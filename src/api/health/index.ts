@@ -8,7 +8,7 @@ export default class Health {
 	}
 
 	public async get(): Promise<string> {
-		const response = await this.apiClient.request<string>({
+		const response = await this.apiClient.request<"OK">({
 			method: "GET",
 			endpoint: "/v3/health"
 		})
