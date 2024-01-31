@@ -1,0 +1,18 @@
+{
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "dist",
+		"lib": ["ES2017"],
+		"module": "commonjs",
+		"target": "ES2017",
+		"strict": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"skipDefaultLibCheck": true,
+		"skipLibCheck": true
+	},
+	"include": ["src", "__tests__"],
+	"exclude": ["node_modules", "dist", "__tests__"]
+}

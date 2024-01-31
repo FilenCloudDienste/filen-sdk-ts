@@ -1,0 +1,30 @@
+{
+	"name": "filen-sdk-ts",
+	"version": "1.0.0",
+	"description": "Filen SDK for TypeScript",
+	"main": "dist/index.js",
+	"scripts": {
+		"test": "jest --forceExit ./__tests__",
+		"dev": "ts-node src/index.ts",
+		"build": "tsc"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/FilenCloudDienste/filen-sdk-ts.git"
+	},
+	"keywords": [
+		"filen"
+	],
+	"author": "Filen",
+	"license": "AGPLv3",
+	"bugs": {
+		"url": "https://github.com/FilenCloudDienste/filen-sdk-ts/issues"
+	},
+	"homepage": "https://github.com/FilenCloudDienste/filen-sdk-ts#readme",
+	"devDependencies": {
+		"@jest/globals": "^29.7.0",
+		"jest": "^29.7.0",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.3.3"
+	}
+}
