@@ -37,15 +37,30 @@ export default class APIClient {
 		apiKey: ""
 	} as const
 
+	/**
+	 * Creates an instance of APIClient.
+	 * @date 1/31/2024 - 4:09:17 PM
+	 *
+	 * @constructor
+	 * @public
+	 * @param {APIClientConfig} params
+	 */
 	public constructor(params: APIClientConfig) {
 		this.config = params
 
 		if (this.config.apiKey.length === 0) {
-			throw new Error("Invalid apiKey")
+			throw new Error("Invalid apiKey, please call login() first")
 		}
 	}
 
-	private buildHeaders() {
+	/**
+	 * Build API request headers
+	 * @date 1/31/2024 - 4:09:33 PM
+	 *
+	 * @private
+	 * @returns {Record<string, string>}
+	 */
+	private buildHeaders(): Record<string, string> {
 		return {
 			Authorization: "Bearer " + this.config.apiKey
 		}

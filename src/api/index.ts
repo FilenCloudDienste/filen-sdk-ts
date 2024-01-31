@@ -1,6 +1,6 @@
 import APIClient from "./client"
-import Health from "./health"
-import DirContent from "./dir/content"
+import V3Health from "./v3/health"
+import V3DirContent from "./v3/dir/content"
 
 export type APIConfig = {
 	apiKey: string
@@ -26,13 +26,17 @@ export default class API {
 
 	public v3() {
 		return {
-			health: new Health({
-				apiClient: this.apiClient
-			}),
-			dir: {
-				content: new DirContent({
+			health: () =>
+				new V3Health({
 					apiClient: this.apiClient
-				})
+				}),
+			dir: () => {
+				return {
+					content: () =>
+						new V3DirContent({
+							apiClient: this.apiClient
+						})
+				}
 			}
 		}
 	}

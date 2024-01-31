@@ -1,5 +1,5 @@
-import type APIClient from "../client"
-import type { FileEncryptionVersion } from "../../types"
+import type APIClient from "../../client"
+import type { FileEncryptionVersion } from "../../../types"
 
 export type DirContentUpload = {
 	uuid: string
@@ -38,7 +38,7 @@ export default class DirContent {
 		this.apiClient = apiClient
 	}
 
-	public async get({ uuid }: { uuid: string }): Promise<DirContentResponse> {
+	public async fetch({ uuid }: { uuid: string }): Promise<DirContentResponse> {
 		const response = await this.apiClient.request<DirContentResponse>({
 			method: "POST",
 			endpoint: "/v3/dir/content",

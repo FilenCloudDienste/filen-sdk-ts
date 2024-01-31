@@ -1,5 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const path = require("path")
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const webpack = require("webpack")
 
 module.exports = [
 	{
@@ -10,7 +12,7 @@ module.exports = [
 			path: path.resolve(__dirname, "dist"),
 			filename: "bundle.browser.js",
 			libraryTarget: "umd",
-			globalObject: "this"
+			globalObject: "globalThis"
 		},
 		module: {
 			rules: [
@@ -21,6 +23,11 @@ module.exports = [
 				}
 			]
 		},
+		plugins: [
+			new webpack.ProvidePlugin({
+				Buffer: ["buffer", "Buffer"]
+			})
+		],
 		resolve: {
 			extensions: [".tsx", ".ts", ".js"],
 			fallback: {
@@ -31,7 +38,9 @@ module.exports = [
 				zlib: require.resolve("browserify-zlib"),
 				os: require.resolve("os-browserify"),
 				http: require.resolve("http-browserify"),
-				https: require.resolve("https-browserify")
+				https: require.resolve("https-browserify"),
+				util: require.resolve("util"),
+				buffer: require.resolve("buffer/")
 			}
 		},
 		target: "web",

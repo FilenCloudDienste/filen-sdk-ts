@@ -1,4 +1,4 @@
-import type APIClient from "../client"
+import type APIClient from "../../client"
 
 export default class Health {
 	private readonly apiClient: APIClient
@@ -7,7 +7,7 @@ export default class Health {
 		this.apiClient = apiClient
 	}
 
-	public async get(): Promise<"OK"> {
+	public async fetch(): Promise<"OK"> {
 		const response = await this.apiClient.request<"OK">({
 			method: "GET",
 			endpoint: "/v3/health"
