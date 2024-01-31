@@ -116,7 +116,7 @@ export default class Decrypt {
 						...decrypted,
 						size: parseInt(decrypted.size ?? 0),
 						lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
-						creation: convertTimestampToMs(parseInt(decrypted.creation ?? Date.now()))
+						creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
 					}
 
 					break
