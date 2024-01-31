@@ -1,10 +1,11 @@
 {
-	"name": "filen-sdk",
+	"name": "@filen/filen-sdk",
 	"version": "1.0.0",
 	"description": "Filen SDK",
 	"main": "dist/bundle.node.js",
 	"browser": "dist/bundle.browser.js",
 	"types": "dist/types/index.d.ts",
+	"private": false,
 	"scripts": {
 		"test": "jest --forceExit ./__tests__",
 		"dev": "ts-node src/test/index.ts",
