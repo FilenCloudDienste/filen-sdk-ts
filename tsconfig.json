@@ -11,7 +11,9 @@
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"skipDefaultLibCheck": true,
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"declaration": true,
+		"declarationDir": "dist/types"
 	},
 	"include": ["src", "__tests__"],
 	"exclude": ["node_modules", "dist", "__tests__"]
