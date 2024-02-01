@@ -14,7 +14,7 @@ import { convertTimestampToMs } from "../utils"
  * @class Decrypt
  * @typedef {Decrypt}
  */
-export default class Decrypt {
+export class Decrypt {
 	private readonly config: CryptoConfig
 	private readonly textEncoder = new TextEncoder()
 	private readonly textDecoder = new TextDecoder()
@@ -172,3 +172,5 @@ export default class Decrypt {
 		return folderMetadata
 	}
 }
+
+export default Decrypt

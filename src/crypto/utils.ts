@@ -201,10 +201,12 @@ export function base64ToBuffer(base64: string): Uint8Array {
 	return bytes
 }
 
-export default {
+export const utils = {
 	generateRandomString,
 	bufferToBase64,
 	bufferToHex,
 	deriveKeyFromPassword,
 	base64ToBuffer
 }
+
+export default utils

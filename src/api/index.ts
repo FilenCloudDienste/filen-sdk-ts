@@ -6,7 +6,7 @@ export type APIConfig = {
 	apiKey: string
 }
 
-export default class API {
+export class API {
 	private readonly config: APIConfig = {
 		apiKey: ""
 	} as const
@@ -41,3 +41,5 @@ export default class API {
 		}
 	}
 }
+
+export default API

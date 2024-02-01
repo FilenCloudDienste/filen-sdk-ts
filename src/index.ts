@@ -16,7 +16,15 @@ export type FilenSDKConfig = {
 	userId?: number
 }
 
-export default class FilenSDK {
+/**
+ * FilenSDK
+ * @date 2/1/2024 - 2:45:02 AM
+ *
+ * @export
+ * @class FilenSDK
+ * @typedef {FilenSDK}
+ */
+export class FilenSDK {
 	private readonly config: FilenSDKConfig
 	private readonly _api: API
 	private readonly _crypto: Crypto
@@ -115,3 +123,5 @@ export default class FilenSDK {
 
 	public readonly utils = utils
 }
+
+export default FilenSDK

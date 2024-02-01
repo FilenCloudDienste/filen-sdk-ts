@@ -29,7 +29,9 @@ export function convertTimestampToMs(timestamp: number): number {
 	return Math.floor(timestamp * 1000)
 }
 
-export default {
+export const utils = {
 	sleep,
 	convertTimestampToMs
 }
+
+export default utils

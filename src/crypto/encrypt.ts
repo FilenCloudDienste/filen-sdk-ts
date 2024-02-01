@@ -3,7 +3,15 @@ import type { CryptoConfig } from "."
 import nodeCrypto from "crypto"
 import { generateRandomString, deriveKeyFromPassword } from "./utils"
 
-export default class Encrypt {
+/**
+ * Encrypt
+ * @date 2/1/2024 - 2:44:28 AM
+ *
+ * @export
+ * @class Encrypt
+ * @typedef {Encrypt}
+ */
+export class Encrypt {
 	private readonly config: CryptoConfig
 	private readonly textEncoder = new TextEncoder()
 	private readonly textDecoder = new TextDecoder()
@@ -66,3 +74,5 @@ export default class Encrypt {
 		throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`)
 	}
 }
+
+export default Encrypt

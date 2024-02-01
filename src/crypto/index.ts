@@ -8,7 +8,15 @@ export type CryptoConfig = {
 	privateKey: string
 }
 
-export default class Crypto {
+/**
+ * Crypto
+ * @date 2/1/2024 - 2:44:47 AM
+ *
+ * @export
+ * @class Crypto
+ * @typedef {Crypto}
+ */
+export class Crypto {
 	private readonly config: CryptoConfig
 	private readonly _encrypt: Encrypt
 	private readonly _decrypt: Decrypt
@@ -51,3 +59,5 @@ export default class Crypto {
 
 	public readonly utils = utils
 }
+
+export default Crypto

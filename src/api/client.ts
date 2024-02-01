@@ -32,7 +32,15 @@ export const APIClientDefaults = {
 	retryTimeout: 1000
 } as const
 
-export default class APIClient {
+/**
+ * APIClient
+ * @date 2/1/2024 - 2:45:15 AM
+ *
+ * @export
+ * @class APIClient
+ * @typedef {APIClient}
+ */
+export class APIClient {
 	private readonly config: APIClientConfig = {
 		apiKey: ""
 	} as const
@@ -66,6 +74,15 @@ export default class APIClient {
 		}
 	}
 
+	/**
+	 * Send a POST request.
+	 * @date 2/1/2024 - 2:48:57 AM
+	 *
+	 * @private
+	 * @async
+	 * @param {PostRequestParameters} params
+	 * @returns {unknown}
+	 */
 	private async post(params: PostRequestParameters) {
 		const headers = this.buildHeaders()
 		const url = params.url ? params.url : APIClientDefaults.url
@@ -77,6 +94,15 @@ export default class APIClient {
 		})
 	}
 
+	/**
+	 * Send a GET request.
+	 * @date 2/1/2024 - 2:49:04 AM
+	 *
+	 * @private
+	 * @async
+	 * @param {GetRequestParameters} params
+	 * @returns {unknown}
+	 */
 	private async get(params: GetRequestParameters) {
 		const headers = this.buildHeaders()
 		const url = params.url ? params.url : APIClientDefaults.url
@@ -88,6 +114,16 @@ export default class APIClient {
 		})
 	}
 
+	/**
+	 * Sends the request to the API.
+	 * @date 2/1/2024 - 2:49:20 AM
+	 *
+	 * @public
+	 * @async
+	 * @template T
+	 * @param {RequestParameters} params
+	 * @returns {Promise<T>}
+	 */
 	public async request<T>(params: RequestParameters): Promise<T> {
 		const maxRetries = params.maxRetries ? params.maxRetries : APIClientDefaults.maxRetries
 		const retryTimeout = params.retryTimeout ? params.retryTimeout : APIClientDefaults.retryTimeout
@@ -129,3 +165,5 @@ export default class APIClient {
 		return await send()
 	}
 }
+
+export default APIClient
