@@ -80,6 +80,9 @@ export declare class FilenSDK {
             info: () => import("./api/v3/user/info").UserInfo;
             baseFolder: () => import("./api/v3/user/baseFolder").UserBaseFolder;
         };
+        shared: () => {
+            in: () => import("./api/v3/shared/in").SharedIn;
+        };
     };
     /**
      * Returns a Filen Crypto instance.
