@@ -1,10 +1,11 @@
+/* eslint-disable no-var */
+
 export {}
 
 // Global declarations for the ReactNative <-> Node.JS bridge
 // Keep it in sync (only the needed functions) with the actual app at all times
 
 declare global {
-	// eslint-disable-next-line no-var
 	var nodeThread: {
 		encryptData: (params: { base64: string; key: string }) => Promise<Uint8Array>
 		decryptData: (params: { base64: string; key: string; version: number }) => Promise<Uint8Array>
