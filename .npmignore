@@ -1,5 +1,2 @@
-dist/**/*
 node_modules/**/*
 src/test/**/*
-docs/**/*
-__tests__/**/*

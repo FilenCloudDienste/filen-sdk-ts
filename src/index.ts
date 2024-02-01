@@ -125,3 +125,5 @@ export class FilenSDK {
 }
 
 export default FilenSDK
+
+module.exports = FilenSDK
