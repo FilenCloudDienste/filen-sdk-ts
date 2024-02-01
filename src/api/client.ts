@@ -81,7 +81,7 @@ export class APIClient {
 	 * @private
 	 * @async
 	 * @param {PostRequestParameters} params
-	 * @returns {unknown}
+	 * @returns {Promise<AxiosResponse<any, any>>}
 	 */
 	private async post(params: PostRequestParameters) {
 		const headers = this.buildHeaders()
@@ -101,7 +101,7 @@ export class APIClient {
 	 * @private
 	 * @async
 	 * @param {GetRequestParameters} params
-	 * @returns {unknown}
+	 * @returns {Promise<AxiosResponse<any, any>>}
 	 */
 	private async get(params: GetRequestParameters) {
 		const headers = this.buildHeaders()
@@ -149,7 +149,7 @@ export class APIClient {
 					throw new Error(`Invalid HTTP status code: ${response.status}`)
 				}
 
-				if (typeof response.data.status === "boolean" && response.data.status === false) {
+				if (!response.data.status) {
 					returnImmediately = true
 
 					throw new Error(`Invalid status code: ${response.data.code}`)

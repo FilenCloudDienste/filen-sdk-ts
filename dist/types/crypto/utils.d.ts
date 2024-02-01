@@ -35,36 +35,19 @@ export declare function bufferToBase64({ buffer }: {
 export declare function bufferToHex({ buffer }: {
     buffer: ArrayBuffer | Uint8Array | Buffer;
 }): string;
-/**
- * Derive a key from given inputs using PBKDF2
- * @date 1/31/2024 - 4:03:29 PM
- *
- * @export
- * @async
- * @param {{
- * 	password: string
- * 	salt: string
- * 	iterations: number
- * 	hash: "sha512"
- * 	bitLength: 256 | 512
- * 	returnHex: boolean
- * }} param0
- * @param {string} param0.password
- * @param {string} param0.salt
- * @param {number} param0.iterations
- * @param {"sha512"} param0.hash
- * @param {(256 | 512)} param0.bitLength
- * @param {boolean} param0.returnHex
- * @returns {Promise<string | Uint8Array>}
- */
-export declare function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }: {
+export type DeriveKeyFromPasswordBase = {
     password: string;
     salt: string;
     iterations: number;
     hash: "sha512";
     bitLength: 256 | 512;
-    returnHex: boolean;
-}): Promise<string | Uint8Array>;
+};
+export declare function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }: DeriveKeyFromPasswordBase & {
+    returnHex: false;
+}): Promise<Uint8Array>;
+export declare function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }: DeriveKeyFromPasswordBase & {
+    returnHex: true;
+}): Promise<string>;
 /**
  * Convert base64 to a buffer
  * @date 1/31/2024 - 4:04:21 PM
@@ -74,11 +57,13 @@ export declare function deriveKeyFromPassword({ password, salt, iterations, hash
  * @returns {Uint8Array}
  */
 export declare function base64ToBuffer(base64: string): Uint8Array;
+export declare function hashFn(input: string): Promise<string>;
 export declare const utils: {
     generateRandomString: typeof generateRandomString;
     bufferToBase64: typeof bufferToBase64;
     bufferToHex: typeof bufferToHex;
     deriveKeyFromPassword: typeof deriveKeyFromPassword;
     base64ToBuffer: typeof base64ToBuffer;
+    hashFn: typeof hashFn;
 };
 export default utils;

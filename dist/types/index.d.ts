@@ -71,6 +71,9 @@ export declare class FilenSDK {
         health: () => import("./api/v3/health").Health;
         dir: () => {
             content: () => import("./api/v3/dir/content").DirContent;
+            download: () => import("./api/v3/dir/download").DirDownload;
+            shared: () => import("./api/v3/dir/shared").DirShared;
+            linked: () => import("./api/v3/dir/linked").DirLinked;
         };
         auth: () => {
             info: () => import("./api/v3/auth/info").AuthInfo;
@@ -83,6 +86,9 @@ export declare class FilenSDK {
         shared: () => {
             in: () => import("./api/v3/shared/in").SharedIn;
             out: () => import("./api/v3/shared/out").SharedOut;
+        };
+        upload: () => {
+            done: () => import("./api/v3/upload/done").UploadDone;
         };
     };
     /**

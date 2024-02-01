@@ -51,17 +51,18 @@ export declare class DirContent {
     });
     /**
      * Returns all files and folders inside a folder.
-     * @date 2/1/2024 - 3:28:52 PM
+     * Use "recents" as the UUID parameter to get the recently uploaded files.
+     * @date 2/1/2024 - 4:42:23 PM
      *
      * @public
      * @async
-     * @param {{ uuid: string; dirsOnly?: boolean }} param0
+     * @param {({ uuid: string | "recents"; dirsOnly?: boolean })} param0
      * @param {string} param0.uuid
      * @param {boolean} [param0.dirsOnly=false]
      * @returns {Promise<DirContentResponse>}
      */
     fetch({ uuid, dirsOnly }: {
-        uuid: string;
+        uuid: string | "recents";
         dirsOnly?: boolean;
     }): Promise<DirContentResponse>;
 }

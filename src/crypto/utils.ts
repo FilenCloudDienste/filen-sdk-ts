@@ -67,12 +67,12 @@ export function bufferToBase64({ buffer }: { buffer: ArrayBuffer | Uint8Array | 
 		base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d]
 	}
 
-	if (byteRemainder == 1) {
+	if (byteRemainder === 1) {
 		chunk = bytes[mainLength]
 		a = (chunk & 252) >> 2
 		b = (chunk & 3) << 4
 		base64 += encodings[a] + encodings[b] + "=="
-	} else if (byteRemainder == 2) {
+	} else if (byteRemainder === 2) {
 		chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1]
 		a = (chunk & 64512) >> 10
 		b = (chunk & 1008) >> 4
@@ -96,18 +96,39 @@ export function bufferToHex({ buffer }: { buffer: ArrayBuffer | Uint8Array | Buf
 	return new Uint8Array(buffer).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")
 }
 
+export type DeriveKeyFromPasswordBase = {
+	password: string
+	salt: string
+	iterations: number
+	hash: "sha512"
+	bitLength: 256 | 512
+}
+
+export async function deriveKeyFromPassword({
+	password,
+	salt,
+	iterations,
+	hash,
+	bitLength,
+	returnHex
+}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Uint8Array>
+
+export async function deriveKeyFromPassword({
+	password,
+	salt,
+	iterations,
+	hash,
+	bitLength,
+	returnHex
+}: DeriveKeyFromPasswordBase & { returnHex: true }): Promise<string>
+
 /**
  * Derive a key from given inputs using PBKDF2
- * @date 1/31/2024 - 4:03:29 PM
+ * @date 2/1/2024 - 6:14:25 PM
  *
  * @export
  * @async
- * @param {{
- * 	password: string
- * 	salt: string
- * 	iterations: number
- * 	hash: "sha512"
- * 	bitLength: 256 | 512
+ * @param {DeriveKeyFromPasswordBase & {
  * 	returnHex: boolean
  * }} param0
  * @param {string} param0.password
@@ -125,12 +146,7 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: {
-	password: string
-	salt: string
-	iterations: number
-	hash: "sha512"
-	bitLength: 256 | 512
+}: DeriveKeyFromPasswordBase & {
 	returnHex: boolean
 }): Promise<string | Uint8Array> {
 	if (environment === "node") {
@@ -201,12 +217,25 @@ export function base64ToBuffer(base64: string): Uint8Array {
 	return bytes
 }
 
+export async function hashFn(input: string): Promise<string> {
+	if (environment === "node") {
+		return nodeCrypto.createHash("sha1").update(nodeCrypto.createHash("sha512").update(input).digest("hex")).digest("hex")
+	} else if (environment === "browser") {
+		return Buffer.from(
+			await globalThis.crypto.subtle.digest("SHA-1", await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(input)))
+		).toString("hex")
+	}
+
+	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
+}
+
 export const utils = {
 	generateRandomString,
 	bufferToBase64,
 	bufferToHex,
 	deriveKeyFromPassword,
-	base64ToBuffer
+	base64ToBuffer,
+	hashFn
 }
 
 export default utils

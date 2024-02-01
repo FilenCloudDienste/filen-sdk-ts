@@ -57,7 +57,7 @@ export declare class APIClient {
      * @private
      * @async
      * @param {PostRequestParameters} params
-     * @returns {unknown}
+     * @returns {Promise<AxiosResponse<any, any>>}
      */
     private post;
     /**
@@ -67,7 +67,7 @@ export declare class APIClient {
      * @private
      * @async
      * @param {GetRequestParameters} params
-     * @returns {unknown}
+     * @returns {Promise<AxiosResponse<any, any>>}
      */
     private get;
     /**

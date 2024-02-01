@@ -48,6 +48,7 @@ export declare class Crypto {
         bufferToHex: typeof import("./utils").bufferToHex;
         deriveKeyFromPassword: typeof import("./utils").deriveKeyFromPassword;
         base64ToBuffer: typeof import("./utils").base64ToBuffer;
+        hashFn: typeof import("./utils").hashFn;
     };
 }
 export default Crypto;
