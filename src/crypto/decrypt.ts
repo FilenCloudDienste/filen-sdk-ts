@@ -6,6 +6,14 @@ import nodeCrypto from "crypto"
 import type { FileMetadata, FolderMetadata } from "../types"
 import { convertTimestampToMs } from "../utils"
 
+/**
+ * Decrypt
+ * @date 1/31/2024 - 6:36:57 PM
+ *
+ * @export
+ * @class Decrypt
+ * @typedef {Decrypt}
+ */
 export default class Decrypt {
 	private readonly config: CryptoConfig
 	private readonly textEncoder = new TextEncoder()

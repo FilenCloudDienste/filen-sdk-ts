@@ -25,7 +25,7 @@
 	"bugs": {
 		"url": "https://github.com/FilenCloudDienste/filen-sdk-ts/issues"
 	},
-	"homepage": "https://github.com/FilenCloudDienste/filen-sdk-ts#readme",
+	"homepage": "https://filen.io",
 	"devDependencies": {
 		"@babel/core": "^7.23.9",
 		"@babel/preset-env": "^7.23.9",
