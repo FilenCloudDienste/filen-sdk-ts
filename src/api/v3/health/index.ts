@@ -11,6 +11,15 @@ import type APIClient from "../../client"
 export class Health {
 	private readonly apiClient: APIClient
 
+	/**
+	 * Creates an instance of Health.
+	 * @date 2/1/2024 - 3:19:24 PM
+	 *
+	 * @constructor
+	 * @public
+	 * @param {{ apiClient: APIClient }} param0
+	 * @param {APIClient} param0.apiClient
+	 */
 	public constructor({ apiClient }: { apiClient: APIClient }) {
 		this.apiClient = apiClient
 	}

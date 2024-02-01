@@ -1,6 +1,10 @@
 import APIClient from "./client"
 import V3Health from "./v3/health"
 import V3DirContent from "./v3/dir/content"
+import V3AuthInfo from "./v3/auth/info"
+import V3Login from "./v3/login"
+import V3UserInfo from "./v3/user/info"
+import V3UserBaseFolder from "./v3/user/baseFolder"
 
 export type APIConfig = {
 	apiKey: string
@@ -34,6 +38,30 @@ export class API {
 				return {
 					content: () =>
 						new V3DirContent({
+							apiClient: this.apiClient
+						})
+				}
+			},
+			auth: () => {
+				return {
+					info: () =>
+						new V3AuthInfo({
+							apiClient: this.apiClient
+						})
+				}
+			},
+			login: () =>
+				new V3Login({
+					apiClient: this.apiClient
+				}),
+			user: () => {
+				return {
+					info: () =>
+						new V3UserInfo({
+							apiClient: this.apiClient
+						}),
+					baseFolder: () =>
+						new V3UserBaseFolder({
 							apiClient: this.apiClient
 						})
 				}

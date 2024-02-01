@@ -129,6 +129,7 @@ export class APIClient {
 		const retryTimeout = params.retryTimeout ? params.retryTimeout : APIClientDefaults.retryTimeout
 		let tries = 0
 		let lastError: Error | unknown
+		let returnImmediately = false
 
 		const send = async (): Promise<T> => {
 			if (tries >= maxRetries) {
@@ -149,11 +150,17 @@ export class APIClient {
 				}
 
 				if (typeof response.data.status === "boolean" && response.data.status === false) {
+					returnImmediately = true
+
 					throw new Error(`Invalid status code: ${response.data.code}`)
 				}
 
 				return response.data.data ? response.data.data : response.data
 			} catch (e) {
+				if (returnImmediately) {
+					throw e
+				}
+
 				lastError = e
 
 				await sleep(retryTimeout)

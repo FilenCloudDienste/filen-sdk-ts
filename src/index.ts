@@ -26,9 +26,9 @@ export type FilenSDKConfig = {
  * @typedef {FilenSDK}
  */
 export class FilenSDK {
-	private readonly config: FilenSDKConfig
-	private readonly _api: API
-	private readonly _crypto: Crypto
+	private config: FilenSDKConfig
+	private _api: API
+	private _crypto: Crypto
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -39,6 +39,22 @@ export class FilenSDK {
 	 * @param {FilenSDKConfig} params
 	 */
 	public constructor(params: FilenSDKConfig) {
+		this.config = params
+		this._api = params.apiKey ? new API({ apiKey: params.apiKey }) : new API({ apiKey: "anonymous" })
+		this._crypto =
+			params.masterKeys && params.publicKey && params.privateKey
+				? new Crypto({ masterKeys: params.masterKeys, publicKey: params.publicKey, privateKey: params.privateKey })
+				: new Crypto({ masterKeys: [], publicKey: "", privateKey: "" })
+	}
+
+	/**
+	 * Initialize the SDK again (after logging in for example).
+	 * @date 2/1/2024 - 3:23:58 PM
+	 *
+	 * @public
+	 * @param {FilenSDKConfig} params
+	 */
+	public init(params: FilenSDKConfig): void {
 		this.config = params
 		this._api = params.apiKey ? new API({ apiKey: params.apiKey }) : new API({ apiKey: "anonymous" })
 		this._crypto =
