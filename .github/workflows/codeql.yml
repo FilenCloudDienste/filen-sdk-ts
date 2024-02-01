@@ -11,6 +11,9 @@
 #
 name: "CodeQL"
 
+paths:
+    - src
+
 on:
     push:
         branches: ["main"]
