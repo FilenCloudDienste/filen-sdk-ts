@@ -46,6 +46,7 @@ export class Decrypt {
 		const sliced = metadata.slice(0, 8)
 
 		if (sliced === "U2FsdGVk") {
+			// Old and deprecated, not in use anymore, just here for backwards compatibility
 			return CryptoJS.AES.decrypt(metadata, key).toString(CryptoJS.enc.Utf8)
 		} else {
 			const version = metadata.slice(0, 3)

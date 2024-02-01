@@ -10,7 +10,7 @@
 		"test": "jest --forceExit ./__tests__",
 		"dev": "ts-node src/test/index.ts",
 		"build": "npm run lint && tsc --emitDeclarationOnly && webpack --config webpack.config.js && npm run typedoc",
-		"lint": "eslint src/**/* --ext .ts",
+		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
 		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts"
 	},
 	"repository": {
