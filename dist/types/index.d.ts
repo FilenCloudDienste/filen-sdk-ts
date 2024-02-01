@@ -1,3 +1,4 @@
+import "./reactNative";
 import type { AuthVersion } from "./types";
 import Crypto from "./crypto";
 export type FilenSDKConfig = {
@@ -21,9 +22,9 @@ export type FilenSDKConfig = {
  * @typedef {FilenSDK}
  */
 export declare class FilenSDK {
-    private readonly config;
-    private readonly _api;
-    private readonly _crypto;
+    private config;
+    private _api;
+    private _crypto;
     /**
      * Creates an instance of FilenSDK.
      * @date 1/31/2024 - 4:04:52 PM
@@ -33,6 +34,14 @@ export declare class FilenSDK {
      * @param {FilenSDKConfig} params
      */
     constructor(params: FilenSDKConfig);
+    /**
+     * Initialize the SDK again (after logging in for example).
+     * @date 2/1/2024 - 3:23:58 PM
+     *
+     * @public
+     * @param {FilenSDKConfig} params
+     */
+    init(params: FilenSDKConfig): void;
     /**
      * Check if the SDK user is authenticated.
      * @date 1/31/2024 - 4:08:17 PM
@@ -62,6 +71,14 @@ export declare class FilenSDK {
         health: () => import("./api/v3/health").Health;
         dir: () => {
             content: () => import("./api/v3/dir/content").DirContent;
+        };
+        auth: () => {
+            info: () => import("./api/v3/auth/info").AuthInfo;
+        };
+        login: () => import("./api/v3/login").Login;
+        user: () => {
+            info: () => import("./api/v3/user/info").UserInfo;
+            baseFolder: () => import("./api/v3/user/baseFolder").UserBaseFolder;
         };
     };
     /**

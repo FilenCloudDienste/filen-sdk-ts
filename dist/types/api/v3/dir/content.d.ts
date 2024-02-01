@@ -37,21 +37,32 @@ export type DirContentResponse = {
  */
 export declare class DirContent {
     private readonly apiClient;
+    /**
+     * Creates an instance of DirContent.
+     * @date 2/1/2024 - 3:19:31 PM
+     *
+     * @constructor
+     * @public
+     * @param {{ apiClient: APIClient }} param0
+     * @param {APIClient} param0.apiClient
+     */
     constructor({ apiClient }: {
         apiClient: APIClient;
     });
     /**
      * Returns all files and folders inside a folder.
-     * @date 2/1/2024 - 3:22:42 AM
+     * @date 2/1/2024 - 3:28:52 PM
      *
      * @public
      * @async
-     * @param {{ uuid: string }} param0
+     * @param {{ uuid: string; dirsOnly?: boolean }} param0
      * @param {string} param0.uuid
+     * @param {boolean} [param0.dirsOnly=false]
      * @returns {Promise<DirContentResponse>}
      */
-    fetch({ uuid }: {
+    fetch({ uuid, dirsOnly }: {
         uuid: string;
+        dirsOnly?: boolean;
     }): Promise<DirContentResponse>;
 }
 export default DirContent;

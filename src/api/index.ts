@@ -14,6 +14,7 @@ export class API {
 	private readonly config: APIConfig = {
 		apiKey: ""
 	} as const
+
 	private apiClient: APIClient = new APIClient({ apiKey: "anonymous" })
 
 	public constructor(params: APIConfig) {

@@ -1,1 +1,2 @@
-export declare const environment: "node" | "react-native" | "browser";
+import type { Environment } from "./types";
+export declare const environment: Environment;
