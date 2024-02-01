@@ -1,7 +1,7 @@
 const env = {
 	isBrowser: typeof window !== "undefined" && typeof window.document !== "undefined",
-	isNode: typeof process !== "undefined" && process.versions != null && process.versions.node != null,
-	isReactNative: typeof navigator !== "undefined" && navigator.product === "ReactNative"
+	isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null,
+	isReactNative: typeof global.nodeThread !== "undefined" && global.nodeThread !== null
 } as const
 
 export const environment: "node" | "react-native" | "browser" =

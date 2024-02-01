@@ -1,3 +1,4 @@
+import "./reactNative"
 import API from "./api"
 import type { AuthVersion } from "./types"
 import Crypto from "./crypto"
