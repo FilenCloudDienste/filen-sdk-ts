@@ -82,6 +82,7 @@ export declare class FilenSDK {
         };
         shared: () => {
             in: () => import("./api/v3/shared/in").SharedIn;
+            out: () => import("./api/v3/shared/out").SharedOut;
         };
     };
     /**

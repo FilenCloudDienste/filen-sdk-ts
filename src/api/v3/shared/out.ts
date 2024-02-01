@@ -1,7 +1,7 @@
 import type APIClient from "../../client"
 import { FileEncryptionVersion } from "../../../types"
 
-export type SharedInUpload = {
+export type SharedOutUpload = {
 	uuid: string
 	parent: string
 	metadata: string
@@ -19,7 +19,7 @@ export type SharedInUpload = {
 	timestamp: number
 }
 
-export type SharedInFolder = {
+export type SharedOutFolder = {
 	uuid: string
 	parent: string | null
 	metadata: string
@@ -38,25 +38,25 @@ export type SharedInFolder = {
 	is_default: 0 | 1
 }
 
-export type SharedInResponse = {
-	uploads: SharedInUpload[]
-	folders: SharedInFolder[]
+export type SharedOutResponse = {
+	uploads: SharedOutUpload[]
+	folders: SharedOutFolder[]
 }
 
 /**
- * SharedIn
- * @date 2/1/2024 - 4:04:02 PM
+ * SharedOut
+ * @date 2/1/2024 - 4:19:58 PM
  *
  * @export
- * @class SharedIn
- * @typedef {SharedIn}
+ * @class SharedOut
+ * @typedef {SharedOut}
  */
-export class SharedIn {
+export class SharedOut {
 	private readonly apiClient: APIClient
 
 	/**
-	 * Creates an instance of SharedIn.
-	 * @date 2/1/2024 - 4:04:08 PM
+	 * Creates an instance of SharedOut.
+	 * @date 2/1/2024 - 4:20:03 PM
 	 *
 	 * @constructor
 	 * @public
@@ -68,20 +68,21 @@ export class SharedIn {
 	}
 
 	/**
-	 * Fetch files and folder shared to the user based on the parent UUID.
-	 * @date 2/1/2024 - 4:25:28 PM
+	 * Fetch shared files and folders based on the given UUID and receiverId.
+	 * @date 2/1/2024 - 4:26:07 PM
 	 *
 	 * @public
 	 * @async
-	 * @param {?{ uuid?: string }} [params]
-	 * @returns {Promise<SharedInResponse>}
+	 * @param {?{ uuid?: string; receiverId?: number }} [params]
+	 * @returns {Promise<SharedOutResponse>}
 	 */
-	public async fetch(params?: { uuid?: string }): Promise<SharedInResponse> {
-		const response = await this.apiClient.request<SharedInResponse>({
+	public async fetch(params?: { uuid?: string; receiverId?: number }): Promise<SharedOutResponse> {
+		const response = await this.apiClient.request<SharedOutResponse>({
 			method: "POST",
-			endpoint: "/v3/shared/in",
+			endpoint: "/v3/shared/out",
 			data: {
-				uuid: params ? params.uuid : "shared-in"
+				uuid: params ? params.uuid : "shared-out",
+				receiverId: params ? params.receiverId : 0
 			}
 		})
 
@@ -89,4 +90,4 @@ export class SharedIn {
 	}
 }
 
-export default SharedIn
+export default SharedOut

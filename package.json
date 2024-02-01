@@ -9,8 +9,10 @@
 	"scripts": {
 		"test": "jest --forceExit ./__tests__",
 		"dev": "ts-node src/test/index.ts",
-		"build": "npm run lint && tsc --emitDeclarationOnly && webpack --config webpack.config.js && npm run typedoc",
+		"build": "npm run lint && npm run emitTypes && npm run bundle && npm run typedoc",
 		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
+		"emitTypes": "tsc --emitDeclarationOnly",
+		"bundle": "webpack --config webpack.config.js",
 		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts"
 	},
 	"repository": {
@@ -37,6 +39,7 @@
 		"babel-loader": "^9.1.3",
 		"browserify-zlib": "^0.2.0",
 		"buffer": "^6.0.3",
+		"concurrently": "^8.2.2",
 		"crypto-browserify": "^3.12.0",
 		"eslint": "^8.56.0",
 		"http-browserify": "^1.7.0",

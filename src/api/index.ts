@@ -6,6 +6,7 @@ import V3Login from "./v3/login"
 import V3UserInfo from "./v3/user/info"
 import V3UserBaseFolder from "./v3/user/baseFolder"
 import V3SharedIn from "./v3/shared/in"
+import V3SharedOut from "./v3/shared/out"
 
 export type APIConfig = {
 	apiKey: string
@@ -72,6 +73,10 @@ export class API {
 				return {
 					in: () =>
 						new V3SharedIn({
+							apiClient: this.apiClient
+						}),
+					out: () =>
+						new V3SharedOut({
 							apiClient: this.apiClient
 						})
 				}
