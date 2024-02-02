@@ -4,7 +4,7 @@ on:
         types: [created]
 jobs:
     build:
-        runs-on: self-hosted
+        runs-on: ubuntu-latest
         environment: npm
         steps:
             - name: Checkout
