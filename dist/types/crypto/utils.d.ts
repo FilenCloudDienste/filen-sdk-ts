@@ -10,7 +10,7 @@
  */
 export declare function generateRandomString({ length }: {
     length: number;
-}): string;
+}): Promise<string>;
 /**
  * Convert a buffer to base64
  * @date 1/31/2024 - 4:01:49 PM

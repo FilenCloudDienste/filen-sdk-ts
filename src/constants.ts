@@ -11,4 +11,4 @@ export const environment: Environment =
 		? "browser"
 		: env.isNode && !env.isBrowser && !env.isReactNative
 		? "node"
-		: "react-native"
+		: "reactNative"

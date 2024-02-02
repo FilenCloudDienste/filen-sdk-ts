@@ -30,8 +30,10 @@ export declare class Encrypt {
      * @param {string} param0.data
      * @returns {Promise<string>}
      */
-    metadata({ data }: {
-        data: string;
+    metadata({ metadata, key, derive }: {
+        metadata: string;
+        key?: string;
+        derive?: boolean;
     }): Promise<string>;
 }
 export default Encrypt;

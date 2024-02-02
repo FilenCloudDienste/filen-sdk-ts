@@ -86,6 +86,8 @@ export class Decrypt {
 					)
 
 					return this.textDecoder.decode(decrypted)
+				} else if (environment === "reactNative") {
+					return await global.nodeThread.decryptMetadata({ data: metadata, key })
 				}
 
 				throw new Error(`crypto.decrypt.metadata not implemented for ${environment} environment`)

@@ -12,7 +12,7 @@ const textEncoder = new TextEncoder()
  * @param {number} param0.length
  * @returns {string}
  */
-export function generateRandomString({ length }: { length: number }): string {
+export async function generateRandomString({ length }: { length: number }): Promise<string> {
 	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	if (environment === "node") {
@@ -34,6 +34,8 @@ export function generateRandomString({ length }: { length: number }): string {
 		const randomNumbers = Array.from(array).map(x => x % chars.length)
 
 		return randomNumbers.map(x => chars[x]).join("")
+	} else if (environment === "reactNative") {
+		return await global.nodeThread.generateRandomString({ charLength: length })
 	}
 
 	throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`)
@@ -192,6 +194,8 @@ export async function deriveKeyFromPassword({
 		const key = returnHex ? Buffer.from(bits).toString("hex") : new Uint8Array(bits)
 
 		return key
+	} else if (environment === "reactNative") {
+		return await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex })
 	}
 
 	throw new Error(`crypto.utils.deriveKeyFromPassword not implemented for ${environment} environment`)
@@ -224,6 +228,8 @@ export async function hashFn(input: string): Promise<string> {
 		return Buffer.from(
 			await globalThis.crypto.subtle.digest("SHA-1", await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(input)))
 		).toString("hex")
+	} else if (environment === "reactNative") {
+		return await global.nodeThread.hashFn({ string: input })
 	}
 
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
