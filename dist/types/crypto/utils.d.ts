@@ -58,6 +58,7 @@ export declare function deriveKeyFromPassword({ password, salt, iterations, hash
  */
 export declare function base64ToBuffer(base64: string): Uint8Array;
 export declare function hashFn(input: string): Promise<string>;
+export declare function normalizeHash(hash: string): string;
 export declare const utils: {
     generateRandomString: typeof generateRandomString;
     bufferToBase64: typeof bufferToBase64;
