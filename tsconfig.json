@@ -13,7 +13,8 @@
 		"skipDefaultLibCheck": true,
 		"skipLibCheck": true,
 		"declaration": true,
-		"declarationDir": "dist/types"
+		"declarationDir": "dist/types",
+		"resolveJsonModule": true
 	},
 	"include": ["src", "__tests__"],
 	"exclude": ["node_modules", "dist", "__tests__"]
