@@ -235,6 +235,40 @@ export async function hashFn(input: string): Promise<string> {
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
 }
 
+export function normalizeHash(hash: string) {
+	const lowercased = hash.toLowerCase()
+
+	if (lowercased === "sha-512") {
+		return "sha512"
+	}
+
+	if (lowercased === "sha-256") {
+		return "sha256"
+	}
+
+	if (lowercased === "sha-384") {
+		return "sha384"
+	}
+
+	if (lowercased === "sha-1") {
+		return "sha1"
+	}
+
+	if (lowercased === "md-2") {
+		return "md2"
+	}
+
+	if (lowercased === "md-4") {
+		return "md4"
+	}
+
+	if (lowercased === "md-5") {
+		return "md5"
+	}
+
+	return hash
+}
+
 export const utils = {
 	generateRandomString,
 	bufferToBase64,
