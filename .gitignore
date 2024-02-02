@@ -1,2 +1,2 @@
 node_modules/**/*
-src/dev/test.config.json
+src/dev/dev.config.json

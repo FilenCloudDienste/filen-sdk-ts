@@ -1,5 +1,5 @@
 import FilenSDK from ".."
-import config from "./test.config.json"
+import config from "./dev.config.json"
 import type { AuthVersion } from "../types"
 
 const filen = new FilenSDK({
