@@ -8,7 +8,7 @@
 	"private": false,
 	"scripts": {
 		"test": "jest --forceExit ./__tests__",
-		"dev": "ts-node src/dev/index.ts",
+		"dev": "ts-node dev/index.ts",
 		"build": "npm run lint && npm run emitTypes && npm run bundle && npm run typedoc",
 		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
 		"emitTypes": "tsc --emitDeclarationOnly",

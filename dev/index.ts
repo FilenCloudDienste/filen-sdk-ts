@@ -1,6 +1,6 @@
 import FilenSDK from ".."
 import config from "./dev.config.json"
-import type { AuthVersion } from "../types"
+import type { AuthVersion } from "../src/types"
 
 const filen = new FilenSDK({
 	email: config.email,

@@ -1,2 +1,3 @@
 node_modules/**/*
-src/dev/dev.config.json
+dev/dev.config.json
+.DS_Store
