@@ -1,5 +1,3 @@
-/* eslint-disable no-mixed-spaces-and-tabs */
-
 import { environment } from "../constants"
 import type { CryptoConfig } from "."
 import nodeCrypto from "crypto"

@@ -5,7 +5,8 @@
 	"extends": ["eslint:recommended", "plugin:@typescript-eslint/eslint-recommended", "plugin:@typescript-eslint/recommended"],
 	"rules": {
 		"eqeqeq": 2,
-		"quotes": ["error", "double"]
+		"quotes": ["error", "double"],
+		"no-mixed-spaces-and-tabs": 0
 	},
 	"env": {
 		"browser": true,

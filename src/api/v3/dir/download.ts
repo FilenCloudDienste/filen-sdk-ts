@@ -1,5 +1,3 @@
-/* eslint-disable no-mixed-spaces-and-tabs */
-
 import type APIClient from "../../client"
 import type { FileEncryptionVersion } from "../../../types"
 import { deriveKeyFromPassword, hashFn } from "../../../crypto/utils"
