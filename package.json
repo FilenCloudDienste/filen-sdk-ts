@@ -59,6 +59,8 @@
 	},
 	"dependencies": {
 		"axios": "^1.6.7",
-		"crypto-js": "^4.2.0"
+		"crypto-api": "^0.8.5",
+		"crypto-js": "^4.2.0",
+		"js-crypto-key-utils": "^1.0.7"
 	}
 }

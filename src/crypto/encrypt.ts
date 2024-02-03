@@ -1,7 +1,7 @@
 import { environment } from "../constants"
 import type { CryptoConfig } from "."
 import nodeCrypto from "crypto"
-import { generateRandomString, deriveKeyFromPassword } from "./utils"
+import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey } from "./utils"
 
 /**
  * Encrypt
@@ -87,6 +87,48 @@ export class Encrypt {
 		}
 
 		throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`)
+	}
+
+	/**
+	 * Encrypts metadata using a public key.
+	 * @date 2/2/2024 - 6:49:12 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; publicKey: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.publicKey
+	 * @returns {Promise<string>}
+	 */
+	public async metadataPublic({ metadata, publicKey }: { metadata: string; publicKey: string }): Promise<string> {
+		if (environment === "node") {
+			const pemKey = await derKeyToPem({ key: publicKey })
+			const encrypted = nodeCrypto.publicEncrypt(
+				{
+					key: pemKey,
+					padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
+					oaepHash: "sha512"
+				},
+				this.textEncoder.encode(metadata)
+			)
+
+			return Buffer.from(encrypted).toString("base64")
+		} else if (environment === "browser") {
+			const importedPublicKey = await importPublicKey({ publicKey, mode: ["encrypt"] })
+			const encrypted = await globalThis.crypto.subtle.encrypt(
+				{
+					name: "RSA-OAEP"
+				},
+				importedPublicKey,
+				this.textEncoder.encode(metadata)
+			)
+
+			return Buffer.from(encrypted).toString("base64")
+		} else if (environment === "reactNative") {
+			return await global.nodeThread.encryptMetadataPublicKey({ data: metadata, publicKey })
+		}
+
+		throw new Error(`crypto.encrypt.metadataPublic not implemented for ${environment} environment`)
 	}
 }
 

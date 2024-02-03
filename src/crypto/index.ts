@@ -6,6 +6,7 @@ export type CryptoConfig = {
 	masterKeys: string[]
 	publicKey: string
 	privateKey: string
+	metadataCache: boolean
 }
 
 /**
@@ -42,7 +43,7 @@ export class Crypto {
 	 * @public
 	 * @returns {Encrypt}
 	 */
-	public encrypt() {
+	public encrypt(): Encrypt {
 		return this._encrypt
 	}
 
@@ -53,7 +54,7 @@ export class Crypto {
 	 * @public
 	 * @returns {Decrypt}
 	 */
-	public decrypt() {
+	public decrypt(): Decrypt {
 		return this._decrypt
 	}
 

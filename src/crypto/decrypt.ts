@@ -1,10 +1,11 @@
 import { environment } from "../constants"
 import type { CryptoConfig } from "."
-import { deriveKeyFromPassword } from "./utils"
+import { deriveKeyFromPassword, importPrivateKey, derKeyToPem } from "./utils"
 import CryptoJS from "crypto-js"
 import nodeCrypto from "crypto"
 import type { FileMetadata, FolderMetadata } from "../types"
 import { convertTimestampToMs } from "../utils"
+import cache from "../cache"
 
 /**
  * Decrypt
@@ -98,16 +99,63 @@ export class Decrypt {
 	}
 
 	/**
-	 * Decrypt file metadata.
-	 * @date 1/31/2024 - 4:20:32 PM
+	 * Decrypt metadata using the given private key.
+	 * @date 2/3/2024 - 1:50:10 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ metadata: string }} param0
+	 * @param {{ metadata: string; privateKey: string }} param0
 	 * @param {string} param0.metadata
+	 * @param {string} param0.privateKey
+	 * @returns {Promise<string>}
+	 */
+	public async metadataPrivate({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
+		if (environment === "node") {
+			const pemKey = await derKeyToPem({ key: privateKey })
+			const decrypted = nodeCrypto.privateDecrypt(
+				{
+					key: pemKey,
+					padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
+					oaepHash: "sha512"
+				},
+				Buffer.from(metadata, "base64")
+			)
+
+			return decrypted.toString("utf-8")
+		} else if (environment === "browser") {
+			const importedPrivateKey = await importPrivateKey({ privateKey, mode: ["decrypt"] })
+			const decrypted = await globalThis.crypto.subtle.decrypt(
+				{
+					name: "RSA-OAEP"
+				},
+				importedPrivateKey,
+				Buffer.from(metadata, "base64")
+			)
+
+			return this.textDecoder.decode(decrypted)
+		} else if (environment === "reactNative") {
+			return await global.nodeThread.decryptMetadataPrivateKey({ data: metadata, privateKey })
+		}
+
+		throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${environment} environment`)
+	}
+
+	/**
+	 * Decrypt file metadata.
+	 * @date 2/3/2024 - 1:54:51 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string, key?: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.key
 	 * @returns {Promise<FileMetadata>}
 	 */
-	public async fileMetadata({ metadata }: { metadata: string }): Promise<FileMetadata> {
+	public async fileMetadata({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
+		if (this.config.metadataCache && cache.fileMetadata.has(metadata)) {
+			return cache.fileMetadata.get(metadata)!
+		}
+
 		let fileMetadata: FileMetadata = {
 			name: "",
 			size: 0,
@@ -118,7 +166,9 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		for (const masterKey of this.config.masterKeys.reverse()) {
+		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+
+		for (const masterKey of keysToUse) {
 			try {
 				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
 
@@ -130,6 +180,10 @@ export class Decrypt {
 						creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
 					}
 
+					if (this.config.metadataCache) {
+						cache.fileMetadata.set(metadata, fileMetadata)
+					}
+
 					break
 				}
 			} catch {
@@ -137,25 +191,36 @@ export class Decrypt {
 			}
 		}
 
+		if (fileMetadata.name.length === 0) {
+			throw new Error("Could not decrypt file metadata using master keys.")
+		}
+
 		return fileMetadata
 	}
 
 	/**
 	 * Decrypt folder metadata.
-	 * @date 1/31/2024 - 4:26:11 PM
+	 * @date 2/3/2024 - 1:55:17 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ metadata: string }} param0
+	 * @param {{ metadata: string, key?: string }} param0
 	 * @param {string} param0.metadata
+	 * @param {string} param0.key
 	 * @returns {Promise<FolderMetadata>}
 	 */
-	public async folderMetadata({ metadata }: { metadata: string }): Promise<FolderMetadata> {
+	public async folderMetadata({ metadata, key }: { metadata: string; key?: string }): Promise<FolderMetadata> {
+		if (this.config.metadataCache && cache.folderMetadata.has(metadata)) {
+			return cache.folderMetadata.get(metadata)!
+		}
+
 		let folderMetadata: FolderMetadata = {
 			name: ""
 		}
 
-		for (const masterKey of this.config.masterKeys.reverse()) {
+		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+
+		for (const masterKey of keysToUse) {
 			try {
 				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
 
@@ -165,11 +230,109 @@ export class Decrypt {
 						name: decrypted.name
 					}
 
+					if (this.config.metadataCache) {
+						cache.folderMetadata.set(metadata, folderMetadata)
+					}
+
 					break
 				}
 			} catch {
 				continue
 			}
+		}
+
+		if (folderMetadata.name.length === 0) {
+			throw new Error("Could not decrypt folder metadata using master keys.")
+		}
+
+		return folderMetadata
+	}
+
+	/**
+	 * Decrypt file metadata using a private key.
+	 * @date 2/3/2024 - 1:58:12 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; key?: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.key
+	 * @returns {Promise<FileMetadata>}
+	 */
+	public async fileMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
+		if (this.config.metadataCache && cache.fileMetadata.has(metadata)) {
+			return cache.fileMetadata.get(metadata)!
+		}
+
+		let fileMetadata: FileMetadata = {
+			name: "",
+			size: 0,
+			mime: "application/octet-stream",
+			key: "",
+			lastModified: Date.now(),
+			creation: undefined,
+			hash: undefined
+		}
+
+		const privateKey = key ? key : this.config.privateKey
+		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
+
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			fileMetadata = {
+				...decrypted,
+				size: parseInt(decrypted.size ?? 0),
+				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
+			}
+
+			if (this.config.metadataCache) {
+				cache.fileMetadata.set(metadata, fileMetadata)
+			}
+		}
+
+		if (fileMetadata.name.length === 0) {
+			throw new Error("Could not decrypt file metadata using private key.")
+		}
+
+		return fileMetadata
+	}
+
+	/**
+	 * Decrypt folder metadata using a private key.
+	 * @date 2/3/2024 - 1:58:05 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; key?: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.key
+	 * @returns {Promise<FolderMetadata>}
+	 */
+	public async folderMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FolderMetadata> {
+		if (this.config.metadataCache && cache.folderMetadata.has(metadata)) {
+			return cache.folderMetadata.get(metadata)!
+		}
+
+		let folderMetadata: FolderMetadata = {
+			name: ""
+		}
+
+		const privateKey = key ? key : this.config.privateKey
+		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
+
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			folderMetadata = {
+				...folderMetadata,
+				name: decrypted.name
+			}
+
+			if (this.config.metadataCache) {
+				cache.folderMetadata.set(metadata, folderMetadata)
+			}
+		}
+
+		if (folderMetadata.name.length === 0) {
+			throw new Error("Could not decrypt folder metadata using private key.")
 		}
 
 		return folderMetadata

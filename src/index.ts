@@ -15,6 +15,7 @@ export type FilenSDKConfig = {
 	authVersion?: AuthVersion
 	baseFolderUUID?: string
 	userId?: number
+	metadataCache?: boolean
 }
 
 /**
@@ -43,8 +44,18 @@ export class FilenSDK {
 		this._api = params.apiKey ? new API({ apiKey: params.apiKey }) : new API({ apiKey: "anonymous" })
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
-				? new Crypto({ masterKeys: params.masterKeys, publicKey: params.publicKey, privateKey: params.privateKey })
-				: new Crypto({ masterKeys: [], publicKey: "", privateKey: "" })
+				? new Crypto({
+						masterKeys: params.masterKeys,
+						publicKey: params.publicKey,
+						privateKey: params.privateKey,
+						metadataCache: params.metadataCache ? params.metadataCache : false
+				  })
+				: new Crypto({
+						masterKeys: [],
+						publicKey: "",
+						privateKey: "",
+						metadataCache: params.metadataCache ? params.metadataCache : false
+				  })
 	}
 
 	/**
@@ -59,8 +70,18 @@ export class FilenSDK {
 		this._api = params.apiKey ? new API({ apiKey: params.apiKey }) : new API({ apiKey: "anonymous" })
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
-				? new Crypto({ masterKeys: params.masterKeys, publicKey: params.publicKey, privateKey: params.privateKey })
-				: new Crypto({ masterKeys: [], publicKey: "", privateKey: "" })
+				? new Crypto({
+						masterKeys: params.masterKeys,
+						publicKey: params.publicKey,
+						privateKey: params.privateKey,
+						metadataCache: params.metadataCache ? params.metadataCache : false
+				  })
+				: new Crypto({
+						masterKeys: [],
+						publicKey: "",
+						privateKey: "",
+						metadataCache: params.metadataCache ? params.metadataCache : false
+				  })
 	}
 
 	/**

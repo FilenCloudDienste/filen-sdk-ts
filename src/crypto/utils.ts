@@ -1,5 +1,9 @@
 import { environment } from "../constants"
 import nodeCrypto from "crypto"
+import CryptoAPI from "crypto-api"
+import type { AuthVersion } from "../types"
+import keyutil from "js-crypto-key-utils"
+import cache from "../cache"
 
 const textEncoder = new TextEncoder()
 
@@ -39,63 +43,6 @@ export async function generateRandomString({ length }: { length: number }): Prom
 	}
 
 	throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`)
-}
-
-/**
- * Convert a buffer to base64
- * @date 1/31/2024 - 4:01:49 PM
- *
- * @export
- * @param {({ buffer: ArrayBuffer | Uint8Array | Buffer })} param0
- * @param {*} param0.buffer
- * @returns {string}
- */
-export function bufferToBase64({ buffer }: { buffer: ArrayBuffer | Uint8Array | Buffer }): string {
-	let base64 = ""
-	const encodings = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-	const bytes = new Uint8Array(buffer)
-	const byteLength = bytes.byteLength
-	const byteRemainder = byteLength % 3
-	const mainLength = byteLength - byteRemainder
-	let a, b, c, d
-	let chunk
-
-	for (let i = 0; i < mainLength; i = i + 3) {
-		chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2]
-		a = (chunk & 16515072) >> 18
-		b = (chunk & 258048) >> 12
-		c = (chunk & 4032) >> 6
-		d = chunk & 63
-		base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d]
-	}
-
-	if (byteRemainder === 1) {
-		chunk = bytes[mainLength]
-		a = (chunk & 252) >> 2
-		b = (chunk & 3) << 4
-		base64 += encodings[a] + encodings[b] + "=="
-	} else if (byteRemainder === 2) {
-		chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1]
-		a = (chunk & 64512) >> 10
-		b = (chunk & 1008) >> 4
-		c = (chunk & 15) << 2
-		base64 += encodings[a] + encodings[b] + encodings[c] + "="
-	}
-
-	return base64
-}
-
-/**
- * Convert a buffer to a hex string
- * @date 1/31/2024 - 4:03:03 PM
- *
- * @export
- * @param {({ buffer: ArrayBuffer | Uint8Array | Buffer })} param0
- * @param {*} param0.buffer
- * @returns {string}
- */
-export function bufferToHex({ buffer }: { buffer: ArrayBuffer | Uint8Array | Buffer }): string {
-	return new Uint8Array(buffer).reduce((a, b) => a + b.toString(16).padStart(2, "0"), "")
 }
 
 export type DeriveKeyFromPasswordBase = {
@@ -202,28 +149,21 @@ export async function deriveKeyFromPassword({
 }
 
 /**
- * Convert base64 to a buffer
- * @date 1/31/2024 - 4:04:21 PM
+ * Hashes an input (mostly file/folder names).
+ * @date 2/2/2024 - 6:59:32 PM
  *
  * @export
- * @param {string} base64
- * @returns {Uint8Array}
+ * @async
+ * @param {{input: string}} param0
+ * @param {string} param0.input
+ * @returns {Promise<string>}
  */
-export function base64ToBuffer(base64: string): Uint8Array {
-	const binary_string = globalThis.atob(base64)
-	const len = binary_string.length
-	const bytes = new Uint8Array(len)
-
-	for (let i = 0; i < len; i++) {
-		bytes[i] = binary_string.charCodeAt(i)
-	}
-
-	return bytes
-}
-
-export async function hashFn(input: string): Promise<string> {
+export async function hashFn({ input }: { input: string }): Promise<string> {
 	if (environment === "node") {
-		return nodeCrypto.createHash("sha1").update(nodeCrypto.createHash("sha512").update(input).digest("hex")).digest("hex")
+		return nodeCrypto
+			.createHash("sha1")
+			.update(nodeCrypto.createHash("sha512").update(textEncoder.encode(input)).digest("hex"))
+			.digest("hex")
 	} else if (environment === "browser") {
 		return Buffer.from(
 			await globalThis.crypto.subtle.digest("SHA-1", await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(input)))
@@ -235,7 +175,16 @@ export async function hashFn(input: string): Promise<string> {
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
 }
 
-export function normalizeHash(hash: string) {
+/**
+ * Normalize hash names. E.g. WebCrypto uses "SHA-512" while Node.JS's Crypto Core lib uses "sha512".
+ * @date 2/2/2024 - 6:59:42 PM
+ *
+ * @export
+ * @param {{hash: string}} param0
+ * @param {string} param0.hash
+ * @returns {string}
+ */
+export function normalizeHash({ hash }: { hash: string }): string {
 	const lowercased = hash.toLowerCase()
 
 	if (lowercased === "sha-512") {
@@ -269,13 +218,232 @@ export function normalizeHash(hash: string) {
 	return hash
 }
 
+/**
+ * Old V1 authentication password hashing. DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
+ * @date 2/2/2024 - 6:59:54 PM
+ *
+ * @export
+ * @async
+ * @param {{password: string}} param0
+ * @param {string} param0.password
+ * @returns {Promise<string>}
+ */
+export async function hashPassword({ password }: { password: string }): Promise<string> {
+	if (environment === "node") {
+		const passwordBuffer = textEncoder.encode(password)
+
+		return (
+			nodeCrypto
+				.createHash("sha512")
+				.update(
+					nodeCrypto
+						.createHash("sha384")
+						.update(nodeCrypto.createHash("sha256").update(passwordBuffer).digest("hex"))
+						.digest("hex")
+				)
+				.digest("hex") +
+			nodeCrypto
+				.createHash("sha512")
+				.update(
+					nodeCrypto.createHash("md5").update(nodeCrypto.createHash("md4").update(passwordBuffer).digest("hex")).digest("hex")
+				)
+				.digest("hex")
+		)
+	} else if (environment === "browser") {
+		return (
+			CryptoAPI.hash("sha512", CryptoAPI.hash("sha384", CryptoAPI.hash("sha256", CryptoAPI.hash("sha1", password)))) +
+			CryptoAPI.hash("sha512", CryptoAPI.hash("md5", CryptoAPI.hash("md4", CryptoAPI.hash("md2", password))))
+		)
+	} else if (environment === "reactNative") {
+		return await global.nodeThread.hashPassword({ password })
+	}
+
+	throw new Error(`crypto.utils.hashPassword not implemented for ${environment} environment`)
+}
+
+/**
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
+ * @date 2/2/2024 - 6:16:04 PM
+ *
+ * @export
+ * @async
+ * @param {{rawPassword: string, authVersion: AuthVersion, salt: string}} param0
+ * @param {string} param0.rawPassword
+ * @param {AuthVersion} param0.authVersion
+ * @param {string} param0.salt
+ * @returns {Promise<{ derivedMasterKeys: string; derivedPassword: string }>}
+ */
+export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
+	rawPassword,
+	authVersion,
+	salt
+}: {
+	rawPassword: string
+	authVersion: AuthVersion
+	salt: string
+}): Promise<{ derivedMasterKeys: string; derivedPassword: string }> {
+	if (authVersion === 1) {
+		// DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
+		const derivedPassword = await hashPassword({ password: rawPassword })
+		const derivedMasterKeys = await hashFn({ input: rawPassword })
+
+		return { derivedMasterKeys, derivedPassword }
+	} else if (authVersion === 2) {
+		const derivedKey = await deriveKeyFromPassword({
+			password: rawPassword,
+			salt,
+			iterations: 200000,
+			hash: "sha512",
+			bitLength: 512,
+			returnHex: true
+		})
+		let derivedPassword = derivedKey.substring(derivedKey.length / 2, derivedKey.length)
+		const derivedMasterKeys = derivedKey.substring(0, derivedKey.length / 2)
+
+		if (environment === "node") {
+			derivedPassword = nodeCrypto.createHash("sha512").update(textEncoder.encode(derivedPassword)).digest("hex")
+		} else if (environment === "browser") {
+			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(derivedPassword))).toString(
+				"hex"
+			)
+		} else if (environment === "reactNative") {
+			derivedPassword = CryptoAPI.hash("sha512", derivedPassword)
+		} else {
+			throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${environment} environment`)
+		}
+
+		return { derivedMasterKeys, derivedPassword }
+	} else {
+		throw new Error(`Invalid authVersion: ${authVersion}`)
+	}
+}
+
+/**
+ * Converts a public/private key in DER format to PEM.
+ * @date 2/2/2024 - 7:00:12 PM
+ *
+ * @export
+ * @async
+ * @param {{key: string}} param0
+ * @param {string} param0.key
+ * @returns {Promise<string>}
+ */
+export async function derKeyToPem({ key }: { key: string }): Promise<string> {
+	const importedKey = new keyutil.Key("der", Buffer.from(key, "base64"))
+
+	return (await importedKey.export("pem")).toString()
+}
+
+/**
+ * Imports a base64 encoded SPKI public key to WebCrypto's format.
+ * @date 2/2/2024 - 7:04:12 PM
+ *
+ * @export
+ * @async
+ * @param {{ publicKey: string; mode?: KeyUsage[] }} param0
+ * @param {string} param0.publicKey
+ * @param {{}} [param0.mode=["encrypt"]]
+ * @returns {Promise<CryptoKey>}
+ */
+export async function importPublicKey({ publicKey, mode = ["encrypt"] }: { publicKey: string; mode?: KeyUsage[] }): Promise<CryptoKey> {
+	if (environment !== "browser") {
+		throw new Error(`crypto.utils.importPublicKey not implemented for ${environment} environment`)
+	}
+
+	const cacheKey = `${publicKey}:${mode.join(":")}`
+
+	if (cache.importPublicKey.has(cacheKey)) {
+		return cache.importPublicKey.get(cacheKey)!
+	}
+
+	const importedPublicKey = await globalThis.crypto.subtle.importKey(
+		"spki",
+		Buffer.from(publicKey, "base64"),
+		{
+			name: "RSA-OAEP",
+			hash: "SHA-512"
+		},
+		true,
+		mode
+	)
+
+	cache.importPublicKey.set(cacheKey, importedPublicKey)
+
+	return importedPublicKey
+}
+
+/**
+ * Imports a base64 PCS8 private key to WebCrypto's format.
+ * @date 2/3/2024 - 1:44:39 AM
+ *
+ * @export
+ * @async
+ * @param {{ privateKey: string; mode?: KeyUsage[] }} param0
+ * @param {string} param0.privateKey
+ * @param {{}} [param0.mode=["encrypt"]]
+ * @returns {Promise<CryptoKey>}
+ */
+export async function importPrivateKey({ privateKey, mode = ["encrypt"] }: { privateKey: string; mode?: KeyUsage[] }): Promise<CryptoKey> {
+	if (environment !== "browser") {
+		throw new Error(`crypto.utils.importPublicKey not implemented for ${environment} environment`)
+	}
+
+	const cacheKey = `${privateKey}:${mode.join(":")}`
+
+	if (cache.importPrivateKey.has(cacheKey)) {
+		return cache.importPrivateKey.get(cacheKey)!
+	}
+
+	const importedPrivateKey = await globalThis.crypto.subtle.importKey(
+		"pkcs8",
+		Buffer.from(privateKey, "base64"),
+		{
+			name: "RSA-OAEP",
+			hash: "SHA-512"
+		},
+		true,
+		mode
+	)
+
+	cache.importPrivateKey.set(cacheKey, importedPrivateKey)
+
+	return importedPrivateKey
+}
+
+/**
+ * Generates the hash hex digest of a Buffer/Uint8Array.
+ * @date 2/3/2024 - 2:03:24 AM
+ *
+ * @export
+ * @async
+ * @param {({buffer: Uint8Array, algorithm: "sha256" | "sha512" | "md5"})} param0
+ * @param {Uint8Array} param0.buffer
+ * @param {("sha256" | "sha512" | "md5")} param0.algorithm
+ * @returns {Promise<string>}
+ */
+export async function bufferToHash({ buffer, algorithm }: { buffer: Uint8Array; algorithm: "sha256" | "sha512" | "md5" }): Promise<string> {
+	if (environment === "node") {
+		return nodeCrypto.createHash(algorithm).update(buffer).digest("hex")
+	} else if (environment === "browser") {
+		const webcryptoAlgorithm = algorithm === "sha512" ? "SHA-512" : algorithm === "sha256" ? "SHA-256" : "MD-5"
+		const digest = await globalThis.crypto.subtle.digest(webcryptoAlgorithm, buffer)
+
+		return Buffer.from(digest).toString("hex")
+	}
+
+	throw new Error(`crypto.utils.bufferToHash not implemented for ${environment} environment`)
+}
+
 export const utils = {
 	generateRandomString,
-	bufferToBase64,
-	bufferToHex,
 	deriveKeyFromPassword,
-	base64ToBuffer,
-	hashFn
+	hashFn,
+	generatePasswordAndMasterKeyBasedOnAuthVersion,
+	hashPassword,
+	derKeyToPem,
+	importPublicKey,
+	importPrivateKey,
+	bufferToHash
 }
 
 export default utils
