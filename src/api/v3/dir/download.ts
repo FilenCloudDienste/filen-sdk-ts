@@ -111,8 +111,8 @@ export class DirDownload {
 											bitLength: 512,
 											returnHex: true
 									  })
-									: await hashFn(linkPassword.length === 0 ? "empty" : linkPassword)
-								: await hashFn("empty")
+									: await hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
+								: await hashFn({ input: "empty" })
 				  }
 
 		const response = await this.apiClient.request<DirDownloadResponse>({

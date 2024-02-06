@@ -7,6 +7,7 @@ export type CryptoConfig = {
 	publicKey: string
 	privateKey: string
 	metadataCache: boolean
+	tmpPath: string
 }
 
 /**

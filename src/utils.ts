@@ -1,3 +1,5 @@
+import pathModule from "path"
+
 /**
  * "Sleep" for given milliseconds.
  * @date 1/31/2024 - 4:27:48 PM
@@ -29,9 +31,22 @@ export function convertTimestampToMs(timestamp: number): number {
 	return Math.floor(timestamp * 1000)
 }
 
+/**
+ * Normalizes a path to UNIX/Windows standards.
+ * @date 2/5/2024 - 9:13:01 PM
+ *
+ * @export
+ * @param {string} path
+ * @returns {string}
+ */
+export function normalizePath(path: string): string {
+	return pathModule.normalize(path.split("file://").join("").split("file:/").join("").split("file:").join(""))
+}
+
 export const utils = {
 	sleep,
-	convertTimestampToMs
+	convertTimestampToMs,
+	normalizePath
 }
 
 export default utils

@@ -14,7 +14,6 @@ import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicK
 export class Encrypt {
 	private readonly config: CryptoConfig
 	private readonly textEncoder = new TextEncoder()
-	private readonly textDecoder = new TextDecoder()
 
 	/**
 	 * Creates an instance of Encrypt.
@@ -129,6 +128,96 @@ export class Encrypt {
 		}
 
 		throw new Error(`crypto.encrypt.metadataPublic not implemented for ${environment} environment`)
+	}
+
+	/**
+	 * Encrypt a chat message using the conversation encryption key.
+	 * @date 2/6/2024 - 3:01:09 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ message: string; key: string }} param0
+	 * @param {string} param0.message
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async chatMessage({ message, key }: { message: string; key: string }): Promise<string> {
+		return await this.metadata({ metadata: JSON.stringify({ message }), key })
+	}
+
+	/**
+	 * Encrypt note content using the note's encryption key.
+	 * @date 2/6/2024 - 3:02:23 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ content: string; key: string }} param0
+	 * @param {string} param0.content
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteContent({ content, key }: { content: string; key: string }): Promise<string> {
+		return await this.metadata({ metadata: JSON.stringify({ content }), key })
+	}
+
+	/**
+	 * Encrypt the note's title using the note's encryption key.
+	 * @date 2/6/2024 - 3:02:44 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ title: string; key: string }} param0
+	 * @param {string} param0.title
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteTitle({ title, key }: { title: string; key: string }): Promise<string> {
+		return await this.metadata({ metadata: JSON.stringify({ title }), key })
+	}
+
+	/**
+	 * Encrypt the note's preview using the note's encryption key.
+	 * @date 2/6/2024 - 3:02:56 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ preview: string; key: string }} param0
+	 * @param {string} param0.preview
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async notePreview({ preview, key }: { preview: string; key: string }): Promise<string> {
+		return await this.metadata({ metadata: JSON.stringify({ preview }), key })
+	}
+
+	/**
+	 * Encrypt a tag's name using the given key.
+	 * @date 2/6/2024 - 3:03:06 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ name: string; key: string }} param0
+	 * @param {string} param0.name
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteTagName({ name, key }: { name: string; key: string }): Promise<string> {
+		return await this.metadata({ metadata: JSON.stringify({ name }), key })
+	}
+
+	/**
+	 * Encrypt the conversation name using the conversation encryption key.
+	 * @date 2/6/2024 - 3:03:45 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ name: string; key: string }} param0
+	 * @param {string} param0.name
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async chatConversationName({ name, key }: { name: string; key: string }): Promise<string> {
+		return await this.metadata({ metadata: JSON.stringify({ name }), key })
 	}
 }
 

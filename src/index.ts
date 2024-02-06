@@ -3,6 +3,8 @@ import API from "./api"
 import type { AuthVersion } from "./types"
 import Crypto from "./crypto"
 import utils from "./utils"
+import { environment } from "./constants"
+import os from "os"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -16,6 +18,7 @@ export type FilenSDKConfig = {
 	baseFolderUUID?: string
 	userId?: number
 	metadataCache?: boolean
+	tmpPath?: string
 }
 
 /**
@@ -48,13 +51,17 @@ export class FilenSDK {
 						masterKeys: params.masterKeys,
 						publicKey: params.publicKey,
 						privateKey: params.privateKey,
-						metadataCache: params.metadataCache ? params.metadataCache : false
+						metadataCache: params.metadataCache ? params.metadataCache : false,
+						tmpPath:
+							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
 				  })
 				: new Crypto({
 						masterKeys: [],
 						publicKey: "",
 						privateKey: "",
-						metadataCache: params.metadataCache ? params.metadataCache : false
+						metadataCache: params.metadataCache ? params.metadataCache : false,
+						tmpPath:
+							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
 				  })
 	}
 
@@ -74,13 +81,17 @@ export class FilenSDK {
 						masterKeys: params.masterKeys,
 						publicKey: params.publicKey,
 						privateKey: params.privateKey,
-						metadataCache: params.metadataCache ? params.metadataCache : false
+						metadataCache: params.metadataCache ? params.metadataCache : false,
+						tmpPath:
+							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
 				  })
 				: new Crypto({
 						masterKeys: [],
 						publicKey: "",
 						privateKey: "",
-						metadataCache: params.metadataCache ? params.metadataCache : false
+						metadataCache: params.metadataCache ? params.metadataCache : false,
+						tmpPath:
+							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
 				  })
 	}
 

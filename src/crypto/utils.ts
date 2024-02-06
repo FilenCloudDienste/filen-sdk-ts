@@ -1,6 +1,6 @@
 import { environment } from "../constants"
 import nodeCrypto from "crypto"
-import CryptoAPI from "crypto-api"
+import CryptoAPI from "crypto-api-v1"
 import type { AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
@@ -8,7 +8,7 @@ import cache from "../cache"
 const textEncoder = new TextEncoder()
 
 /**
- * Generate a cryptographically secure random string of given length
+ * Generate a cryptographically secure random string of given length.
  * @date 1/31/2024 - 4:01:20 PM
  *
  * @export
@@ -72,7 +72,7 @@ export async function deriveKeyFromPassword({
 }: DeriveKeyFromPasswordBase & { returnHex: true }): Promise<string>
 
 /**
- * Derive a key from given inputs using PBKDF2
+ * Derive a key from given inputs using PBKDF2.
  * @date 2/1/2024 - 6:14:25 PM
  *
  * @export
@@ -434,6 +434,71 @@ export async function bufferToHash({ buffer, algorithm }: { buffer: Uint8Array; 
 	throw new Error(`crypto.utils.bufferToHash not implemented for ${environment} environment`)
 }
 
+/**
+ * Generate an asymmetric public/private keypair.
+ * @date 2/6/2024 - 3:24:43 AM
+ *
+ * @export
+ * @async
+ * @returns {Promise<{ publicKey: string; privateKey: string }>}
+ */
+export async function generateKeyPair(): Promise<{ publicKey: string; privateKey: string }> {
+	if (environment === "node") {
+		return await new Promise((resolve, reject) => {
+			nodeCrypto.generateKeyPair(
+				"rsa",
+				{
+					modulusLength: 4096,
+					publicKeyEncoding: {
+						type: "spki",
+						format: "der"
+					},
+					privateKeyEncoding: {
+						type: "pkcs8",
+						format: "der"
+					},
+					publicExponent: 0x10001
+				},
+				(err, publicKey, privateKey) => {
+					if (err) {
+						reject(err)
+
+						return
+					}
+
+					resolve({
+						publicKey: publicKey.toString("base64"),
+						privateKey: privateKey.toString("base64")
+					})
+				}
+			)
+		})
+	} else if (environment === "browser") {
+		const keyPair = await globalThis.crypto.subtle.generateKey(
+			{
+				name: "RSA-OAEP",
+				modulusLength: 4096,
+				publicExponent: new Uint8Array([1, 0, 1]),
+				hash: "SHA-512"
+			},
+			true,
+			["encrypt", "decrypt"]
+		)
+
+		const publicKey = await globalThis.crypto.subtle.exportKey("spki", keyPair.publicKey)
+		const privateKey = await globalThis.crypto.subtle.exportKey("pkcs8", keyPair.privateKey)
+
+		return {
+			publicKey: Buffer.from(publicKey).toString("base64"),
+			privateKey: Buffer.from(privateKey).toString("base64")
+		}
+	} else if (environment === "reactNative") {
+		return await global.nodeThread.generateKeypair()
+	}
+
+	throw new Error(`crypto.utils.generateKeyPair not implemented for ${environment} environment`)
+}
+
 export const utils = {
 	generateRandomString,
 	deriveKeyFromPassword,
@@ -443,7 +508,8 @@ export const utils = {
 	derKeyToPem,
 	importPublicKey,
 	importPrivateKey,
-	bufferToHash
+	bufferToHash,
+	generateKeyPair
 }
 
 export default utils

@@ -12,6 +12,8 @@ export type FilenSDKConfig = {
     authVersion?: AuthVersion;
     baseFolderUUID?: string;
     userId?: number;
+    metadataCache?: boolean;
+    tmpPath?: string;
 };
 /**
  * FilenSDK
@@ -102,6 +104,7 @@ export declare class FilenSDK {
     readonly utils: {
         sleep: typeof import("./utils").sleep;
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
+        normalizePath: typeof import("./utils").normalizePath;
     };
 }
 export default FilenSDK;

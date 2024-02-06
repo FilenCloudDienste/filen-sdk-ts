@@ -337,6 +337,427 @@ export class Decrypt {
 
 		return folderMetadata
 	}
+
+	/**
+	 * Decrypt file metadata inside a public link.
+	 * @date 2/6/2024 - 3:05:42 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; linkKey: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.linkKey
+	 * @returns {Promise<FileMetadata>}
+	 */
+	public async fileMetadataLink({ metadata, linkKey }: { metadata: string; linkKey: string }): Promise<FileMetadata> {
+		if (this.config.metadataCache && cache.fileMetadata.has(metadata)) {
+			return cache.fileMetadata.get(metadata)!
+		}
+
+		let fileMetadata: FileMetadata = {
+			name: "",
+			size: 0,
+			mime: "application/octet-stream",
+			key: "",
+			lastModified: Date.now(),
+			creation: undefined,
+			hash: undefined
+		}
+
+		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
+
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			fileMetadata = {
+				...decrypted,
+				size: parseInt(decrypted.size ?? 0),
+				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
+			}
+
+			if (this.config.metadataCache) {
+				cache.fileMetadata.set(metadata, fileMetadata)
+			}
+		}
+
+		if (fileMetadata.name.length === 0) {
+			throw new Error("Could not decrypt file metadata (link) using given key.")
+		}
+
+		return fileMetadata
+	}
+
+	/**
+	 * Decrypt folder metadata inside a public link.
+	 * @date 2/6/2024 - 3:07:06 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; linkKey: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.linkKey
+	 * @returns {Promise<FolderMetadata>}
+	 */
+	public async folderMetadataLink({ metadata, linkKey }: { metadata: string; linkKey: string }): Promise<FolderMetadata> {
+		if (this.config.metadataCache && cache.folderMetadata.has(metadata)) {
+			return cache.folderMetadata.get(metadata)!
+		}
+
+		let folderMetadata: FolderMetadata = {
+			name: ""
+		}
+
+		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
+
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			folderMetadata = {
+				...folderMetadata,
+				name: decrypted.name
+			}
+
+			if (this.config.metadataCache) {
+				cache.folderMetadata.set(metadata, folderMetadata)
+			}
+		}
+
+		if (folderMetadata.name.length === 0) {
+			throw new Error("Could not decrypt folder metadata (link) using given key.")
+		}
+
+		return folderMetadata
+	}
+
+	/**
+	 * Decrypt a public link folder encryption key (using given key or master keys).
+	 * @date 2/6/2024 - 3:09:37 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; key?: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async folderLinkKey({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
+		if (this.config.metadataCache && cache.folderLinkKey.has(metadata)) {
+			return cache.folderLinkKey.get(metadata)!
+		}
+
+		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+
+		for (const masterKey of keysToUse) {
+			try {
+				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
+
+				if (typeof decrypted === "string" && decrypted.length > 0) {
+					if (this.config.metadataCache) {
+						cache.folderLinkKey.set(metadata, decrypted)
+					}
+
+					return decrypted
+				}
+			} catch {
+				continue
+			}
+		}
+
+		throw new Error("Could not decrypt folder link key using given keys.")
+	}
+
+	/**
+	 * Decrypts a chat encryption (symmetric) key.
+	 * @date 2/6/2024 - 12:54:25 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{metadata: string, privateKey: string}} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.privateKey
+	 * @returns {Promise<string>}
+	 */
+	public async chatKey({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
+		if (this.config.metadataCache && cache.chatKey.has(metadata)) {
+			return cache.chatKey.get(metadata)!
+		}
+
+		const decrypted = await this.metadataPrivate({ metadata, privateKey })
+		const parsed = JSON.parse(decrypted)
+
+		if (typeof parsed.key !== "string") {
+			throw new Error("Could not decrypt chat key, malformed decrypted metadata")
+		}
+
+		if (this.config.metadataCache) {
+			cache.chatKey.set(metadata, parsed.key)
+		}
+
+		return parsed.key
+	}
+
+	/**
+	 * Decrypts a chat message with the given participant metadata (participant metadata includes the symmetric chat encryption key).
+	 * @date 2/6/2024 - 12:57:06 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		message: string
+	 * 		metadata: string
+	 * 		privateKey: string
+	 * 	}} param0
+	 * @param {string} param0.message
+	 * @param {string} param0.metadata
+	 * @param {string} param0.privateKey
+	 * @returns {Promise<string>}
+	 */
+	public async chatMessage({
+		message,
+		metadata,
+		privateKey
+	}: {
+		message: string
+		metadata: string
+		privateKey: string
+	}): Promise<string> {
+		const keyDecrypted = await this.chatKey({ metadata, privateKey })
+		const messageDecrypted = await this.metadata({ metadata: message, key: keyDecrypted })
+		const parsedMessage = JSON.parse(messageDecrypted)
+
+		if (typeof parsedMessage.message !== "string") {
+			throw new Error("Could not decrypt chat message, malformed decrypted metadata")
+		}
+
+		return parsedMessage.message
+	}
+
+	/**
+	 * Decrypts the symmetric note encryption key with the given owner metadata.
+	 * @date 2/6/2024 - 1:01:59 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ metadata: string; key?: string }} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteKeyOwner({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
+		if (this.config.metadataCache && cache.noteKeyOwner.has(metadata)) {
+			return cache.noteKeyOwner.get(metadata)!
+		}
+
+		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+
+		for (const masterKey of keysToUse) {
+			try {
+				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
+
+				if (decrypted && typeof decrypted.key === "string" && decrypted.key.length > 0) {
+					if (this.config.metadataCache) {
+						cache.noteKeyOwner.set(metadata, decrypted.key)
+					}
+
+					return decrypted.key
+				}
+			} catch {
+				continue
+			}
+		}
+
+		throw new Error("Could not decrypt note key (owner) using given metadata and keys")
+	}
+
+	/**
+	 * Decrypt a symmetric note encryption key using participant metadata and their private key.
+	 * @date 2/6/2024 - 2:47:34 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{metadata: string, privateKey: string}} param0
+	 * @param {string} param0.metadata
+	 * @param {string} param0.privateKey
+	 * @returns {Promise<string>}
+	 */
+	public async noteKeyParticipant({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
+		if (this.config.metadataCache && cache.noteKeyParticipant.has(metadata)) {
+			return cache.noteKeyParticipant.get(metadata)!
+		}
+
+		const decrypted = await this.metadataPrivate({ metadata, privateKey })
+		const parsed = JSON.parse(decrypted)
+
+		if (typeof parsed.key !== "string") {
+			throw new Error("Could not decrypt note key of participant, malformed decrypted metadata")
+		}
+
+		if (this.config.metadataCache) {
+			cache.noteKeyParticipant.set(metadata, parsed.key)
+		}
+
+		return parsed.key
+	}
+
+	/**
+	 * Decrypt note content using the note's symmetric encryption key.
+	 * @date 2/6/2024 - 2:50:15 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{content: string, key: string}} param0
+	 * @param {string} param0.content
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteContent({ content, key }: { content: string; key: string }): Promise<string> {
+		const decrypted = await this.metadata({ metadata: content, key })
+		const parsed = JSON.parse(decrypted)
+
+		if (typeof parsed.content !== "string") {
+			throw new Error("Could not decrypt note content, malformed decrypted metadata")
+		}
+
+		return parsed.content
+	}
+
+	/**
+	 * Decrypt a note's title using the note's symmetric encryption key.
+	 * @date 2/6/2024 - 2:52:02 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{title: string, key: string}} param0
+	 * @param {string} param0.title
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteTitle({ title, key }: { title: string; key: string }): Promise<string> {
+		if (this.config.metadataCache && cache.noteTitle.has(title)) {
+			return cache.noteTitle.get(title)!
+		}
+
+		const decrypted = await this.metadata({ metadata: title, key })
+		const parsed = JSON.parse(decrypted)
+
+		if (typeof parsed.title !== "string") {
+			throw new Error("Could not decrypt note title, malformed decrypted metadata")
+		}
+
+		if (this.config.metadataCache) {
+			cache.noteTitle.set(title, parsed.title)
+		}
+
+		return parsed.title
+	}
+
+	/**
+	 * Decrypt a note's preview using the note's symmetric encryption key.
+	 * @date 2/6/2024 - 2:53:35 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ preview: string; key: string }} param0
+	 * @param {string} param0.preview
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async notePreview({ preview, key }: { preview: string; key: string }): Promise<string> {
+		if (this.config.metadataCache && cache.notePreview.has(preview)) {
+			return cache.notePreview.get(preview)!
+		}
+
+		const decrypted = await this.metadata({ metadata: preview, key })
+		const parsed = JSON.parse(decrypted)
+
+		if (typeof parsed.preview !== "string") {
+			throw new Error("Could not decrypt note preview, malformed decrypted metadata")
+		}
+
+		if (this.config.metadataCache) {
+			cache.notePreview.set(preview, parsed.preview)
+		}
+
+		return parsed.preview
+	}
+
+	/**
+	 * Decrypt a note tag name using the master keys or a given key.
+	 * @date 2/6/2024 - 2:56:38 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{name: string, key?: string}} param0
+	 * @param {string} param0.name
+	 * @param {string} param0.key
+	 * @returns {Promise<string>}
+	 */
+	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
+		if (this.config.metadataCache && cache.noteTagName.has(name)) {
+			return cache.noteTagName.get(name)!
+		}
+
+		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+
+		for (const masterKey of keysToUse) {
+			try {
+				const decrypted = JSON.parse(await this.metadata({ metadata: name, key: masterKey }))
+
+				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+					if (this.config.metadataCache) {
+						cache.noteTagName.set(name, decrypted.name)
+					}
+
+					return decrypted.name
+				}
+			} catch {
+				continue
+			}
+		}
+
+		throw new Error("Could not decrypt note tag name using given metadata and keys")
+	}
+
+	/**
+	 * Decrypt a chat conversation name using the participants metadata and private key.
+	 * @date 2/6/2024 - 2:59:41 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		name: string
+	 * 		metadata: string
+	 * 		privateKey: string
+	 * 	}} param0
+	 * @param {string} param0.name
+	 * @param {string} param0.metadata
+	 * @param {string} param0.privateKey
+	 * @returns {Promise<string>}
+	 */
+	public async chatConversationName({
+		name,
+		metadata,
+		privateKey
+	}: {
+		name: string
+		metadata: string
+		privateKey: string
+	}): Promise<string> {
+		if (this.config.metadataCache && cache.chatConversationName.has(name)) {
+			return cache.chatConversationName.get(name)!
+		}
+
+		const keyDecrypted = await this.chatKey({ metadata, privateKey })
+		const nameDecrypted = await this.metadata({ metadata: name, key: keyDecrypted })
+		const parsed = JSON.parse(nameDecrypted)
+
+		if (typeof parsed.name !== "string") {
+			throw new Error("Could not decrypt chat conversation name, malformed decrypted metadata")
+		}
+
+		if (this.config.metadataCache) {
+			cache.chatConversationName.set(name, parsed.name)
+		}
+
+		return parsed.name
+	}
 }
 
 export default Decrypt

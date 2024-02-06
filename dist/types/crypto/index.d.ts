@@ -4,6 +4,8 @@ export type CryptoConfig = {
     masterKeys: string[];
     publicKey: string;
     privateKey: string;
+    metadataCache: boolean;
+    tmpPath: string;
 };
 /**
  * Crypto
@@ -44,11 +46,15 @@ export declare class Crypto {
     decrypt(): Decrypt;
     readonly utils: {
         generateRandomString: typeof import("./utils").generateRandomString;
-        bufferToBase64: typeof import("./utils").bufferToBase64;
-        bufferToHex: typeof import("./utils").bufferToHex;
         deriveKeyFromPassword: typeof import("./utils").deriveKeyFromPassword;
-        base64ToBuffer: typeof import("./utils").base64ToBuffer;
         hashFn: typeof import("./utils").hashFn;
+        generatePasswordAndMasterKeyBasedOnAuthVersion: typeof import("./utils").generatePasswordAndMasterKeyBasedOnAuthVersion;
+        hashPassword: typeof import("./utils").hashPassword;
+        derKeyToPem: typeof import("./utils").derKeyToPem;
+        importPublicKey: typeof import("./utils").importPublicKey;
+        importPrivateKey: typeof import("./utils").importPrivateKey;
+        bufferToHash: typeof import("./utils").bufferToHash;
+        generateKeyPair: typeof import("./utils").generateKeyPair;
     };
 }
 export default Crypto;
