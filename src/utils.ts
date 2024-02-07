@@ -1,4 +1,6 @@
 import pathModule from "path"
+import { v4 as _uuidv4 } from "uuid"
+import { environment } from "./constants"
 
 /**
  * "Sleep" for given milliseconds.
@@ -43,10 +45,37 @@ export function normalizePath(path: string): string {
 	return pathModule.normalize(path.split("file://").join("").split("file:/").join("").split("file:").join(""))
 }
 
+/**
+ * Generates a V4 UUID.
+ * @date 2/6/2024 - 9:22:54 PM
+ *
+ * @export
+ * @async
+ * @returns {Promise<string>}
+ */
+export async function uuidv4(): Promise<string> {
+	if (environment === "reactNative") {
+		return await global.nodeThread.uuidv4()
+	}
+
+	return _uuidv4()
+}
+
+export function Uint8ArrayConcat(a1: Uint8Array, a2: Uint8Array): Uint8Array {
+	const mergedArray = new Uint8Array(a1.length + a2.length)
+
+	mergedArray.set(a1)
+	mergedArray.set(a2, a1.length)
+
+	return mergedArray
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
-	normalizePath
+	normalizePath,
+	uuidv4,
+	Uint8ArrayConcat
 }
 
 export default utils

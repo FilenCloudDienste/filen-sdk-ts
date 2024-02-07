@@ -70,27 +70,64 @@ export declare class FilenSDK {
      * @returns {*}
      */
     api(version: number): {
-        health: () => import("./api/v3/health").Health;
+        health: () => Promise<"OK">;
         dir: () => {
-            content: () => import("./api/v3/dir/content").DirContent;
-            download: () => import("./api/v3/dir/download").DirDownload;
-            shared: () => import("./api/v3/dir/shared").DirShared;
-            linked: () => import("./api/v3/dir/linked").DirLinked;
+            content: (params_0: {
+                uuid: string;
+                dirsOnly?: boolean | undefined;
+            }) => Promise<import("./api/v3/dir/content").DirContentResponse>;
+            download: (params_0: {
+                uuid: string;
+                type?: import("./api/v3/dir/download").DirDownloadType | undefined;
+                linkUUID?: string | undefined;
+                linkHasPassword?: boolean | undefined;
+                linkPassword?: string | undefined;
+                linkSalt?: string | undefined;
+            }) => Promise<import("./api/v3/dir/download").DirDownloadResponse>;
+            shared: (params_0: {
+                uuid: string;
+            }) => Promise<import("./api/v3/dir/shared").DirSharedResponse>;
+            linked: (params_0: {
+                uuid: string;
+            }) => Promise<import("./api/v3/dir/linked").DirLinkedResponse>;
         };
         auth: () => {
-            info: () => import("./api/v3/auth/info").AuthInfo;
+            info: (params_0: {
+                email: string;
+            }) => Promise<import("./api/v3/auth/info").AuthInfoResponse>;
         };
-        login: () => import("./api/v3/login").Login;
+        login: (params_0: {
+            email: string;
+            password: string;
+            twoFactorCode?: string | undefined;
+            authVersion: AuthVersion;
+        }) => Promise<import("./api/v3/login").LoginResponse>;
         user: () => {
-            info: () => import("./api/v3/user/info").UserInfo;
-            baseFolder: () => import("./api/v3/user/baseFolder").UserBaseFolder;
+            info: () => Promise<import("./api/v3/user/info").UserInfoResponse>;
+            baseFolder: () => Promise<import("./api/v3/user/baseFolder").UserBaseFolderResponse>;
         };
         shared: () => {
-            in: () => import("./api/v3/shared/in").SharedIn;
-            out: () => import("./api/v3/shared/out").SharedOut;
+            in: (params?: {
+                uuid?: string | undefined;
+            } | undefined) => Promise<import("./api/v3/shared/in").SharedInResponse>;
+            out: (params?: {
+                uuid?: string | undefined;
+                receiverId?: number | undefined;
+            } | undefined) => Promise<import("./api/v3/shared/out").SharedOutResponse>;
         };
         upload: () => {
-            done: () => import("./api/v3/upload/done").UploadDone;
+            done: (params_0: {
+                uuid: string;
+                name: string;
+                nameHashed: string;
+                size: string;
+                chunks: number;
+                mime: string;
+                rm: string;
+                metadata: string;
+                version: import("./types").FileEncryptionVersion;
+                uploadKey: string;
+            }) => Promise<import("./api/v3/upload/done").UploadDoneResponse>;
         };
     };
     /**
@@ -105,6 +142,8 @@ export declare class FilenSDK {
         sleep: typeof import("./utils").sleep;
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
         normalizePath: typeof import("./utils").normalizePath;
+        uuidv4: typeof import("./utils").uuidv4;
+        Uint8ArrayConcat: typeof import("./utils").Uint8ArrayConcat;
     };
 }
 export default FilenSDK;

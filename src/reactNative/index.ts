@@ -25,5 +25,6 @@ declare global {
 		hashPassword: (params: { password: string }) => Promise<string>
 		hashFn: (params: { string: string }) => Promise<string>
 		generateRandomString: (params: { charLength?: number }) => Promise<string>
+		uuidv4: () => Promise<string>
 	}
 }

@@ -126,15 +126,7 @@ export async function deriveKeyFromPassword({
 					name: hash === "sha512" ? "SHA-512" : hash
 				}
 			},
-			await globalThis.crypto.subtle.importKey(
-				"raw",
-				textEncoder.encode(password),
-				{
-					name: "PBKDF2"
-				},
-				false,
-				["deriveBits"]
-			),
+			await importPBKDF2Key({ key: password, mode: ["deriveBits"] }),
 			bitLength
 		)
 
@@ -343,9 +335,18 @@ export async function derKeyToPem({ key }: { key: string }): Promise<string> {
  * @param {{ publicKey: string; mode?: KeyUsage[] }} param0
  * @param {string} param0.publicKey
  * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
  * @returns {Promise<CryptoKey>}
  */
-export async function importPublicKey({ publicKey, mode = ["encrypt"] }: { publicKey: string; mode?: KeyUsage[] }): Promise<CryptoKey> {
+export async function importPublicKey({
+	publicKey,
+	mode = ["encrypt"],
+	keyCache = true
+}: {
+	publicKey: string
+	mode?: KeyUsage[]
+	keyCache?: boolean
+}): Promise<CryptoKey> {
 	if (environment !== "browser") {
 		throw new Error(`crypto.utils.importPublicKey not implemented for ${environment} environment`)
 	}
@@ -367,7 +368,9 @@ export async function importPublicKey({ publicKey, mode = ["encrypt"] }: { publi
 		mode
 	)
 
-	cache.importPublicKey.set(cacheKey, importedPublicKey)
+	if (keyCache) {
+		cache.importPublicKey.set(cacheKey, importedPublicKey)
+	}
 
 	return importedPublicKey
 }
@@ -381,11 +384,20 @@ export async function importPublicKey({ publicKey, mode = ["encrypt"] }: { publi
  * @param {{ privateKey: string; mode?: KeyUsage[] }} param0
  * @param {string} param0.privateKey
  * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
  * @returns {Promise<CryptoKey>}
  */
-export async function importPrivateKey({ privateKey, mode = ["encrypt"] }: { privateKey: string; mode?: KeyUsage[] }): Promise<CryptoKey> {
+export async function importPrivateKey({
+	privateKey,
+	mode = ["encrypt"],
+	keyCache = true
+}: {
+	privateKey: string
+	mode?: KeyUsage[]
+	keyCache?: boolean
+}): Promise<CryptoKey> {
 	if (environment !== "browser") {
-		throw new Error(`crypto.utils.importPublicKey not implemented for ${environment} environment`)
+		throw new Error(`crypto.utils.importPrivateKey not implemented for ${environment} environment`)
 	}
 
 	const cacheKey = `${privateKey}:${mode.join(":")}`
@@ -405,9 +417,99 @@ export async function importPrivateKey({ privateKey, mode = ["encrypt"] }: { pri
 		mode
 	)
 
-	cache.importPrivateKey.set(cacheKey, importedPrivateKey)
+	if (keyCache) {
+		cache.importPrivateKey.set(cacheKey, importedPrivateKey)
+	}
 
 	return importedPrivateKey
+}
+
+/**
+ * Imports a raw AES-GCM key to WebCrypto's fromat.
+ * @date 2/6/2024 - 3:59:05 PM
+ *
+ * @export
+ * @async
+ * @param {{ key: string; mode?: KeyUsage[] }} param0
+ * @param {string} param0.key
+ * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
+ * @returns {Promise<CryptoKey>}
+ */
+export async function importRawAESGCMKey({
+	key,
+	mode = ["encrypt"],
+	keyCache = true
+}: {
+	key: string
+	mode?: KeyUsage[]
+	keyCache?: boolean
+}): Promise<CryptoKey> {
+	if (environment !== "browser") {
+		throw new Error(`crypto.utils.importRawAESGCMKey not implemented for ${environment} environment`)
+	}
+
+	const cacheKey = `${key}:${mode.join(":")}`
+
+	if (cache.importRawAESGCMKey.has(cacheKey)) {
+		return cache.importRawAESGCMKey.get(cacheKey)!
+	}
+
+	const importedRawKey = await globalThis.crypto.subtle.importKey("raw", textEncoder.encode(key), "AES-GCM", false, mode)
+
+	if (keyCache) {
+		cache.importRawAESGCMKey.set(cacheKey, importedRawKey)
+	}
+
+	return importedRawKey
+}
+
+/**
+ * Imports a PBKDF2 key into WebCrypto's format.
+ * @date 2/6/2024 - 8:56:57 PM
+ *
+ * @export
+ * @async
+ * @param {{ key: string; mode?: KeyUsage[], keyCache?: boolean }} param0
+ * @param {string} param0.key
+ * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
+ * @returns {Promise<CryptoKey>}
+ */
+export async function importPBKDF2Key({
+	key,
+	mode = ["encrypt"],
+	keyCache = true
+}: {
+	key: string
+	mode?: KeyUsage[]
+	keyCache?: boolean
+}): Promise<CryptoKey> {
+	if (environment !== "browser") {
+		throw new Error(`crypto.utils.importPBKDF2Key not implemented for ${environment} environment`)
+	}
+
+	const cacheKey = `${key}:${mode.join(":")}`
+
+	if (cache.importPBKDF2Key.has(cacheKey)) {
+		return cache.importPBKDF2Key.get(cacheKey)!
+	}
+
+	const importedPBKF2Key = await globalThis.crypto.subtle.importKey(
+		"raw",
+		textEncoder.encode(key),
+		{
+			name: "PBKDF2"
+		},
+		false,
+		mode
+	)
+
+	if (keyCache) {
+		cache.importPBKDF2Key.set(cacheKey, importedPBKF2Key)
+	}
+
+	return importedPBKF2Key
 }
 
 /**
@@ -499,6 +601,81 @@ export async function generateKeyPair(): Promise<{ publicKey: string; privateKey
 	throw new Error(`crypto.utils.generateKeyPair not implemented for ${environment} environment`)
 }
 
+/**
+ * JS implementation of OpenSSL's EVP_BytesToKey. Depcrecated. NOT IN USE. Just here for backwards compatibility of another function.
+ * @date 2/7/2024 - 1:00:21 AM
+ *
+ * @export
+ * @param {{
+ * 	password: Buffer
+ * 	salt: Buffer
+ * 	keyBits: number
+ * 	ivLength: number
+ * }} param0
+ * @param {Buffer} param0.password
+ * @param {Buffer} param0.salt
+ * @param {number} param0.keyBits
+ * @param {number} param0.ivLength
+ * @returns {{ key: Buffer; iv: Buffer }}
+ */
+export function EVP_BytesToKey({
+	password,
+	salt,
+	keyBits,
+	ivLength
+}: {
+	password: Buffer
+	salt: Buffer
+	keyBits: number
+	ivLength: number
+}): { key: Buffer; iv: Buffer } {
+	let keyLen = keyBits / 8
+	const key = Buffer.alloc(keyLen)
+	const iv = Buffer.alloc(ivLength || 0)
+	let tmp = Buffer.alloc(0)
+
+	while (keyLen > 0 || ivLength > 0) {
+		const hash = nodeCrypto.createHash("md5")
+
+		hash.update(tmp)
+		hash.update(password)
+
+		if (salt) {
+			hash.update(salt)
+		}
+
+		tmp = hash.digest()
+
+		let used = 0
+
+		if (keyLen > 0) {
+			const keyStart = key.length - keyLen
+
+			used = Math.min(keyLen, tmp.length)
+
+			tmp.copy(key, keyStart, 0, used)
+
+			keyLen -= used
+		}
+
+		if (used < tmp.length && ivLength > 0) {
+			const ivStart = iv.length - ivLength
+			const length = Math.min(ivLength, tmp.length - used)
+
+			tmp.copy(iv, ivStart, used, used + length)
+
+			ivLength -= length
+		}
+	}
+
+	tmp.fill(0)
+
+	return {
+		key,
+		iv
+	}
+}
+
 export const utils = {
 	generateRandomString,
 	deriveKeyFromPassword,
@@ -509,7 +686,9 @@ export const utils = {
 	importPublicKey,
 	importPrivateKey,
 	bufferToHash,
-	generateKeyPair
+	generateKeyPair,
+	importRawAESGCMKey,
+	importPBKDF2Key
 }
 
 export default utils

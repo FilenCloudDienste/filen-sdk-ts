@@ -1,7 +1,9 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+/* eslint-disable @typescript-eslint/no-var-requires */
+
 const path = require("path")
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 const webpack = require("webpack")
+const TerserPlugin = require("terser-webpack-plugin")
 
 module.exports = [
 	{
@@ -15,6 +17,7 @@ module.exports = [
 			globalObject: "globalThis"
 		},
 		module: {
+			noParse: /browserfs\.js/,
 			rules: [
 				{
 					test: /\.tsx?$/,
@@ -24,26 +27,32 @@ module.exports = [
 			]
 		},
 		plugins: [
-			new webpack.ProvidePlugin({
-				Buffer: ["buffer", "Buffer"]
-			})
+			new NodePolyfillPlugin({
+				excludeAliases: ["fs", "buffer", "Buffer", "path", "process"]
+			}),
+			new webpack.ProvidePlugin({ BrowserFS: "bfsGlobal", process: "processGlobal", Buffer: "bufferGlobal" })
 		],
 		resolve: {
 			extensions: [".tsx", ".ts", ".js"],
-			fallback: {
-				crypto: require.resolve("crypto-browserify"),
-				path: require.resolve("path-browserify"),
-				stream: require.resolve("stream-browserify"),
-				assert: require.resolve("assert/"),
-				zlib: require.resolve("browserify-zlib"),
-				os: require.resolve("os-browserify"),
-				http: require.resolve("http-browserify"),
-				https: require.resolve("https-browserify"),
-				util: require.resolve("util"),
-				buffer: require.resolve("buffer/")
+			alias: {
+				fs: "browserfs/dist/shims/fs.js",
+				buffer: "browserfs/dist/shims/buffer.js",
+				path: "browserfs/dist/shims/path.js",
+				processGlobal: "browserfs/dist/shims/process.js",
+				bufferGlobal: "browserfs/dist/shims/bufferGlobal.js",
+				bfsGlobal: require.resolve("browserfs")
 			}
 		},
 		target: "web",
+		optimization: {
+			nodeEnv: "production",
+			minimize: true,
+			minimizer: [
+				new TerserPlugin({
+					parallel: true
+				})
+			]
+		},
 		devtool: "source-map" // Enable sourcemaps for debugging
 	},
 	{
@@ -69,6 +78,15 @@ module.exports = [
 			extensions: [".tsx", ".ts", ".js"]
 		},
 		target: "node",
+		optimization: {
+			nodeEnv: "production",
+			minimize: true,
+			minimizer: [
+				new TerserPlugin({
+					parallel: true
+				})
+			]
+		},
 		devtool: "source-map" // Enable sourcemaps for debugging
 	}
 ]

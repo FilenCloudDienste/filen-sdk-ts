@@ -1,7 +1,14 @@
-import { environment } from "../constants"
+import { environment, BUFFER_SIZE } from "../constants"
 import type { CryptoConfig } from "."
 import nodeCrypto from "crypto"
-import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey } from "./utils"
+import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawAESGCMKey } from "./utils"
+import { Uint8ArrayConcat, uuidv4 } from "../utils"
+import pathModule from "path"
+import fs from "fs-extra"
+import { pipeline } from "stream"
+import { promisify } from "util"
+
+const pipelineAsync = promisify(pipeline)
 
 /**
  * Encrypt
@@ -67,16 +74,16 @@ export class Encrypt {
 						iterations: 1,
 						hash: "sha512",
 						bitLength: 256,
-						returnHex: false
+						returnHex: true
 				  })
-				: this.textEncoder.encode(keyToUse)
+				: keyToUse
 			const dataBuffer = this.textEncoder.encode(metadata)
 			const encrypted = await globalThis.crypto.subtle.encrypt(
 				{
 					name: "AES-GCM",
 					iv: ivBuffer
 				},
-				await globalThis.crypto.subtle.importKey("raw", derivedKey, "AES-GCM", false, ["encrypt"]),
+				await importRawAESGCMKey({ key: derivedKey, mode: ["encrypt"] }),
 				dataBuffer
 			)
 
@@ -218,6 +225,107 @@ export class Encrypt {
 	 */
 	public async chatConversationName({ name, key }: { name: string; key: string }): Promise<string> {
 		return await this.metadata({ metadata: JSON.stringify({ name }), key })
+	}
+
+	/**
+	 * Encrypt data.
+	 * @date 2/7/2024 - 1:50:47 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ data: Uint8Array; key: string }} param0
+	 * @param {Uint8Array} param0.data
+	 * @param {string} param0.key
+	 * @returns {Promise<Uint8Array>}
+	 */
+	public async data({ data, key }: { data: Uint8Array; key: string }): Promise<Uint8Array> {
+		const iv = await generateRandomString({ length: 12 })
+
+		if (environment === "node") {
+			const ivBuffer = Buffer.from(iv, "utf-8")
+			const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer)
+			const encrypted = Buffer.concat([cipher.update(data), cipher.final()])
+			const authTag = cipher.getAuthTag()
+			const ciphertext = Buffer.concat([encrypted, authTag])
+
+			return Buffer.concat([ivBuffer, ciphertext])
+		} else if (environment === "browser") {
+			const encrypted = await globalThis.crypto.subtle.encrypt(
+				{
+					name: "AES-GCM",
+					iv: this.textEncoder.encode(iv)
+				},
+				await importRawAESGCMKey({ key, mode: ["encrypt"], keyCache: false }),
+				data
+			)
+
+			return Uint8ArrayConcat(this.textEncoder.encode(iv), new Uint8Array(encrypted))
+		} else if (environment === "reactNative") {
+			return await global.nodeThread.encryptData({ base64: Buffer.from(data).toString("base64"), key })
+		}
+
+		throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`)
+	}
+
+	/**
+	 * Encrypt a file/chunk using streams. Only available in a Node.JS environment.
+	 * @date 2/7/2024 - 1:51:28 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ inputFile: string; key: string; outputFile?: string }} param0
+	 * @param {string} param0.inputFile
+	 * @param {string} param0.key
+	 * @param {string} param0.outputFile
+	 * @returns {Promise<string>}
+	 */
+	public async dataStream({ inputFile, key, outputFile }: { inputFile: string; key: string; outputFile?: string }): Promise<string> {
+		if (environment !== "node") {
+			throw new Error(`crypto.encrypt.dataStream not implemented for ${environment} environment`)
+		}
+
+		const input = pathModule.normalize(inputFile)
+		const output = pathModule.normalize(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()))
+
+		if (!(await fs.exists(input))) {
+			throw new Error("Input file does not exist.")
+		}
+
+		await fs.rm(output, {
+			force: true,
+			maxRetries: 60 * 100,
+			recursive: true,
+			retryDelay: 100
+		})
+
+		const iv = await generateRandomString({ length: 12 })
+		const ivBuffer = Buffer.from(iv, "utf-8")
+		const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer)
+
+		const readStream = fs.createReadStream(pathModule.normalize(input), {
+			highWaterMark: BUFFER_SIZE
+		})
+		const writeStream = fs.createWriteStream(pathModule.normalize(output))
+
+		await new Promise<void>((resolve, reject) => {
+			writeStream.write(ivBuffer, err => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve()
+			})
+		})
+
+		await pipelineAsync(readStream, cipher, writeStream)
+
+		const authTag = cipher.getAuthTag()
+
+		await fs.appendFile(output, authTag)
+
+		return output
 	}
 }
 

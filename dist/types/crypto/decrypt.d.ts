@@ -1,5 +1,5 @@
 import type { CryptoConfig } from ".";
-import type { FileMetadata, FolderMetadata } from "../types";
+import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types";
 /**
  * Decrypt
  * @date 1/31/2024 - 6:36:57 PM
@@ -302,6 +302,47 @@ export declare class Decrypt {
         name: string;
         metadata: string;
         privateKey: string;
+    }): Promise<string>;
+    /**
+     * Decrypt data.
+     * @date 2/7/2024 - 1:50:58 AM
+     *
+     * @public
+     * @async
+     * @param {{ data: Uint8Array; key: string; version: FileEncryptionVersion }} param0
+     * @param {Uint8Array} param0.data
+     * @param {string} param0.key
+     * @param {FileEncryptionVersion} param0.version
+     * @returns {Promise<Uint8Array>}
+     */
+    data({ data, key, version }: {
+        data: Uint8Array;
+        key: string;
+        version: FileEncryptionVersion;
+    }): Promise<Uint8Array>;
+    /**
+     * Decrypt a file/chunk using streams. Only available in a Node.JS environment.
+     * @date 2/7/2024 - 1:38:12 AM
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		inputFile: string
+     * 		key: string
+     * 		version: FileEncryptionVersion
+     * 		outputFile?: string
+     * 	}} param0
+     * @param {string} param0.inputFile
+     * @param {string} param0.key
+     * @param {FileEncryptionVersion} param0.version
+     * @param {string} param0.outputFile
+     * @returns {Promise<string>}
+     */
+    dataStream({ inputFile, key, version, outputFile }: {
+        inputFile: string;
+        key: string;
+        version: FileEncryptionVersion;
+        outputFile?: string;
     }): Promise<string>;
 }
 export default Decrypt;

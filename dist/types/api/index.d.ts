@@ -1,15 +1,3 @@
-import V3Health from "./v3/health";
-import V3DirContent from "./v3/dir/content";
-import V3AuthInfo from "./v3/auth/info";
-import V3Login from "./v3/login";
-import V3UserInfo from "./v3/user/info";
-import V3UserBaseFolder from "./v3/user/baseFolder";
-import V3SharedIn from "./v3/shared/in";
-import V3SharedOut from "./v3/shared/out";
-import V3UploadDone from "./v3/upload/done";
-import V3DirDownload from "./v3/dir/download";
-import V3DirShared from "./v3/dir/shared";
-import V3DirLinked from "./v3/dir/linked";
 export type APIConfig = {
     apiKey: string;
 };
@@ -24,6 +12,7 @@ export type APIConfig = {
 export declare class API {
     private readonly config;
     private readonly apiClient;
+    private readonly _v3;
     /**
      * Creates an instance of API.
      * @date 2/1/2024 - 4:46:38 PM
@@ -34,27 +23,64 @@ export declare class API {
      */
     constructor(params: APIConfig);
     v3(): {
-        health: () => V3Health;
+        health: () => Promise<"OK">;
         dir: () => {
-            content: () => V3DirContent;
-            download: () => V3DirDownload;
-            shared: () => V3DirShared;
-            linked: () => V3DirLinked;
+            content: (params_0: {
+                uuid: string;
+                dirsOnly?: boolean | undefined;
+            }) => Promise<import("./v3/dir/content").DirContentResponse>;
+            download: (params_0: {
+                uuid: string;
+                type?: import("./v3/dir/download").DirDownloadType | undefined;
+                linkUUID?: string | undefined;
+                linkHasPassword?: boolean | undefined;
+                linkPassword?: string | undefined;
+                linkSalt?: string | undefined;
+            }) => Promise<import("./v3/dir/download").DirDownloadResponse>;
+            shared: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/dir/shared").DirSharedResponse>;
+            linked: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/dir/linked").DirLinkedResponse>;
         };
         auth: () => {
-            info: () => V3AuthInfo;
+            info: (params_0: {
+                email: string;
+            }) => Promise<import("./v3/auth/info").AuthInfoResponse>;
         };
-        login: () => V3Login;
+        login: (params_0: {
+            email: string;
+            password: string;
+            twoFactorCode?: string | undefined;
+            authVersion: import("../types").AuthVersion;
+        }) => Promise<import("./v3/login").LoginResponse>;
         user: () => {
-            info: () => V3UserInfo;
-            baseFolder: () => V3UserBaseFolder;
+            info: () => Promise<import("./v3/user/info").UserInfoResponse>;
+            baseFolder: () => Promise<import("./v3/user/baseFolder").UserBaseFolderResponse>;
         };
         shared: () => {
-            in: () => V3SharedIn;
-            out: () => V3SharedOut;
+            in: (params?: {
+                uuid?: string | undefined;
+            } | undefined) => Promise<import("./v3/shared/in").SharedInResponse>;
+            out: (params?: {
+                uuid?: string | undefined;
+                receiverId?: number | undefined;
+            } | undefined) => Promise<import("./v3/shared/out").SharedOutResponse>;
         };
         upload: () => {
-            done: () => V3UploadDone;
+            done: (params_0: {
+                uuid: string;
+                name: string;
+                nameHashed: string;
+                size: string;
+                chunks: number;
+                mime: string;
+                rm: string;
+                metadata: string;
+                version: import("../types").FileEncryptionVersion;
+                uploadKey: string;
+            }) => Promise<import("./v3/upload/done").UploadDoneResponse>;
         };
     };
 }

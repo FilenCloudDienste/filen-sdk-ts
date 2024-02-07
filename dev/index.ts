@@ -1,6 +1,9 @@
-import FilenSDK from ".."
+import FilenSDK from "../src"
 import config from "./dev.config.json"
 import type { AuthVersion } from "../src/types"
+//import fs from "fs-extra"
+//import pathModule from "path"
+//import { generateRandomString } from "../src/crypto/utils"
 
 const filen = new FilenSDK({
 	email: config.email,
@@ -15,7 +18,25 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	console.log(await filen.api(3).dir().linked().fetch({ uuid: "3c90310b-dc15-47ef-b931-149414aedfe2" }))
+	const content = await filen.api(3).dir().content({ uuid: "6fc3d024-083f-41ba-906e-638a12a13a71" })
+
+	for (const folders of content.folders) {
+		console.log(await filen.crypto().decrypt().folderMetadata({ metadata: folders.name }))
+	}
+
+	for (const file of content.uploads) {
+		console.log(await filen.crypto().decrypt().fileMetadata({ metadata: file.metadata }))
+	}
+
+	/*const inputFile = pathModule.join(__dirname, "dev.config.json")
+	const outputFile = pathModule.join(__dirname, "dev.config.json.encrypted")
+	const key = await generateRandomString({ length: 32 })
+
+	await filen.crypto().encrypt().dataStream({ inputFile, outputFile, key })
+	await filen
+		.crypto()
+		.decrypt()
+		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })*/
 }
 
 main()

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { AuthVersion } from "../types";
 /**
  * Generate a cryptographically secure random string of given length.
@@ -104,11 +105,13 @@ export declare function derKeyToPem({ key }: {
  * @param {{ publicKey: string; mode?: KeyUsage[] }} param0
  * @param {string} param0.publicKey
  * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
  * @returns {Promise<CryptoKey>}
  */
-export declare function importPublicKey({ publicKey, mode }: {
+export declare function importPublicKey({ publicKey, mode, keyCache }: {
     publicKey: string;
     mode?: KeyUsage[];
+    keyCache?: boolean;
 }): Promise<CryptoKey>;
 /**
  * Imports a base64 PCS8 private key to WebCrypto's format.
@@ -119,11 +122,47 @@ export declare function importPublicKey({ publicKey, mode }: {
  * @param {{ privateKey: string; mode?: KeyUsage[] }} param0
  * @param {string} param0.privateKey
  * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
  * @returns {Promise<CryptoKey>}
  */
-export declare function importPrivateKey({ privateKey, mode }: {
+export declare function importPrivateKey({ privateKey, mode, keyCache }: {
     privateKey: string;
     mode?: KeyUsage[];
+    keyCache?: boolean;
+}): Promise<CryptoKey>;
+/**
+ * Imports a raw AES-GCM key to WebCrypto's fromat.
+ * @date 2/6/2024 - 3:59:05 PM
+ *
+ * @export
+ * @async
+ * @param {{ key: string; mode?: KeyUsage[] }} param0
+ * @param {string} param0.key
+ * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
+ * @returns {Promise<CryptoKey>}
+ */
+export declare function importRawAESGCMKey({ key, mode, keyCache }: {
+    key: string;
+    mode?: KeyUsage[];
+    keyCache?: boolean;
+}): Promise<CryptoKey>;
+/**
+ * Imports a PBKDF2 key into WebCrypto's format.
+ * @date 2/6/2024 - 8:56:57 PM
+ *
+ * @export
+ * @async
+ * @param {{ key: string; mode?: KeyUsage[], keyCache?: boolean }} param0
+ * @param {string} param0.key
+ * @param {{}} [param0.mode=["encrypt"]]
+ * @param {boolean} [param0.keyCache=true]
+ * @returns {Promise<CryptoKey>}
+ */
+export declare function importPBKDF2Key({ key, mode, keyCache }: {
+    key: string;
+    mode?: KeyUsage[];
+    keyCache?: boolean;
 }): Promise<CryptoKey>;
 /**
  * Generates the hash hex digest of a Buffer/Uint8Array.
@@ -152,6 +191,32 @@ export declare function generateKeyPair(): Promise<{
     publicKey: string;
     privateKey: string;
 }>;
+/**
+ * JS implementation of OpenSSL's EVP_BytesToKey. Depcrecated. NOT IN USE. Just here for backwards compatibility of another function.
+ * @date 2/7/2024 - 1:00:21 AM
+ *
+ * @export
+ * @param {{
+ * 	password: Buffer
+ * 	salt: Buffer
+ * 	keyBits: number
+ * 	ivLength: number
+ * }} param0
+ * @param {Buffer} param0.password
+ * @param {Buffer} param0.salt
+ * @param {number} param0.keyBits
+ * @param {number} param0.ivLength
+ * @returns {{ key: Buffer; iv: Buffer }}
+ */
+export declare function EVP_BytesToKey({ password, salt, keyBits, ivLength }: {
+    password: Buffer;
+    salt: Buffer;
+    keyBits: number;
+    ivLength: number;
+}): {
+    key: Buffer;
+    iv: Buffer;
+};
 export declare const utils: {
     generateRandomString: typeof generateRandomString;
     deriveKeyFromPassword: typeof deriveKeyFromPassword;
@@ -163,5 +228,7 @@ export declare const utils: {
     importPrivateKey: typeof importPrivateKey;
     bufferToHash: typeof bufferToHash;
     generateKeyPair: typeof generateKeyPair;
+    importRawAESGCMKey: typeof importRawAESGCMKey;
+    importPBKDF2Key: typeof importPBKDF2Key;
 };
 export default utils;

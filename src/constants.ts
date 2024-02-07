@@ -12,3 +12,6 @@ export const environment: Environment =
 		: env.isNode && !env.isBrowser && !env.isReactNative
 		? "node"
 		: "reactNative"
+
+export const BUFFER_SIZE = 4096
+export const BASE64_BUFFER_SIZE = 3 * 1024

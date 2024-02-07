@@ -1,11 +1,18 @@
-import { environment } from "../constants"
+import { environment, BUFFER_SIZE } from "../constants"
 import type { CryptoConfig } from "."
-import { deriveKeyFromPassword, importPrivateKey, derKeyToPem } from "./utils"
+import { deriveKeyFromPassword, importPrivateKey, derKeyToPem, importRawAESGCMKey, EVP_BytesToKey } from "./utils"
 import CryptoJS from "crypto-js"
 import nodeCrypto from "crypto"
-import type { FileMetadata, FolderMetadata } from "../types"
-import { convertTimestampToMs } from "../utils"
+import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types"
+import { convertTimestampToMs, uuidv4 } from "../utils"
 import cache from "../cache"
+import pathModule from "path"
+import fs from "fs-extra"
+import { streamDecodeBase64 } from "./streams/base64"
+import { pipeline } from "stream"
+import { promisify } from "util"
+
+const pipelineAsync = promisify(pipeline)
 
 /**
  * Decrypt
@@ -48,6 +55,7 @@ export class Decrypt {
 
 		if (sliced === "U2FsdGVk") {
 			// Old and deprecated, not in use anymore, just here for backwards compatibility
+
 			return CryptoJS.AES.decrypt(metadata, key).toString(CryptoJS.enc.Utf8)
 		} else {
 			const version = metadata.slice(0, 3)
@@ -82,7 +90,7 @@ export class Decrypt {
 							name: "AES-GCM",
 							iv: ivBuffer
 						},
-						await globalThis.crypto.subtle.importKey("raw", keyBuffer, "AES-GCM", false, ["decrypt"]),
+						await importRawAESGCMKey({ key, mode: ["decrypt"] }),
 						encrypted
 					)
 
@@ -757,6 +765,234 @@ export class Decrypt {
 		}
 
 		return parsed.name
+	}
+
+	/**
+	 * Decrypt data.
+	 * @date 2/7/2024 - 1:50:58 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ data: Uint8Array; key: string; version: FileEncryptionVersion }} param0
+	 * @param {Uint8Array} param0.data
+	 * @param {string} param0.key
+	 * @param {FileEncryptionVersion} param0.version
+	 * @returns {Promise<Uint8Array>}
+	 */
+	public async data({ data, key, version }: { data: Uint8Array; key: string; version: FileEncryptionVersion }): Promise<Uint8Array> {
+		if (environment === "node") {
+			if (version === 1) {
+				// Old and deprecated, not in use anymore, just here for backwards compatibility
+				// @TODO
+			} else if (version === 2) {
+				const iv = data.slice(0, 12)
+				const encData = data.slice(12)
+				const authTag = encData.slice(encData.byteLength - ((128 + 7) >> 3))
+				const ciphertext = encData.slice(0, encData.byteLength - authTag.byteLength)
+				const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), iv)
+
+				decipher.setAuthTag(authTag)
+
+				return Buffer.concat([decipher.update(ciphertext), decipher.final()])
+			}
+		} else if (environment === "browser") {
+			if (version === 1) {
+				// Old and deprecated, not in use anymore, just here for backwards compatibility
+				// @TODO
+			} else if (version === 2) {
+				const iv = data.slice(0, 12)
+				const encData = data.slice(12)
+				const decrypted = await globalThis.crypto.subtle.decrypt(
+					{
+						name: "AES-GCM",
+						iv
+					},
+					await importRawAESGCMKey({ key, mode: ["decrypt"] }),
+					encData
+				)
+				return new Uint8Array(decrypted)
+			}
+		} else if (environment === "reactNative") {
+			return await global.nodeThread.decryptData({ base64: Buffer.from(data).toString("base64"), key, version })
+		}
+
+		throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`)
+	}
+
+	/**
+	 * Decrypt a file/chunk using streams. Only available in a Node.JS environment.
+	 * @date 2/7/2024 - 1:38:12 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		inputFile: string
+	 * 		key: string
+	 * 		version: FileEncryptionVersion
+	 * 		outputFile?: string
+	 * 	}} param0
+	 * @param {string} param0.inputFile
+	 * @param {string} param0.key
+	 * @param {FileEncryptionVersion} param0.version
+	 * @param {string} param0.outputFile
+	 * @returns {Promise<string>}
+	 */
+	public async dataStream({
+		inputFile,
+		key,
+		version,
+		outputFile
+	}: {
+		inputFile: string
+		key: string
+		version: FileEncryptionVersion
+		outputFile?: string
+	}): Promise<string> {
+		if (environment !== "node") {
+			throw new Error(`crypto.decrypt.dataStream not implemented for ${environment} environment`)
+		}
+
+		let input = pathModule.normalize(inputFile)
+		const output = pathModule.normalize(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()))
+
+		if (!(await fs.exists(input))) {
+			throw new Error("Input file does not exist.")
+		}
+
+		await fs.rm(output, {
+			force: true,
+			maxRetries: 60 * 100,
+			recursive: true,
+			retryDelay: 100
+		})
+
+		const inputStat = await fs.stat(input)
+
+		if (inputStat.size < (version === 1 ? 17 : 13)) {
+			throw new Error(`Input file size too small: ${inputStat.size}.`)
+		}
+
+		let inputHandle = await fs.open(input, fs.constants.R_OK)
+		let decipher: nodeCrypto.Decipher | nodeCrypto.DecipherGCM
+		let bytesToSkipAtStartOfInputStream = 0
+		let bytesToSkipAtEndOfInputStream = 0
+		let inputFileSize = 0
+
+		try {
+			if (version === 1) {
+				const firstBytes = Buffer.alloc(16)
+
+				await fs.read(inputHandle, firstBytes, 0, 16, 0)
+
+				if (firstBytes.byteLength === 0) {
+					throw new Error("Could not read input file.")
+				}
+
+				const asciiString = firstBytes.toString("ascii")
+				const base64String = firstBytes.toString("base64")
+				const utf8String = firstBytes.toString("utf-8")
+				let needsConvert = true
+				let isCBC = true
+
+				if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
+					needsConvert = false
+				}
+
+				if (
+					asciiString.startsWith("Salted_") ||
+					base64String.startsWith("Salted_") ||
+					utf8String.startsWith("U2FsdGVk") ||
+					asciiString.startsWith("U2FsdGVk") ||
+					utf8String.startsWith("Salted_") ||
+					base64String.startsWith("U2FsdGVk")
+				) {
+					isCBC = false
+				}
+
+				if (needsConvert && !isCBC) {
+					const inputConverted = pathModule.join(pathModule.dirname(output), await uuidv4())
+
+					await fs.rm(inputConverted, {
+						force: true,
+						maxRetries: 60 * 100,
+						recursive: true,
+						retryDelay: 100
+					})
+
+					await fs.close(inputHandle)
+
+					const oldInput = input
+
+					input = await streamDecodeBase64({ input, output: inputConverted })
+					inputHandle = await fs.open(input, fs.constants.R_OK)
+
+					await fs.rm(oldInput, {
+						force: true,
+						maxRetries: 60 * 100,
+						recursive: true,
+						retryDelay: 100
+					})
+				}
+
+				if (!isCBC) {
+					const saltBytes = Buffer.alloc(8)
+
+					await fs.read(inputHandle, saltBytes, 0, 8, 0)
+
+					const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
+						password: Buffer.from(key, "utf-8"),
+						salt: saltBytes,
+						keyBits: 256,
+						ivLength: 16
+					})
+
+					decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes)
+					bytesToSkipAtStartOfInputStream = 16
+					bytesToSkipAtEndOfInputStream = 0
+				} else {
+					const keyBytes = Buffer.from(key, "utf-8")
+					const ivBytes = keyBytes.subarray(0, 16)
+
+					decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes)
+					bytesToSkipAtStartOfInputStream = 0
+					bytesToSkipAtEndOfInputStream = 0
+				}
+			} else if (version === 2) {
+				const keyBytes = Buffer.from(key, "utf-8")
+				const ivBytes = Buffer.alloc(12)
+				const authTagBytes = Buffer.alloc(16)
+
+				const stat = await fs.stat(input)
+
+				await fs.read(inputHandle, ivBytes, 0, 12, 0)
+				await fs.read(inputHandle, authTagBytes, 0, 16, stat.size - 16)
+
+				if (ivBytes.byteLength === 0 || authTagBytes.byteLength === 0) {
+					throw new Error("Could not read input file.")
+				}
+
+				decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBytes, ivBytes).setAuthTag(authTagBytes)
+
+				bytesToSkipAtStartOfInputStream = 12
+				bytesToSkipAtEndOfInputStream = 16
+				inputFileSize = stat.size
+			} else {
+				throw new Error(`Invalid FileEncryptionVersion: ${version}`)
+			}
+		} finally {
+			await fs.close(inputHandle)
+		}
+
+		const readStream = fs.createReadStream(pathModule.normalize(input), {
+			highWaterMark: BUFFER_SIZE,
+			end: inputFileSize > 0 ? inputFileSize - bytesToSkipAtEndOfInputStream - 1 : Infinity,
+			start: bytesToSkipAtStartOfInputStream
+		})
+		const writeStream = fs.createWriteStream(pathModule.normalize(output))
+
+		await pipelineAsync(readStream, decipher, writeStream)
+
+		return output
 	}
 }
 

@@ -47,5 +47,6 @@ declare global {
         generateRandomString: (params: {
             charLength?: number;
         }) => Promise<string>;
+        uuidv4: () => Promise<string>;
     };
 }

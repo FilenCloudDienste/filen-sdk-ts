@@ -12,7 +12,9 @@ const cache = {
 	notePreview: new Map<string, string>(),
 	noteTagName: new Map<string, string>(),
 	chatConversationName: new Map<string, string>(),
-	folderLinkKey: new Map<string, string>()
+	folderLinkKey: new Map<string, string>(),
+	importRawAESGCMKey: new Map<string, CryptoKey>(),
+	importPBKDF2Key: new Map<string, CryptoKey>()
 }
 
 export default cache

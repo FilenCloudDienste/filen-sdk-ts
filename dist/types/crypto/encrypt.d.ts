@@ -139,5 +139,37 @@ export declare class Encrypt {
         name: string;
         key: string;
     }): Promise<string>;
+    /**
+     * Encrypt data.
+     * @date 2/7/2024 - 1:50:47 AM
+     *
+     * @public
+     * @async
+     * @param {{ data: Uint8Array; key: string }} param0
+     * @param {Uint8Array} param0.data
+     * @param {string} param0.key
+     * @returns {Promise<Uint8Array>}
+     */
+    data({ data, key }: {
+        data: Uint8Array;
+        key: string;
+    }): Promise<Uint8Array>;
+    /**
+     * Encrypt a file/chunk using streams. Only available in a Node.JS environment.
+     * @date 2/7/2024 - 1:51:28 AM
+     *
+     * @public
+     * @async
+     * @param {{ inputFile: string; key: string; outputFile?: string }} param0
+     * @param {string} param0.inputFile
+     * @param {string} param0.key
+     * @param {string} param0.outputFile
+     * @returns {Promise<string>}
+     */
+    dataStream({ inputFile, key, outputFile }: {
+        inputFile: string;
+        key: string;
+        outputFile?: string;
+    }): Promise<string>;
 }
 export default Encrypt;
