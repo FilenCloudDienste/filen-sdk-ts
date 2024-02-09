@@ -425,40 +425,48 @@ export async function importPrivateKey({
 }
 
 /**
- * Imports a raw AES-GCM key to WebCrypto's fromat.
- * @date 2/6/2024 - 3:59:05 PM
+ * Imports a raw key to WebCrypto's fromat.
+ * @date 2/9/2024 - 12:48:51 AM
  *
  * @export
  * @async
- * @param {{ key: string; mode?: KeyUsage[] }} param0
+ * @param {{
+ * 	key: string
+ * 	algorithm: "AES-GCM" | "AES-CBC"
+ * 	mode?: KeyUsage[]
+ * 	keyCache?: boolean
+ * }} param0
  * @param {string} param0.key
+ * @param {("AES-GCM" | "AES-CBC")} param0.algorithm
  * @param {{}} [param0.mode=["encrypt"]]
  * @param {boolean} [param0.keyCache=true]
  * @returns {Promise<CryptoKey>}
  */
-export async function importRawAESGCMKey({
+export async function importRawKey({
 	key,
+	algorithm,
 	mode = ["encrypt"],
 	keyCache = true
 }: {
 	key: string
+	algorithm: "AES-GCM" | "AES-CBC"
 	mode?: KeyUsage[]
 	keyCache?: boolean
 }): Promise<CryptoKey> {
 	if (environment !== "browser") {
-		throw new Error(`crypto.utils.importRawAESGCMKey not implemented for ${environment} environment`)
+		throw new Error(`crypto.utils.importRawKey not implemented for ${environment} environment`)
 	}
 
-	const cacheKey = `${key}:${mode.join(":")}`
+	const cacheKey = `${key}:${algorithm}:${mode.join(":")}`
 
-	if (cache.importRawAESGCMKey.has(cacheKey)) {
-		return cache.importRawAESGCMKey.get(cacheKey)!
+	if (cache.importRawKey.has(cacheKey)) {
+		return cache.importRawKey.get(cacheKey)!
 	}
 
-	const importedRawKey = await globalThis.crypto.subtle.importKey("raw", textEncoder.encode(key), "AES-GCM", false, mode)
+	const importedRawKey = await globalThis.crypto.subtle.importKey("raw", textEncoder.encode(key), algorithm, false, mode)
 
 	if (keyCache) {
-		cache.importRawAESGCMKey.set(cacheKey, importedRawKey)
+		cache.importRawKey.set(cacheKey, importedRawKey)
 	}
 
 	return importedRawKey
@@ -687,7 +695,7 @@ export const utils = {
 	importPrivateKey,
 	bufferToHash,
 	generateKeyPair,
-	importRawAESGCMKey,
+	importRawKey,
 	importPBKDF2Key
 }
 

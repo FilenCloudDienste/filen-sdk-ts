@@ -1,9 +1,9 @@
 import FilenSDK from "../src"
 import config from "./dev.config.json"
 import type { AuthVersion } from "../src/types"
-//import fs from "fs-extra"
-//import pathModule from "path"
-//import { generateRandomString } from "../src/crypto/utils"
+import fs from "fs-extra"
+import pathModule from "path"
+import { generateRandomString } from "../src/crypto/utils"
 
 const filen = new FilenSDK({
 	email: config.email,
@@ -28,15 +28,31 @@ const main = async () => {
 		console.log(await filen.crypto().decrypt().fileMetadata({ metadata: file.metadata }))
 	}
 
-	/*const inputFile = pathModule.join(__dirname, "dev.config.json")
+	const inputFile = pathModule.join(__dirname, "dev.config.json")
 	const outputFile = pathModule.join(__dirname, "dev.config.json.encrypted")
+
+	await Promise.all([
+		fs.rm(pathModule.join(__dirname, "dev.config.json.decrypted"), {
+			force: true,
+			maxRetries: 60 * 10,
+			recursive: true,
+			retryDelay: 100
+		}),
+		fs.rm(pathModule.join(__dirname, "dev.config.json.encrypted"), {
+			force: true,
+			maxRetries: 60 * 10,
+			recursive: true,
+			retryDelay: 100
+		})
+	])
+
 	const key = await generateRandomString({ length: 32 })
 
 	await filen.crypto().encrypt().dataStream({ inputFile, outputFile, key })
 	await filen
 		.crypto()
 		.decrypt()
-		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })*/
+		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })
 }
 
 main()

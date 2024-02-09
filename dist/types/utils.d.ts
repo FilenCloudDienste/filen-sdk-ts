@@ -35,6 +35,15 @@ export declare function normalizePath(path: string): string;
  * @returns {Promise<string>}
  */
 export declare function uuidv4(): Promise<string>;
+/**
+ * Concat two Uint8Arrays.
+ * @date 2/7/2024 - 5:13:31 AM
+ *
+ * @export
+ * @param {Uint8Array} a1
+ * @param {Uint8Array} a2
+ * @returns {Uint8Array}
+ */
 export declare function Uint8ArrayConcat(a1: Uint8Array, a2: Uint8Array): Uint8Array;
 export declare const utils: {
     sleep: typeof sleep;

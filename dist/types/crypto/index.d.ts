@@ -55,7 +55,7 @@ export declare class Crypto {
         importPrivateKey: typeof import("./utils").importPrivateKey;
         bufferToHash: typeof import("./utils").bufferToHash;
         generateKeyPair: typeof import("./utils").generateKeyPair;
-        importRawAESGCMKey: typeof import("./utils").importRawAESGCMKey;
+        importRawKey: typeof import("./utils").importRawKey;
         importPBKDF2Key: typeof import("./utils").importPBKDF2Key;
     };
 }

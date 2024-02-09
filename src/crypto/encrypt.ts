@@ -1,8 +1,8 @@
 import { environment, BUFFER_SIZE } from "../constants"
 import type { CryptoConfig } from "."
 import nodeCrypto from "crypto"
-import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawAESGCMKey } from "./utils"
-import { Uint8ArrayConcat, uuidv4 } from "../utils"
+import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawKey } from "./utils"
+import { Uint8ArrayConcat, uuidv4, normalizePath } from "../utils"
 import pathModule from "path"
 import fs from "fs-extra"
 import { pipeline } from "stream"
@@ -83,7 +83,7 @@ export class Encrypt {
 					name: "AES-GCM",
 					iv: ivBuffer
 				},
-				await importRawAESGCMKey({ key: derivedKey, mode: ["encrypt"] }),
+				await importRawKey({ key: derivedKey, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
 				dataBuffer
 			)
 
@@ -255,7 +255,7 @@ export class Encrypt {
 					name: "AES-GCM",
 					iv: this.textEncoder.encode(iv)
 				},
-				await importRawAESGCMKey({ key, mode: ["encrypt"], keyCache: false }),
+				await importRawKey({ key, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
 				data
 			)
 
@@ -284,8 +284,8 @@ export class Encrypt {
 			throw new Error(`crypto.encrypt.dataStream not implemented for ${environment} environment`)
 		}
 
-		const input = pathModule.normalize(inputFile)
-		const output = pathModule.normalize(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()))
+		const input = normalizePath(inputFile)
+		const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()))
 
 		if (!(await fs.exists(input))) {
 			throw new Error("Input file does not exist.")
@@ -293,7 +293,7 @@ export class Encrypt {
 
 		await fs.rm(output, {
 			force: true,
-			maxRetries: 60 * 100,
+			maxRetries: 60 * 10,
 			recursive: true,
 			retryDelay: 100
 		})
@@ -302,10 +302,10 @@ export class Encrypt {
 		const ivBuffer = Buffer.from(iv, "utf-8")
 		const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer)
 
-		const readStream = fs.createReadStream(pathModule.normalize(input), {
+		const readStream = fs.createReadStream(normalizePath(input), {
 			highWaterMark: BUFFER_SIZE
 		})
-		const writeStream = fs.createWriteStream(pathModule.normalize(output))
+		const writeStream = fs.createWriteStream(normalizePath(output))
 
 		await new Promise<void>((resolve, reject) => {
 			writeStream.write(ivBuffer, err => {

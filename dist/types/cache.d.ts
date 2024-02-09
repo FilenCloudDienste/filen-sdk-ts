@@ -12,7 +12,7 @@ declare const cache: {
     noteTagName: Map<string, string>;
     chatConversationName: Map<string, string>;
     folderLinkKey: Map<string, string>;
-    importRawAESGCMKey: Map<string, CryptoKey>;
+    importRawKey: Map<string, CryptoKey>;
     importPBKDF2Key: Map<string, CryptoKey>;
 };
 export default cache;
