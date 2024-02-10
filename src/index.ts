@@ -5,6 +5,7 @@ import Crypto from "./crypto"
 import utils from "./utils"
 import { environment } from "./constants"
 import os from "os"
+import FS from "./fs"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -33,6 +34,7 @@ export class FilenSDK {
 	private config: FilenSDKConfig
 	private _api: API
 	private _crypto: Crypto
+	private _fs: FS
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -44,7 +46,6 @@ export class FilenSDK {
 	 */
 	public constructor(params: FilenSDKConfig) {
 		this.config = params
-		this._api = params.apiKey ? new API({ apiKey: params.apiKey }) : new API({ apiKey: "anonymous" })
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
 				? new Crypto({
@@ -63,6 +64,10 @@ export class FilenSDK {
 						tmpPath:
 							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
 				  })
+		this._api = params.apiKey
+			? new API({ apiKey: params.apiKey, crypto: this._crypto })
+			: new API({ apiKey: "anonymous", crypto: this._crypto })
+		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto })
 	}
 
 	/**
@@ -74,7 +79,6 @@ export class FilenSDK {
 	 */
 	public init(params: FilenSDKConfig): void {
 		this.config = params
-		this._api = params.apiKey ? new API({ apiKey: params.apiKey }) : new API({ apiKey: "anonymous" })
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
 				? new Crypto({
@@ -93,6 +97,10 @@ export class FilenSDK {
 						tmpPath:
 							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
 				  })
+		this._api = params.apiKey
+			? new API({ apiKey: params.apiKey, crypto: this._crypto })
+			: new API({ apiKey: "anonymous", crypto: this._crypto })
+		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto })
 	}
 
 	/**
@@ -136,6 +144,28 @@ export class FilenSDK {
 	}
 
 	/**
+	 * Logout.
+	 * @date 2/9/2024 - 5:48:28 AM
+	 *
+	 * @public
+	 */
+	public logout(): void {
+		this.init({
+			...this.config,
+			email: undefined,
+			password: undefined,
+			twoFactorCode: undefined,
+			masterKeys: undefined,
+			apiKey: undefined,
+			publicKey: undefined,
+			privateKey: undefined,
+			authVersion: undefined,
+			baseFolderUUID: undefined,
+			userId: undefined
+		})
+	}
+
+	/**
 	 * Returns an instance of the API wrapper based on the given API version.
 	 * @date 1/31/2024 - 4:28:59 PM
 	 *
@@ -162,12 +192,20 @@ export class FilenSDK {
 	 * @public
 	 * @returns {Crypto}
 	 */
-	public crypto() {
+	public crypto(): Crypto {
 		if (!this.isLoggedIn()) {
 			throw new Error("Not authenticated, please call login() first")
 		}
 
 		return this._crypto
+	}
+
+	public fs(): FS {
+		if (!this.isLoggedIn()) {
+			throw new Error("Not authenticated, please call login() first")
+		}
+
+		return this._fs
 	}
 
 	public readonly utils = utils

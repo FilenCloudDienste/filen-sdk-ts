@@ -12,7 +12,7 @@
 		"build": "npm run clear && npm run lint && npm run emitTypes && npm run typedoc && npm run bundle",
 		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
 		"emitTypes": "tsc --emitDeclarationOnly",
-		"bundle": "webpack --config webpack.config.js",
+		"bundle": "webpack --mode production --node-env production --config webpack.config.js",
 		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts",
 		"clear": "npm run rmdir -- dist docs",
 		"rmdir": "node -e \"var fs = require('fs'); try{process.argv.slice(1).map((fpath) => fs.rmdirSync(fpath, { recursive: true }))}catch(err){console.log(`Dir ${fpath} not found`)}; process.exit(0);\""

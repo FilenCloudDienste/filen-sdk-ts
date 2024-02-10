@@ -1,5 +1,8 @@
+/// <reference types="node" />
+import type Crypto from "../crypto";
 export type APIConfig = {
     apiKey: string;
+    crypto: Crypto;
 };
 /**
  * API
@@ -12,6 +15,7 @@ export type APIConfig = {
 export declare class API {
     private readonly config;
     private readonly apiClient;
+    private readonly crypto;
     private readonly _v3;
     /**
      * Creates an instance of API.
@@ -43,6 +47,82 @@ export declare class API {
             linked: (params_0: {
                 uuid: string;
             }) => Promise<import("./v3/dir/linked").DirLinkedResponse>;
+            link: () => {
+                add: (params_0: {
+                    uuid: string;
+                    parent: string;
+                    linkUUID: string;
+                    type: string;
+                    metadata: string;
+                    key: string;
+                    expiration: string;
+                }) => Promise<void>;
+                status: (params_0: {
+                    uuid: string;
+                }) => Promise<import("./v3/dir/link/status").DirLinkStatusResponse>;
+                remove: (params_0: {
+                    uuid: string;
+                }) => Promise<void>;
+                edit: (params_0: {
+                    uuid: string;
+                    expiration?: import("./v3/dir/link/edit").DirLinkEditExpiration | undefined;
+                    password?: string | undefined;
+                    downloadBtn?: boolean | undefined;
+                }) => Promise<void>;
+                info: (params_0: {
+                    uuid: string;
+                }) => Promise<import("./v3/dir/link/info").DirLinkInfoResponse>;
+                content: (params_0: {
+                    uuid: string;
+                    password: string;
+                    parent: string;
+                }) => Promise<import("./v3/dir/link/content").DirLinkContentResponse>;
+            };
+            exists: (params_0: {
+                name: string;
+                parent: string;
+            }) => Promise<import("./v3/dir/exists").DirExistsResponse>;
+            create: (params_0: {
+                uuid?: string | undefined;
+                name: string;
+                parent: string;
+            }) => Promise<import("./v3/dir/create").DirCreateResponse>;
+            present: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/dir/present").DirPresentResponse>;
+            trash: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            move: (params_0: {
+                uuid: string;
+                to: string;
+            }) => Promise<void>;
+            rename: (params_0: {
+                uuid: string;
+                name: string;
+            }) => Promise<void>;
+            size: (params_0: {
+                uuid: string;
+                sharerId?: number | undefined;
+                receiverId?: number | undefined;
+                trash?: boolean | undefined;
+            }) => Promise<import("./v3/dir/size").DirSizeResponse>;
+            sizeLink: (params_0: {
+                uuid: string;
+                linkUUID: string;
+            }) => Promise<import("./v3/dir/sizeLink").DirSizeLinkResponse>;
+            delete: () => {
+                permanent: (params_0: {
+                    uuid: string;
+                }) => Promise<void>;
+            };
+            restore: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            color: (params_0: {
+                uuid: string;
+                color: import("./v3/dir/color").DirColors;
+            }) => Promise<void>;
         };
         auth: () => {
             info: (params_0: {
@@ -58,6 +138,88 @@ export declare class API {
         user: () => {
             info: () => Promise<import("./v3/user/info").UserInfoResponse>;
             baseFolder: () => Promise<import("./v3/user/baseFolder").UserBaseFolderResponse>;
+            publicKey: (params_0: {
+                email: string;
+            }) => Promise<import("./v3/user/publicKey").UserPublicKeyResponse>;
+            settings: () => Promise<import("./v3/user/settings").UserSettingsResponse>;
+            account: () => Promise<import("./v3/user/account").UserAccountResponse>;
+            gdpr: () => Promise<import("./v3/user/gdpr").UserGDPRResponse>;
+            avatar: (params_0: {
+                buffer: Buffer;
+            }) => Promise<void>;
+            settingsEmail: () => {
+                change: (params_0: {
+                    email: string;
+                    password: string;
+                    authVersion: import("../types").AuthVersion;
+                }) => Promise<void>;
+            };
+            personal: () => {
+                change: (params_0: {
+                    city?: string | undefined;
+                    companyName?: string | undefined;
+                    country?: string | undefined;
+                    firstName?: string | undefined;
+                    lastName?: string | undefined;
+                    postalCode?: string | undefined;
+                    street?: string | undefined;
+                    streetNumber?: string | undefined;
+                    vatId?: string | undefined;
+                }) => Promise<void>;
+            };
+            delete: (params_0: {
+                twoFactorCode?: string | undefined;
+            }) => Promise<void>;
+            deleteVersions: () => Promise<void>;
+            deleteAll: () => Promise<void>;
+            settingsPassword: () => {
+                change: (params_0: {
+                    password: string;
+                    currentPassword: string;
+                    authVersion: import("../types").AuthVersion;
+                    salt: string;
+                    masterKeys: string;
+                }) => Promise<import("./v3/user/settings/password/change").UserSettingsPasswordChangeResponse>;
+            };
+            twoFactorAuthentication: () => {
+                enable: (params_0: {
+                    code: string;
+                }) => Promise<import("./v3/user/2fa/enable").User2FAEnableResponse>;
+                disable: (params_0: {
+                    code: string;
+                }) => Promise<void>;
+            };
+            events: (params_0: {
+                lastTimestamp?: number | undefined;
+                filter?: string | undefined;
+            }) => Promise<import("./v3/user/events").UserEvent[]>;
+            event: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/user/event").UserEventResponse>;
+            sub: () => {
+                cancel: (params_0: {
+                    uuid: string;
+                }) => Promise<void>;
+                create: (params_0: {
+                    planId: number;
+                    method: import("./v3/user/sub/create").PaymentMethods;
+                }) => Promise<import("./v3/user/sub/create").UserSubCreateResponse>;
+            };
+            invoice: (params_0: {
+                uuid: string;
+            }) => Promise<string>;
+            affiliate: () => {
+                payout: (params_0: {
+                    address: string;
+                    method: string;
+                }) => Promise<void>;
+            };
+            versioning: (params_0: {
+                enable: boolean;
+            }) => Promise<void>;
+            loginAlerts: (params_0: {
+                enable: boolean;
+            }) => Promise<void>;
         };
         shared: () => {
             in: (params?: {
@@ -81,6 +243,105 @@ export declare class API {
                 version: import("../types").FileEncryptionVersion;
                 uploadKey: string;
             }) => Promise<import("./v3/upload/done").UploadDoneResponse>;
+        };
+        item: () => {
+            share: (params_0: {
+                uuid: string;
+                parent: string;
+                email: string;
+                type: string;
+                metadata: string;
+            }) => Promise<void>;
+            shared: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/item/shared").ItemSharedResponse>;
+            linked: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/item/linked").ItemLinkedResponse>;
+            linkedRename: (params_0: {
+                uuid: string;
+                linkUUID: string;
+                metadata: string;
+            }) => Promise<void>;
+            sharedRename: (params_0: {
+                uuid: string;
+                receiverId: number;
+                metadata: string;
+            }) => Promise<void>;
+            favorite: (params_0: {
+                uuid: string;
+                type: "file" | "folder";
+                favorite: boolean;
+            }) => Promise<void>;
+            sharedOut: () => {
+                remove: (params_0: {
+                    uuid: string;
+                    receiverId: number;
+                }) => Promise<void>;
+            };
+            sharedIn: () => {
+                remove: (params_0: {
+                    uuid: string;
+                }) => Promise<void>;
+            };
+        };
+        file: () => {
+            exists: (params_0: {
+                name: string;
+                parent: string;
+            }) => Promise<import("./v3/file/exists").FileExistsResponse>;
+            trash: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            move: (params_0: {
+                uuid: string;
+                to: string;
+            }) => Promise<void>;
+            rename: (params_0: {
+                uuid: string;
+                metadata: import("../types").FileMetadata;
+                name: string;
+            }) => Promise<void>;
+            delete: () => {
+                permanent: (params_0: {
+                    uuid: string;
+                }) => Promise<void>;
+            };
+            restore: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            version: () => {
+                restore: (params_0: {
+                    uuid: string;
+                    currentUUID: string;
+                }) => Promise<void>;
+            };
+            link: () => {
+                status: (params_0: {
+                    uuid: string;
+                }) => Promise<import("./v3/file/link/status").FileLinkStatusResponse>;
+                edit: (params_0: {
+                    uuid: string;
+                    fileUUID: string;
+                    expiration?: import("./v3/file/link/edit").FileLinkEditExpiration | undefined;
+                    password?: string | undefined;
+                    downloadBtn?: boolean | undefined;
+                    type: "enable" | "disable" | "edit";
+                }) => Promise<void>;
+                info: (params_0: {
+                    uuid: string;
+                    password: string;
+                }) => Promise<import("./v3/file/link/info").FileLinkInfoResponse>;
+                password: (params_0: {
+                    uuid: string;
+                }) => Promise<import("./v3/file/link/password").FileLinkPasswordResponse>;
+            };
+            versions: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/file/versions").FileVersionsResponse>;
+        };
+        trash: () => {
+            empty: () => Promise<void>;
         };
     };
 }

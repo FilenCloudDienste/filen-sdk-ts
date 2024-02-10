@@ -53,6 +53,16 @@ const main = async () => {
 		.crypto()
 		.decrypt()
 		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })
+
+	console.log(await filen.api(3).item().shared({ uuid: "d33bd2c2-9a5f-43bb-884b-d8ebbe241085" }))
+	console.log(await filen.api(3).item().linked({ uuid: "d33bd2c2-9a5f-43bb-884b-d8ebbe241085" }))
+	console.log(await filen.api(3).dir().present({ uuid: "b48a3029-56f0-40e2-aa88-6afdd8d81274" }))
+
+	console.log(await filen.fs().readdir({ path: "/" }))
+	console.log(await filen.fs().stat({ path: "/.txt" }))
+
+	console.log(await filen.api(3).dir().link().status({ uuid: "b48a3029-56f0-40e2-aa88-6afdd8d81274" }))
+	console.log(await filen.api(3).file().link().status({ uuid: "f12403d1-2df3-41ea-9250-fb1e15c25d6b" }))
 }
 
 main()
