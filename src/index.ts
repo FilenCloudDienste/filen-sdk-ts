@@ -6,6 +6,9 @@ import utils from "./utils"
 import { environment } from "./constants"
 import os from "os"
 import FS from "./fs"
+import appendStream from "./streams/append"
+import { streamDecodeBase64, streamEncodeBase64 } from "./streams/base64"
+import cryptoUtils from "./crypto/utils"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -208,7 +211,15 @@ export class FilenSDK {
 		return this._fs
 	}
 
-	public readonly utils = utils
+	public readonly utils = {
+		...utils,
+		crypto: cryptoUtils,
+		streams: {
+			append: appendStream,
+			decodeBase64: streamDecodeBase64,
+			encodeBase64: streamEncodeBase64
+		}
+	}
 }
 
 export default FilenSDK

@@ -220,6 +220,20 @@ export declare class API {
             loginAlerts: (params_0: {
                 enable: boolean;
             }) => Promise<void>;
+            nickname: (params_0: {
+                nickname: string;
+            }) => Promise<void>;
+            appearOffline: (params_0: {
+                appearOffline: boolean;
+            }) => Promise<void>;
+            profile: (params_0: {
+                id: number;
+            }) => Promise<import("./v3/user/profile").UserProfileResponse>;
+            lastActive: () => {
+                desktop: (params_0: {
+                    timestamp: number;
+                }) => Promise<void>;
+            };
         };
         shared: () => {
             in: (params?: {
@@ -342,6 +356,193 @@ export declare class API {
         };
         trash: () => {
             empty: () => Promise<void>;
+        };
+        chat: () => {
+            conversations: () => Promise<import("./v3/chat/conversations").ChatConversation[]>;
+            messages: (params_0: {
+                conversation: string;
+                timestamp?: number | undefined;
+            }) => Promise<import("./v3/chat/messages").ChatMessage[]>;
+            conversationsName: () => {
+                edit: (params_0: {
+                    uuid: string;
+                    name: string;
+                }) => Promise<void>;
+            };
+            send: (params_0: {
+                conversation: string;
+                uuid: string;
+                message: string;
+                replyTo: string;
+            }) => Promise<void>;
+            edit: (params_0: {
+                conversation: string;
+                uuid: string;
+                message: string;
+            }) => Promise<void>;
+            conversationsCreate: (params_0: {
+                uuid: string;
+                metadata: string;
+            }) => Promise<void>;
+            conversationsParticipants: () => {
+                add: (params_0: {
+                    uuid: string;
+                    contactUUID: string;
+                    metadata: string;
+                }) => Promise<void>;
+                remove: (params_0: {
+                    uuid: string;
+                    userId: number;
+                }) => Promise<void>;
+            };
+            typing: (params_0: {
+                conversation: string;
+                type: import("./v3/chat/typing").ChatTypingType;
+            }) => Promise<void>;
+            conversationsRead: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            conversationsUnread: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/chat/conversations/unread").ChatConversationsUnreadResponse>;
+            unread: () => Promise<import("./v3/chat/unread").ChatUnreadResponse>;
+            conversationsOnline: (params_0: {
+                conversation: string;
+            }) => Promise<import("./v3/chat/conversations/online").ChatConversationsOnlineResponse>;
+            delete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            message: () => {
+                embed: () => {
+                    disable: (params_0: {
+                        uuid: string;
+                    }) => Promise<void>;
+                };
+            };
+            conversationsLeave: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            conversationsDelete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            lastFocusUpdate: (params_0: {
+                conversations: import("./v3/chat/lastFocusUpdate").ChatLastFocusValues[];
+            }) => Promise<void>;
+            lastFocus: () => Promise<import("./v3/chat/lastFocus").ChatLastFocusResponse>;
+        };
+        notes: () => {
+            all: () => Promise<import("./v3/notes").NotesResponse>;
+            content: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/notes/content").NoteContent>;
+            create: (params_0: {
+                uuid: string;
+                title: string;
+                metadata: string;
+            }) => Promise<void>;
+            contentEdit: (params_0: {
+                uuid: string;
+                preview: string;
+                content: string;
+                type: import("./v3/notes").NoteType;
+            }) => Promise<void>;
+            titleEdit: (params_0: {
+                uuid: string;
+                title: string;
+            }) => Promise<void>;
+            delete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            trash: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            archive: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            restore: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            typeChange: (params_0: {
+                uuid: string;
+                type: import("./v3/notes").NoteType;
+                preview: string;
+                content: string;
+            }) => Promise<void>;
+            pinned: (params_0: {
+                uuid: string;
+                pinned: boolean;
+            }) => Promise<void>;
+            favorite: (params_0: {
+                uuid: string;
+                favorite: boolean;
+            }) => Promise<void>;
+            history: (params_0: {
+                uuid: string;
+            }) => Promise<import("./v3/notes/history").NotesHistoryResponse>;
+            historyRestore: (params_0: {
+                uuid: string;
+                id: number;
+            }) => Promise<void>;
+            participantsRemove: (params_0: {
+                uuid: string;
+                userId: number;
+            }) => Promise<void>;
+            participantsPermissions: (params_0: {
+                uuid: string;
+                userId: number;
+                permissionsWrite: boolean;
+            }) => Promise<void>;
+            tags: () => Promise<import("./v3/notes/tags").NotesTagsResponse>;
+            tagsCreate: (params_0: {
+                name: string;
+            }) => Promise<import("./v3/notes/tags/create").NotesTagsCreateResponse>;
+            tagsRename: (params_0: {
+                uuid: string;
+                name: string;
+            }) => Promise<void>;
+            tagsDelete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            tagsFavorite: (params_0: {
+                uuid: string;
+                favorite: boolean;
+            }) => Promise<void>;
+            tag: (params_0: {
+                uuid: string;
+                tag: string;
+            }) => Promise<void>;
+            untag: (params_0: {
+                uuid: string;
+                tag: string;
+            }) => Promise<void>;
+        };
+        contacts: () => {
+            all: () => Promise<import("./v3/contacts").ContactsResponse>;
+            requestsIn: () => Promise<import("./v3/contacts/requests/in").ContactsRequestsInResponse>;
+            requestsInCount: () => Promise<number>;
+            requestsOut: () => Promise<import("./v3/contacts/requests/out").ContactsRequestsOutResponse>;
+            requestsOutDelete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            requestsSend: (params_0: {
+                email: string;
+            }) => Promise<void>;
+            requestsAccept: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            requestsDeny: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            delete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
+            blocked: () => Promise<import("./v3/contacts/blocked").ContactsBlockedResponse>;
+            blockedAdd: (params_0: {
+                email: string;
+            }) => Promise<void>;
+            blockedDelete: (params_0: {
+                uuid: string;
+            }) => Promise<void>;
         };
     };
 }

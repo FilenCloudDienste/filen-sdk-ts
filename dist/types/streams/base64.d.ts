@@ -31,6 +31,28 @@ export declare class Base64DecodeStream extends Transform {
     _transform(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error | null, data?: Buffer) => void): void;
 }
 /**
+ * Base64EncodeStream
+ * @date 2/10/2024 - 2:55:35 PM
+ *
+ * @export
+ * @class Base64EncodeStream
+ * @typedef {Base64EncodeStream}
+ * @extends {Transform}
+ */
+export declare class Base64EncodeStream extends Transform {
+    constructor();
+    /**
+     * Custom transform function, encodes each chunk from a buffer to base64.
+     * @date 2/7/2024 - 12:48:02 AM
+     *
+     * @public
+     * @param {Buffer} chunk
+     * @param {BufferEncoding} encoding
+     * @param {(error?: Error | null, data?: Buffer) => void} callback
+     */
+    _transform(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error | null, data?: Buffer) => void): void;
+}
+/**
  * Decodes a base64 input file to an output file using streams.
  * @date 2/7/2024 - 12:47:06 AM
  *
@@ -42,6 +64,21 @@ export declare class Base64DecodeStream extends Transform {
  * @returns {Promise<string>}
  */
 export declare function streamDecodeBase64({ inputFile, outputFile }: {
+    inputFile: string;
+    outputFile: string;
+}): Promise<string>;
+/**
+ * Encodes a input file to an output file in base64 using streams.
+ * @date 2/10/2024 - 2:56:34 PM
+ *
+ * @export
+ * @async
+ * @param {{ inputFile: string; outputFile: string }} param0
+ * @param {string} param0.inputFile
+ * @param {string} param0.outputFile
+ * @returns {Promise<string>}
+ */
+export declare function streamEncodeBase64({ inputFile, outputFile }: {
     inputFile: string;
     outputFile: string;
 }): Promise<string>;

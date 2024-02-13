@@ -71,6 +71,64 @@ import V3UserSubCreate from "./v3/user/sub/create"
 import V3UserAffiliatePayout from "./v3/user/affiliate/payout"
 import V3UserVersioning from "./v3/user/versioning"
 import V3UserLoginAlerts from "./v3/user/loginAlerts"
+import V3ChatConversations from "./v3/chat/conversations"
+import V3ChatMessages from "./v3/chat/messages"
+import V3ChatConversationsNameEdit from "./v3/chat/conversations/name/edit"
+import V3ChatSend from "./v3/chat/send"
+import V3ChatEdit from "./v3/chat/edit"
+import V3ChatConversationsCreate from "./v3/chat/conversations/create"
+import V3ChatConversationsParticipantAdd from "./v3/chat/conversations/participants/add"
+import V3ChatTyping from "./v3/chat/typing"
+import V3ChatConversationsRead from "./v3/chat/conversations/read"
+import V3ChatConversationsUnread from "./v3/chat/conversations/unread"
+import V3ChatUnread from "./v3/chat/unread"
+import V3ChatConversationsOnline from "./v3/chat/conversations/online"
+import V3ChatDelete from "./v3/chat/delete"
+import V3Notes from "./v3/notes"
+import V3NotesContent from "./v3/notes/content"
+import V3NotesCreate from "./v3/notes/create"
+import V3NotesContentEdit from "./v3/notes/content/edit"
+import V3NotesTitleEdit from "./v3/notes/title/edit"
+import V3NotesDelete from "./v3/notes/delete"
+import V3NotesTrash from "./v3/notes/trash"
+import V3NotesArchive from "./v3/notes/archive"
+import V3NotesRestore from "./v3/notes/restore"
+import V3NotesTypeChange from "./v3/notes/type/change"
+import V3NotesPinned from "./v3/notes/pinned"
+import V3NotesFavorite from "./v3/notes/favorite"
+import V3NotesHistory from "./v3/notes/history"
+import V3NotesHistoryRestore from "./v3/notes/history/restore"
+import V3NotesParticipantsRemove from "./v3/notes/participants/remove"
+import V3NotesParticipantsPermissions from "./v3/notes/participants/permissions"
+import V3Contacts from "./v3/contacts"
+import V3ContactsRequestsIn from "./v3/contacts/requests/in"
+import V3ContactsRequestsInCount from "./v3/contacts/requests/in/count"
+import V3ContactsRequestsOut from "./v3/contacts/requests/out"
+import V3ContactsRequestsOutDelete from "./v3/contacts/requests/out/delete"
+import V3ContactsRequestsSend from "./v3/contacts/requests/send"
+import V3ContactsRequestsAccept from "./v3/contacts/requests/accept"
+import V3ContactsRequestsDeny from "./v3/contacts/requests/deny"
+import V3ContactsDelete from "./v3/contacts/delete"
+import V3UserNickname from "./v3/user/nickname"
+import V3UserAppearOffline from "./v3/user/appearOffline"
+import V3ContactsBlocked from "./v3/contacts/blocked"
+import V3ContactsBlockedAdd from "./v3/contacts/blocked/add"
+import V3ContactsBlockedDelete from "./v3/contacts/blocked/delete"
+import V3NotesTags from "./v3/notes/tags"
+import V3NotesTagsCreate from "./v3/notes/tags/create"
+import V3NotesTagsRename from "./v3/notes/tags/rename"
+import V3NotesTagsDelete from "./v3/notes/tags/delete"
+import V3NotesTagsFavorite from "./v3/notes/tags/favorite"
+import V3NotesTag from "./v3/notes/tag"
+import V3NotesUntag from "./v3/notes/untag"
+import V3ChatMessageEmbedDisable from "./v3/chat/message/embed/disable"
+import V3ChatConversationsParticipantsRemove from "./v3/chat/conversations/participants/remove"
+import V3ChatConversationsLeave from "./v3/chat/conversations/leave"
+import V3ChatConversationsDelete from "./v3/chat/conversations/delete"
+import V3ChatLastFocusUpdate from "./v3/chat/lastFocusUpdate"
+import V3ChatLastFocus from "./v3/chat/lastFocus"
+import V3UserProfile from "./v3/user/profile"
+import V3UserLastActiveDesktop from "./v3/user/lastActive/desktop"
 
 export type APIConfig = {
 	apiKey: string
@@ -159,6 +217,12 @@ export class API {
 			}
 			versioning: V3UserVersioning
 			loginAlerts: V3UserLoginAlerts
+			nickname: V3UserNickname
+			appearOffline: V3UserAppearOffline
+			profile: V3UserProfile
+			lastActive: {
+				desktop: V3UserLastActiveDesktop
+			}
 		}
 		shared: {
 			in: V3SharedIn
@@ -203,6 +267,74 @@ export class API {
 		}
 		trash: {
 			empty: V3TrashEmpty
+		}
+		chat: {
+			conversations: V3ChatConversations
+			messages: V3ChatMessages
+			conversationsName: {
+				edit: V3ChatConversationsNameEdit
+			}
+			send: V3ChatSend
+			edit: V3ChatEdit
+			conversationsCreate: V3ChatConversationsCreate
+			conversationsParticipants: {
+				add: V3ChatConversationsParticipantAdd
+				remove: V3ChatConversationsParticipantsRemove
+			}
+			typing: V3ChatTyping
+			conversationsRead: V3ChatConversationsRead
+			conversationsUnread: V3ChatConversationsUnread
+			unread: V3ChatUnread
+			conversationsOnline: V3ChatConversationsOnline
+			delete: V3ChatDelete
+			message: {
+				embed: {
+					disable: V3ChatMessageEmbedDisable
+				}
+			}
+			conversationsLeave: V3ChatConversationsLeave
+			conversationsDelete: V3ChatConversationsDelete
+			lastFocusUpdate: V3ChatLastFocusUpdate
+			lastFocus: V3ChatLastFocus
+		}
+		notes: {
+			all: V3Notes
+			content: V3NotesContent
+			create: V3NotesCreate
+			contentEdit: V3NotesContentEdit
+			titleEdit: V3NotesTitleEdit
+			delete: V3NotesDelete
+			trash: V3NotesTrash
+			archive: V3NotesArchive
+			restore: V3NotesRestore
+			typeChange: V3NotesTypeChange
+			pinned: V3NotesPinned
+			favorite: V3NotesFavorite
+			history: V3NotesHistory
+			historyRestore: V3NotesHistoryRestore
+			participantsRemove: V3NotesParticipantsRemove
+			participantsPermissions: V3NotesParticipantsPermissions
+			tags: V3NotesTags
+			tagsCreate: V3NotesTagsCreate
+			tagsRename: V3NotesTagsRename
+			tagsDelete: V3NotesTagsDelete
+			tagsFavorite: V3NotesTagsFavorite
+			tag: V3NotesTag
+			untag: V3NotesUntag
+		}
+		contacts: {
+			all: V3Contacts
+			requestsIn: V3ContactsRequestsIn
+			requestsInCount: V3ContactsRequestsInCount
+			requestsOut: V3ContactsRequestsOut
+			requestsOutDelete: V3ContactsRequestsOutDelete
+			requestsSend: V3ContactsRequestsSend
+			requestsAccept: V3ContactsRequestsAccept
+			requestsDeny: V3ContactsRequestsDeny
+			delete: V3ContactsDelete
+			blocked: V3ContactsBlocked
+			blockedAdd: V3ContactsBlockedAdd
+			blockedDelete: V3ContactsBlockedDelete
 		}
 	}
 
@@ -292,7 +424,13 @@ export class API {
 					payout: new V3UserAffiliatePayout({ apiClient: this.apiClient })
 				},
 				versioning: new V3UserVersioning({ apiClient: this.apiClient }),
-				loginAlerts: new V3UserLoginAlerts({ apiClient: this.apiClient })
+				loginAlerts: new V3UserLoginAlerts({ apiClient: this.apiClient }),
+				nickname: new V3UserNickname({ apiClient: this.apiClient }),
+				appearOffline: new V3UserAppearOffline({ apiClient: this.apiClient }),
+				profile: new V3UserProfile({ apiClient: this.apiClient }),
+				lastActive: {
+					desktop: new V3UserLastActiveDesktop({ apiClient: this.apiClient })
+				}
 			},
 			shared: {
 				in: new V3SharedIn({ apiClient: this.apiClient }),
@@ -337,6 +475,74 @@ export class API {
 			},
 			trash: {
 				empty: new V3TrashEmpty({ apiClient: this.apiClient })
+			},
+			chat: {
+				conversations: new V3ChatConversations({ apiClient: this.apiClient }),
+				messages: new V3ChatMessages({ apiClient: this.apiClient }),
+				conversationsName: {
+					edit: new V3ChatConversationsNameEdit({ apiClient: this.apiClient })
+				},
+				send: new V3ChatSend({ apiClient: this.apiClient }),
+				edit: new V3ChatEdit({ apiClient: this.apiClient }),
+				conversationsCreate: new V3ChatConversationsCreate({ apiClient: this.apiClient }),
+				conversationsParticipants: {
+					add: new V3ChatConversationsParticipantAdd({ apiClient: this.apiClient }),
+					remove: new V3ChatConversationsParticipantsRemove({ apiClient: this.apiClient })
+				},
+				typing: new V3ChatTyping({ apiClient: this.apiClient }),
+				conversationsRead: new V3ChatConversationsRead({ apiClient: this.apiClient }),
+				conversationsUnread: new V3ChatConversationsUnread({ apiClient: this.apiClient }),
+				unread: new V3ChatUnread({ apiClient: this.apiClient }),
+				conversationsOnline: new V3ChatConversationsOnline({ apiClient: this.apiClient }),
+				delete: new V3ChatDelete({ apiClient: this.apiClient }),
+				message: {
+					embed: {
+						disable: new V3ChatMessageEmbedDisable({ apiClient: this.apiClient })
+					}
+				},
+				conversationsLeave: new V3ChatConversationsLeave({ apiClient: this.apiClient }),
+				conversationsDelete: new V3ChatConversationsDelete({ apiClient: this.apiClient }),
+				lastFocusUpdate: new V3ChatLastFocusUpdate({ apiClient: this.apiClient }),
+				lastFocus: new V3ChatLastFocus({ apiClient: this.apiClient })
+			},
+			notes: {
+				all: new V3Notes({ apiClient: this.apiClient }),
+				content: new V3NotesContent({ apiClient: this.apiClient }),
+				create: new V3NotesCreate({ apiClient: this.apiClient }),
+				contentEdit: new V3NotesContentEdit({ apiClient: this.apiClient }),
+				titleEdit: new V3NotesTitleEdit({ apiClient: this.apiClient }),
+				delete: new V3NotesDelete({ apiClient: this.apiClient }),
+				trash: new V3NotesTrash({ apiClient: this.apiClient }),
+				archive: new V3NotesArchive({ apiClient: this.apiClient }),
+				restore: new V3NotesRestore({ apiClient: this.apiClient }),
+				typeChange: new V3NotesTypeChange({ apiClient: this.apiClient }),
+				pinned: new V3NotesPinned({ apiClient: this.apiClient }),
+				favorite: new V3NotesFavorite({ apiClient: this.apiClient }),
+				history: new V3NotesHistory({ apiClient: this.apiClient }),
+				historyRestore: new V3NotesHistoryRestore({ apiClient: this.apiClient }),
+				participantsRemove: new V3NotesParticipantsRemove({ apiClient: this.apiClient }),
+				participantsPermissions: new V3NotesParticipantsPermissions({ apiClient: this.apiClient }),
+				tags: new V3NotesTags({ apiClient: this.apiClient }),
+				tagsCreate: new V3NotesTagsCreate({ apiClient: this.apiClient }),
+				tagsRename: new V3NotesTagsRename({ apiClient: this.apiClient }),
+				tagsDelete: new V3NotesTagsDelete({ apiClient: this.apiClient }),
+				tagsFavorite: new V3NotesTagsFavorite({ apiClient: this.apiClient }),
+				tag: new V3NotesTag({ apiClient: this.apiClient }),
+				untag: new V3NotesUntag({ apiClient: this.apiClient })
+			},
+			contacts: {
+				all: new V3Contacts({ apiClient: this.apiClient }),
+				requestsIn: new V3ContactsRequestsIn({ apiClient: this.apiClient }),
+				requestsInCount: new V3ContactsRequestsInCount({ apiClient: this.apiClient }),
+				requestsOut: new V3ContactsRequestsOut({ apiClient: this.apiClient }),
+				requestsOutDelete: new V3ContactsRequestsOutDelete({ apiClient: this.apiClient }),
+				requestsSend: new V3ContactsRequestsSend({ apiClient: this.apiClient }),
+				requestsAccept: new V3ContactsRequestsAccept({ apiClient: this.apiClient }),
+				requestsDeny: new V3ContactsRequestsDeny({ apiClient: this.apiClient }),
+				delete: new V3ContactsDelete({ apiClient: this.apiClient }),
+				blocked: new V3ContactsBlocked({ apiClient: this.apiClient }),
+				blockedAdd: new V3ContactsBlockedAdd({ apiClient: this.apiClient }),
+				blockedDelete: new V3ContactsBlockedDelete({ apiClient: this.apiClient })
 			}
 		}
 	}
@@ -445,7 +651,17 @@ export class API {
 					},
 					versioning: (...params: Parameters<typeof this._v3.user.versioning.fetch>) => this._v3.user.versioning.fetch(...params),
 					loginAlerts: (...params: Parameters<typeof this._v3.user.loginAlerts.fetch>) =>
-						this._v3.user.loginAlerts.fetch(...params)
+						this._v3.user.loginAlerts.fetch(...params),
+					nickname: (...params: Parameters<typeof this._v3.user.nickname.fetch>) => this._v3.user.nickname.fetch(...params),
+					appearOffline: (...params: Parameters<typeof this._v3.user.appearOffline.fetch>) =>
+						this._v3.user.appearOffline.fetch(...params),
+					profile: (...params: Parameters<typeof this._v3.user.profile.fetch>) => this._v3.user.profile.fetch(...params),
+					lastActive: () => {
+						return {
+							desktop: (...params: Parameters<typeof this._v3.user.lastActive.desktop.fetch>) =>
+								this._v3.user.lastActive.desktop.fetch(...params)
+						}
+					}
 				}
 			},
 			shared: () => {
@@ -518,6 +734,118 @@ export class API {
 			trash: () => {
 				return {
 					empty: (...params: Parameters<typeof this._v3.trash.empty.fetch>) => this._v3.trash.empty.fetch(...params)
+				}
+			},
+			chat: () => {
+				return {
+					conversations: (...params: Parameters<typeof this._v3.chat.conversations.fetch>) =>
+						this._v3.chat.conversations.fetch(...params),
+					messages: (...params: Parameters<typeof this._v3.chat.messages.fetch>) => this._v3.chat.messages.fetch(...params),
+					conversationsName: () => {
+						return {
+							edit: (...params: Parameters<typeof this._v3.chat.conversationsName.edit.fetch>) =>
+								this._v3.chat.conversationsName.edit.fetch(...params)
+						}
+					},
+					send: (...params: Parameters<typeof this._v3.chat.send.fetch>) => this._v3.chat.send.fetch(...params),
+					edit: (...params: Parameters<typeof this._v3.chat.edit.fetch>) => this._v3.chat.edit.fetch(...params),
+					conversationsCreate: (...params: Parameters<typeof this._v3.chat.conversationsCreate.fetch>) =>
+						this._v3.chat.conversationsCreate.fetch(...params),
+					conversationsParticipants: () => {
+						return {
+							add: (...params: Parameters<typeof this._v3.chat.conversationsParticipants.add.fetch>) =>
+								this._v3.chat.conversationsParticipants.add.fetch(...params),
+							remove: (...params: Parameters<typeof this._v3.chat.conversationsParticipants.remove.fetch>) =>
+								this._v3.chat.conversationsParticipants.remove.fetch(...params)
+						}
+					},
+					typing: (...params: Parameters<typeof this._v3.chat.typing.fetch>) => this._v3.chat.typing.fetch(...params),
+					conversationsRead: (...params: Parameters<typeof this._v3.chat.conversationsRead.fetch>) =>
+						this._v3.chat.conversationsRead.fetch(...params),
+					conversationsUnread: (...params: Parameters<typeof this._v3.chat.conversationsUnread.fetch>) =>
+						this._v3.chat.conversationsUnread.fetch(...params),
+					unread: (...params: Parameters<typeof this._v3.chat.unread.fetch>) => this._v3.chat.unread.fetch(...params),
+					conversationsOnline: (...params: Parameters<typeof this._v3.chat.conversationsOnline.fetch>) =>
+						this._v3.chat.conversationsOnline.fetch(...params),
+					delete: (...params: Parameters<typeof this._v3.chat.delete.fetch>) => this._v3.chat.delete.fetch(...params),
+					message: () => {
+						return {
+							embed: () => {
+								return {
+									disable: (...params: Parameters<typeof this._v3.chat.message.embed.disable.fetch>) =>
+										this._v3.chat.message.embed.disable.fetch(...params)
+								}
+							}
+						}
+					},
+					conversationsLeave: (...params: Parameters<typeof this._v3.chat.conversationsLeave.fetch>) =>
+						this._v3.chat.conversationsLeave.fetch(...params),
+					conversationsDelete: (...params: Parameters<typeof this._v3.chat.conversationsDelete.fetch>) =>
+						this._v3.chat.conversationsDelete.fetch(...params),
+					lastFocusUpdate: (...params: Parameters<typeof this._v3.chat.lastFocusUpdate.fetch>) =>
+						this._v3.chat.lastFocusUpdate.fetch(...params),
+					lastFocus: (...params: Parameters<typeof this._v3.chat.lastFocus.fetch>) => this._v3.chat.lastFocus.fetch(...params)
+				}
+			},
+			notes: () => {
+				return {
+					all: (...params: Parameters<typeof this._v3.notes.all.fetch>) => this._v3.notes.all.fetch(...params),
+					content: (...params: Parameters<typeof this._v3.notes.content.fetch>) => this._v3.notes.content.fetch(...params),
+					create: (...params: Parameters<typeof this._v3.notes.create.fetch>) => this._v3.notes.create.fetch(...params),
+					contentEdit: (...params: Parameters<typeof this._v3.notes.contentEdit.fetch>) =>
+						this._v3.notes.contentEdit.fetch(...params),
+					titleEdit: (...params: Parameters<typeof this._v3.notes.titleEdit.fetch>) => this._v3.notes.titleEdit.fetch(...params),
+					delete: (...params: Parameters<typeof this._v3.notes.delete.fetch>) => this._v3.notes.delete.fetch(...params),
+					trash: (...params: Parameters<typeof this._v3.notes.trash.fetch>) => this._v3.notes.trash.fetch(...params),
+					archive: (...params: Parameters<typeof this._v3.notes.archive.fetch>) => this._v3.notes.archive.fetch(...params),
+					restore: (...params: Parameters<typeof this._v3.notes.restore.fetch>) => this._v3.notes.restore.fetch(...params),
+					typeChange: (...params: Parameters<typeof this._v3.notes.typeChange.fetch>) =>
+						this._v3.notes.typeChange.fetch(...params),
+					pinned: (...params: Parameters<typeof this._v3.notes.pinned.fetch>) => this._v3.notes.pinned.fetch(...params),
+					favorite: (...params: Parameters<typeof this._v3.notes.favorite.fetch>) => this._v3.notes.favorite.fetch(...params),
+					history: (...params: Parameters<typeof this._v3.notes.history.fetch>) => this._v3.notes.history.fetch(...params),
+					historyRestore: (...params: Parameters<typeof this._v3.notes.historyRestore.fetch>) =>
+						this._v3.notes.historyRestore.fetch(...params),
+					participantsRemove: (...params: Parameters<typeof this._v3.notes.participantsRemove.fetch>) =>
+						this._v3.notes.participantsRemove.fetch(...params),
+					participantsPermissions: (...params: Parameters<typeof this._v3.notes.participantsPermissions.fetch>) =>
+						this._v3.notes.participantsPermissions.fetch(...params),
+					tags: (...params: Parameters<typeof this._v3.notes.tags.fetch>) => this._v3.notes.tags.fetch(...params),
+					tagsCreate: (...params: Parameters<typeof this._v3.notes.tagsCreate.fetch>) =>
+						this._v3.notes.tagsCreate.fetch(...params),
+					tagsRename: (...params: Parameters<typeof this._v3.notes.tagsRename.fetch>) =>
+						this._v3.notes.tagsRename.fetch(...params),
+					tagsDelete: (...params: Parameters<typeof this._v3.notes.tagsDelete.fetch>) =>
+						this._v3.notes.tagsDelete.fetch(...params),
+					tagsFavorite: (...params: Parameters<typeof this._v3.notes.tagsFavorite.fetch>) =>
+						this._v3.notes.tagsFavorite.fetch(...params),
+					tag: (...params: Parameters<typeof this._v3.notes.tag.fetch>) => this._v3.notes.tag.fetch(...params),
+					untag: (...params: Parameters<typeof this._v3.notes.untag.fetch>) => this._v3.notes.untag.fetch(...params)
+				}
+			},
+			contacts: () => {
+				return {
+					all: (...params: Parameters<typeof this._v3.contacts.all.fetch>) => this._v3.contacts.all.fetch(...params),
+					requestsIn: (...params: Parameters<typeof this._v3.contacts.requestsIn.fetch>) =>
+						this._v3.contacts.requestsIn.fetch(...params),
+					requestsInCount: (...params: Parameters<typeof this._v3.contacts.requestsInCount.fetch>) =>
+						this._v3.contacts.requestsInCount.fetch(...params),
+					requestsOut: (...params: Parameters<typeof this._v3.contacts.requestsOut.fetch>) =>
+						this._v3.contacts.requestsOut.fetch(...params),
+					requestsOutDelete: (...params: Parameters<typeof this._v3.contacts.requestsOutDelete.fetch>) =>
+						this._v3.contacts.requestsOutDelete.fetch(...params),
+					requestsSend: (...params: Parameters<typeof this._v3.contacts.requestsSend.fetch>) =>
+						this._v3.contacts.requestsSend.fetch(...params),
+					requestsAccept: (...params: Parameters<typeof this._v3.contacts.requestsAccept.fetch>) =>
+						this._v3.contacts.requestsAccept.fetch(...params),
+					requestsDeny: (...params: Parameters<typeof this._v3.contacts.requestsDeny.fetch>) =>
+						this._v3.contacts.requestsDeny.fetch(...params),
+					delete: (...params: Parameters<typeof this._v3.contacts.delete.fetch>) => this._v3.contacts.delete.fetch(...params),
+					blocked: (...params: Parameters<typeof this._v3.contacts.blocked.fetch>) => this._v3.contacts.blocked.fetch(...params),
+					blockedAdd: (...params: Parameters<typeof this._v3.contacts.blockedAdd.fetch>) =>
+						this._v3.contacts.blockedAdd.fetch(...params),
+					blockedDelete: (...params: Parameters<typeof this._v3.contacts.blockedDelete.fetch>) =>
+						this._v3.contacts.blockedDelete.fetch(...params)
 				}
 			}
 		}
