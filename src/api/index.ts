@@ -129,6 +129,9 @@ import V3ChatLastFocusUpdate from "./v3/chat/lastFocusUpdate"
 import V3ChatLastFocus from "./v3/chat/lastFocus"
 import V3UserProfile from "./v3/user/profile"
 import V3UserLastActiveDesktop from "./v3/user/lastActive/desktop"
+import V3FileDownloadChunkBuffer from "./v3/file/download/chunk/buffer"
+import V3FileDownloadChunkStream from "./v3/file/download/chunk/stream"
+import V3FileDownloadChunkLocal from "./v3/file/download/chunk/local"
 
 export type APIConfig = {
 	apiKey: string
@@ -264,6 +267,13 @@ export class API {
 				password: V3FileLinkPassword
 			}
 			versions: V3FileVersions
+			download: {
+				chunk: {
+					buffer: V3FileDownloadChunkBuffer
+					stream: V3FileDownloadChunkStream
+					local: V3FileDownloadChunkLocal
+				}
+			}
 		}
 		trash: {
 			empty: V3TrashEmpty
@@ -372,11 +382,11 @@ export class API {
 					content: new V3DirLinkContent({ apiClient: this.apiClient })
 				},
 				exists: new V3DirExists({ apiClient: this.apiClient }),
-				create: new V3DirCreate({ apiClient: this.apiClient, crypto: this.crypto }),
+				create: new V3DirCreate({ apiClient: this.apiClient }),
 				present: new V3DirPresent({ apiClient: this.apiClient }),
 				trash: new V3DirTrash({ apiClient: this.apiClient }),
 				move: new V3DirMove({ apiClient: this.apiClient }),
-				rename: new V3DirRename({ apiClient: this.apiClient, crypto: this.crypto }),
+				rename: new V3DirRename({ apiClient: this.apiClient }),
 				size: new V3DirSize({ apiClient: this.apiClient }),
 				sizeLink: new V3DirSizeLink({ apiClient: this.apiClient }),
 				delete: {
@@ -457,7 +467,7 @@ export class API {
 				exists: new V3FileExists({ apiClient: this.apiClient }),
 				trash: new V3FileTrash({ apiClient: this.apiClient }),
 				move: new V3FileMove({ apiClient: this.apiClient }),
-				rename: new V3FileRename({ apiClient: this.apiClient, crypto: this.crypto }),
+				rename: new V3FileRename({ apiClient: this.apiClient }),
 				delete: {
 					permanent: new V3FileDeletePermanent({ apiClient: this.apiClient })
 				},
@@ -471,7 +481,14 @@ export class API {
 					info: new V3FileLinkInfo({ apiClient: this.apiClient }),
 					password: new V3FileLinkPassword({ apiClient: this.apiClient })
 				},
-				versions: new V3FileVersions({ apiClient: this.apiClient })
+				versions: new V3FileVersions({ apiClient: this.apiClient }),
+				download: {
+					chunk: {
+						buffer: new V3FileDownloadChunkBuffer({ apiClient: this.apiClient }),
+						stream: new V3FileDownloadChunkStream({ apiClient: this.apiClient }),
+						local: new V3FileDownloadChunkLocal({ apiClient: this.apiClient })
+					}
+				}
 			},
 			trash: {
 				empty: new V3TrashEmpty({ apiClient: this.apiClient })
@@ -728,7 +745,21 @@ export class API {
 								this._v3.file.link.password.fetch(...params)
 						}
 					},
-					versions: (...params: Parameters<typeof this._v3.file.versions.fetch>) => this._v3.file.versions.fetch(...params)
+					versions: (...params: Parameters<typeof this._v3.file.versions.fetch>) => this._v3.file.versions.fetch(...params),
+					download: () => {
+						return {
+							chunk: () => {
+								return {
+									buffer: (...params: Parameters<typeof this._v3.file.download.chunk.buffer.fetch>) =>
+										this._v3.file.download.chunk.buffer.fetch(...params),
+									stream: (...params: Parameters<typeof this._v3.file.download.chunk.stream.fetch>) =>
+										this._v3.file.download.chunk.stream.fetch(...params),
+									local: (...params: Parameters<typeof this._v3.file.download.chunk.local.fetch>) =>
+										this._v3.file.download.chunk.local.fetch(...params)
+								}
+							}
+						}
+					}
 				}
 			},
 			trash: () => {

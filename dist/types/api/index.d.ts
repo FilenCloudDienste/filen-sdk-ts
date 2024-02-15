@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import type Crypto from "../crypto";
 export type APIConfig = {
     apiKey: string;
@@ -84,8 +85,9 @@ export declare class API {
             }) => Promise<import("./v3/dir/exists").DirExistsResponse>;
             create: (params_0: {
                 uuid?: string | undefined;
-                name: string;
+                metadataEncrypted: string;
                 parent: string;
+                nameHashed: string;
             }) => Promise<import("./v3/dir/create").DirCreateResponse>;
             present: (params_0: {
                 uuid: string;
@@ -99,7 +101,8 @@ export declare class API {
             }) => Promise<void>;
             rename: (params_0: {
                 uuid: string;
-                name: string;
+                metadataEncrypted: string;
+                nameHashed: string;
             }) => Promise<void>;
             size: (params_0: {
                 uuid: string;
@@ -313,8 +316,9 @@ export declare class API {
             }) => Promise<void>;
             rename: (params_0: {
                 uuid: string;
-                metadata: import("../types").FileMetadata;
-                name: string;
+                metadataEncrypted: string;
+                nameEncrypted: string;
+                nameHashed: string;
             }) => Promise<void>;
             delete: () => {
                 permanent: (params_0: {
@@ -353,6 +357,35 @@ export declare class API {
             versions: (params_0: {
                 uuid: string;
             }) => Promise<import("./v3/file/versions").FileVersionsResponse>;
+            download: () => {
+                chunk: () => {
+                    buffer: (params_0: {
+                        uuid: string;
+                        bucket: string;
+                        region: string;
+                        chunk: number;
+                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal | undefined;
+                    }) => Promise<Buffer>;
+                    stream: (params_0: {
+                        uuid: string;
+                        bucket: string;
+                        region: string;
+                        chunk: number;
+                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal | undefined;
+                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
+                    local: (params_0: {
+                        uuid: string;
+                        bucket: string;
+                        region: string;
+                        chunk: number;
+                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal | undefined;
+                        to: string;
+                    }) => Promise<void>;
+                };
+            };
         };
         trash: () => {
             empty: () => Promise<void>;

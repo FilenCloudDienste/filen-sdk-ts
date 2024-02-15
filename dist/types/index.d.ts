@@ -1,10 +1,12 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import "./reactNative";
 import type { AuthVersion } from "./types";
 import Crypto from "./crypto";
 import FS from "./fs";
 import appendStream from "./streams/append";
 import { streamDecodeBase64, streamEncodeBase64 } from "./streams/base64";
+import Cloud from "./cloud";
 export type FilenSDKConfig = {
     email?: string;
     password?: string;
@@ -32,6 +34,7 @@ export declare class FilenSDK {
     private _api;
     private _crypto;
     private _fs;
+    private _cloud;
     /**
      * Creates an instance of FilenSDK.
      * @date 1/31/2024 - 4:04:52 PM
@@ -139,8 +142,9 @@ export declare class FilenSDK {
             }) => Promise<import("./api/v3/dir/exists").DirExistsResponse>;
             create: (params_0: {
                 uuid?: string | undefined;
-                name: string;
+                metadataEncrypted: string;
                 parent: string;
+                nameHashed: string;
             }) => Promise<import("./api/v3/dir/create").DirCreateResponse>;
             present: (params_0: {
                 uuid: string;
@@ -154,7 +158,8 @@ export declare class FilenSDK {
             }) => Promise<void>;
             rename: (params_0: {
                 uuid: string;
-                name: string;
+                metadataEncrypted: string;
+                nameHashed: string;
             }) => Promise<void>;
             size: (params_0: {
                 uuid: string;
@@ -368,8 +373,9 @@ export declare class FilenSDK {
             }) => Promise<void>;
             rename: (params_0: {
                 uuid: string;
-                metadata: import("./types").FileMetadata;
-                name: string;
+                metadataEncrypted: string;
+                nameEncrypted: string;
+                nameHashed: string;
             }) => Promise<void>;
             delete: () => {
                 permanent: (params_0: {
@@ -408,6 +414,35 @@ export declare class FilenSDK {
             versions: (params_0: {
                 uuid: string;
             }) => Promise<import("./api/v3/file/versions").FileVersionsResponse>;
+            download: () => {
+                chunk: () => {
+                    buffer: (params_0: {
+                        uuid: string;
+                        bucket: string;
+                        region: string;
+                        chunk: number;
+                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal | undefined;
+                    }) => Promise<Buffer>;
+                    stream: (params_0: {
+                        uuid: string;
+                        bucket: string;
+                        region: string;
+                        chunk: number;
+                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal | undefined;
+                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
+                    local: (params_0: {
+                        uuid: string;
+                        bucket: string;
+                        region: string;
+                        chunk: number;
+                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal | undefined;
+                        to: string;
+                    }) => Promise<void>;
+                };
+            };
         };
         trash: () => {
             empty: () => Promise<void>;
@@ -481,14 +516,6 @@ export declare class FilenSDK {
                 uuid: string;
             }) => Promise<void>;
             lastFocusUpdate: (params_0: {
-                /**
-                 * Creates an instance of FilenSDK.
-                 * @date 1/31/2024 - 4:04:52 PM
-                 *
-                 * @constructor
-                 * @public
-                 * @param {FilenSDKConfig} params
-                 */
                 conversations: import("./api/v3/chat/lastFocusUpdate").ChatLastFocusValues[];
             }) => Promise<void>;
             lastFocus: () => Promise<import("./api/v3/chat/lastFocus").ChatLastFocusResponse>;
@@ -617,6 +644,7 @@ export declare class FilenSDK {
      */
     crypto(): Crypto;
     fs(): FS;
+    cloud(): Cloud;
     readonly utils: {
         crypto: {
             generateRandomString: typeof import("./crypto/utils").generateRandomString;
@@ -642,6 +670,8 @@ export declare class FilenSDK {
         normalizePath: typeof import("./utils").normalizePath;
         uuidv4: typeof import("./utils").uuidv4;
         Uint8ArrayConcat: typeof import("./utils").Uint8ArrayConcat;
+        promiseAllChunked: typeof import("./utils").promiseAllChunked;
+        getRandomArbitrary: typeof import("./utils").getRandomArbitrary;
     };
 }
 export default FilenSDK;

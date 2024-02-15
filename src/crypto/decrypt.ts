@@ -771,13 +771,13 @@ export class Decrypt {
 	 *
 	 * @public
 	 * @async
-	 * @param {{ data: Uint8Array; key: string; version: FileEncryptionVersion }} param0
-	 * @param {Uint8Array} param0.data
+	 * @param {{ data: Buffer; key: string; version: FileEncryptionVersion }} param0
+	 * @param {Buffer} param0.data
 	 * @param {string} param0.key
 	 * @param {FileEncryptionVersion} param0.version
-	 * @returns {Promise<Uint8Array>}
+	 * @returns {Promise<Buffer>}
 	 */
-	public async data({ data, key, version }: { data: Uint8Array; key: string; version: FileEncryptionVersion }): Promise<Uint8Array> {
+	public async data({ data, key, version }: { data: Buffer; key: string; version: FileEncryptionVersion }): Promise<Buffer> {
 		if (environment === "node") {
 			if (version === 1) {
 				// Old and deprecated, not in use anymore, just here for backwards compatibility
@@ -804,7 +804,7 @@ export class Decrypt {
 				}
 
 				if (needsConvert && !isCBC) {
-					data = new Uint8Array(Buffer.from(this.textDecoder.decode(data), "base64").buffer)
+					data = Buffer.from(this.textDecoder.decode(data), "base64")
 				}
 
 				if (!isCBC) {
@@ -868,7 +868,7 @@ export class Decrypt {
 				}
 
 				if (needsConvert && !isCBC) {
-					data = new Uint8Array(Buffer.from(this.textDecoder.decode(data), "base64").buffer)
+					data = Buffer.from(this.textDecoder.decode(data), "base64")
 				}
 
 				if (!isCBC) {
@@ -891,7 +891,7 @@ export class Decrypt {
 						data.subarray(16)
 					)
 
-					return new Uint8Array(decrypted)
+					return Buffer.from(decrypted)
 				} else {
 					// Old and deprecated, not in use anymore, just here for backwards compatibility
 					const keyBytes = Buffer.from(key, "utf-8")
@@ -906,7 +906,7 @@ export class Decrypt {
 						data
 					)
 
-					return new Uint8Array(decrypted)
+					return Buffer.from(decrypted)
 				}
 			} else if (version === 2) {
 				const iv = data.subarray(0, 12)
@@ -920,10 +920,10 @@ export class Decrypt {
 					encData
 				)
 
-				return new Uint8Array(decrypted)
+				return Buffer.from(decrypted)
 			}
 		} else if (environment === "reactNative") {
-			return await global.nodeThread.decryptData({ base64: Buffer.from(data).toString("base64"), key, version })
+			return Buffer.from(await global.nodeThread.decryptData({ base64: Buffer.from(data).toString("base64"), key, version }))
 		}
 
 		throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`)

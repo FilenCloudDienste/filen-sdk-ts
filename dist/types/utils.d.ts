@@ -45,11 +45,26 @@ export declare function uuidv4(): Promise<string>;
  * @returns {Uint8Array}
  */
 export declare function Uint8ArrayConcat(a1: Uint8Array, a2: Uint8Array): Uint8Array;
+/**
+ * Chunk large Promise.all executions.
+ * @date 2/14/2024 - 11:59:34 PM
+ *
+ * @export
+ * @async
+ * @template T
+ * @param {Promise<T>[]} promises
+ * @param {number} [chunkSize=10000]
+ * @returns {Promise<T[]>}
+ */
+export declare function promiseAllChunked<T>(promises: Promise<T>[], chunkSize?: number): Promise<T[]>;
+export declare function getRandomArbitrary(min: number, max: number): number;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
     normalizePath: typeof normalizePath;
     uuidv4: typeof uuidv4;
     Uint8ArrayConcat: typeof Uint8ArrayConcat;
+    promiseAllChunked: typeof promiseAllChunked;
+    getRandomArbitrary: typeof getRandomArbitrary;
 };
 export default utils;

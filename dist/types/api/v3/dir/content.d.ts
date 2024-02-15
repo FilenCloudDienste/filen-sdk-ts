@@ -1,5 +1,6 @@
 import type APIClient from "../../client";
 import type { FileEncryptionVersion } from "../../../types";
+import type DirColor from "./color";
 export type DirContentUpload = {
     uuid: string;
     metadata: string;
@@ -17,7 +18,7 @@ export type DirContentFolder = {
     uuid: string;
     name: string;
     parent: string;
-    color: string | null;
+    color: DirColor;
     timestamp: number;
     favorited: 0 | 1;
     is_sync: 0 | 1;

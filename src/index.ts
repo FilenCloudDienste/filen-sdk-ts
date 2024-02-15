@@ -9,6 +9,7 @@ import FS from "./fs"
 import appendStream from "./streams/append"
 import { streamDecodeBase64, streamEncodeBase64 } from "./streams/base64"
 import cryptoUtils from "./crypto/utils"
+import Cloud from "./cloud"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -38,6 +39,7 @@ export class FilenSDK {
 	private _api: API
 	private _crypto: Crypto
 	private _fs: FS
+	private _cloud: Cloud
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -70,7 +72,8 @@ export class FilenSDK {
 		this._api = params.apiKey
 			? new API({ apiKey: params.apiKey, crypto: this._crypto })
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
-		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
 	}
 
 	/**
@@ -103,7 +106,8 @@ export class FilenSDK {
 		this._api = params.apiKey
 			? new API({ apiKey: params.apiKey, crypto: this._crypto })
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
-		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
 	}
 
 	/**
@@ -209,6 +213,14 @@ export class FilenSDK {
 		}
 
 		return this._fs
+	}
+
+	public cloud(): Cloud {
+		if (!this.isLoggedIn()) {
+			throw new Error("Not authenticated, please call login() first")
+		}
+
+		return this._cloud
 	}
 
 	public readonly utils = {

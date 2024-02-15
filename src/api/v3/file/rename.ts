@@ -1,7 +1,4 @@
 import type APIClient from "../../client"
-import type Crypto from "../../../crypto"
-import { hashFn } from "../../../crypto/utils"
-import type { FileMetadata } from "../../../types"
 
 /**
  * FileRename
@@ -13,55 +10,52 @@ import type { FileMetadata } from "../../../types"
  */
 export class FileRename {
 	private readonly apiClient: APIClient
-	private readonly crypto: Crypto
 
 	/**
 	 * Creates an instance of FileRename.
-	 * @date 2/9/2024 - 5:10:15 AM
+	 * @date 2/14/2024 - 4:40:52 AM
 	 *
 	 * @constructor
 	 * @public
-	 * @param {{ apiClient: APIClient, crypto: Crypto }} param0
+	 * @param {{ apiClient: APIClient; }} param0
 	 * @param {APIClient} param0.apiClient
-	 * @param {Crypto} param0.crypto
 	 */
-	public constructor({ apiClient, crypto }: { apiClient: APIClient; crypto: Crypto }) {
+	public constructor({ apiClient }: { apiClient: APIClient }) {
 		this.apiClient = apiClient
-		this.crypto = crypto
 	}
 
 	/**
 	 * Rename a file.
-	 * @date 2/9/2024 - 5:16:16 AM
+	 * @date 2/14/2024 - 4:40:39 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string; metadata: FileMetadata; name: string }} param0
+	 * @param {{ uuid: string; metadataEncrypted: string; nameEncrypted: string, nameHashed: string }} param0
 	 * @param {string} param0.uuid
-	 * @param {FileMetadata} param0.metadata
-	 * @param {string} param0.name
+	 * @param {string} param0.metadataEncrypted
+	 * @param {string} param0.nameEncrypted
+	 * @param {string} param0.nameHashed
 	 * @returns {Promise<void>}
 	 */
-	public async fetch({ uuid, metadata, name }: { uuid: string; metadata: FileMetadata; name: string }): Promise<void> {
-		const [nameHashed, encrypted, encryptedName] = await Promise.all([
-			hashFn({ input: name.toLowerCase() }),
-			this.crypto.encrypt().metadata({
-				metadata: JSON.stringify({
-					...metadata,
-					name
-				})
-			}),
-			this.crypto.encrypt().metadata({ metadata: name, key: metadata.key })
-		])
-
+	public async fetch({
+		uuid,
+		metadataEncrypted,
+		nameEncrypted,
+		nameHashed
+	}: {
+		uuid: string
+		metadataEncrypted: string
+		nameEncrypted: string
+		nameHashed: string
+	}): Promise<void> {
 		await this.apiClient.request({
 			method: "POST",
 			endpoint: "/v3/file/rename",
 			data: {
 				uuid,
-				name: encryptedName,
+				name: nameEncrypted,
 				nameHashed,
-				metadata: encrypted
+				metadata: metadataEncrypted
 			}
 		})
 

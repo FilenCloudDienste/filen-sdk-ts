@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { CryptoConfig } from ".";
 import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types";
 /**
@@ -309,17 +310,17 @@ export declare class Decrypt {
      *
      * @public
      * @async
-     * @param {{ data: Uint8Array; key: string; version: FileEncryptionVersion }} param0
-     * @param {Uint8Array} param0.data
+     * @param {{ data: Buffer; key: string; version: FileEncryptionVersion }} param0
+     * @param {Buffer} param0.data
      * @param {string} param0.key
      * @param {FileEncryptionVersion} param0.version
-     * @returns {Promise<Uint8Array>}
+     * @returns {Promise<Buffer>}
      */
     data({ data, key, version }: {
-        data: Uint8Array;
+        data: Buffer;
         key: string;
         version: FileEncryptionVersion;
-    }): Promise<Uint8Array>;
+    }): Promise<Buffer>;
     /**
      * Decrypt a file/chunk using streams. Only available in a Node.JS environment.
      * @date 2/7/2024 - 1:38:12 AM

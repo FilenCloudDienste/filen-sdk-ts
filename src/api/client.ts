@@ -1,5 +1,12 @@
 import axios from "axios"
-import { sleep } from "../utils"
+import { sleep, getRandomArbitrary } from "../utils"
+import { environment } from "../constants"
+import { normalizePath } from "../utils"
+import { promisify } from "util"
+import { pipeline } from "stream"
+import fs from "fs-extra"
+
+const pipelineAsync = promisify(pipeline)
 
 export type APIClientConfig = {
 	apiKey: string
@@ -8,7 +15,7 @@ export type APIClientConfig = {
 export type BaseRequestParameters = {
 	endpoint: string
 	url?: string
-	signal?: AbortSignal
+	abortSignal?: AbortSignal
 	timeout?: number
 	maxRetries?: number
 	retryTimeout?: number
@@ -26,9 +33,40 @@ export type PostRequestParameters = BaseRequestParameters & {
 export type RequestParameters = GetRequestParameters | PostRequestParameters
 
 export const APIClientDefaults = {
-	url: "https://gateway.filen.io",
-	timeout: 300000,
-	maxRetries: 3,
+	gatewayURLs: [
+		"https://gateway.filen.io",
+		"https://gateway.filen.net",
+		"https://gateway.filen-1.net",
+		"https://gateway.filen-2.net",
+		"https://gateway.filen-3.net",
+		"https://gateway.filen-4.net",
+		"https://gateway.filen-5.net",
+		"https://gateway.filen-6.net"
+	],
+	egestURLs: [
+		"https://egest.filen.io",
+		"https://egest.filen.net",
+		"https://egest.filen-1.net",
+		"https://egest.filen-2.net",
+		"https://egest.filen-3.net",
+		"https://egest.filen-4.net",
+		"https://egest.filen-5.net",
+		"https://egest.filen-6.net"
+	],
+	ingestURLs: [
+		"https://ingest.filen.io",
+		"https://ingest.filen.net",
+		"https://ingest.filen-1.net",
+		"https://ingest.filen-2.net",
+		"https://ingest.filen-3.net",
+		"https://ingest.filen-4.net",
+		"https://ingest.filen-5.net",
+		"https://ingest.filen-6.net"
+	],
+	gatewayTimeout: 300000,
+	egestTimeout: 1800000,
+	ingestTimeout: 3600000,
+	maxRetries: 32,
 	retryTimeout: 1000
 } as const
 
@@ -85,12 +123,12 @@ export class APIClient {
 	 */
 	private async post(params: PostRequestParameters) {
 		const headers = this.buildHeaders()
-		const url = params.url ? params.url : APIClientDefaults.url
+		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
 
 		return await axios.post(url + params.endpoint, params.data, {
 			headers,
-			signal: params.signal,
-			timeout: params.timeout ? params.timeout : APIClientDefaults.timeout
+			signal: params.abortSignal,
+			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
 		})
 	}
 
@@ -105,12 +143,12 @@ export class APIClient {
 	 */
 	private async get(params: GetRequestParameters) {
 		const headers = this.buildHeaders()
-		const url = params.url ? params.url : APIClientDefaults.url
+		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
 
 		return await axios.get(url + params.endpoint, {
 			headers,
-			signal: params.signal,
-			timeout: params.timeout ? params.timeout : APIClientDefaults.timeout
+			signal: params.abortSignal,
+			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
 		})
 	}
 
@@ -170,6 +208,146 @@ export class APIClient {
 		}
 
 		return await send()
+	}
+
+	/**
+	 * Downloads a file chunk to a local path.
+	 * @date 2/15/2024 - 4:33:17 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string, bucket: string, region: string, chunk: number, to: string, timeout?: number, abortSignal?: AbortSignal}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.bucket
+	 * @param {string} param0.region
+	 * @param {number} param0.chunk
+	 * @param {string} param0.to
+	 * @param {number} param0.timeout
+	 * @param {AbortSignal} param0.abortSignal
+	 * @returns {Promise<void>}
+	 */
+	public async downloadChunkToLocal({
+		uuid,
+		bucket,
+		region,
+		chunk,
+		to,
+		timeout,
+		abortSignal
+	}: {
+		uuid: string
+		bucket: string
+		region: string
+		chunk: number
+		to: string
+		timeout?: number
+		abortSignal?: AbortSignal
+	}): Promise<void> {
+		if (environment !== "node") {
+			throw new Error("cloud.downloadChunkToLocal is only available in a Node.JS environment")
+		}
+
+		to = normalizePath(to)
+
+		const headers = this.buildHeaders()
+		const response = await axios.get(
+			`${
+				APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]
+			}/${region}/${bucket}/${uuid}/${chunk}`,
+			{
+				signal: abortSignal,
+				headers,
+				timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
+				responseType: "stream"
+			}
+		)
+		const responseStream = response.data
+
+		await pipelineAsync(responseStream, fs.createWriteStream(to))
+	}
+
+	/**
+	 * Downloads a file chunk and returns a readable stream.
+	 * @date 2/15/2024 - 4:36:47 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		bucket: string
+	 * 		region: string
+	 * 		chunk: number
+	 * 		timeout?: number
+	 * 		abortSignal?: AbortSignal
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.bucket
+	 * @param {string} param0.region
+	 * @param {number} param0.chunk
+	 * @param {number} param0.timeout
+	 * @param {AbortSignal} param0.abortSignal
+	 * @returns {Promise<ReadableStream | fs.ReadStream>}
+	 */
+	public async downloadChunkToStream({
+		uuid,
+		bucket,
+		region,
+		chunk,
+		timeout,
+		abortSignal
+	}: {
+		uuid: string
+		bucket: string
+		region: string
+		chunk: number
+		timeout?: number
+		abortSignal?: AbortSignal
+	}): Promise<ReadableStream | fs.ReadStream> {
+		const headers = this.buildHeaders()
+		const response = await axios.get(
+			`${
+				APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]
+			}/${region}/${bucket}/${uuid}/${chunk}`,
+			{
+				signal: abortSignal,
+				headers,
+				timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
+				responseType: "stream"
+			}
+		)
+
+		return response.data
+	}
+
+	public async downloadChunkToBuffer({
+		uuid,
+		bucket,
+		region,
+		chunk,
+		timeout,
+		abortSignal
+	}: {
+		uuid: string
+		bucket: string
+		region: string
+		chunk: number
+		timeout?: number
+		abortSignal?: AbortSignal
+	}): Promise<Buffer> {
+		const headers = this.buildHeaders()
+		const response = await axios.get(
+			`${
+				APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]
+			}/${region}/${bucket}/${uuid}/${chunk}`,
+			{
+				signal: abortSignal,
+				headers,
+				timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
+				responseType: "arraybuffer"
+			}
+		)
+
+		return Buffer.from(response.data as ArrayBuffer)
 	}
 }
 

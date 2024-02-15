@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import FilenSDK from "../src"
 import config from "./dev.config.json"
 import type { AuthVersion } from "../src/types"
@@ -18,7 +20,7 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	const content = await filen.api(3).dir().content({ uuid: "6fc3d024-083f-41ba-906e-638a12a13a71" })
+	/*const content = await filen.api(3).dir().content({ uuid: "6fc3d024-083f-41ba-906e-638a12a13a71" })
 
 	for (const folders of content.folders) {
 		console.log(await filen.crypto().decrypt().folderMetadata({ metadata: folders.name }))
@@ -52,17 +54,54 @@ const main = async () => {
 	await filen
 		.crypto()
 		.decrypt()
-		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })
+		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })*/
 
-	console.log(await filen.api(3).item().shared({ uuid: "d33bd2c2-9a5f-43bb-884b-d8ebbe241085" }))
-	console.log(await filen.api(3).item().linked({ uuid: "d33bd2c2-9a5f-43bb-884b-d8ebbe241085" }))
-	console.log(await filen.api(3).dir().present({ uuid: "b48a3029-56f0-40e2-aa88-6afdd8d81274" }))
+	const files = await filen.cloud().listDirectory({ uuid: "6fc3d024-083f-41ba-906e-638a12a13a71" })
+	const file = files.filter(file => file.name === "Highway.jpg")[0]
 
-	console.log(await filen.fs().readdir({ path: "/" }))
-	console.log(await filen.fs().stat({ path: "/.txt" }))
+	const outputFile = pathModule.join(__dirname, "Highway.jpg")
 
-	console.log(await filen.api(3).dir().link().status({ uuid: "b48a3029-56f0-40e2-aa88-6afdd8d81274" }))
-	console.log(await filen.api(3).file().link().status({ uuid: "f12403d1-2df3-41ea-9250-fb1e15c25d6b" }))
+	if (file.type === "file") {
+		const stream = await filen.cloud().downloadFileToReadableStream({
+			uuid: file.uuid,
+			bucket: file.bucket,
+			region: file.region,
+			chunks: file.chunks,
+			version: file.version,
+			key: file.key
+		})
+
+		const writer = fs.createWriteStream(outputFile)
+
+		writer.on("open", async () => {
+			const reader = stream.getReader()
+
+			// eslint-disable-next-line no-constant-condition
+			while (true) {
+				const { done, value } = await reader.read()
+
+				if (done) {
+					break
+				}
+
+				if (value) {
+					await new Promise<void>((resolve, reject) => {
+						writer.write(value, err => {
+							if (err) {
+								reject(err)
+							} else {
+								resolve()
+							}
+						})
+					})
+
+					console.log("pumped")
+				}
+			}
+
+			console.log("done")
+		})
+	}
 }
 
 main()

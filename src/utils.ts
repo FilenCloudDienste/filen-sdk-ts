@@ -84,12 +84,41 @@ export function Uint8ArrayConcat(a1: Uint8Array, a2: Uint8Array): Uint8Array {
 	return mergedArray
 }
 
+/**
+ * Chunk large Promise.all executions.
+ * @date 2/14/2024 - 11:59:34 PM
+ *
+ * @export
+ * @async
+ * @template T
+ * @param {Promise<T>[]} promises
+ * @param {number} [chunkSize=10000]
+ * @returns {Promise<T[]>}
+ */
+export async function promiseAllChunked<T>(promises: Promise<T>[], chunkSize = 100000): Promise<T[]> {
+	const results: T[] = []
+
+	for (let i = 0; i < promises.length; i += chunkSize) {
+		const chunkResults = await Promise.all(promises.slice(i, i + chunkSize))
+
+		results.push(...chunkResults)
+	}
+
+	return results
+}
+
+export function getRandomArbitrary(min: number, max: number) {
+	return Math.floor(Math.random() * (max - min) + min)
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
 	normalizePath,
 	uuidv4,
-	Uint8ArrayConcat
+	Uint8ArrayConcat,
+	promiseAllChunked,
+	getRandomArbitrary
 }
 
 export default utils

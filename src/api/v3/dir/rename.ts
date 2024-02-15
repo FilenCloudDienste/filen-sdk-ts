@@ -1,6 +1,4 @@
 import type APIClient from "../../client"
-import type Crypto from "../../../crypto"
-import { hashFn } from "../../../crypto/utils"
 
 /**
  * DirRename
@@ -12,50 +10,51 @@ import { hashFn } from "../../../crypto/utils"
  */
 export class DirRename {
 	private readonly apiClient: APIClient
-	private readonly crypto: Crypto
 
 	/**
 	 * Creates an instance of DirRename.
-	 * @date 2/9/2024 - 5:10:15 AM
+	 * @date 2/14/2024 - 4:41:14 AM
 	 *
 	 * @constructor
 	 * @public
-	 * @param {{ apiClient: APIClient, crypto: Crypto }} param0
+	 * @param {{ apiClient: APIClient }} param0
 	 * @param {APIClient} param0.apiClient
-	 * @param {Crypto} param0.crypto
 	 */
-	public constructor({ apiClient, crypto }: { apiClient: APIClient; crypto: Crypto }) {
+	public constructor({ apiClient }: { apiClient: APIClient }) {
 		this.apiClient = apiClient
-		this.crypto = crypto
 	}
 
 	/**
 	 * Rename a directory.
-	 * @date 2/9/2024 - 5:16:43 AM
+	 * @date 2/14/2024 - 4:41:08 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string; name: string }} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		metadataEncrypted: string
+	 * 		nameHashed: string
+	 * 	}} param0
 	 * @param {string} param0.uuid
-	 * @param {string} param0.name
+	 * @param {string} param0.metadataEncrypted
+	 * @param {string} param0.nameHashed
 	 * @returns {Promise<void>}
 	 */
-	public async fetch({ uuid, name }: { uuid: string; name: string }): Promise<void> {
-		const [nameHashed, encrypted] = await Promise.all([
-			hashFn({ input: name.toLowerCase() }),
-			this.crypto.encrypt().metadata({
-				metadata: JSON.stringify({
-					name
-				})
-			})
-		])
-
+	public async fetch({
+		uuid,
+		metadataEncrypted,
+		nameHashed
+	}: {
+		uuid: string
+		metadataEncrypted: string
+		nameHashed: string
+	}): Promise<void> {
 		await this.apiClient.request({
 			method: "POST",
 			endpoint: "/v3/dir/rename",
 			data: {
 				uuid,
-				name: encrypted,
+				name: metadataEncrypted,
 				nameHashed
 			}
 		})
