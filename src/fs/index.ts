@@ -4,10 +4,12 @@ import type { FilenSDKConfig } from ".."
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
-//import { convertTimestampToMs, uuidv4 } from "../utils"
 import { BUFFER_SIZE } from "../constants"
 import type Cloud from "../cloud"
 import type { PauseSignal } from "../cloud/signals"
+import fs from "fs-extra"
+import { uuidv4 } from "../utils"
+import os from "os"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
@@ -682,50 +684,144 @@ export class FS {
 
 	/**
 	 * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
-	 * @date 2/14/2024 - 4:49:00 AM
+	 * @date 2/16/2024 - 5:32:31 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{path: string}} param0
+	 * @param {{
+	 * 		path: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress: ProgressCallback
+	 * 	}} param0
 	 * @param {string} param0.path
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<Buffer>}
 	 */
-	public async readFile({ path }: { path: string }): Promise<Buffer> {
+	public async readFile({
+		path,
+		abortSignal,
+		pauseSignal,
+		onProgress
+	}: {
+		path: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress: ProgressCallback
+	}): Promise<Buffer> {
 		path = this.normalizePath({ path })
 
 		const uuid = await this.pathToItemUUID({ path })
+		const item = this._items[path]
 
-		if (!uuid || !this._items[path]) {
+		if (!uuid || !item || item.type === "directory") {
 			throw new ENOENT({ path })
 		}
 
-		// @TODO
+		const stream = await this.cloud.downloadFileToReadableStream({
+			uuid: uuid,
+			bucket: item.metadata.bucket,
+			region: item.metadata.region,
+			chunks: item.metadata.chunks,
+			version: item.metadata.version,
+			key: item.metadata.key,
+			abortSignal,
+			pauseSignal,
+			onProgress
+		})
 
-		return Buffer.alloc(1)
+		let buffer = Buffer.from([])
+		const reader = stream.getReader()
+		let doneReading = false
+
+		while (!doneReading) {
+			const { done, value } = await reader.read()
+
+			if (done) {
+				doneReading = true
+
+				break
+			}
+
+			if (value instanceof Uint8Array && value.byteLength > 0) {
+				buffer = Buffer.concat([buffer, value])
+			}
+		}
+
+		return buffer
 	}
 
 	/**
-	 * Write to a file.
-	 * @date 2/14/2024 - 4:59:25 AM
+	 * Write to a file. Warning: This reads the whole file into memory and can be very inefficient. Only available in a Node.JS environment.
+	 * @date 2/16/2024 - 5:36:19 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {({ path: string; content: Buffer })} param0
+	 * @param {{
+	 * 		path: string
+	 * 		content: Buffer
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress: ProgressCallback
+	 * 	}} param0
 	 * @param {string} param0.path
-	 * @param {*} param0.content
+	 * @param {Buffer} param0.content
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<void>}
 	 */
-	/*public async writeFile({ path, content }: { path: string; content: Buffer }): Promise<void> {
+	public async writeFile({
+		path,
+		content,
+		abortSignal,
+		pauseSignal,
+		onProgress
+	}: {
+		path: string
+		content: Buffer
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress: ProgressCallback
+	}): Promise<void> {
 		path = this.normalizePath({ path })
 
-		const uuid = await this.pathToItemUUID({ path })
+		const parentPath = pathModule.posix.dirname(path)
+		let parentUUID = ""
 
-		if (!uuid || !this._items[path]) {
-			throw new ENOENT({ path })
+		if (parentPath === "/" || parentPath === "." || parentPath === "") {
+			parentUUID = this.sdkConfig.baseFolderUUID!
+		} else {
+			await this.mkdir({ path: parentPath })
+
+			const parentItemUUID = await this.pathToItemUUID({ path: parentPath, type: "directory" })
+			const parentItem = this._items[parentPath]
+
+			if (!parentItemUUID || !parentItem) {
+				throw new Error(`Could not find parent for path ${path}`)
+			}
+
+			parentUUID = parentItem.uuid
 		}
 
-		// @TODO
-	}*/
+		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk-tmp", await uuidv4())
+
+		await fs.writeFile(tmpFilePath, content)
+
+		try {
+			await this.cloud.uploadFileFromLocal({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+		} finally {
+			await fs.rm(tmpFilePath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+		}
+	}
 
 	/**
 	 * Download a file from path to a local destination path. Only available in a Node.JS environment.
@@ -775,7 +871,6 @@ export class FS {
 			region: item.metadata.region,
 			chunks: item.metadata.chunks,
 			version: item.metadata.version,
-			name: item.metadata.name,
 			key: item.metadata.key,
 			to: destination,
 			abortSignal,
@@ -785,27 +880,66 @@ export class FS {
 	}
 
 	/**
-	 * Upload a file to path from a local source path.
-	 * @date 2/14/2024 - 5:02:31 AM
+	 * Upload a file to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
+	 * @date 2/16/2024 - 5:32:17 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ path: string, source: string }} param0
+	 * @param {{
+	 * 		path: string
+	 * 		source: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress: ProgressCallback
+	 * 	}} param0
 	 * @param {string} param0.path
 	 * @param {string} param0.source
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<void>}
 	 */
-	/*public async upload({ path, source }: { path: string; source: string }): Promise<void> {
+	public async upload({
+		path,
+		source,
+		abortSignal,
+		pauseSignal,
+		onProgress
+	}: {
+		path: string
+		source: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress: ProgressCallback
+	}): Promise<void> {
 		path = this.normalizePath({ path })
 
-		// @TODO
-	}*/
+		const parentPath = pathModule.posix.dirname(path)
+		let parentUUID = ""
+
+		if (parentPath === "/" || parentPath === "." || parentPath === "") {
+			parentUUID = this.sdkConfig.baseFolderUUID!
+		} else {
+			await this.mkdir({ path: parentPath })
+
+			const parentItemUUID = await this.pathToItemUUID({ path: parentPath, type: "directory" })
+			const parentItem = this._items[parentPath]
+
+			if (!parentItemUUID || !parentItem) {
+				throw new Error(`Could not find parent for path ${path}`)
+			}
+
+			parentUUID = parentItem.uuid
+		}
+
+		await this.cloud.uploadFileFromLocal({ source, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+	}
 
 	/**
 	 * Copy a file or directory structure. Recursively creates intermediate directories if needed.
 	 * Warning: Can be really inefficient when copying large directory structures.
 	 * All files and folders need to be downloaded first and then reuploaded due to our end to end encryption.
-	 * Plain copying unfortunately does not work.
+	 * Plain copying unfortunately does not work. Only available in a Node.JS environment.
 	 * @date 2/14/2024 - 5:06:04 AM
 	 *
 	 * @public

@@ -238,28 +238,55 @@ export declare class FS {
     }): Promise<void>;
     /**
      * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
-     * @date 2/14/2024 - 4:49:00 AM
+     * @date 2/16/2024 - 5:32:31 AM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{
+     * 		path: string
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress: ProgressCallback
+     * 	}} param0
      * @param {string} param0.path
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<Buffer>}
      */
-    readFile({ path }: {
+    readFile({ path, abortSignal, pauseSignal, onProgress }: {
         path: string;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress: ProgressCallback;
     }): Promise<Buffer>;
     /**
-     * Write to a file.
-     * @date 2/14/2024 - 4:59:25 AM
+     * Write to a file. Warning: This reads the whole file into memory and can be very inefficient. Only available in a Node.JS environment.
+     * @date 2/16/2024 - 5:36:19 AM
      *
      * @public
      * @async
-     * @param {({ path: string; content: Buffer })} param0
+     * @param {{
+     * 		path: string
+     * 		content: Buffer
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress: ProgressCallback
+     * 	}} param0
      * @param {string} param0.path
-     * @param {*} param0.content
+     * @param {Buffer} param0.content
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<void>}
      */
+    writeFile({ path, content, abortSignal, pauseSignal, onProgress }: {
+        path: string;
+        content: Buffer;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress: ProgressCallback;
+    }): Promise<void>;
     /**
      * Download a file from path to a local destination path. Only available in a Node.JS environment.
      * @date 2/15/2024 - 5:59:23 AM
@@ -288,21 +315,37 @@ export declare class FS {
         onProgress: ProgressCallback;
     }): Promise<void>;
     /**
-     * Upload a file to path from a local source path.
-     * @date 2/14/2024 - 5:02:31 AM
+     * Upload a file to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
+     * @date 2/16/2024 - 5:32:17 AM
      *
      * @public
      * @async
-     * @param {{ path: string, source: string }} param0
+     * @param {{
+     * 		path: string
+     * 		source: string
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress: ProgressCallback
+     * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.source
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<void>}
      */
+    upload({ path, source, abortSignal, pauseSignal, onProgress }: {
+        path: string;
+        source: string;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress: ProgressCallback;
+    }): Promise<void>;
     /**
      * Copy a file or directory structure. Recursively creates intermediate directories if needed.
      * Warning: Can be really inefficient when copying large directory structures.
      * All files and folders need to be downloaded first and then reuploaded due to our end to end encryption.
-     * Plain copying unfortunately does not work.
+     * Plain copying unfortunately does not work. Only available in a Node.JS environment.
      * @date 2/14/2024 - 5:06:04 AM
      *
      * @public

@@ -2,7 +2,7 @@ import { environment, BUFFER_SIZE } from "../constants"
 import type { CryptoConfig } from "."
 import nodeCrypto from "crypto"
 import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawKey } from "./utils"
-import { Uint8ArrayConcat, uuidv4, normalizePath } from "../utils"
+import { uuidv4, normalizePath } from "../utils"
 import pathModule from "path"
 import fs from "fs-extra"
 import { pipeline } from "stream"
@@ -233,12 +233,12 @@ export class Encrypt {
 	 *
 	 * @public
 	 * @async
-	 * @param {{ data: Uint8Array; key: string }} param0
-	 * @param {Uint8Array} param0.data
+	 * @param {{ data: Buffer; key: string }} param0
+	 * @param {Buffer} param0.data
 	 * @param {string} param0.key
-	 * @returns {Promise<Uint8Array>}
+	 * @returns {Promise<Buffer>}
 	 */
-	public async data({ data, key }: { data: Uint8Array; key: string }): Promise<Uint8Array> {
+	public async data({ data, key }: { data: Buffer; key: string }): Promise<Buffer> {
 		const iv = await generateRandomString({ length: 12 })
 
 		if (environment === "node") {
@@ -259,9 +259,9 @@ export class Encrypt {
 				data
 			)
 
-			return Uint8ArrayConcat(this.textEncoder.encode(iv), new Uint8Array(encrypted))
+			return Buffer.concat([this.textEncoder.encode(iv), new Uint8Array(encrypted)])
 		} else if (environment === "reactNative") {
-			return await global.nodeThread.encryptData({ base64: Buffer.from(data).toString("base64"), key })
+			return Buffer.from(await global.nodeThread.encryptData({ base64: Buffer.from(data).toString("base64"), key }))
 		}
 
 		throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`)

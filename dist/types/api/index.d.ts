@@ -386,6 +386,21 @@ export declare class API {
                     }) => Promise<void>;
                 };
             };
+            upload: () => {
+                chunk: () => {
+                    buffer: (params_0: {
+                        uuid: string;
+                        index: number;
+                        parent: string;
+                        uploadKey: string;
+                        abortSignal?: AbortSignal | undefined;
+                        maxRetries?: number | undefined;
+                        retryTimeout?: number | undefined;
+                        timeout?: number | undefined;
+                        buffer: Buffer;
+                    }) => Promise<import("./client").UploadChunkResponse>;
+                };
+            };
         };
         trash: () => {
             empty: () => Promise<void>;

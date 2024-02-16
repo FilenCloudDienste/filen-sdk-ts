@@ -132,6 +132,7 @@ import V3UserLastActiveDesktop from "./v3/user/lastActive/desktop"
 import V3FileDownloadChunkBuffer from "./v3/file/download/chunk/buffer"
 import V3FileDownloadChunkStream from "./v3/file/download/chunk/stream"
 import V3FileDownloadChunkLocal from "./v3/file/download/chunk/local"
+import V3FileUploadChunkBuffer from "./v3/file/upload/chunk/buffer"
 
 export type APIConfig = {
 	apiKey: string
@@ -272,6 +273,11 @@ export class API {
 					buffer: V3FileDownloadChunkBuffer
 					stream: V3FileDownloadChunkStream
 					local: V3FileDownloadChunkLocal
+				}
+			}
+			upload: {
+				chunk: {
+					buffer: V3FileUploadChunkBuffer
 				}
 			}
 		}
@@ -487,6 +493,11 @@ export class API {
 						buffer: new V3FileDownloadChunkBuffer({ apiClient: this.apiClient }),
 						stream: new V3FileDownloadChunkStream({ apiClient: this.apiClient }),
 						local: new V3FileDownloadChunkLocal({ apiClient: this.apiClient })
+					}
+				},
+				upload: {
+					chunk: {
+						buffer: new V3FileUploadChunkBuffer({ apiClient: this.apiClient })
 					}
 				}
 			},
@@ -756,6 +767,16 @@ export class API {
 										this._v3.file.download.chunk.stream.fetch(...params),
 									local: (...params: Parameters<typeof this._v3.file.download.chunk.local.fetch>) =>
 										this._v3.file.download.chunk.local.fetch(...params)
+								}
+							}
+						}
+					},
+					upload: () => {
+						return {
+							chunk: () => {
+								return {
+									buffer: (...params: Parameters<typeof this._v3.file.upload.chunk.buffer.fetch>) =>
+										this._v3.file.upload.chunk.buffer.fetch(...params)
 								}
 							}
 						}

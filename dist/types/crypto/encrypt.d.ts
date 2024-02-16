@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { CryptoConfig } from ".";
 /**
  * Encrypt
@@ -145,15 +146,15 @@ export declare class Encrypt {
      *
      * @public
      * @async
-     * @param {{ data: Uint8Array; key: string }} param0
-     * @param {Uint8Array} param0.data
+     * @param {{ data: Buffer; key: string }} param0
+     * @param {Buffer} param0.data
      * @param {string} param0.key
-     * @returns {Promise<Uint8Array>}
+     * @returns {Promise<Buffer>}
      */
     data({ data, key }: {
-        data: Uint8Array;
+        data: Buffer;
         key: string;
-    }): Promise<Uint8Array>;
+    }): Promise<Buffer>;
     /**
      * Encrypt a file/chunk using streams. Only available in a Node.JS environment.
      * @date 2/7/2024 - 1:51:28 AM

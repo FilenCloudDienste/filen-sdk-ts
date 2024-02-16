@@ -4,13 +4,27 @@ import type { FilenSDKConfig } from ".."
 import type DirColor from "../api/v3/dir/color"
 import type { FileEncryptionVersion, FileMetadata, ProgressCallback } from "../types"
 import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath } from "../utils"
-import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS } from "../constants"
+import {
+	environment,
+	MAX_DOWNLOAD_THREADS,
+	MAX_DOWNLOAD_WRITERS,
+	MAX_UPLOAD_THREADS,
+	CURRENT_FILE_ENCRYPTION_VERSION,
+	DEFAULT_UPLOAD_BUCKET,
+	DEFAULT_UPLOAD_REGION,
+	UPLOAD_CHUNK_SIZE
+} from "../constants"
 import { PauseSignal } from "./signals"
 import pathModule from "path"
 import os from "os"
 import fs from "fs-extra"
 import { Semaphore } from "../semaphore"
 import appendStream from "../streams/append"
+import type { DirColors } from "../api/v3/dir/color"
+import type { FileVersionsResponse } from "../api/v3/file/versions"
+import type { DirDownloadType } from "../api/v3/dir/download"
+import mimeTypes from "mime-types"
+import utils from "./utils"
 
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
@@ -81,6 +95,22 @@ export type CloudItemShared =
 			CloudItemFileShared &
 			CloudItemSharedBase)
 
+export type CloudItemTree =
+	| Omit<
+			{
+				type: "directory"
+			} & CloudItemBase &
+				CloudItemDirectory,
+			"color" | "favorited" | "timestamp" | "lastModified"
+	  >
+	| Omit<
+			{
+				type: "file"
+			} & CloudItemBase &
+				CloudItemFile,
+			"favorited" | "rm" | "timestamp"
+	  >
+
 /**
  * Cloud
  * @date 2/14/2024 - 11:29:58 PM
@@ -90,13 +120,14 @@ export type CloudItemShared =
  * @typedef {Cloud}
  */
 export class Cloud {
-	protected readonly api: API
-	protected readonly crypto: Crypto
-	protected readonly sdkConfig: FilenSDKConfig
+	private readonly api: API
+	private readonly crypto: Crypto
+	private readonly sdkConfig: FilenSDKConfig
 
-	protected readonly _semaphores = {
+	private readonly _semaphores = {
 		downloadThreads: new Semaphore(MAX_DOWNLOAD_THREADS),
-		downloadWriters: new Semaphore(MAX_DOWNLOAD_WRITERS)
+		downloadWriters: new Semaphore(MAX_DOWNLOAD_WRITERS),
+		uploadThreads: new Semaphore(MAX_UPLOAD_THREADS)
 	}
 
 	/**
@@ -116,7 +147,8 @@ export class Cloud {
 	public readonly utils = {
 		signals: {
 			PauseSignal
-		}
+		},
+		utils
 	}
 
 	/**
@@ -426,6 +458,243 @@ export class Cloud {
 	}
 
 	/**
+	 * List all files and directories inside the trash.
+	 * @date 2/15/2024 - 8:59:04 PM
+	 *
+	 * @public
+	 * @async
+	 * @returns {Promise<CloudItem[]>}
+	 */
+	public async listTrash(): Promise<CloudItem[]> {
+		const content = await this.api.v3().dir().content({ uuid: "trash" })
+		const items: CloudItem[] = []
+		const promises: Promise<void>[] = []
+
+		for (const folder of content.folders) {
+			promises.push(
+				new Promise((resolve, reject) =>
+					this.crypto
+						.decrypt()
+						.folderMetadata({ metadata: folder.name })
+						.then(decrypted => {
+							const timestamp = convertTimestampToMs(folder.timestamp)
+
+							items.push({
+								type: "directory",
+								uuid: folder.uuid,
+								name: decrypted.name,
+								lastModified: timestamp,
+								timestamp,
+								color: folder.color,
+								parent: folder.parent,
+								favorited: folder.favorited === 1
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				)
+			)
+		}
+
+		for (const file of content.uploads) {
+			promises.push(
+				new Promise((resolve, reject) =>
+					this.crypto
+						.decrypt()
+						.fileMetadata({ metadata: file.metadata })
+						.then(decrypted => {
+							items.push({
+								type: "file",
+								uuid: file.uuid,
+								name: decrypted.name,
+								size: decrypted.size,
+								mime: decrypted.mime,
+								lastModified: convertTimestampToMs(decrypted.lastModified),
+								timestamp: convertTimestampToMs(file.timestamp),
+								parent: file.parent,
+								rm: file.rm,
+								version: file.version,
+								chunks: file.chunks,
+								favorited: file.favorited === 1,
+								key: decrypted.key,
+								bucket: file.bucket,
+								region: file.region,
+								creation: decrypted.creation,
+								hash: decrypted.hash
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				)
+			)
+		}
+
+		await promiseAllChunked(promises)
+
+		return items
+	}
+
+	/**
+	 * List all favorite files and directories.
+	 * @date 2/15/2024 - 8:59:52 PM
+	 *
+	 * @public
+	 * @async
+	 * @returns {Promise<CloudItem[]>}
+	 */
+	public async listFavorites(): Promise<CloudItem[]> {
+		const content = await this.api.v3().dir().content({ uuid: "favorites" })
+		const items: CloudItem[] = []
+		const promises: Promise<void>[] = []
+
+		for (const folder of content.folders) {
+			promises.push(
+				new Promise((resolve, reject) =>
+					this.crypto
+						.decrypt()
+						.folderMetadata({ metadata: folder.name })
+						.then(decrypted => {
+							const timestamp = convertTimestampToMs(folder.timestamp)
+
+							items.push({
+								type: "directory",
+								uuid: folder.uuid,
+								name: decrypted.name,
+								lastModified: timestamp,
+								timestamp,
+								color: folder.color,
+								parent: folder.parent,
+								favorited: folder.favorited === 1
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				)
+			)
+		}
+
+		for (const file of content.uploads) {
+			promises.push(
+				new Promise((resolve, reject) =>
+					this.crypto
+						.decrypt()
+						.fileMetadata({ metadata: file.metadata })
+						.then(decrypted => {
+							items.push({
+								type: "file",
+								uuid: file.uuid,
+								name: decrypted.name,
+								size: decrypted.size,
+								mime: decrypted.mime,
+								lastModified: convertTimestampToMs(decrypted.lastModified),
+								timestamp: convertTimestampToMs(file.timestamp),
+								parent: file.parent,
+								rm: file.rm,
+								version: file.version,
+								chunks: file.chunks,
+								favorited: file.favorited === 1,
+								key: decrypted.key,
+								bucket: file.bucket,
+								region: file.region,
+								creation: decrypted.creation,
+								hash: decrypted.hash
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				)
+			)
+		}
+
+		await promiseAllChunked(promises)
+
+		return items
+	}
+
+	/**
+	 * List all public linked files and directories.
+	 * @date 2/15/2024 - 9:01:01 PM
+	 *
+	 * @public
+	 * @async
+	 * @returns {Promise<CloudItem[]>}
+	 */
+	public async listPublicLinks(): Promise<CloudItem[]> {
+		const content = await this.api.v3().dir().content({ uuid: "links" })
+		const items: CloudItem[] = []
+		const promises: Promise<void>[] = []
+
+		for (const folder of content.folders) {
+			promises.push(
+				new Promise((resolve, reject) =>
+					this.crypto
+						.decrypt()
+						.folderMetadata({ metadata: folder.name })
+						.then(decrypted => {
+							const timestamp = convertTimestampToMs(folder.timestamp)
+
+							items.push({
+								type: "directory",
+								uuid: folder.uuid,
+								name: decrypted.name,
+								lastModified: timestamp,
+								timestamp,
+								color: folder.color,
+								parent: folder.parent,
+								favorited: folder.favorited === 1
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				)
+			)
+		}
+
+		for (const file of content.uploads) {
+			promises.push(
+				new Promise((resolve, reject) =>
+					this.crypto
+						.decrypt()
+						.fileMetadata({ metadata: file.metadata })
+						.then(decrypted => {
+							items.push({
+								type: "file",
+								uuid: file.uuid,
+								name: decrypted.name,
+								size: decrypted.size,
+								mime: decrypted.mime,
+								lastModified: convertTimestampToMs(decrypted.lastModified),
+								timestamp: convertTimestampToMs(file.timestamp),
+								parent: file.parent,
+								rm: file.rm,
+								version: file.version,
+								chunks: file.chunks,
+								favorited: file.favorited === 1,
+								key: decrypted.key,
+								bucket: file.bucket,
+								region: file.region,
+								creation: decrypted.creation,
+								hash: decrypted.hash
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				)
+			)
+		}
+
+		await promiseAllChunked(promises)
+
+		return items
+	}
+
+	/**
 	 * Rename a file.
 	 * @date 2/15/2024 - 1:23:33 AM
 	 *
@@ -573,6 +842,136 @@ export class Cloud {
 	}
 
 	/**
+	 * Change the color of a directory.
+	 * @date 2/15/2024 - 8:52:40 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string, color: DirColors}} param0
+	 * @param {string} param0.uuid
+	 * @param {DirColors} param0.color
+	 * @returns {Promise<void>}
+	 */
+	public async changeDirectoryColor({ uuid, color }: { uuid: string; color: DirColors }): Promise<void> {
+		await this.api.v3().dir().color({ uuid, color })
+	}
+
+	/**
+	 * Toggle the favorite status of a directory.
+	 * @date 2/15/2024 - 8:54:03 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string, favorite: boolean}} param0
+	 * @param {string} param0.uuid
+	 * @param {boolean} param0.favorite
+	 * @returns {Promise<void>}
+	 */
+	public async favoriteDirectory({ uuid, favorite }: { uuid: string; favorite: boolean }): Promise<void> {
+		await this.api.v3().item().favorite({ uuid, type: "folder", favorite })
+	}
+
+	/**
+	 * Toggle the favorite status of a file.
+	 * @date 2/15/2024 - 8:54:23 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string, favorite: boolean}} param0
+	 * @param {string} param0.uuid
+	 * @param {boolean} param0.favorite
+	 * @returns {Promise<void>}
+	 */
+	public async favoriteFile({ uuid, favorite }: { uuid: string; favorite: boolean }): Promise<void> {
+		await this.api.v3().item().favorite({ uuid, type: "file", favorite })
+	}
+
+	/**
+	 * Permanently delete a file.
+	 * @date 2/15/2024 - 11:42:05 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<void>}
+	 */
+	public async deleteFile({ uuid }: { uuid: string }): Promise<void> {
+		await this.api.v3().file().delete().permanent({ uuid })
+	}
+
+	/**
+	 * Permanently delete a directory.
+	 * @date 2/15/2024 - 11:42:13 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<void>}
+	 */
+	public async deleteDirectory({ uuid }: { uuid: string }): Promise<void> {
+		await this.api.v3().dir().delete().permanent({ uuid })
+	}
+
+	/**
+	 * Restore a file from the trash.
+	 * @date 2/15/2024 - 11:43:21 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<void>}
+	 */
+	public async restoreFile({ uuid }: { uuid: string }): Promise<void> {
+		await this.api.v3().file().restore({ uuid })
+	}
+
+	/**
+	 * Restore a directory from the trash.
+	 * @date 2/15/2024 - 11:43:29 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<void>}
+	 */
+	public async restoreDirectory({ uuid }: { uuid: string }): Promise<void> {
+		await this.api.v3().dir().restore({ uuid })
+	}
+
+	/**
+	 * Restore a file version.
+	 * @date 2/15/2024 - 11:44:51 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid:string, currentUUID:string}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.currentUUID
+	 * @returns {Promise<void>}
+	 */
+	public async restoreFileVersion({ uuid, currentUUID }: { uuid: string; currentUUID: string }): Promise<void> {
+		await this.api.v3().file().version().restore({ uuid, currentUUID })
+	}
+
+	/**
+	 * Retrieve all versions of a file.
+	 * @date 2/15/2024 - 11:46:38 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ uuid: string }} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<FileVersionsResponse>}
+	 */
+	public async fileVersions({ uuid }: { uuid: string }): Promise<FileVersionsResponse> {
+		return await this.api.v3().file().versions({ uuid })
+	}
+
+	/**
 	 * Download a file to a local path. Only works in a Node.JS environment.
 	 * @date 2/15/2024 - 7:39:34 AM
 	 *
@@ -585,7 +984,6 @@ export class Cloud {
 	 * 		chunks: number
 	 * 		version: FileEncryptionVersion
 	 * 		key: string
-	 * 		name: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		chunksStart?: number
@@ -603,7 +1001,6 @@ export class Cloud {
 	 * @param {number} param0.chunks
 	 * @param {FileEncryptionVersion} param0.version
 	 * @param {string} param0.key
-	 * @param {string} param0.name
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {number} param0.chunksStart
@@ -623,7 +1020,6 @@ export class Cloud {
 		chunks,
 		version,
 		key,
-		name,
 		abortSignal,
 		pauseSignal,
 		chunksStart,
@@ -641,7 +1037,6 @@ export class Cloud {
 		chunks: number
 		version: FileEncryptionVersion
 		key: string
-		name: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		chunksStart?: number
@@ -670,7 +1065,7 @@ export class Cloud {
 		const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks
 		const firstChunk = chunksStart ? chunksStart : 0
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk-downloads", name))
+		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk-downloads", await uuidv4()))
 		const tmpChunksPath = normalizePath(pathModule.join(tmpDir, `filen-sdk-chunks-${await uuidv4()}`))
 		let currentWriteIndex = firstChunk
 		let writerStopped = false
@@ -701,14 +1096,14 @@ export class Cloud {
 
 		const waitForPause = async (): Promise<void> => {
 			return await new Promise(resolve => {
-				if (!pauseSignal || !pauseSignal.isPaused()) {
+				if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
 					resolve()
 
 					return
 				}
 
 				const wait = setInterval(() => {
-					if (!pauseSignal.isPaused()) {
+					if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
 						clearInterval(wait)
 
 						resolve()
@@ -719,16 +1114,16 @@ export class Cloud {
 
 		const writeToDestination = async ({ index, file }: { index: number; file: string }) => {
 			try {
-				if (writerStopped) {
-					return
+				if (pauseSignal && pauseSignal.isPaused()) {
+					await waitForPause()
 				}
 
 				if (abortSignal && abortSignal.aborted) {
 					throw new Error("Aborted")
 				}
 
-				if (pauseSignal && pauseSignal.isPaused()) {
-					await waitForPause()
+				if (writerStopped) {
+					return
 				}
 
 				if (index !== currentWriteIndex) {
@@ -770,14 +1165,12 @@ export class Cloud {
 						try {
 							await Promise.all([this._semaphores.downloadThreads.acquire(), this._semaphores.downloadWriters.acquire()])
 
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
 							if (pauseSignal && pauseSignal.isPaused()) {
 								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								throw new Error("Aborted")
 							}
 
 							const encryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.encrypted`)
@@ -789,14 +1182,12 @@ export class Cloud {
 								.chunk()
 								.local({ uuid, bucket, region, chunk: i, to: encryptedTmpChunkPath, abortSignal })
 
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
 							if (pauseSignal && pauseSignal.isPaused()) {
 								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								throw new Error("Aborted")
 							}
 
 							const decryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.decrypted`)
@@ -861,6 +1252,13 @@ export class Cloud {
 				}, 10)
 			})
 		} catch (e) {
+			await fs.rm(destinationPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+
 			if (onError) {
 				onError(e as unknown as Error)
 			}
@@ -873,10 +1271,10 @@ export class Cloud {
 				recursive: true,
 				retryDelay: 100
 			})
+		}
 
-			if (onFinished) {
-				onFinished()
-			}
+		if (onFinished) {
+			onFinished()
 		}
 
 		return destinationPath
@@ -976,14 +1374,14 @@ export class Cloud {
 
 		const waitForPause = async (): Promise<void> => {
 			return await new Promise(resolve => {
-				if (!pauseSignal || !pauseSignal.isPaused()) {
+				if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
 					resolve()
 
 					return
 				}
 
 				const wait = setInterval(() => {
-					if (!pauseSignal.isPaused()) {
+					if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
 						clearInterval(wait)
 
 						resolve()
@@ -997,16 +1395,16 @@ export class Cloud {
 				async start(controller) {
 					const write = async ({ index, buffer }: { index: number; buffer: Buffer }): Promise<void> => {
 						try {
-							if (writerStopped) {
-								return
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
 							}
 
 							if (abortSignal && abortSignal.aborted) {
 								throw new Error("Aborted")
 							}
 
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
+							if (writerStopped) {
+								return
 							}
 
 							if (index !== currentWriteIndex) {
@@ -1038,6 +1436,10 @@ export class Cloud {
 									try {
 										await Promise.all([threadsSemaphore.acquire(), writersSemaphore.acquire()])
 
+										if (pauseSignal && pauseSignal.isPaused()) {
+											await waitForPause()
+										}
+
 										if (abortSignal && abortSignal.aborted) {
 											controller.close()
 
@@ -1046,16 +1448,16 @@ export class Cloud {
 											return
 										}
 
-										if (pauseSignal && pauseSignal.isPaused()) {
-											await waitForPause()
-										}
-
 										const encryptedBuffer = await api
 											.v3()
 											.file()
 											.download()
 											.chunk()
 											.buffer({ uuid, bucket, region, chunk: i, abortSignal })
+
+										if (pauseSignal && pauseSignal.isPaused()) {
+											await waitForPause()
+										}
 
 										if (abortSignal && abortSignal.aborted) {
 											controller.close()
@@ -1131,10 +1533,10 @@ export class Cloud {
 						throw e
 					} finally {
 						controller.close()
+					}
 
-						if (onFinished) {
-							onFinished()
-						}
+					if (onFinished) {
+						onFinished()
 					}
 				}
 			},
@@ -1142,6 +1544,798 @@ export class Cloud {
 				highWaterMark: 1024 * 1024
 			}
 		)
+	}
+
+	/**
+	 * Build a recursive directory tree which includes sub-directories and sub-files.
+	 * Tree looks like this:
+	 * {
+	 * 		"path": CloudItemTree,
+	 * 		"path": CloudItemTree,
+	 * 		"path": CloudItemTree
+	 * }
+	 * @date 2/16/2024 - 12:24:25 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		type?: DirDownloadType
+	 * 		linkUUID?: string
+	 * 		linkHasPassword?: boolean
+	 * 		linkPassword?: string
+	 * 		linkSalt?: string
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {DirDownloadType} [param0.type="normal"]
+	 * @param {string} param0.linkUUID
+	 * @param {boolean} param0.linkHasPassword
+	 * @param {string} param0.linkPassword
+	 * @param {string} param0.linkSalt
+	 * @returns {Promise<Record<string, CloudItemTree>>}
+	 */
+	public async getDirectoryTree({
+		uuid,
+		type = "normal",
+		linkUUID,
+		linkHasPassword,
+		linkPassword,
+		linkSalt
+	}: {
+		uuid: string
+		type?: DirDownloadType
+		linkUUID?: string
+		linkHasPassword?: boolean
+		linkPassword?: string
+		linkSalt?: string
+	}): Promise<Record<string, CloudItemTree>> {
+		const contents = await this.api.v3().dir().download({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt })
+		const tree: Record<string, CloudItemTree> = {}
+		const folderNames: Record<string, string> = { base: "/" }
+
+		for (const folder of contents.folders) {
+			const decrypted =
+				folder.parent !== "base" ? await this.crypto.decrypt().folderMetadata({ metadata: folder.name }) : { name: "" }
+			const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`
+			const folderPath = `${parentPath}${decrypted.name}`
+
+			folderNames[folder.uuid] = folderPath
+			tree[folderPath] = {
+				type: "directory",
+				uuid: folder.uuid,
+				name: decrypted.name,
+				parent: folder.parent
+			}
+		}
+
+		const promises: Promise<void>[] = []
+
+		for (const file of contents.files) {
+			promises.push(
+				new Promise((resolve, reject) => {
+					this.crypto
+						.decrypt()
+						.fileMetadata({ metadata: file.metadata })
+						.then(decrypted => {
+							const parentPath = folderNames[file.parent]
+
+							tree[`${parentPath}/${decrypted.name}`] = {
+								type: "file",
+								uuid: file.uuid,
+								name: decrypted.name,
+								size: decrypted.size,
+								mime: decrypted.mime,
+								lastModified: convertTimestampToMs(decrypted.lastModified),
+								parent: file.parent,
+								version: file.version,
+								chunks: file.chunks,
+								key: decrypted.key,
+								bucket: file.bucket,
+								region: file.region,
+								creation: decrypted.creation,
+								hash: decrypted.hash
+							}
+
+							resolve()
+						})
+						.catch(reject)
+				})
+			)
+		}
+
+		await promiseAllChunked(promises)
+
+		return tree
+	}
+
+	/**
+	 * Download a directory to path. Only available in a Node.JS environment.
+	 * @date 2/16/2024 - 1:30:09 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		type?: DirDownloadType
+	 * 		linkUUID?: string
+	 * 		linkHasPassword?: boolean
+	 * 		linkPassword?: string
+	 * 		linkSalt?: string
+	 * 		to?: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 		onQueued?: () => void
+	 * 		onStarted?: () => void
+	 * 		onError?: (err: Error) => void
+	 * 		onFinished?: () => void
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {DirDownloadType} [param0.type="normal"]
+	 * @param {string} param0.linkUUID
+	 * @param {boolean} param0.linkHasPassword
+	 * @param {string} param0.linkPassword
+	 * @param {string} param0.linkSalt
+	 * @param {string} param0.to
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {() => void} param0.onQueued
+	 * @param {() => void} param0.onStarted
+	 * @param {(err: Error) => void} param0.onError
+	 * @param {() => void} param0.onFinished
+	 * @returns {Promise<string>}
+	 */
+	public async downloadDirectoryToLocal({
+		uuid,
+		type = "normal",
+		linkUUID,
+		linkHasPassword,
+		linkPassword,
+		linkSalt,
+		to,
+		abortSignal,
+		pauseSignal,
+		onQueued,
+		onStarted,
+		onError,
+		onFinished
+	}: {
+		uuid: string
+		type?: DirDownloadType
+		linkUUID?: string
+		linkHasPassword?: boolean
+		linkPassword?: string
+		linkSalt?: string
+		to?: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+		onQueued?: () => void
+		onStarted?: () => void
+		onError?: (err: Error) => void
+		onFinished?: () => void
+	}): Promise<string> {
+		if (environment !== "node") {
+			throw new Error(`cloud.downloadDirectoryToLocal is not implemented for ${environment}`)
+		}
+
+		if (onQueued) {
+			onQueued()
+		}
+
+		// TODO: Queue logic
+
+		if (onStarted) {
+			onStarted()
+		}
+
+		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk-downloads", await uuidv4()))
+
+		try {
+			await fs.rm(destinationPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+
+			await fs.mkdir(destinationPath, {
+				recursive: true
+			})
+
+			const tree = await this.getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt })
+			const promises: Promise<void>[] = []
+
+			for (const path in tree) {
+				const item = tree[path]
+
+				if (item.type !== "file") {
+					continue
+				}
+
+				const filePath = pathModule.join(destinationPath, path)
+
+				// TODO: Limit file downloads to N using semaphore
+
+				promises.push(
+					new Promise((resolve, reject) => {
+						this.downloadFileToLocal({
+							uuid: item.uuid,
+							bucket: item.bucket,
+							region: item.region,
+							chunks: item.chunks,
+							version: item.version,
+							key: item.key,
+							abortSignal,
+							pauseSignal,
+							to: filePath
+							// TODO: progress logic
+						})
+							.then(() => resolve())
+							.catch(reject)
+					})
+				)
+			}
+
+			await promiseAllChunked(promises)
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return destinationPath
+		} catch (e) {
+			await fs.rm(destinationPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+
+			if (onError) {
+				onError(e as unknown as Error)
+			}
+
+			throw e
+		}
+	}
+
+	/**
+	 * Upload a local file. Only available in a Node.JS environment.
+	 * @date 2/16/2024 - 5:13:26 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		source: string
+	 * 		parent: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 		onQueued?: () => void
+	 * 		onStarted?: () => void
+	 * 		onError?: (err: Error) => void
+	 * 		onFinished?: () => void
+	 * 		onUploaded?: (item: CloudItem) => Promise<void>
+	 * 	}} param0
+	 * @param {string} param0.source
+	 * @param {string} param0.parent
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {ProgressCallback} param0.onProgress
+	 * @param {() => void} param0.onQueued
+	 * @param {() => void} param0.onStarted
+	 * @param {(err: Error) => void} param0.onError
+	 * @param {() => void} param0.onFinished
+	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+	 * @returns {Promise<CloudItem>}
+	 */
+	public async uploadFileFromLocal({
+		source,
+		parent,
+		pauseSignal,
+		abortSignal,
+		onProgress,
+		onQueued,
+		onStarted,
+		onError,
+		onFinished,
+		onUploaded
+	}: {
+		source: string
+		parent: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+		onQueued?: () => void
+		onStarted?: () => void
+		onError?: (err: Error) => void
+		onFinished?: () => void
+		onUploaded?: (item: CloudItem) => Promise<void>
+	}): Promise<CloudItem> {
+		if (environment !== "node") {
+			throw new Error(`cloud.uploadFileFromLocal is not implemented for ${environment}`)
+		}
+
+		try {
+			if (onQueued) {
+				onQueued()
+			}
+
+			// TODO: Implement queue logic
+
+			if (onStarted) {
+				onStarted()
+			}
+
+			source = normalizePath(source)
+
+			if (!(await fs.exists(source))) {
+				throw new Error(`Could not find source file at path ${source}.`)
+			}
+
+			const parentPresent = await this.api.v3().dir().present({ uuid: parent })
+
+			if (!parentPresent.present || parentPresent.trash) {
+				throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`)
+			}
+
+			const fileName = pathModule.basename(source)
+
+			if (fileName === "." || fileName === "/" || fileName.length <= 0) {
+				throw new Error(`Invalid source file at path ${source}. Could not parse file name.`)
+			}
+
+			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
+			const fileStats = await fs.stat(source)
+			const fileSize = fileStats.size
+			let dummyOffset = 0
+			let fileChunks = 0
+			const lastModified = parseInt(fileStats.mtimeMs.toString())
+			const creation = parseInt(fileStats.birthtimeMs.toString())
+			let bucket = DEFAULT_UPLOAD_BUCKET
+			let region = DEFAULT_UPLOAD_REGION
+
+			while (dummyOffset < fileSize) {
+				fileChunks += 1
+				dummyOffset += UPLOAD_CHUNK_SIZE
+			}
+
+			const [uuid, key, rm, uploadKey] = await Promise.all([
+				uuidv4(),
+				this.crypto.utils.generateRandomString({ length: 32 }),
+				this.crypto.utils.generateRandomString({ length: 32 }),
+				this.crypto.utils.generateRandomString({ length: 32 })
+			])
+
+			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
+				this.crypto.encrypt().metadata({ metadata: fileName, key }),
+				this.crypto.encrypt().metadata({ metadata: mimeType, key }),
+				this.crypto.encrypt().metadata({ metadata: fileSize.toString(), key }),
+				this.crypto.encrypt().metadata({
+					metadata: JSON.stringify({
+						name: fileName,
+						size: fileSize,
+						mime: mimeType,
+						key,
+						lastModified,
+						creation
+					})
+				}),
+				this.crypto.utils.hashFn({ input: fileName.toLowerCase() })
+			])
+
+			const waitForPause = async (): Promise<void> => {
+				return await new Promise(resolve => {
+					if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+						resolve()
+
+						return
+					}
+
+					const wait = setInterval(() => {
+						if (!pauseSignal.isPaused() || abortSignal?.aborted) {
+							clearInterval(wait)
+
+							resolve()
+						}
+					}, 10)
+				})
+			}
+
+			await new Promise<void>((resolve, reject) => {
+				let done = 0
+
+				for (let i = 0; i < fileChunks; i++) {
+					const index = i
+
+					;(async () => {
+						try {
+							await this._semaphores.uploadThreads.acquire()
+
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								reject(new Error("Aborted"))
+
+								return
+							}
+
+							const chunkBuffer = await utils.readLocalFileChunk({
+								path: source,
+								offset: index * UPLOAD_CHUNK_SIZE,
+								length: UPLOAD_CHUNK_SIZE
+							})
+
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								reject(new Error("Aborted"))
+
+								return
+							}
+
+							const encryptedChunkBuffer = await this.crypto.encrypt().data({ data: chunkBuffer, key })
+
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								reject(new Error("Aborted"))
+
+								return
+							}
+
+							const uploadResponse = await this.api
+								.v3()
+								.file()
+								.upload()
+								.chunk()
+								.buffer({ uuid, index, parent, uploadKey, abortSignal, buffer: encryptedChunkBuffer })
+
+							bucket = uploadResponse.bucket
+							region = uploadResponse.region
+
+							done += 1
+
+							this._semaphores.uploadThreads.release()
+
+							if (onProgress) {
+								// TODO: actual progress emitter
+								onProgress(done, fileChunks)
+							}
+
+							if (done >= fileChunks) {
+								resolve()
+							}
+						} catch (e) {
+							this._semaphores.uploadThreads.release()
+
+							throw e
+						}
+					})().catch(reject)
+				}
+			})
+
+			const done = await this.api.v3().upload().done({
+				uuid,
+				name: nameEncrypted,
+				nameHashed,
+				size: sizeEncrypted,
+				chunks: fileChunks,
+				mime: mimeEncrypted,
+				rm,
+				metadata,
+				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				uploadKey
+			})
+
+			fileChunks = done.chunks
+
+			const item: CloudItem = {
+				type: "file",
+				uuid,
+				name: fileName,
+				size: fileSize,
+				mime: mimeType,
+				lastModified,
+				timestamp: Date.now(),
+				parent,
+				rm,
+				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				chunks: fileChunks,
+				favorited: false,
+				key: key,
+				bucket,
+				region,
+				creation
+			}
+
+			// TODO: checkIfItemParentIsShared
+
+			if (onUploaded) {
+				await onUploaded.call(undefined, item)
+			}
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return item
+		} catch (e) {
+			if (onError) {
+				onError(e as unknown as Error)
+			}
+
+			throw e
+		}
+	}
+
+	/**
+	 * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.
+	 * @date 2/16/2024 - 5:50:00 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		file: File
+	 * 		parent: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 		onQueued?: () => void
+	 * 		onStarted?: () => void
+	 * 		onError?: (err: Error) => void
+	 * 		onFinished?: () => void
+	 * 		onUploaded?: (item: CloudItem) => Promise<void>
+	 * 	}} param0
+	 * @param {File} param0.file
+	 * @param {string} param0.parent
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {ProgressCallback} param0.onProgress
+	 * @param {() => void} param0.onQueued
+	 * @param {() => void} param0.onStarted
+	 * @param {(err: Error) => void} param0.onError
+	 * @param {() => void} param0.onFinished
+	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+	 * @returns {Promise<CloudItem>}
+	 */
+	public async uploadWebFile({
+		file,
+		parent,
+		pauseSignal,
+		abortSignal,
+		onProgress,
+		onQueued,
+		onStarted,
+		onError,
+		onFinished,
+		onUploaded
+	}: {
+		file: File
+		parent: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+		onQueued?: () => void
+		onStarted?: () => void
+		onError?: (err: Error) => void
+		onFinished?: () => void
+		onUploaded?: (item: CloudItem) => Promise<void>
+	}): Promise<CloudItem> {
+		if (environment !== "browser") {
+			throw new Error(`cloud.uploadWebFile is not implemented for ${environment}`)
+		}
+
+		try {
+			if (onQueued) {
+				onQueued()
+			}
+
+			// TODO: Implement queue logic
+
+			if (onStarted) {
+				onStarted()
+			}
+
+			const parentPresent = await this.api.v3().dir().present({ uuid: parent })
+
+			if (!parentPresent.present || parentPresent.trash) {
+				throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`)
+			}
+
+			const fileName = file.name
+			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
+			const fileSize = file.size
+			let dummyOffset = 0
+			let fileChunks = 0
+			const lastModified = file.lastModified
+			let bucket = DEFAULT_UPLOAD_BUCKET
+			let region = DEFAULT_UPLOAD_REGION
+
+			while (dummyOffset < fileSize) {
+				fileChunks += 1
+				dummyOffset += UPLOAD_CHUNK_SIZE
+			}
+
+			const [uuid, key, rm, uploadKey] = await Promise.all([
+				uuidv4(),
+				this.crypto.utils.generateRandomString({ length: 32 }),
+				this.crypto.utils.generateRandomString({ length: 32 }),
+				this.crypto.utils.generateRandomString({ length: 32 })
+			])
+
+			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
+				this.crypto.encrypt().metadata({ metadata: fileName, key }),
+				this.crypto.encrypt().metadata({ metadata: mimeType, key }),
+				this.crypto.encrypt().metadata({ metadata: fileSize.toString(), key }),
+				this.crypto.encrypt().metadata({
+					metadata: JSON.stringify({
+						name: fileName,
+						size: fileSize,
+						mime: mimeType,
+						key,
+						lastModified
+					})
+				}),
+				this.crypto.utils.hashFn({ input: fileName.toLowerCase() })
+			])
+
+			const waitForPause = async (): Promise<void> => {
+				return await new Promise(resolve => {
+					if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+						resolve()
+
+						return
+					}
+
+					const wait = setInterval(() => {
+						if (!pauseSignal.isPaused() || abortSignal?.aborted) {
+							clearInterval(wait)
+
+							resolve()
+						}
+					}, 10)
+				})
+			}
+
+			await new Promise<void>((resolve, reject) => {
+				let done = 0
+
+				for (let i = 0; i < fileChunks; i++) {
+					const index = i
+
+					;(async () => {
+						try {
+							await this._semaphores.uploadThreads.acquire()
+
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								reject(new Error("Aborted"))
+
+								return
+							}
+
+							const chunkBuffer = await utils.readWebFileChunk({
+								file,
+								index,
+								length: UPLOAD_CHUNK_SIZE
+							})
+
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								reject(new Error("Aborted"))
+
+								return
+							}
+
+							const encryptedChunkBuffer = await this.crypto.encrypt().data({ data: chunkBuffer, key })
+
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
+
+							if (abortSignal && abortSignal.aborted) {
+								reject(new Error("Aborted"))
+
+								return
+							}
+
+							const uploadResponse = await this.api
+								.v3()
+								.file()
+								.upload()
+								.chunk()
+								.buffer({ uuid, index, parent, uploadKey, abortSignal, buffer: encryptedChunkBuffer })
+
+							bucket = uploadResponse.bucket
+							region = uploadResponse.region
+
+							done += 1
+
+							this._semaphores.uploadThreads.release()
+
+							if (onProgress) {
+								// TODO: actual progress emitter
+								onProgress(done, fileChunks)
+							}
+
+							if (done >= fileChunks) {
+								resolve()
+							}
+						} catch (e) {
+							this._semaphores.uploadThreads.release()
+
+							throw e
+						}
+					})().catch(reject)
+				}
+			})
+
+			const done = await this.api.v3().upload().done({
+				uuid,
+				name: nameEncrypted,
+				nameHashed,
+				size: sizeEncrypted,
+				chunks: fileChunks,
+				mime: mimeEncrypted,
+				rm,
+				metadata,
+				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				uploadKey
+			})
+
+			fileChunks = done.chunks
+
+			const item: CloudItem = {
+				type: "file",
+				uuid,
+				name: fileName,
+				size: fileSize,
+				mime: mimeType,
+				lastModified,
+				timestamp: Date.now(),
+				parent,
+				rm,
+				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				chunks: fileChunks,
+				favorited: false,
+				key: key,
+				bucket,
+				region
+			}
+
+			// TODO: checkIfItemParentIsShared
+
+			if (onUploaded) {
+				await onUploaded.call(undefined, item)
+			}
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return item
+		} catch (e) {
+			if (onError) {
+				onError(e as unknown as Error)
+			}
+
+			throw e
+		}
 	}
 }
 

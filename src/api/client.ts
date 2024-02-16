@@ -1,10 +1,11 @@
-import axios from "axios"
+import axios, { ResponseType } from "axios"
 import { sleep, getRandomArbitrary } from "../utils"
 import { environment } from "../constants"
 import { normalizePath } from "../utils"
 import { promisify } from "util"
 import { pipeline } from "stream"
 import fs from "fs-extra"
+import { APIError } from "./errors"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -19,6 +20,7 @@ export type BaseRequestParameters = {
 	timeout?: number
 	maxRetries?: number
 	retryTimeout?: number
+	responseType?: ResponseType
 }
 
 export type GetRequestParameters = BaseRequestParameters & {
@@ -27,10 +29,15 @@ export type GetRequestParameters = BaseRequestParameters & {
 
 export type PostRequestParameters = BaseRequestParameters & {
 	method: "POST"
-	data: Record<string, unknown>
+	data: unknown
 }
 
 export type RequestParameters = GetRequestParameters | PostRequestParameters
+
+export type UploadChunkResponse = {
+	bucket: string
+	region: string
+}
 
 export const APIClientDefaults = {
 	gatewayURLs: [
@@ -128,7 +135,8 @@ export class APIClient {
 		return await axios.post(url + params.endpoint, params.data, {
 			headers,
 			signal: params.abortSignal,
-			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
+			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
+			responseType: params.responseType
 		})
 	}
 
@@ -148,7 +156,8 @@ export class APIClient {
 		return await axios.get(url + params.endpoint, {
 			headers,
 			signal: params.abortSignal,
-			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
+			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
+			responseType: params.responseType
 		})
 	}
 
@@ -175,7 +184,7 @@ export class APIClient {
 					throw lastError
 				}
 
-				throw new Error(`Request failed after ${maxRetries} tries`)
+				throw new APIError({ code: "request_failed_after_max_tries", message: `Request failed after ${maxRetries} tries` })
 			}
 
 			tries += 1
@@ -184,13 +193,13 @@ export class APIClient {
 				const response = params.method === "GET" ? await this.get(params) : await this.post(params)
 
 				if (!response || response.status !== 200) {
-					throw new Error(`Invalid HTTP status code: ${response.status}`)
+					throw new APIError({ code: "invalid_http_status_code", message: `Invalid HTTP status code: ${response.status}` })
 				}
 
-				if (!response.data.status) {
+				if (typeof response.data === "object" && typeof response.data.status === "boolean" && !response.data.status) {
 					returnImmediately = true
 
-					throw new Error(`Invalid status code: ${response.data.code}`)
+					throw new APIError({ code: response.data.code, message: response.data.message })
 				}
 
 				return response.data.data ? response.data.data : response.data
@@ -212,11 +221,21 @@ export class APIClient {
 
 	/**
 	 * Downloads a file chunk to a local path.
-	 * @date 2/15/2024 - 4:33:17 AM
+	 * @date 2/16/2024 - 4:53:34 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string, bucket: string, region: string, chunk: number, to: string, timeout?: number, abortSignal?: AbortSignal}} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		bucket: string
+	 * 		region: string
+	 * 		chunk: number
+	 * 		to: string
+	 * 		timeout?: number
+	 * 		abortSignal?: AbortSignal,
+	 * 		maxRetries?: number,
+	 * 		retryTimeout?: number
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
 	 * @param {string} param0.region
@@ -224,6 +243,8 @@ export class APIClient {
 	 * @param {string} param0.to
 	 * @param {number} param0.timeout
 	 * @param {AbortSignal} param0.abortSignal
+	 * @param {number} param0.maxRetries
+	 * @param {number} param0.retryTimeout
 	 * @returns {Promise<void>}
 	 */
 	public async downloadChunkToLocal({
@@ -233,7 +254,9 @@ export class APIClient {
 		chunk,
 		to,
 		timeout,
-		abortSignal
+		abortSignal,
+		maxRetries,
+		retryTimeout
 	}: {
 		uuid: string
 		bucket: string
@@ -242,6 +265,8 @@ export class APIClient {
 		to: string
 		timeout?: number
 		abortSignal?: AbortSignal
+		maxRetries?: number
+		retryTimeout?: number
 	}): Promise<void> {
 		if (environment !== "node") {
 			throw new Error("cloud.downloadChunkToLocal is only available in a Node.JS environment")
@@ -249,26 +274,23 @@ export class APIClient {
 
 		to = normalizePath(to)
 
-		const headers = this.buildHeaders()
-		const response = await axios.get(
-			`${
-				APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]
-			}/${region}/${bucket}/${uuid}/${chunk}`,
-			{
-				signal: abortSignal,
-				headers,
-				timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
-				responseType: "stream"
-			}
-		)
-		const responseStream = response.data
+		const response = await this.request<fs.ReadStream>({
+			method: "GET",
+			url: `${APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]}`,
+			endpoint: `/${region}/${bucket}/${uuid}/${chunk}`,
+			abortSignal,
+			timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
+			responseType: "stream",
+			maxRetries,
+			retryTimeout
+		})
 
-		await pipelineAsync(responseStream, fs.createWriteStream(to))
+		await pipelineAsync(response, fs.createWriteStream(to))
 	}
 
 	/**
 	 * Downloads a file chunk and returns a readable stream.
-	 * @date 2/15/2024 - 4:36:47 AM
+	 * @date 2/16/2024 - 4:53:57 AM
 	 *
 	 * @public
 	 * @async
@@ -279,6 +301,8 @@ export class APIClient {
 	 * 		chunk: number
 	 * 		timeout?: number
 	 * 		abortSignal?: AbortSignal
+	 * 		maxRetries?: number,
+	 * 		retryTimeout?: number
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -286,6 +310,8 @@ export class APIClient {
 	 * @param {number} param0.chunk
 	 * @param {number} param0.timeout
 	 * @param {AbortSignal} param0.abortSignal
+	 * @param {number} param0.maxRetries
+	 * @param {number} param0.retryTimeout
 	 * @returns {Promise<ReadableStream | fs.ReadStream>}
 	 */
 	public async downloadChunkToStream({
@@ -294,7 +320,9 @@ export class APIClient {
 		region,
 		chunk,
 		timeout,
-		abortSignal
+		abortSignal,
+		maxRetries,
+		retryTimeout
 	}: {
 		uuid: string
 		bucket: string
@@ -302,30 +330,58 @@ export class APIClient {
 		chunk: number
 		timeout?: number
 		abortSignal?: AbortSignal
+		maxRetries?: number
+		retryTimeout?: number
 	}): Promise<ReadableStream | fs.ReadStream> {
-		const headers = this.buildHeaders()
-		const response = await axios.get(
-			`${
-				APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]
-			}/${region}/${bucket}/${uuid}/${chunk}`,
-			{
-				signal: abortSignal,
-				headers,
-				timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
-				responseType: "stream"
-			}
-		)
+		const response = await this.request<ReadableStream | fs.ReadStream>({
+			method: "GET",
+			url: `${APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]}`,
+			endpoint: `/${region}/${bucket}/${uuid}/${chunk}`,
+			abortSignal,
+			timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
+			responseType: "stream",
+			maxRetries,
+			retryTimeout
+		})
 
-		return response.data
+		return response
 	}
 
+	/**
+	 * Download a chunk buffer.
+	 * @date 2/16/2024 - 4:54:19 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		bucket: string
+	 * 		region: string
+	 * 		chunk: number
+	 * 		timeout?: number
+	 * 		abortSignal?: AbortSignal,
+	 * 		maxRetries?: number,
+	 * 		retryTimeout?: number
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.bucket
+	 * @param {string} param0.region
+	 * @param {number} param0.chunk
+	 * @param {number} param0.timeout
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {number} param0.maxRetries
+	 * @param {number} param0.retryTimeout
+	 * @returns {Promise<Buffer>}
+	 */
 	public async downloadChunkToBuffer({
 		uuid,
 		bucket,
 		region,
 		chunk,
 		timeout,
-		abortSignal
+		abortSignal,
+		maxRetries,
+		retryTimeout
 	}: {
 		uuid: string
 		bucket: string
@@ -333,21 +389,91 @@ export class APIClient {
 		chunk: number
 		timeout?: number
 		abortSignal?: AbortSignal
+		maxRetries?: number
+		retryTimeout?: number
 	}): Promise<Buffer> {
-		const headers = this.buildHeaders()
-		const response = await axios.get(
-			`${
-				APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]
-			}/${region}/${bucket}/${uuid}/${chunk}`,
-			{
-				signal: abortSignal,
-				headers,
-				timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
-				responseType: "arraybuffer"
-			}
-		)
+		const response = await this.request<ArrayBuffer>({
+			method: "GET",
+			url: `${APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]}`,
+			endpoint: `/${region}/${bucket}/${uuid}/${chunk}`,
+			abortSignal,
+			timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
+			responseType: "arraybuffer",
+			maxRetries,
+			retryTimeout
+		})
 
-		return Buffer.from(response.data as ArrayBuffer)
+		return Buffer.from(response)
+	}
+
+	/**
+	 * Upload a chunk buffer.
+	 * @date 2/16/2024 - 4:55:16 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		index: number
+	 * 		parent: string
+	 * 		uploadKey: string
+	 * 		buffer: Buffer,
+	 * 		timeout?: number
+	 * 		abortSignal?: AbortSignal,
+	 * 		maxRetries?: number,
+	 * 		retryTimeout?: number
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {number} param0.index
+	 * @param {string} param0.parent
+	 * @param {string} param0.uploadKey
+	 * @param {Buffer} param0.buffer
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {number} param0.maxRetries
+	 * @param {number} param0.timeout
+	 * @param {number} param0.retryTimeout
+	 * @returns {Promise<UploadChunkResponse>}
+	 */
+	public async uploadChunkBuffer({
+		uuid,
+		index,
+		parent,
+		uploadKey,
+		buffer,
+		abortSignal,
+		maxRetries,
+		timeout,
+		retryTimeout
+	}: {
+		uuid: string
+		index: number
+		parent: string
+		uploadKey: string
+		buffer: Buffer
+		timeout?: number
+		abortSignal?: AbortSignal
+		maxRetries?: number
+		retryTimeout?: number
+	}): Promise<UploadChunkResponse> {
+		const urlParams = new URLSearchParams({
+			uuid,
+			index,
+			parent,
+			uploadKey
+		} as unknown as Record<string, string>).toString()
+
+		const response = await this.request<UploadChunkResponse>({
+			method: "POST",
+			url: `${APIClientDefaults.ingestURLs[getRandomArbitrary(0, APIClientDefaults.ingestURLs.length - 1)]}`,
+			endpoint: `/v3/upload?${urlParams}`,
+			data: buffer,
+			abortSignal,
+			maxRetries,
+			timeout: timeout ? timeout : APIClientDefaults.ingestTimeout,
+			retryTimeout
+		})
+
+		return response
 	}
 }
 

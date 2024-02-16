@@ -56,52 +56,16 @@ const main = async () => {
 		.decrypt()
 		.dataStream({ inputFile: outputFile, outputFile: pathModule.join(__dirname, "dev.config.json.decrypted"), key, version: 2 })*/
 
-	const files = await filen.cloud().listDirectory({ uuid: "6fc3d024-083f-41ba-906e-638a12a13a71" })
-	const file = files.filter(file => file.name === "Highway.jpg")[0]
-
-	const outputFile = pathModule.join(__dirname, "Highway.jpg")
-
-	if (file.type === "file") {
-		const stream = await filen.cloud().downloadFileToReadableStream({
-			uuid: file.uuid,
-			bucket: file.bucket,
-			region: file.region,
-			chunks: file.chunks,
-			version: file.version,
-			key: file.key
+	console.log(
+		await filen.cloud().uploadFileFromLocal({
+			parent: "6fc3d024-083f-41ba-906e-638a12a13a71",
+			source: pathModule.join(__dirname, "folderDownload", "Kylo.jpg")
 		})
+	)
 
-		const writer = fs.createWriteStream(outputFile)
-
-		writer.on("open", async () => {
-			const reader = stream.getReader()
-
-			// eslint-disable-next-line no-constant-condition
-			while (true) {
-				const { done, value } = await reader.read()
-
-				if (done) {
-					break
-				}
-
-				if (value) {
-					await new Promise<void>((resolve, reject) => {
-						writer.write(value, err => {
-							if (err) {
-								reject(err)
-							} else {
-								resolve()
-							}
-						})
-					})
-
-					console.log("pumped")
-				}
-			}
-
-			console.log("done")
-		})
-	}
+	/*await filen
+		.cloud()
+		.downloadDirectoryToLocal({ uuid: "6fc3d024-083f-41ba-906e-638a12a13a71", to: pathModule.join(__dirname, "folderDownload") })*/
 }
 
 main()

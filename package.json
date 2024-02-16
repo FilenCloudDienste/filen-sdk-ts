@@ -37,6 +37,7 @@
 		"@jest/globals": "^29.7.0",
 		"@types/crypto-js": "^4.2.2",
 		"@types/fs-extra": "^11.0.4",
+		"@types/mime-types": "^2.1.4",
 		"@types/uuid": "^9.0.8",
 		"@typescript-eslint/eslint-plugin": "^6.20.0",
 		"@typescript-eslint/parser": "^6.20.0",
@@ -72,6 +73,7 @@
 		"crypto-js": "^4.2.0",
 		"fs-extra": "^11.2.0",
 		"js-crypto-key-utils": "^1.0.7",
+		"mime-types": "^2.1.35",
 		"uuid": "^9.0.1"
 	}
 }
