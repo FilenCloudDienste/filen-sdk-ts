@@ -266,7 +266,7 @@ export declare class API {
                 uuid: string;
                 parent: string;
                 email: string;
-                type: string;
+                type: "file" | "folder";
                 metadata: string;
             }) => Promise<void>;
             shared: (params_0: {
@@ -366,6 +366,7 @@ export declare class API {
                         chunk: number;
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
+                        onProgress?: import("../types").ProgressCallback | undefined;
                     }) => Promise<Buffer>;
                     stream: (params_0: {
                         uuid: string;
@@ -374,6 +375,7 @@ export declare class API {
                         chunk: number;
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
+                        onProgress?: import("../types").ProgressCallback | undefined;
                     }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
@@ -383,6 +385,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         to: string;
+                        onProgress?: import("../types").ProgressCallback | undefined;
                     }) => Promise<void>;
                 };
             };

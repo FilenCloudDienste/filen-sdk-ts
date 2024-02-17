@@ -10,6 +10,7 @@ import appendStream from "./streams/append"
 import { streamDecodeBase64, streamEncodeBase64 } from "./streams/base64"
 import cryptoUtils from "./crypto/utils"
 import Cloud from "./cloud"
+import pathModule from "path"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -59,7 +60,11 @@ export class FilenSDK {
 						privateKey: params.privateKey,
 						metadataCache: params.metadataCache ? params.metadataCache : false,
 						tmpPath:
-							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
+							environment === "browser"
+								? "/dev/null"
+								: params.tmpPath
+								? utils.normalizePath(params.tmpPath)
+								: utils.normalizePath(os.tmpdir())
 				  })
 				: new Crypto({
 						masterKeys: [],
@@ -67,7 +72,11 @@ export class FilenSDK {
 						privateKey: "",
 						metadataCache: params.metadataCache ? params.metadataCache : false,
 						tmpPath:
-							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
+							environment === "browser"
+								? "/dev/null"
+								: params.tmpPath
+								? utils.normalizePath(params.tmpPath)
+								: utils.normalizePath(os.tmpdir())
 				  })
 		this._api = params.apiKey
 			? new API({ apiKey: params.apiKey, crypto: this._crypto })
@@ -93,7 +102,11 @@ export class FilenSDK {
 						privateKey: params.privateKey,
 						metadataCache: params.metadataCache ? params.metadataCache : false,
 						tmpPath:
-							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
+							environment === "browser"
+								? "/dev/null"
+								: params.tmpPath
+								? utils.normalizePath(params.tmpPath)
+								: utils.normalizePath(os.tmpdir())
 				  })
 				: new Crypto({
 						masterKeys: [],
@@ -101,7 +114,11 @@ export class FilenSDK {
 						privateKey: "",
 						metadataCache: params.metadataCache ? params.metadataCache : false,
 						tmpPath:
-							environment === "browser" ? "/dev/null" : params.tmpPath ? utils.normalizePath(params.tmpPath) : os.tmpdir()
+							environment === "browser"
+								? "/dev/null"
+								: params.tmpPath
+								? utils.normalizePath(params.tmpPath)
+								: utils.normalizePath(os.tmpdir())
 				  })
 		this._api = params.apiKey
 			? new API({ apiKey: params.apiKey, crypto: this._crypto })
@@ -193,7 +210,7 @@ export class FilenSDK {
 	}
 
 	/**
-	 * Returns a Filen Crypto instance.
+	 * Crypto
 	 * @date 1/31/2024 - 4:29:49 PM
 	 *
 	 * @public
@@ -207,6 +224,13 @@ export class FilenSDK {
 		return this._crypto
 	}
 
+	/**
+	 * FS
+	 * @date 2/17/2024 - 1:52:12 AM
+	 *
+	 * @public
+	 * @returns {FS}
+	 */
 	public fs(): FS {
 		if (!this.isLoggedIn()) {
 			throw new Error("Not authenticated, please call login() first")
@@ -215,12 +239,37 @@ export class FilenSDK {
 		return this._fs
 	}
 
+	/**
+	 * Cloud
+	 * @date 2/17/2024 - 1:52:05 AM
+	 *
+	 * @public
+	 * @returns {Cloud}
+	 */
 	public cloud(): Cloud {
 		if (!this.isLoggedIn()) {
 			throw new Error("Not authenticated, please call login() first")
 		}
 
 		return this._cloud
+	}
+
+	/**
+	 * Clear the temporary directory. Only available in a Node.JS environment.
+	 * @date 2/17/2024 - 1:51:39 AM
+	 *
+	 * @public
+	 * @async
+	 * @returns {Promise<void>}
+	 */
+	public async clearTemporaryDirectory(): Promise<void> {
+		if (environment !== "node") {
+			return
+		}
+
+		const tmpDir = utils.normalizePath(pathModule.join(this.config.tmpPath ? this.config.tmpPath : os.tmpdir(), "filen-sdk"))
+
+		await utils.clearTempDirectory({ tmpDir })
 	}
 
 	public readonly utils = {

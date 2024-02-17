@@ -2,6 +2,7 @@
 /// <reference types="node" />
 import { ResponseType } from "axios";
 import fs from "fs-extra";
+import type { ProgressCallback } from "../types";
 export type APIClientConfig = {
     apiKey: string;
 };
@@ -13,6 +14,9 @@ export type BaseRequestParameters = {
     maxRetries?: number;
     retryTimeout?: number;
     responseType?: ResponseType;
+    headers?: Record<string, string>;
+    onUploadProgress?: ProgressCallback;
+    onDownloadProgress?: ProgressCallback;
 };
 export type GetRequestParameters = BaseRequestParameters & {
     method: "GET";
@@ -96,7 +100,7 @@ export declare class APIClient {
     request<T>(params: RequestParameters): Promise<T>;
     /**
      * Downloads a file chunk to a local path.
-     * @date 2/16/2024 - 4:53:34 AM
+     * @date 2/17/2024 - 6:40:58 AM
      *
      * @public
      * @async
@@ -107,9 +111,10 @@ export declare class APIClient {
      * 		chunk: number
      * 		to: string
      * 		timeout?: number
-     * 		abortSignal?: AbortSignal,
-     * 		maxRetries?: number,
+     * 		abortSignal?: AbortSignal
+     * 		maxRetries?: number
      * 		retryTimeout?: number
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -120,9 +125,10 @@ export declare class APIClient {
      * @param {AbortSignal} param0.abortSignal
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<void>}
      */
-    downloadChunkToLocal({ uuid, bucket, region, chunk, to, timeout, abortSignal, maxRetries, retryTimeout }: {
+    downloadChunkToLocal({ uuid, bucket, region, chunk, to, timeout, abortSignal, maxRetries, retryTimeout, onProgress }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -132,10 +138,11 @@ export declare class APIClient {
         abortSignal?: AbortSignal;
         maxRetries?: number;
         retryTimeout?: number;
+        onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
      * Downloads a file chunk and returns a readable stream.
-     * @date 2/16/2024 - 4:53:57 AM
+     * @date 2/17/2024 - 6:40:44 AM
      *
      * @public
      * @async
@@ -146,8 +153,9 @@ export declare class APIClient {
      * 		chunk: number
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
-     * 		maxRetries?: number,
+     * 		maxRetries?: number
      * 		retryTimeout?: number
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -157,9 +165,10 @@ export declare class APIClient {
      * @param {AbortSignal} param0.abortSignal
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<ReadableStream | fs.ReadStream>}
      */
-    downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout }: {
+    downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -168,10 +177,11 @@ export declare class APIClient {
         abortSignal?: AbortSignal;
         maxRetries?: number;
         retryTimeout?: number;
+        onProgress?: ProgressCallback;
     }): Promise<ReadableStream | fs.ReadStream>;
     /**
      * Download a chunk buffer.
-     * @date 2/16/2024 - 4:54:19 AM
+     * @date 2/17/2024 - 6:40:21 AM
      *
      * @public
      * @async
@@ -181,9 +191,10 @@ export declare class APIClient {
      * 		region: string
      * 		chunk: number
      * 		timeout?: number
-     * 		abortSignal?: AbortSignal,
-     * 		maxRetries?: number,
-     * 		retryTimeout?: number
+     * 		abortSignal?: AbortSignal
+     * 		maxRetries?: number
+     * 		retryTimeout?: number,
+     * 		onProgress: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -193,9 +204,10 @@ export declare class APIClient {
      * @param {AbortSignal} param0.abortSignal
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<Buffer>}
      */
-    downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout }: {
+    downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -204,10 +216,11 @@ export declare class APIClient {
         abortSignal?: AbortSignal;
         maxRetries?: number;
         retryTimeout?: number;
+        onProgress?: ProgressCallback;
     }): Promise<Buffer>;
     /**
      * Upload a chunk buffer.
-     * @date 2/16/2024 - 4:55:16 AM
+     * @date 2/17/2024 - 5:08:04 AM
      *
      * @public
      * @async
@@ -216,11 +229,12 @@ export declare class APIClient {
      * 		index: number
      * 		parent: string
      * 		uploadKey: string
-     * 		buffer: Buffer,
+     * 		buffer: Buffer
      * 		timeout?: number
-     * 		abortSignal?: AbortSignal,
-     * 		maxRetries?: number,
-     * 		retryTimeout?: number
+     * 		abortSignal?: AbortSignal
+     * 		maxRetries?: number
+     * 		retryTimeout?: number,
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {number} param0.index
@@ -231,9 +245,10 @@ export declare class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.timeout
      * @param {number} param0.retryTimeout
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<UploadChunkResponse>}
      */
-    uploadChunkBuffer({ uuid, index, parent, uploadKey, buffer, abortSignal, maxRetries, timeout, retryTimeout }: {
+    uploadChunkBuffer({ uuid, index, parent, uploadKey, buffer, abortSignal, maxRetries, timeout, retryTimeout, onProgress }: {
         uuid: string;
         index: number;
         parent: string;
@@ -243,6 +258,7 @@ export declare class APIClient {
         abortSignal?: AbortSignal;
         maxRetries?: number;
         retryTimeout?: number;
+        onProgress?: ProgressCallback;
     }): Promise<UploadChunkResponse>;
 }
 export default APIClient;

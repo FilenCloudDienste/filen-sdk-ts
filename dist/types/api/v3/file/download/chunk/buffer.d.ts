@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import type APIClient from "../../../../client";
+import type { ProgressCallback } from "../../../../../types";
 /**
  * FileDownloadChunkBuffer
  * @date 2/15/2024 - 4:38:09 AM
@@ -24,7 +25,7 @@ export declare class FileDownloadChunkBuffer {
     });
     /**
      * Download a file chunk.
-     * @date 2/15/2024 - 5:10:49 AM
+     * @date 2/17/2024 - 6:39:08 AM
      *
      * @public
      * @async
@@ -34,7 +35,8 @@ export declare class FileDownloadChunkBuffer {
      * 		region: string
      * 		chunk: number
      * 		timeout?: number
-     * 		abortSignal?: AbortSignal
+     * 		abortSignal?: AbortSignal,
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -42,15 +44,17 @@ export declare class FileDownloadChunkBuffer {
      * @param {number} param0.chunk
      * @param {number} param0.timeout
      * @param {AbortSignal} param0.abortSignal
-     * @returns {Promise<void | ReadableStream | fs.ReadStream | Buffer>}
+     * @param {ProgressCallback} param0.onProgress
+     * @returns {Promise<Buffer>}
      */
-    fetch({ uuid, bucket, region, chunk, timeout, abortSignal }: {
+    fetch({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress }: {
         uuid: string;
         bucket: string;
         region: string;
         chunk: number;
         timeout?: number;
         abortSignal?: AbortSignal;
+        onProgress?: ProgressCallback;
     }): Promise<Buffer>;
 }
 export default FileDownloadChunkBuffer;

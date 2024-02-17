@@ -2,11 +2,12 @@ import type API from "../api";
 import type Crypto from "../crypto";
 import type { FilenSDKConfig } from "..";
 import type DirColor from "../api/v3/dir/color";
-import type { FileEncryptionVersion, FileMetadata, ProgressCallback } from "../types";
+import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata } from "../types";
 import { PauseSignal } from "./signals";
 import type { DirColors } from "../api/v3/dir/color";
 import type { FileVersionsResponse } from "../api/v3/file/versions";
 import type { DirDownloadType } from "../api/v3/dir/download";
+import type { FileLinkEditExpiration } from "../api/v3/file/link/edit";
 export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -46,11 +47,16 @@ export type CloudItem = ({
 } & CloudItemBase & CloudItemDirectory) | ({
     type: "file";
 } & CloudItemBase & CloudItemFile);
+export type CloudItemSharedReceiver = {
+    id: number;
+    email: string;
+};
 export type CloudItemSharedBase = {
     sharerEmail: string;
     sharerId: number;
     receiverEmail: string;
     receiverId: number;
+    receivers: CloudItemSharedReceiver[];
 };
 export type CloudItemShared = ({
     type: "directory";
@@ -62,6 +68,16 @@ export type CloudItemTree = Omit<{
 } & CloudItemBase & CloudItemDirectory, "color" | "favorited" | "timestamp" | "lastModified"> | Omit<{
     type: "file";
 } & CloudItemBase & CloudItemFile, "favorited" | "rm" | "timestamp">;
+export type FileToShare = {
+    uuid: string;
+    parent: string;
+    metadata: FileMetadata;
+};
+export type DirectoryToShare = {
+    uuid: string;
+    parent: string;
+    metadata: FolderMetadata;
+};
 /**
  * Cloud
  * @date 2/14/2024 - 11:29:58 PM
@@ -401,6 +417,127 @@ export declare class Cloud {
         uuid: string;
     }): Promise<FileVersionsResponse>;
     /**
+     * Share an item to another Filen user.
+     * @date 2/17/2024 - 4:11:05 AM
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		uuid: string
+     * 		parent: string
+     * 		email: string
+     * 		type: "file" | "folder"
+     * 		publicKey: string
+     * 		metadata: FileMetadata | FolderMetadata
+     * 	}} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.parent
+     * @param {string} param0.email
+     * @param {("file" | "folder")} param0.type
+     * @param {string} param0.publicKey
+     * @param {*} param0.metadata
+     * @returns {Promise<void>}
+     */
+    shareItem({ uuid, parent, email, type, publicKey, metadata }: {
+        uuid: string;
+        parent: string;
+        email: string;
+        type: "file" | "folder";
+        publicKey: string;
+        metadata: FileMetadata | FolderMetadata;
+    }): Promise<void>;
+    addItemToPublicLink({ uuid, parent, linkUUID, type, metadata, linkKeyEncrypted, expiration }: {
+        uuid: string;
+        parent: string;
+        linkUUID: string;
+        type: "file" | "folder";
+        metadata: FileMetadata | FolderMetadata;
+        linkKeyEncrypted: string;
+        expiration: FileLinkEditExpiration;
+    }): Promise<void>;
+    /**
+     * Checks if the parent of an item is shared or public linked.
+     * If so, it adds the item and all children of the item (in case of a directory) to the share and public link.
+     * @date 2/17/2024 - 4:26:44 AM
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		type: "file" | "directory"
+     * 		parent: string
+     * 		uuid: string
+     * 		itemMetadata: FileMetadata | FolderMetadata
+     * 	}} param0
+     * @param {("file" | "directory")} param0.type
+     * @param {string} param0.parent
+     * @param {string} param0.uuid
+     * @param {*} param0.itemMetadata
+     * @returns {Promise<void>}
+     */
+    checkIfItemParentIsShared({ type, parent, uuid, itemMetadata }: {
+        type: "file" | "directory";
+        parent: string;
+        uuid: string;
+        itemMetadata: FileMetadata | FolderMetadata;
+    }): Promise<void>;
+    /**
+     * Rename a shared item.
+     * @date 2/17/2024 - 4:32:56 AM
+     *
+     * @public
+     * @async
+     * @param {({uuid: string, receiverId: number, metadata: FileMetadata | FolderMetadata, publicKey: string})} param0
+     * @param {string} param0.uuid
+     * @param {number} param0.receiverId
+     * @param {*} param0.metadata
+     * @param {string} param0.publicKey
+     * @returns {Promise<void>}
+     */
+    renameSharedItem({ uuid, receiverId, metadata, publicKey }: {
+        uuid: string;
+        receiverId: number;
+        metadata: FileMetadata | FolderMetadata;
+        publicKey: string;
+    }): Promise<void>;
+    /**
+     * Rename a publicly linked item.
+     * @date 2/17/2024 - 4:35:07 AM
+     *
+     * @public
+     * @async
+     * @param {({uuid: string, linkUUID: string, metadata: FileMetadata | FolderMetadata, linkKeyEncrypted: string})} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.linkUUID
+     * @param {*} param0.metadata
+     * @param {string} param0.linkKeyEncrypted
+     * @returns {Promise<void>}
+     */
+    renamePubliclyLinkedItem({ uuid, linkUUID, metadata, linkKeyEncrypted }: {
+        uuid: string;
+        linkUUID: string;
+        metadata: FileMetadata | FolderMetadata;
+        linkKeyEncrypted: string;
+    }): Promise<void>;
+    /**
+     * Checks if an item is shared or public linked.
+     * If so, it renames the item.
+     * @date 2/17/2024 - 4:37:30 AM
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		uuid: string
+     * 		itemMetadata: FileMetadata | FolderMetadata
+     * 	}} param0
+     * @param {string} param0.uuid
+     * @param {*} param0.itemMetadata
+     * @returns {Promise<void>}
+     */
+    checkIfItemIsSharedForRename({ uuid, itemMetadata }: {
+        uuid: string;
+        itemMetadata: FileMetadata | FolderMetadata;
+    }): Promise<void>;
+    /**
      * Download a file to a local path. Only works in a Node.JS environment.
      * @date 2/15/2024 - 7:39:34 AM
      *
@@ -590,7 +727,7 @@ export declare class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<string>}
      */
-    downloadDirectoryToLocal({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished }: {
+    downloadDirectoryToLocal({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress }: {
         uuid: string;
         type?: DirDownloadType;
         linkUUID?: string;
@@ -690,5 +827,47 @@ export declare class Cloud {
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
     }): Promise<CloudItem>;
+    /**
+     * Upload a local directory. Only available in a Node.JS environment.
+     * @date 2/17/2024 - 12:06:04 AM
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		source: string
+     * 		parent: string
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress?: ProgressCallback
+     * 		onQueued?: () => void
+     * 		onStarted?: () => void
+     * 		onError?: (err: Error) => void
+     * 		onFinished?: () => void
+     * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 	}} param0
+     * @param {string} param0.source
+     * @param {string} param0.parent
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {AbortSignal} param0.abortSignal
+     * @param {ProgressCallback} param0.onProgress
+     * @param {() => void} param0.onQueued
+     * @param {() => void} param0.onStarted
+     * @param {(err: Error) => void} param0.onError
+     * @param {() => void} param0.onFinished
+     * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @returns {Promise<void>}
+     */
+    uploadDirectoryFromLocal({ source, parent, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+        source: string;
+        parent: string;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress?: ProgressCallback;
+        onQueued?: () => void;
+        onStarted?: () => void;
+        onError?: (err: Error) => void;
+        onFinished?: () => void;
+        onUploaded?: (item: CloudItem) => Promise<void>;
+    }): Promise<void>;
 }
 export default Cloud;

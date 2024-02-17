@@ -1,13 +1,20 @@
-import axios, { ResponseType } from "axios"
-import { sleep, getRandomArbitrary } from "../utils"
+import axios, { ResponseType, AxiosResponse, InternalAxiosRequestConfig } from "axios"
+import { sleep, getRandomArbitrary, normalizePath, parseURLParams } from "../utils"
 import { environment } from "../constants"
-import { normalizePath } from "../utils"
 import { promisify } from "util"
 import { pipeline } from "stream"
 import fs from "fs-extra"
 import { APIError } from "./errors"
+import { bufferToHash } from "../crypto/utils"
+import { Semaphore } from "../semaphore"
+import type { ProgressCallback } from "../types"
+import https from "https"
+import urlModule from "url"
+import progressStream from "progress-stream"
+import { Readable, Transform } from "stream"
 
 const pipelineAsync = promisify(pipeline)
+const requestSemaphore = new Semaphore(1024)
 
 export type APIClientConfig = {
 	apiKey: string
@@ -21,6 +28,9 @@ export type BaseRequestParameters = {
 	maxRetries?: number
 	retryTimeout?: number
 	responseType?: ResponseType
+	headers?: Record<string, string>
+	onUploadProgress?: ProgressCallback
+	onDownloadProgress?: ProgressCallback
 }
 
 export type GetRequestParameters = BaseRequestParameters & {
@@ -129,14 +139,152 @@ export class APIClient {
 	 * @returns {Promise<AxiosResponse<any, any>>}
 	 */
 	private async post(params: PostRequestParameters) {
-		const headers = this.buildHeaders()
+		let headers = params.headers ? params.headers : this.buildHeaders()
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
+		const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer
+
+		if (!params.headers && !postDataIsBuffer) {
+			headers = {
+				...headers,
+				Checksum: await bufferToHash({ buffer: Buffer.from(JSON.stringify(params.data), "utf-8"), algorithm: "sha512" })
+			}
+		}
+
+		let lastBytesUploaded = 0
+
+		if (environment === "node") {
+			return new Promise<AxiosResponse>((resolve, reject) => {
+				const urlParsed = urlModule.parse(url, true)
+				const timeout = params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
+
+				const request = https.request(
+					{
+						method: "POST",
+						hostname: urlParsed.hostname,
+						path: params.endpoint,
+						port: 443,
+						timeout,
+						headers: {
+							...headers,
+							...(postDataIsBuffer ? {} : { "Content-Type": "application/json" })
+						}
+					},
+					response => {
+						if (response.statusCode !== 200) {
+							resolve({
+								status: response.statusCode ?? 500,
+								statusText: "",
+								data: null,
+								headers,
+								config: null as unknown as InternalAxiosRequestConfig
+							})
+
+							return
+						}
+
+						if (params.responseType === "stream") {
+							resolve({
+								status: 200,
+								statusText: "",
+								data: response,
+								headers,
+								config: null as unknown as InternalAxiosRequestConfig
+							})
+						} else {
+							const chunks: Buffer[] = []
+
+							response.on("data", chunk => {
+								if (!response || !(chunk instanceof Buffer)) {
+									return
+								}
+
+								chunks.push(chunk)
+							})
+
+							response.on("end", () => {
+								try {
+									const json = JSON.parse(Buffer.concat(chunks).toString())
+
+									resolve({
+										status: 200,
+										statusText: "",
+										data: json,
+										headers,
+										config: null as unknown as InternalAxiosRequestConfig
+									})
+								} catch (e) {
+									reject(e)
+								}
+							})
+						}
+
+						response.on("error", reject)
+					}
+				)
+
+				request.on("error", reject)
+				request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)))
+
+				if (postDataIsBuffer) {
+					const readableBuffer: Buffer | Uint8Array | ArrayBuffer =
+						typeof params.data === "string"
+							? Buffer.from(params.data, "utf-8")
+							: postDataIsBuffer
+							? (params.data as Buffer)
+							: Buffer.from(JSON.stringify(params.data), "utf-8")
+
+					const progressStreamInstance = progressStream({
+						length: readableBuffer.byteLength,
+						time: 100
+					})
+
+					progressStreamInstance.on("progress", info => {
+						if (!params.onUploadProgress || !info || typeof info.transferred !== "number") {
+							return
+						}
+
+						let bytes = info.transferred
+
+						if (lastBytesUploaded === 0) {
+							lastBytesUploaded = info.transferred
+						} else {
+							bytes = Math.floor(info.transferred - lastBytesUploaded)
+							lastBytesUploaded = info.transferred
+						}
+
+						params.onUploadProgress(bytes)
+					})
+
+					Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request)
+				} else {
+					request.write(JSON.stringify(params.data))
+					request.end()
+				}
+			})
+		}
 
 		return await axios.post(url + params.endpoint, params.data, {
 			headers,
 			signal: params.abortSignal,
 			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
-			responseType: params.responseType
+			responseType: params.responseType ? params.responseType : "json",
+			maxRedirects: 0,
+			onUploadProgress: event => {
+				if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
+					return
+				}
+
+				let bytes = event.loaded
+
+				if (lastBytesUploaded === 0) {
+					lastBytesUploaded = event.loaded
+				} else {
+					bytes = Math.floor(event.loaded - lastBytesUploaded)
+					lastBytesUploaded = event.loaded
+				}
+
+				params.onUploadProgress(bytes)
+			}
 		})
 	}
 
@@ -150,14 +298,145 @@ export class APIClient {
 	 * @returns {Promise<AxiosResponse<any, any>>}
 	 */
 	private async get(params: GetRequestParameters) {
-		const headers = this.buildHeaders()
+		const headers = params.headers ? params.headers : this.buildHeaders()
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
+
+		let lastBytesDownloaded = 0
+
+		if (environment === "node") {
+			return new Promise<AxiosResponse>((resolve, reject) => {
+				const urlParsed = urlModule.parse(url, true)
+				const timeout = params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
+
+				const calculateProgress = (transferred: number) => {
+					if (!params.onDownloadProgress) {
+						return
+					}
+
+					let bytes = transferred
+
+					if (lastBytesDownloaded === 0) {
+						lastBytesDownloaded = transferred
+					} else {
+						bytes = Math.floor(transferred - lastBytesDownloaded)
+						lastBytesDownloaded = transferred
+					}
+
+					params.onDownloadProgress(bytes)
+				}
+
+				const calculateProgressTransform = new Transform({
+					transform(chunk, encoding, callback) {
+						if (params.onDownloadProgress && chunk instanceof Buffer) {
+							let bytes = chunk.byteLength
+
+							if (lastBytesDownloaded === 0) {
+								lastBytesDownloaded = chunk.byteLength
+							} else {
+								bytes = Math.floor(chunk.byteLength - lastBytesDownloaded)
+								lastBytesDownloaded = chunk.byteLength
+							}
+
+							params.onDownloadProgress(bytes)
+						}
+
+						this.push(chunk)
+
+						callback()
+					}
+				})
+
+				const request = https.request(
+					{
+						method: "GET",
+						hostname: urlParsed.hostname,
+						path: params.endpoint,
+						port: 443,
+						timeout,
+						headers
+					},
+					response => {
+						if (response.statusCode !== 200) {
+							resolve({
+								status: response.statusCode ?? 500,
+								statusText: "",
+								data: null,
+								headers,
+								config: null as unknown as InternalAxiosRequestConfig
+							})
+
+							return
+						}
+
+						if (params.responseType === "stream") {
+							resolve({
+								status: 200,
+								statusText: "",
+								data: response.pipe(calculateProgressTransform),
+								headers,
+								config: null as unknown as InternalAxiosRequestConfig
+							})
+						} else {
+							const chunks: Buffer[] = []
+
+							response.on("data", chunk => {
+								if (!response || !(chunk instanceof Buffer)) {
+									return
+								}
+
+								chunks.push(chunk)
+
+								calculateProgress(chunk.byteLength)
+							})
+
+							response.on("end", () => {
+								try {
+									resolve({
+										status: 200,
+										statusText: "",
+										data: Buffer.concat(chunks),
+										headers,
+										config: null as unknown as InternalAxiosRequestConfig
+									})
+								} catch (e) {
+									reject(e)
+								}
+							})
+						}
+
+						response.on("error", reject)
+					}
+				)
+
+				request.on("error", reject)
+				request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)))
+
+				request.end()
+			})
+		}
 
 		return await axios.get(url + params.endpoint, {
 			headers,
 			signal: params.abortSignal,
 			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
-			responseType: params.responseType
+			responseType: params.responseType ? params.responseType : "json",
+			maxRedirects: 0,
+			onDownloadProgress: event => {
+				if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
+					return
+				}
+
+				let bytes = event.loaded
+
+				if (lastBytesDownloaded === 0) {
+					lastBytesDownloaded = event.loaded
+				} else {
+					bytes = Math.floor(event.loaded - lastBytesDownloaded)
+					lastBytesDownloaded = event.loaded
+				}
+
+				params.onDownloadProgress(bytes)
+			}
 		})
 	}
 
@@ -216,12 +495,18 @@ export class APIClient {
 			}
 		}
 
-		return await send()
+		await requestSemaphore.acquire()
+
+		try {
+			return await send()
+		} finally {
+			requestSemaphore.release()
+		}
 	}
 
 	/**
 	 * Downloads a file chunk to a local path.
-	 * @date 2/16/2024 - 4:53:34 AM
+	 * @date 2/17/2024 - 6:40:58 AM
 	 *
 	 * @public
 	 * @async
@@ -232,9 +517,10 @@ export class APIClient {
 	 * 		chunk: number
 	 * 		to: string
 	 * 		timeout?: number
-	 * 		abortSignal?: AbortSignal,
-	 * 		maxRetries?: number,
+	 * 		abortSignal?: AbortSignal
+	 * 		maxRetries?: number
 	 * 		retryTimeout?: number
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -245,6 +531,7 @@ export class APIClient {
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.retryTimeout
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<void>}
 	 */
 	public async downloadChunkToLocal({
@@ -256,7 +543,8 @@ export class APIClient {
 		timeout,
 		abortSignal,
 		maxRetries,
-		retryTimeout
+		retryTimeout,
+		onProgress
 	}: {
 		uuid: string
 		bucket: string
@@ -267,6 +555,7 @@ export class APIClient {
 		abortSignal?: AbortSignal
 		maxRetries?: number
 		retryTimeout?: number
+		onProgress?: ProgressCallback
 	}): Promise<void> {
 		if (environment !== "node") {
 			throw new Error("cloud.downloadChunkToLocal is only available in a Node.JS environment")
@@ -282,7 +571,8 @@ export class APIClient {
 			timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
 			responseType: "stream",
 			maxRetries,
-			retryTimeout
+			retryTimeout,
+			onDownloadProgress: onProgress
 		})
 
 		await pipelineAsync(response, fs.createWriteStream(to))
@@ -290,7 +580,7 @@ export class APIClient {
 
 	/**
 	 * Downloads a file chunk and returns a readable stream.
-	 * @date 2/16/2024 - 4:53:57 AM
+	 * @date 2/17/2024 - 6:40:44 AM
 	 *
 	 * @public
 	 * @async
@@ -301,8 +591,9 @@ export class APIClient {
 	 * 		chunk: number
 	 * 		timeout?: number
 	 * 		abortSignal?: AbortSignal
-	 * 		maxRetries?: number,
+	 * 		maxRetries?: number
 	 * 		retryTimeout?: number
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -312,6 +603,7 @@ export class APIClient {
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.retryTimeout
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<ReadableStream | fs.ReadStream>}
 	 */
 	public async downloadChunkToStream({
@@ -322,7 +614,8 @@ export class APIClient {
 		timeout,
 		abortSignal,
 		maxRetries,
-		retryTimeout
+		retryTimeout,
+		onProgress
 	}: {
 		uuid: string
 		bucket: string
@@ -332,6 +625,7 @@ export class APIClient {
 		abortSignal?: AbortSignal
 		maxRetries?: number
 		retryTimeout?: number
+		onProgress?: ProgressCallback
 	}): Promise<ReadableStream | fs.ReadStream> {
 		const response = await this.request<ReadableStream | fs.ReadStream>({
 			method: "GET",
@@ -341,7 +635,8 @@ export class APIClient {
 			timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
 			responseType: "stream",
 			maxRetries,
-			retryTimeout
+			retryTimeout,
+			onDownloadProgress: onProgress
 		})
 
 		return response
@@ -349,7 +644,7 @@ export class APIClient {
 
 	/**
 	 * Download a chunk buffer.
-	 * @date 2/16/2024 - 4:54:19 AM
+	 * @date 2/17/2024 - 6:40:21 AM
 	 *
 	 * @public
 	 * @async
@@ -359,9 +654,10 @@ export class APIClient {
 	 * 		region: string
 	 * 		chunk: number
 	 * 		timeout?: number
-	 * 		abortSignal?: AbortSignal,
-	 * 		maxRetries?: number,
-	 * 		retryTimeout?: number
+	 * 		abortSignal?: AbortSignal
+	 * 		maxRetries?: number
+	 * 		retryTimeout?: number,
+	 * 		onProgress: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -371,6 +667,7 @@ export class APIClient {
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.retryTimeout
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<Buffer>}
 	 */
 	public async downloadChunkToBuffer({
@@ -381,7 +678,8 @@ export class APIClient {
 		timeout,
 		abortSignal,
 		maxRetries,
-		retryTimeout
+		retryTimeout,
+		onProgress
 	}: {
 		uuid: string
 		bucket: string
@@ -391,6 +689,7 @@ export class APIClient {
 		abortSignal?: AbortSignal
 		maxRetries?: number
 		retryTimeout?: number
+		onProgress?: ProgressCallback
 	}): Promise<Buffer> {
 		const response = await this.request<ArrayBuffer>({
 			method: "GET",
@@ -400,7 +699,8 @@ export class APIClient {
 			timeout: timeout ? timeout : APIClientDefaults.egestTimeout,
 			responseType: "arraybuffer",
 			maxRetries,
-			retryTimeout
+			retryTimeout,
+			onDownloadProgress: onProgress
 		})
 
 		return Buffer.from(response)
@@ -408,7 +708,7 @@ export class APIClient {
 
 	/**
 	 * Upload a chunk buffer.
-	 * @date 2/16/2024 - 4:55:16 AM
+	 * @date 2/17/2024 - 5:08:04 AM
 	 *
 	 * @public
 	 * @async
@@ -417,11 +717,12 @@ export class APIClient {
 	 * 		index: number
 	 * 		parent: string
 	 * 		uploadKey: string
-	 * 		buffer: Buffer,
+	 * 		buffer: Buffer
 	 * 		timeout?: number
-	 * 		abortSignal?: AbortSignal,
-	 * 		maxRetries?: number,
-	 * 		retryTimeout?: number
+	 * 		abortSignal?: AbortSignal
+	 * 		maxRetries?: number
+	 * 		retryTimeout?: number,
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {number} param0.index
@@ -432,6 +733,7 @@ export class APIClient {
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.timeout
 	 * @param {number} param0.retryTimeout
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<UploadChunkResponse>}
 	 */
 	public async uploadChunkBuffer({
@@ -443,7 +745,8 @@ export class APIClient {
 		abortSignal,
 		maxRetries,
 		timeout,
-		retryTimeout
+		retryTimeout,
+		onProgress
 	}: {
 		uuid: string
 		index: number
@@ -454,6 +757,7 @@ export class APIClient {
 		abortSignal?: AbortSignal
 		maxRetries?: number
 		retryTimeout?: number
+		onProgress?: ProgressCallback
 	}): Promise<UploadChunkResponse> {
 		const urlParams = new URLSearchParams({
 			uuid,
@@ -462,15 +766,28 @@ export class APIClient {
 			uploadKey
 		} as unknown as Record<string, string>).toString()
 
+		const bufferHash = await bufferToHash({ buffer, algorithm: "sha512" })
+		const fullURL = `${
+			APIClientDefaults.ingestURLs[getRandomArbitrary(0, APIClientDefaults.ingestURLs.length - 1)]
+		}/v3/upload?${urlParams}&hash=${bufferHash}`
+		const parsedURLParams = parseURLParams({ url: fullURL })
+		const urlParamsHash = await bufferToHash({ buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"), algorithm: "sha512" })
+		const builtHeaders = this.buildHeaders()
+
 		const response = await this.request<UploadChunkResponse>({
 			method: "POST",
 			url: `${APIClientDefaults.ingestURLs[getRandomArbitrary(0, APIClientDefaults.ingestURLs.length - 1)]}`,
-			endpoint: `/v3/upload?${urlParams}`,
+			endpoint: `/v3/upload?${urlParams}&hash=${bufferHash}`,
 			data: buffer,
 			abortSignal,
 			maxRetries,
 			timeout: timeout ? timeout : APIClientDefaults.ingestTimeout,
-			retryTimeout
+			retryTimeout,
+			headers: {
+				...builtHeaders,
+				Checksum: urlParamsHash
+			},
+			onUploadProgress: onProgress
 		})
 
 		return response

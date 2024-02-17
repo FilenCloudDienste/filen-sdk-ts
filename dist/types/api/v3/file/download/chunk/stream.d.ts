@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import type APIClient from "../../../../client";
 import type fs from "fs-extra";
+import type { ProgressCallback } from "../../../../../types";
 /**
  * FileDownloadChunkStream
  * @date 2/15/2024 - 4:38:09 AM
@@ -25,7 +26,7 @@ export declare class FileDownloadChunkStream {
     });
     /**
      * Download a file chunk.
-     * @date 2/15/2024 - 5:11:55 AM
+     * @date 2/17/2024 - 6:39:39 AM
      *
      * @public
      * @async
@@ -36,6 +37,7 @@ export declare class FileDownloadChunkStream {
      * 		chunk: number
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -43,15 +45,17 @@ export declare class FileDownloadChunkStream {
      * @param {number} param0.chunk
      * @param {number} param0.timeout
      * @param {AbortSignal} param0.abortSignal
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<ReadableStream | fs.ReadStream>}
      */
-    fetch({ uuid, bucket, region, chunk, timeout, abortSignal }: {
+    fetch({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress }: {
         uuid: string;
         bucket: string;
         region: string;
         chunk: number;
         timeout?: number;
         abortSignal?: AbortSignal;
+        onProgress?: ProgressCallback;
     }): Promise<ReadableStream | fs.ReadStream>;
 }
 export default FileDownloadChunkStream;

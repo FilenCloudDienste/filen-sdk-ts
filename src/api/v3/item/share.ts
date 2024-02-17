@@ -30,11 +30,11 @@ export class ItemShare {
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string; parent: string; email: string; type: string; metadata: string }} param0
+	 * @param {{ uuid: string; parent: string; email: string; type: "file" | "folder"; metadata: string }} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.parent
 	 * @param {string} param0.email
-	 * @param {string} param0.type
+	 * @param {"file" | "folder"} param0.type
 	 * @param {string} param0.metadata
 	 * @returns {Promise<void>}
 	 */
@@ -48,7 +48,7 @@ export class ItemShare {
 		uuid: string
 		parent: string
 		email: string
-		type: string
+		type: "file" | "folder"
 		metadata: string
 	}): Promise<void> {
 		await this.apiClient.request({

@@ -53,7 +53,7 @@ export class DirCreate {
 		parent: string
 		nameHashed: string
 	}): Promise<DirCreateResponse> {
-		const uuidToUse = uuid ? uuid : uuidv4()
+		const uuidToUse = uuid ? uuid : await uuidv4()
 		const response = await this.apiClient.request<DirCreateResponse>({
 			method: "POST",
 			endpoint: "/v3/dir/create",

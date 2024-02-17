@@ -57,7 +57,41 @@ export declare function Uint8ArrayConcat(a1: Uint8Array, a2: Uint8Array): Uint8A
  * @returns {Promise<T[]>}
  */
 export declare function promiseAllChunked<T>(promises: Promise<T>[], chunkSize?: number): Promise<T[]>;
+/**
+ * Generate a random number. NOT CRYPTOGRAPHICALLY SAFE.
+ * @date 2/17/2024 - 1:08:06 AM
+ *
+ * @export
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
 export declare function getRandomArbitrary(min: number, max: number): number;
+/**
+ * Clear the temporary directory.
+ * @date 2/17/2024 - 1:15:42 AM
+ *
+ * @export
+ * @async
+ * @param {{ tmpDir?: string }} param0
+ * @param {string} param0.tmpDir
+ * @returns {Promise<void>}
+ */
+export declare function clearTempDirectory({ tmpDir }: {
+    tmpDir?: string;
+}): Promise<void>;
+/**
+ * Parse URL parameters.
+ * @date 2/17/2024 - 4:57:54 AM
+ *
+ * @export
+ * @param {{url: string}} param0
+ * @param {string} param0.url
+ * @returns {Record<string, string>}
+ */
+export declare function parseURLParams({ url }: {
+    url: string;
+}): Record<string, string>;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -66,5 +100,7 @@ export declare const utils: {
     Uint8ArrayConcat: typeof Uint8ArrayConcat;
     promiseAllChunked: typeof promiseAllChunked;
     getRandomArbitrary: typeof getRandomArbitrary;
+    clearTempDirectory: typeof clearTempDirectory;
+    parseURLParams: typeof parseURLParams;
 };
 export default utils;

@@ -2,6 +2,8 @@ import pathModule from "path"
 import { v4 as _uuidv4 } from "uuid"
 import { environment } from "./constants"
 import nodeCrypto from "crypto"
+import os from "os"
+import fs from "fs-extra"
 
 /**
  * "Sleep" for given milliseconds.
@@ -107,8 +109,66 @@ export async function promiseAllChunked<T>(promises: Promise<T>[], chunkSize = 1
 	return results
 }
 
-export function getRandomArbitrary(min: number, max: number) {
+/**
+ * Generate a random number. NOT CRYPTOGRAPHICALLY SAFE.
+ * @date 2/17/2024 - 1:08:06 AM
+ *
+ * @export
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+export function getRandomArbitrary(min: number, max: number): number {
 	return Math.floor(Math.random() * (max - min) + min)
+}
+
+/**
+ * Clear the temporary directory.
+ * @date 2/17/2024 - 1:15:42 AM
+ *
+ * @export
+ * @async
+ * @param {{ tmpDir?: string }} param0
+ * @param {string} param0.tmpDir
+ * @returns {Promise<void>}
+ */
+export async function clearTempDirectory({ tmpDir }: { tmpDir?: string }): Promise<void> {
+	if (environment !== "node") {
+		return
+	}
+
+	tmpDir = normalizePath(tmpDir ? tmpDir : pathModule.join(os.tmpdir(), "filen-sdk"))
+
+	await fs.rm(tmpDir, {
+		force: true,
+		maxRetries: 60 * 10,
+		recursive: true,
+		retryDelay: 100
+	})
+
+	await fs.mkdir(tmpDir, {
+		recursive: true
+	})
+}
+
+/**
+ * Parse URL parameters.
+ * @date 2/17/2024 - 4:57:54 AM
+ *
+ * @export
+ * @param {{url: string}} param0
+ * @param {string} param0.url
+ * @returns {Record<string, string>}
+ */
+export function parseURLParams({ url }: { url: string }): Record<string, string> {
+	const urlParams = new URLSearchParams(new URL(url).search)
+	const params: Record<string, string> = {}
+
+	urlParams.forEach((value, key) => {
+		params[key] = value
+	})
+
+	return params
 }
 
 export const utils = {
@@ -118,7 +178,9 @@ export const utils = {
 	uuidv4,
 	Uint8ArrayConcat,
 	promiseAllChunked,
-	getRandomArbitrary
+	getRandomArbitrary,
+	clearTempDirectory,
+	parseURLParams
 }
 
 export default utils

@@ -16,4 +16,4 @@ export type FolderMetadata = {
 	name: string
 }
 
-export type ProgressCallback = (transferred: number, total: number) => void
+export type ProgressCallback = (transferred: number) => void

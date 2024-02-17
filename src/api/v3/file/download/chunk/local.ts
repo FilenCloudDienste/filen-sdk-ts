@@ -1,4 +1,5 @@
 import type APIClient from "../../../../client"
+import type { ProgressCallback } from "../../../../../types"
 
 /**
  * FileDownloadChunkLocal
@@ -26,7 +27,7 @@ export class FileDownloadChunkLocal {
 
 	/**
 	 * Download a file chunk.
-	 * @date 2/15/2024 - 5:12:51 AM
+	 * @date 2/17/2024 - 6:38:36 AM
 	 *
 	 * @public
 	 * @async
@@ -37,7 +38,8 @@ export class FileDownloadChunkLocal {
 	 * 		chunk: number
 	 * 		timeout?: number
 	 * 		abortSignal?: AbortSignal
-	 *         to: string
+	 * 		to: string
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -46,6 +48,7 @@ export class FileDownloadChunkLocal {
 	 * @param {number} param0.timeout
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {string} param0.to
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<void>}
 	 */
 	public async fetch({
@@ -55,7 +58,8 @@ export class FileDownloadChunkLocal {
 		chunk,
 		timeout,
 		abortSignal,
-		to
+		to,
+		onProgress
 	}: {
 		uuid: string
 		bucket: string
@@ -64,8 +68,9 @@ export class FileDownloadChunkLocal {
 		timeout?: number
 		abortSignal?: AbortSignal
 		to: string
+		onProgress?: ProgressCallback
 	}): Promise<void> {
-		await this.apiClient.downloadChunkToLocal({ uuid, bucket, region, chunk, timeout, abortSignal, to })
+		await this.apiClient.downloadChunkToLocal({ uuid, bucket, region, chunk, timeout, abortSignal, to, onProgress })
 	}
 }
 

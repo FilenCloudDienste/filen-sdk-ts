@@ -8,7 +8,7 @@ import { BUFFER_SIZE } from "../constants"
 import type Cloud from "../cloud"
 import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
-import { uuidv4 } from "../utils"
+import { uuidv4, normalizePath } from "../utils"
 import os from "os"
 
 export type FSConfig = {
@@ -692,7 +692,7 @@ export class FS {
 	 * 		path: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
-	 * 		onProgress: ProgressCallback
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.path
 	 * @param {AbortSignal} param0.abortSignal
@@ -709,7 +709,7 @@ export class FS {
 		path: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
-		onProgress: ProgressCallback
+		onProgress?: ProgressCallback
 	}): Promise<Buffer> {
 		path = this.normalizePath({ path })
 
@@ -764,7 +764,7 @@ export class FS {
 	 * 		content: Buffer
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
-	 * 		onProgress: ProgressCallback
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.path
 	 * @param {Buffer} param0.content
@@ -784,7 +784,7 @@ export class FS {
 		content: Buffer
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
-		onProgress: ProgressCallback
+		onProgress?: ProgressCallback
 	}): Promise<void> {
 		path = this.normalizePath({ path })
 
@@ -807,7 +807,14 @@ export class FS {
 		}
 
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk-tmp", await uuidv4())
+		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4())
+
+		await fs.rm(tmpFilePath, {
+			force: true,
+			maxRetries: 60 * 10,
+			recursive: true,
+			retryDelay: 100
+		})
 
 		await fs.writeFile(tmpFilePath, content)
 
@@ -834,13 +841,13 @@ export class FS {
 	 * 		destination: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal,
-	 * 		progress: ProgressCallback
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.path
 	 * @param {string} param0.destination
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {PauseSignal} param0.pauseSignal
-	 * @param {ProgressCallback} param0.progress
+	 * @param {ProgressCallback} param0.onProgress
 	 * @returns {Promise<void>}
 	 */
 	public async download({
@@ -854,9 +861,10 @@ export class FS {
 		destination: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
-		onProgress: ProgressCallback
+		onProgress?: ProgressCallback
 	}): Promise<void> {
 		path = this.normalizePath({ path })
+		destination = normalizePath(destination)
 
 		const uuid = await this.pathToItemUUID({ path })
 		const item = this._items[path]
@@ -866,7 +874,7 @@ export class FS {
 		}
 
 		await this.cloud.downloadFileToLocal({
-			uuid: uuid,
+			uuid,
 			bucket: item.metadata.bucket,
 			region: item.metadata.region,
 			chunks: item.metadata.chunks,
@@ -890,7 +898,7 @@ export class FS {
 	 * 		source: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
-	 * 		onProgress: ProgressCallback
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.path
 	 * @param {string} param0.source
@@ -910,9 +918,10 @@ export class FS {
 		source: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
-		onProgress: ProgressCallback
+		onProgress?: ProgressCallback
 	}): Promise<void> {
 		path = this.normalizePath({ path })
+		source = normalizePath(source)
 
 		const parentPath = pathModule.posix.dirname(path)
 		let parentUUID = ""
@@ -949,7 +958,19 @@ export class FS {
 	 * @param {string} param0.to
 	 * @returns {Promise<void>}
 	 */
-	public async cp({ from, to }: { from: string; to: string }): Promise<void> {
+	public async cp({
+		from,
+		to,
+		abortSignal,
+		pauseSignal,
+		onProgress
+	}: {
+		from: string
+		to: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+	}): Promise<void> {
 		from = this.normalizePath({ path: from })
 		to = this.normalizePath({ path: to })
 
@@ -962,6 +983,72 @@ export class FS {
 
 		if (!uuid || !item) {
 			throw new ENOENT({ path: from })
+		}
+
+		const parentPath = pathModule.posix.dirname(to)
+		let parentUUID = ""
+
+		if (parentPath === "/" || parentPath === "." || parentPath === "") {
+			parentUUID = this.sdkConfig.baseFolderUUID!
+		} else {
+			await this.mkdir({ path: parentPath })
+
+			const parentItemUUID = await this.pathToItemUUID({ path: parentPath, type: "directory" })
+			const parentItem = this._items[parentPath]
+
+			if (!parentItemUUID || !parentItem) {
+				throw new Error(`Could not find parent for path ${to}`)
+			}
+
+			parentUUID = parentItem.uuid
+		}
+
+		if (item.type === "directory") {
+			const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+			const baseDirectoryName = pathModule.posix.basename(from)
+			const tmpDirectoryPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4(), baseDirectoryName))
+
+			await this.cloud.downloadDirectoryToLocal({ uuid, to: tmpDirectoryPath })
+
+			try {
+				await this.cloud.uploadDirectoryFromLocal({
+					source: tmpDirectoryPath,
+					parent: parentUUID,
+					abortSignal,
+					pauseSignal,
+					onProgress
+				})
+			} finally {
+				await fs.rm(pathModule.join(tmpDirectoryPath, ".."), {
+					force: true,
+					maxRetries: 60 * 10,
+					recursive: true,
+					retryDelay: 100
+				})
+			}
+		} else {
+			const tmpFilePath = await this.cloud.downloadFileToLocal({
+				uuid,
+				bucket: item.metadata.bucket,
+				region: item.metadata.region,
+				chunks: item.metadata.chunks,
+				version: item.metadata.version,
+				key: item.metadata.key,
+				abortSignal,
+				pauseSignal,
+				onProgress
+			})
+
+			try {
+				await this.cloud.uploadFileFromLocal({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+			} finally {
+				await fs.rm(tmpFilePath, {
+					force: true,
+					maxRetries: 60 * 10,
+					recursive: true,
+					retryDelay: 100
+				})
+			}
 		}
 	}
 

@@ -323,7 +323,7 @@ export declare class FilenSDK {
                 uuid: string;
                 parent: string;
                 email: string;
-                type: string;
+                type: "file" | "folder";
                 metadata: string;
             }) => Promise<void>;
             shared: (params_0: {
@@ -412,6 +412,14 @@ export declare class FilenSDK {
                 }) => Promise<import("./api/v3/file/link/password").FileLinkPasswordResponse>;
             };
             versions: (params_0: {
+                /**
+                 * Creates an instance of FilenSDK.
+                 * @date 1/31/2024 - 4:04:52 PM
+                 *
+                 * @constructor
+                 * @public
+                 * @param {FilenSDKConfig} params
+                 */
                 uuid: string;
             }) => Promise<import("./api/v3/file/versions").FileVersionsResponse>;
             download: () => {
@@ -423,6 +431,7 @@ export declare class FilenSDK {
                         chunk: number;
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
+                        onProgress?: import("./types").ProgressCallback | undefined;
                     }) => Promise<Buffer>;
                     stream: (params_0: {
                         uuid: string;
@@ -431,6 +440,7 @@ export declare class FilenSDK {
                         chunk: number;
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
+                        onProgress?: import("./types").ProgressCallback | undefined;
                     }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
@@ -440,6 +450,7 @@ export declare class FilenSDK {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         to: string;
+                        onProgress?: import("./types").ProgressCallback | undefined;
                     }) => Promise<void>;
                 };
             };
@@ -497,7 +508,14 @@ export declare class FilenSDK {
                 }) => Promise<void>;
                 remove: (params_0: {
                     uuid: string;
-                    userId: number;
+                    userId: number; /**
+                     * Creates an instance of FilenSDK.
+                     * @date 1/31/2024 - 4:04:52 PM
+                     *
+                     * @constructor
+                     * @public
+                     * @param {FilenSDKConfig} params
+                     */
                 }) => Promise<void>;
             };
             typing: (params_0: {
@@ -559,6 +577,14 @@ export declare class FilenSDK {
                 uuid: string;
             }) => Promise<void>;
             trash: (params_0: {
+                /**
+                 * FilenSDK
+                 * @date 2/1/2024 - 2:45:02 AM
+                 *
+                 * @export
+                 * @class FilenSDK
+                 * @typedef {FilenSDK}
+                 */
                 uuid: string;
             }) => Promise<void>;
             archive: (params_0: {
@@ -651,15 +677,38 @@ export declare class FilenSDK {
         };
     };
     /**
-     * Returns a Filen Crypto instance.
+     * Crypto
      * @date 1/31/2024 - 4:29:49 PM
      *
      * @public
      * @returns {Crypto}
      */
     crypto(): Crypto;
+    /**
+     * FS
+     * @date 2/17/2024 - 1:52:12 AM
+     *
+     * @public
+     * @returns {FS}
+     */
     fs(): FS;
+    /**
+     * Cloud
+     * @date 2/17/2024 - 1:52:05 AM
+     *
+     * @public
+     * @returns {Cloud}
+     */
     cloud(): Cloud;
+    /**
+     * Clear the temporary directory. Only available in a Node.JS environment.
+     * @date 2/17/2024 - 1:51:39 AM
+     *
+     * @public
+     * @async
+     * @returns {Promise<void>}
+     */
+    clearTemporaryDirectory(): Promise<void>;
     readonly utils: {
         crypto: {
             generateRandomString: typeof import("./crypto/utils").generateRandomString;
@@ -680,13 +729,21 @@ export declare class FilenSDK {
             decodeBase64: typeof streamDecodeBase64;
             encodeBase64: typeof streamEncodeBase64;
         };
-        sleep: typeof import("./utils").sleep;
+        sleep: typeof import("./utils").sleep; /**
+         * Check if the SDK user is authenticated.
+         * @date 1/31/2024 - 4:08:17 PM
+         *
+         * @private
+         * @returns {boolean}
+         */
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
         normalizePath: typeof import("./utils").normalizePath;
         uuidv4: typeof import("./utils").uuidv4;
         Uint8ArrayConcat: typeof import("./utils").Uint8ArrayConcat;
         promiseAllChunked: typeof import("./utils").promiseAllChunked;
         getRandomArbitrary: typeof import("./utils").getRandomArbitrary;
+        clearTempDirectory: typeof import("./utils").clearTempDirectory;
+        parseURLParams: typeof import("./utils").parseURLParams;
     };
 }
 export default FilenSDK;

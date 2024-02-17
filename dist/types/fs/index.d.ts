@@ -246,7 +246,7 @@ export declare class FS {
      * 		path: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		onProgress: ProgressCallback
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.path
      * @param {AbortSignal} param0.abortSignal
@@ -258,7 +258,7 @@ export declare class FS {
         path: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
-        onProgress: ProgressCallback;
+        onProgress?: ProgressCallback;
     }): Promise<Buffer>;
     /**
      * Write to a file. Warning: This reads the whole file into memory and can be very inefficient. Only available in a Node.JS environment.
@@ -271,7 +271,7 @@ export declare class FS {
      * 		content: Buffer
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		onProgress: ProgressCallback
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.path
      * @param {Buffer} param0.content
@@ -285,7 +285,7 @@ export declare class FS {
         content: Buffer;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
-        onProgress: ProgressCallback;
+        onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
      * Download a file from path to a local destination path. Only available in a Node.JS environment.
@@ -298,13 +298,13 @@ export declare class FS {
      * 		destination: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal,
-     * 		progress: ProgressCallback
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.destination
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
-     * @param {ProgressCallback} param0.progress
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<void>}
      */
     download({ path, destination, abortSignal, pauseSignal, onProgress }: {
@@ -312,7 +312,7 @@ export declare class FS {
         destination: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
-        onProgress: ProgressCallback;
+        onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
      * Upload a file to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
@@ -325,7 +325,7 @@ export declare class FS {
      * 		source: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		onProgress: ProgressCallback
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.source
@@ -339,7 +339,7 @@ export declare class FS {
         source: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
-        onProgress: ProgressCallback;
+        onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
      * Copy a file or directory structure. Recursively creates intermediate directories if needed.
@@ -355,9 +355,12 @@ export declare class FS {
      * @param {string} param0.to
      * @returns {Promise<void>}
      */
-    cp({ from, to }: {
+    cp({ from, to, abortSignal, pauseSignal, onProgress }: {
         from: string;
         to: string;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
      * Alias of cp.

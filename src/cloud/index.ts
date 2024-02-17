@@ -2,7 +2,7 @@ import type API from "../api"
 import type Crypto from "../crypto"
 import type { FilenSDKConfig } from ".."
 import type DirColor from "../api/v3/dir/color"
-import type { FileEncryptionVersion, FileMetadata, ProgressCallback } from "../types"
+import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata } from "../types"
 import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath } from "../utils"
 import {
 	environment,
@@ -25,6 +25,7 @@ import type { FileVersionsResponse } from "../api/v3/file/versions"
 import type { DirDownloadType } from "../api/v3/dir/download"
 import mimeTypes from "mime-types"
 import utils from "./utils"
+import type { FileLinkEditExpiration } from "../api/v3/file/link/edit"
 
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
@@ -76,11 +77,17 @@ export type CloudItem =
 	  } & CloudItemBase &
 			CloudItemFile)
 
+export type CloudItemSharedReceiver = {
+	id: number
+	email: string
+}
+
 export type CloudItemSharedBase = {
 	sharerEmail: string
 	sharerId: number
 	receiverEmail: string
 	receiverId: number
+	receivers: CloudItemSharedReceiver[]
 }
 
 export type CloudItemShared =
@@ -110,6 +117,18 @@ export type CloudItemTree =
 				CloudItemFile,
 			"favorited" | "rm" | "timestamp"
 	  >
+
+export type FileToShare = {
+	uuid: string
+	parent: string
+	metadata: FileMetadata
+}
+
+export type DirectoryToShare = {
+	uuid: string
+	parent: string
+	metadata: FolderMetadata
+}
 
 /**
  * Cloud
@@ -267,7 +286,8 @@ export class Cloud {
 								sharerEmail: folder.sharerEmail,
 								sharerId: folder.sharerId,
 								receiverEmail: folder.receiverEmail ?? "",
-								receiverId: folder.receiverId ?? 0
+								receiverId: folder.receiverId ?? 0,
+								receivers: []
 							})
 
 							resolve()
@@ -303,7 +323,8 @@ export class Cloud {
 								sharerEmail: file.sharerEmail,
 								sharerId: file.sharerId,
 								receiverEmail: file.receiverEmail ?? "",
-								receiverId: file.receiverId ?? 0
+								receiverId: file.receiverId ?? 0,
+								receivers: []
 							})
 
 							resolve()
@@ -354,7 +375,8 @@ export class Cloud {
 								sharerEmail: folder.sharerEmail,
 								sharerId: folder.sharerId,
 								receiverEmail: folder.receiverEmail ?? "",
-								receiverId: folder.receiverId ?? 0
+								receiverId: folder.receiverId ?? 0,
+								receivers: []
 							})
 
 							resolve()
@@ -390,7 +412,8 @@ export class Cloud {
 								sharerEmail: file.sharerEmail,
 								sharerId: file.sharerId,
 								receiverEmail: file.receiverEmail ?? "",
-								receiverId: file.receiverId ?? 0
+								receiverId: file.receiverId ?? 0,
+								receivers: []
 							})
 
 							resolve()
@@ -402,7 +425,39 @@ export class Cloud {
 
 		await promiseAllChunked(promises)
 
-		return items
+		const groups: CloudItemShared[] = []
+		const sharedTo: Record<string, CloudItemReceiver[]> = {}
+		const added: Record<string, boolean> = {}
+
+		for (const item of items) {
+			if (Array.isArray(sharedTo[item.uuid])) {
+				sharedTo[item.uuid].push({
+					id: item.receiverId,
+					email: item.receiverEmail
+				})
+			} else {
+				sharedTo[item.uuid] = [
+					{
+						id: item.receiverId,
+						email: item.receiverEmail
+					}
+				]
+			}
+		}
+
+		for (let i = 0; i < items.length; i++) {
+			if (Array.isArray(sharedTo[items[i].uuid])) {
+				items[i].receivers = sharedTo[items[i].uuid]
+			}
+
+			if (!added[items[i].uuid]) {
+				added[items[i].uuid] = true
+
+				groups.push(items[i])
+			}
+		}
+
+		return groups
 	}
 
 	/**
@@ -835,7 +890,7 @@ export class Cloud {
 				this.crypto.utils.hashFn({ input: name.toLowerCase() })
 			])
 
-			await this.api.v3().dir().create({ uuid, metadataEncrypted, nameHashed, parent })
+			await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent })
 		}
 
 		return uuidToUse
@@ -972,6 +1027,405 @@ export class Cloud {
 	}
 
 	/**
+	 * Share an item to another Filen user.
+	 * @date 2/17/2024 - 4:11:05 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		parent: string
+	 * 		email: string
+	 * 		type: "file" | "folder"
+	 * 		publicKey: string
+	 * 		metadata: FileMetadata | FolderMetadata
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.parent
+	 * @param {string} param0.email
+	 * @param {("file" | "folder")} param0.type
+	 * @param {string} param0.publicKey
+	 * @param {*} param0.metadata
+	 * @returns {Promise<void>}
+	 */
+	public async shareItem({
+		uuid,
+		parent,
+		email,
+		type,
+		publicKey,
+		metadata
+	}: {
+		uuid: string
+		parent: string
+		email: string
+		type: "file" | "folder"
+		publicKey: string
+		metadata: FileMetadata | FolderMetadata
+	}): Promise<void> {
+		const metadataEncrypted = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify(metadata), publicKey })
+
+		await this.api.v3().item().share({ uuid, parent, email, type, metadata: metadataEncrypted })
+	}
+
+	public async addItemToPublicLink({
+		uuid,
+		parent,
+		linkUUID,
+		type,
+		metadata,
+		linkKeyEncrypted,
+		expiration
+	}: {
+		uuid: string
+		parent: string
+		linkUUID: string
+		type: "file" | "folder"
+		metadata: FileMetadata | FolderMetadata
+		linkKeyEncrypted: string
+		expiration: FileLinkEditExpiration
+	}): Promise<void> {
+		const key = await this.crypto.decrypt().folderLinkKey({ metadata: linkKeyEncrypted })
+		const metadataEncrypted = await this.crypto.encrypt().metadata({ metadata: JSON.stringify(metadata), key })
+
+		await this.api
+			.v3()
+			.dir()
+			.link()
+			.add({ uuid, parent, linkUUID, type, metadata: metadataEncrypted, key: linkKeyEncrypted, expiration })
+	}
+
+	/**
+	 * Checks if the parent of an item is shared or public linked.
+	 * If so, it adds the item and all children of the item (in case of a directory) to the share and public link.
+	 * @date 2/17/2024 - 4:26:44 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		type: "file" | "directory"
+	 * 		parent: string
+	 * 		uuid: string
+	 * 		itemMetadata: FileMetadata | FolderMetadata
+	 * 	}} param0
+	 * @param {("file" | "directory")} param0.type
+	 * @param {string} param0.parent
+	 * @param {string} param0.uuid
+	 * @param {*} param0.itemMetadata
+	 * @returns {Promise<void>}
+	 */
+	public async checkIfItemParentIsShared({
+		type,
+		parent,
+		uuid,
+		itemMetadata
+	}: {
+		type: "file" | "directory"
+		parent: string
+		uuid: string
+		itemMetadata: FileMetadata | FolderMetadata
+	}): Promise<void> {
+		const [isSharingParent, isLinkingParent] = await Promise.all([
+			this.api.v3().dir().shared({ uuid: parent }),
+			this.api.v3().dir().linked({ uuid: parent })
+		])
+
+		if (!isSharingParent.sharing && !isLinkingParent.link) {
+			return
+		}
+
+		const promises: Promise<void>[] = []
+		let tree: Record<string, CloudItemTree> | null = null
+
+		if (isSharingParent.sharing) {
+			const filesToShare: FileToShare[] = []
+			const directoriesToShare: DirectoryToShare[] = []
+
+			if (type === "file") {
+				filesToShare.push({
+					uuid,
+					parent,
+					metadata: itemMetadata as FileMetadata
+				})
+			} else {
+				directoriesToShare.push({
+					uuid,
+					parent,
+					metadata: itemMetadata as FolderMetadata
+				})
+
+				if (!tree) {
+					tree = await this.getDirectoryTree({ uuid })
+				}
+
+				for (const entry in tree) {
+					const item = tree[entry]
+
+					if (item.uuid === uuid || item.parent === "base") {
+						continue
+					}
+
+					if (item.type === "file") {
+						filesToShare.push({
+							uuid: item.uuid,
+							parent: item.parent,
+							metadata: {
+								name: item.name,
+								size: item.size,
+								mime: item.mime,
+								key: item.key,
+								lastModified: item.lastModified,
+								creation: item.creation,
+								hash: item.hash
+							} satisfies FileMetadata
+						})
+					} else {
+						directoriesToShare.push({
+							uuid: item.uuid,
+							parent: item.parent,
+							metadata: {
+								name: item.name
+							} satisfies FolderMetadata
+						})
+					}
+				}
+			}
+
+			for (const file of filesToShare) {
+				for (const user of isSharingParent.users) {
+					promises.push(
+						this.shareItem({
+							uuid: file.uuid,
+							parent: file.parent,
+							email: user.email,
+							publicKey: user.publicKey,
+							metadata: file.metadata,
+							type: "file"
+						})
+					)
+				}
+			}
+
+			for (const directory of directoriesToShare) {
+				for (const user of isSharingParent.users) {
+					promises.push(
+						this.shareItem({
+							uuid: directory.uuid,
+							parent: directory.parent,
+							email: user.email,
+							publicKey: user.publicKey,
+							metadata: directory.metadata,
+							type: "folder"
+						})
+					)
+				}
+			}
+		}
+
+		if (isLinkingParent.link) {
+			const filesToLink: FileToShare[] = []
+			const directoriesToLink: DirectoryToShare[] = []
+
+			if (type === "file") {
+				filesToLink.push({
+					uuid,
+					parent,
+					metadata: itemMetadata as FileMetadata
+				})
+			} else {
+				directoriesToLink.push({
+					uuid,
+					parent,
+					metadata: itemMetadata as FolderMetadata
+				})
+
+				if (!tree) {
+					tree = await this.getDirectoryTree({ uuid })
+				}
+
+				for (const entry in tree) {
+					const item = tree[entry]
+
+					if (item.uuid === uuid || item.parent === "base") {
+						continue
+					}
+
+					if (item.type === "file") {
+						filesToLink.push({
+							uuid: item.uuid,
+							parent: item.parent,
+							metadata: {
+								name: item.name,
+								size: item.size,
+								mime: item.mime,
+								key: item.key,
+								lastModified: item.lastModified,
+								creation: item.creation,
+								hash: item.hash
+							} satisfies FileMetadata
+						})
+					} else {
+						directoriesToLink.push({
+							uuid: item.uuid,
+							parent: item.parent,
+							metadata: {
+								name: item.name
+							} satisfies FolderMetadata
+						})
+					}
+				}
+			}
+
+			for (const file of filesToLink) {
+				for (const link of isLinkingParent.links) {
+					promises.push(
+						this.addItemToPublicLink({
+							uuid: file.uuid,
+							parent: file.parent,
+							metadata: file.metadata,
+							type: "file",
+							linkUUID: link.linkUUID,
+							linkKeyEncrypted: link.linkKey,
+							expiration: "never"
+						})
+					)
+				}
+			}
+
+			for (const directory of directoriesToLink) {
+				for (const link of isLinkingParent.links) {
+					promises.push(
+						this.addItemToPublicLink({
+							uuid: directory.uuid,
+							parent: directory.parent,
+							metadata: directory.metadata,
+							type: "folder",
+							linkUUID: link.linkUUID,
+							linkKeyEncrypted: link.linkKey,
+							expiration: "never"
+						})
+					)
+				}
+			}
+		}
+
+		if (promises.length > 0) {
+			await promiseAllChunked(promises)
+		}
+	}
+
+	/**
+	 * Rename a shared item.
+	 * @date 2/17/2024 - 4:32:56 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {({uuid: string, receiverId: number, metadata: FileMetadata | FolderMetadata, publicKey: string})} param0
+	 * @param {string} param0.uuid
+	 * @param {number} param0.receiverId
+	 * @param {*} param0.metadata
+	 * @param {string} param0.publicKey
+	 * @returns {Promise<void>}
+	 */
+	public async renameSharedItem({
+		uuid,
+		receiverId,
+		metadata,
+		publicKey
+	}: {
+		uuid: string
+		receiverId: number
+		metadata: FileMetadata | FolderMetadata
+		publicKey: string
+	}): Promise<void> {
+		const metadataEncrypted = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify(metadata), publicKey })
+
+		await this.api.v3().item().sharedRename({ uuid, receiverId, metadata: metadataEncrypted })
+	}
+
+	/**
+	 * Rename a publicly linked item.
+	 * @date 2/17/2024 - 4:35:07 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {({uuid: string, linkUUID: string, metadata: FileMetadata | FolderMetadata, linkKeyEncrypted: string})} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.linkUUID
+	 * @param {*} param0.metadata
+	 * @param {string} param0.linkKeyEncrypted
+	 * @returns {Promise<void>}
+	 */
+	public async renamePubliclyLinkedItem({
+		uuid,
+		linkUUID,
+		metadata,
+		linkKeyEncrypted
+	}: {
+		uuid: string
+		linkUUID: string
+		metadata: FileMetadata | FolderMetadata
+		linkKeyEncrypted: string
+	}): Promise<void> {
+		const key = await this.crypto.decrypt().folderLinkKey({ metadata: linkKeyEncrypted })
+		const metadataEncrypted = await this.crypto.encrypt().metadata({ metadata: JSON.stringify(metadata), key })
+
+		await this.api.v3().item().linkedRename({ uuid, linkUUID, metadata: metadataEncrypted })
+	}
+
+	/**
+	 * Checks if an item is shared or public linked.
+	 * If so, it renames the item.
+	 * @date 2/17/2024 - 4:37:30 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		itemMetadata: FileMetadata | FolderMetadata
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {*} param0.itemMetadata
+	 * @returns {Promise<void>}
+	 */
+	public async checkIfItemIsSharedForRename({
+		uuid,
+		itemMetadata
+	}: {
+		uuid: string
+		itemMetadata: FileMetadata | FolderMetadata
+	}): Promise<void> {
+		const [isSharingItem, isLinkingItem] = await Promise.all([
+			this.api.v3().item().shared({ uuid }),
+			this.api.v3().item().linked({ uuid })
+		])
+
+		if (!isSharingItem.sharing && !isLinkingItem.link) {
+			return
+		}
+
+		const promises: Promise<void>[] = []
+
+		if (isSharingItem.sharing) {
+			for (const user of isSharingItem.users) {
+				promises.push(this.renameSharedItem({ uuid, receiverId: user.id, metadata: itemMetadata, publicKey: user.publicKey }))
+			}
+		}
+
+		if (isLinkingItem.link) {
+			for (const link of isLinkingItem.links) {
+				promises.push(
+					this.renamePubliclyLinkedItem({ uuid, linkUUID: link.linkUUID, metadata: itemMetadata, linkKeyEncrypted: link.linkKey })
+				)
+			}
+		}
+
+		if (promises.length > 0) {
+			await promiseAllChunked(promises)
+		}
+	}
+
+	/**
 	 * Download a file to a local path. Only works in a Node.JS environment.
 	 * @date 2/15/2024 - 7:39:34 AM
 	 *
@@ -1065,8 +1519,8 @@ export class Cloud {
 		const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks
 		const firstChunk = chunksStart ? chunksStart : 0
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk-downloads", await uuidv4()))
-		const tmpChunksPath = normalizePath(pathModule.join(tmpDir, `filen-sdk-chunks-${await uuidv4()}`))
+		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
+		const tmpChunksPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
 		let currentWriteIndex = firstChunk
 		let writerStopped = false
 
@@ -1218,7 +1672,7 @@ export class Cloud {
 
 							if (onProgress) {
 								// TODO: actual progress emitter
-								onProgress(index, lastChunk - firstChunk)
+								onProgress(index)
 							}
 
 							if (done >= lastChunk) {
@@ -1490,7 +1944,7 @@ export class Cloud {
 
 										if (onProgress) {
 											// TODO: actual progress emitter
-											onProgress(index, lastChunk - firstChunk)
+											onProgress(index)
 										}
 
 										if (done >= lastChunk) {
@@ -1698,7 +2152,8 @@ export class Cloud {
 		onQueued,
 		onStarted,
 		onError,
-		onFinished
+		onFinished,
+		onProgress
 	}: {
 		uuid: string
 		type?: DirDownloadType
@@ -1730,7 +2185,7 @@ export class Cloud {
 		}
 
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk-downloads", await uuidv4()))
+		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
 
 		try {
 			await fs.rm(destinationPath, {
@@ -1769,8 +2224,8 @@ export class Cloud {
 							key: item.key,
 							abortSignal,
 							pauseSignal,
-							to: filePath
-							// TODO: progress logic
+							to: filePath,
+							onProgress
 						})
 							.then(() => resolve())
 							.catch(reject)
@@ -1889,6 +2344,22 @@ export class Cloud {
 
 			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
 			const fileStats = await fs.stat(source)
+
+			if (
+				!fileStats.isFile() ||
+				fileStats.isDirectory() ||
+				fileStats.isSymbolicLink() ||
+				fileStats.isSocket() ||
+				fileStats.isBlockDevice() ||
+				fileStats.isCharacterDevice()
+			) {
+				throw new Error(`Invalid source file at path ${source}. Not a file.`)
+			}
+
+			if (fileStats.size <= 0) {
+				throw new Error(`Invalid source file at path ${source}. 0 bytes.`)
+			}
+
 			const fileSize = fileStats.size
 			let dummyOffset = 0
 			let fileChunks = 0
@@ -2008,7 +2479,7 @@ export class Cloud {
 
 							if (onProgress) {
 								// TODO: actual progress emitter
-								onProgress(done, fileChunks)
+								onProgress(done)
 							}
 
 							if (done >= fileChunks) {
@@ -2270,7 +2741,7 @@ export class Cloud {
 
 							if (onProgress) {
 								// TODO: actual progress emitter
-								onProgress(done, fileChunks)
+								onProgress(done)
 							}
 
 							if (done >= fileChunks) {
@@ -2329,6 +2800,208 @@ export class Cloud {
 			}
 
 			return item
+		} catch (e) {
+			if (onError) {
+				onError(e as unknown as Error)
+			}
+
+			throw e
+		}
+	}
+
+	/**
+	 * Upload a local directory. Only available in a Node.JS environment.
+	 * @date 2/17/2024 - 12:06:04 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		source: string
+	 * 		parent: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 		onQueued?: () => void
+	 * 		onStarted?: () => void
+	 * 		onError?: (err: Error) => void
+	 * 		onFinished?: () => void
+	 * 		onUploaded?: (item: CloudItem) => Promise<void>
+	 * 	}} param0
+	 * @param {string} param0.source
+	 * @param {string} param0.parent
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {ProgressCallback} param0.onProgress
+	 * @param {() => void} param0.onQueued
+	 * @param {() => void} param0.onStarted
+	 * @param {(err: Error) => void} param0.onError
+	 * @param {() => void} param0.onFinished
+	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+	 * @returns {Promise<void>}
+	 */
+	public async uploadDirectoryFromLocal({
+		source,
+		parent,
+		pauseSignal,
+		abortSignal,
+		onProgress,
+		onQueued,
+		onStarted,
+		onError,
+		onFinished,
+		onUploaded
+	}: {
+		source: string
+		parent: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+		onQueued?: () => void
+		onStarted?: () => void
+		onError?: (err: Error) => void
+		onFinished?: () => void
+		onUploaded?: (item: CloudItem) => Promise<void>
+	}): Promise<void> {
+		if (environment !== "node") {
+			throw new Error(`cloud.uploadDirectoryFromLocal is not implemented for ${environment}`)
+		}
+
+		try {
+			if (onQueued) {
+				onQueued()
+			}
+
+			// TODO: Implement queue logic
+
+			if (onStarted) {
+				onStarted()
+			}
+
+			source = normalizePath(source)
+
+			if (!(await fs.exists(source))) {
+				throw new Error(`Could not find source directory at path ${source}.`)
+			}
+
+			const parentPresent = await this.api.v3().dir().present({ uuid: parent })
+
+			if (!parentPresent.present || parentPresent.trash) {
+				throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`)
+			}
+
+			const baseDirectoryName = pathModule.basename(source)
+
+			if (baseDirectoryName === "." || baseDirectoryName === "/" || baseDirectoryName.length <= 0) {
+				throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`)
+			}
+
+			parent = await this.createDirectory({ name: baseDirectoryName, parent })
+
+			const content =
+				pathModule.sep === "\\"
+					? (
+							(await fs.readdir(source, {
+								recursive: true
+							})) as string[]
+					  ).map(entry => entry.split("\\").join("/"))
+					: ((await fs.readdir(source, {
+							recursive: true
+					  })) as string[])
+
+			const sortedBySeparatorLength = content.sort((a, b) => a.split("/").length - b.split("/").length)
+			const statPromises: Promise<void>[] = []
+			const entryStats: Record<string, fs.Stats> = {}
+			const pathsToUUIDs: Record<string, string> = {}
+
+			for (const entry of content) {
+				statPromises.push(
+					new Promise((resolve, reject) => {
+						fs.stat(pathModule.join(source, entry))
+							.then(stats => {
+								entryStats[entry] = stats
+
+								resolve()
+							})
+							.catch(reject)
+					})
+				)
+			}
+
+			await promiseAllChunked(statPromises)
+
+			for (const entry of sortedBySeparatorLength) {
+				const stats = entryStats[entry]
+
+				if (
+					!stats ||
+					!stats.isDirectory() ||
+					stats.isSymbolicLink() ||
+					stats.isBlockDevice() ||
+					stats.isCharacterDevice() ||
+					stats.isSocket()
+				) {
+					continue
+				}
+
+				const parentPath = pathModule.posix.dirname(entry)
+				const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+
+				if (directoryParent.length <= 16) {
+					continue
+				}
+
+				const directoryName = pathModule.posix.basename(entry)
+
+				if (directoryName.length <= 0) {
+					continue
+				}
+
+				const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent })
+
+				pathsToUUIDs[entry] = uuid
+			}
+
+			const uploadPromises: Promise<CloudItem>[] = []
+
+			for (const entry of sortedBySeparatorLength) {
+				const stats = entryStats[entry]
+
+				if (
+					!stats ||
+					!stats.isFile() ||
+					stats.size <= 0 ||
+					stats.isSymbolicLink() ||
+					stats.isBlockDevice() ||
+					stats.isCharacterDevice() ||
+					stats.isSocket()
+				) {
+					continue
+				}
+
+				const parentPath = pathModule.posix.dirname(entry)
+				const fileParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+
+				if (fileParent.length <= 16) {
+					continue
+				}
+
+				uploadPromises.push(
+					this.uploadFileFromLocal({
+						source: pathModule.join(source, entry),
+						parent: fileParent,
+						abortSignal,
+						pauseSignal,
+						onProgress,
+						onUploaded
+					})
+				)
+			}
+
+			await promiseAllChunked(uploadPromises)
+
+			if (onFinished) {
+				onFinished()
+			}
 		} catch (e) {
 			if (onError) {
 				onError(e as unknown as Error)
