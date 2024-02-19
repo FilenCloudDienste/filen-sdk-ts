@@ -21,10 +21,11 @@ const filen = new FilenSDK({
 
 const main = async () => {
 	console.log(
-		await filen.cloud().uploadFileFromLocal({
-			parent: "6fc3d024-083f-41ba-906e-638a12a13a71",
-			source: pathModule.join(__dirname, "folderDownload", "Kylo.jpg")
-		})
+		(
+			(await fs.readdir(__dirname, {
+				recursive: true
+			})) as string[]
+		).map(entry => entry.split("\\").join("/"))
 	)
 }
 

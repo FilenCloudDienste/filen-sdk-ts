@@ -1,6 +1,5 @@
 /// <reference types="node" />
-import type APIClient from "../../../../client";
-import type { UploadChunkResponse } from "../../../../client";
+import type { APIClient, UploadChunkResponse } from "../../../../client";
 /**
  * FileUploadChunkBuffer
  * @date 2/15/2024 - 4:38:09 AM

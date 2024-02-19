@@ -58,8 +58,6 @@ export class DirRename {
 				nameHashed
 			}
 		})
-
-		// @TODO: checkIfItemIsSharedForRename
 	}
 }
 

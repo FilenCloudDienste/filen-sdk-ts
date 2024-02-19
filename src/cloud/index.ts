@@ -1,9 +1,8 @@
 import type API from "../api"
 import type Crypto from "../crypto"
 import type { FilenSDKConfig } from ".."
-import type DirColor from "../api/v3/dir/color"
-import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata } from "../types"
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath } from "../utils"
+import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata, PublicLinkExpiration } from "../types"
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils"
 import {
 	environment,
 	MAX_DOWNLOAD_THREADS,
@@ -20,12 +19,11 @@ import os from "os"
 import fs from "fs-extra"
 import { Semaphore } from "../semaphore"
 import appendStream from "../streams/append"
-import type { DirColors } from "../api/v3/dir/color"
+import type { DirColors, DirColor } from "../api/v3/dir/color"
 import type { FileVersionsResponse } from "../api/v3/file/versions"
 import type { DirDownloadType } from "../api/v3/dir/download"
 import mimeTypes from "mime-types"
 import utils from "./utils"
-import type { FileLinkEditExpiration } from "../api/v3/file/link/edit"
 
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
@@ -774,8 +772,7 @@ export class Cloud {
 		])
 
 		await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed })
-
-		// @TODO checkIf
+		await this.checkIfItemIsSharedForRename({ uuid, itemMetadata: metadata })
 	}
 
 	/**
@@ -801,41 +798,48 @@ export class Cloud {
 
 		await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed })
 
-		// @TODO checkIf
+		await this.checkIfItemIsSharedForRename({
+			uuid,
+			itemMetadata: {
+				name
+			}
+		})
 	}
 
 	/**
 	 * Move a file.
-	 * @date 2/15/2024 - 1:27:38 AM
+	 * @date 2/19/2024 - 1:13:32 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string, to: string}} param0
+	 * @param {{ uuid: string; to: string, metadata: FileMetadata }} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.to
+	 * @param {FileMetadata} param0.metadata
 	 * @returns {Promise<void>}
 	 */
-	public async moveFile({ uuid, to }: { uuid: string; to: string }): Promise<void> {
+	public async moveFile({ uuid, to, metadata }: { uuid: string; to: string; metadata: FileMetadata }): Promise<void> {
 		await this.api.v3().file().move({ uuid, to })
 
-		// @TODO checkIf
+		await this.checkIfItemParentIsShared({ type: "file", parent: to, uuid, itemMetadata: metadata })
 	}
 
 	/**
 	 * Move a directory.
-	 * @date 2/15/2024 - 1:27:42 AM
+	 * @date 2/19/2024 - 1:14:04 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string, to: string}} param0
+	 * @param {{ uuid: string; to: string, metadata: FolderMetadata }} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.to
+	 * @param {FolderMetadata} param0.metadata
 	 * @returns {Promise<void>}
 	 */
-	public async moveDirectory({ uuid, to }: { uuid: string; to: string }): Promise<void> {
+	public async moveDirectory({ uuid, to, metadata }: { uuid: string; to: string; metadata: FolderMetadata }): Promise<void> {
 		await this.api.v3().dir().move({ uuid, to })
 
-		// @TODO checkIf
+		await this.checkIfItemParentIsShared({ type: "directory", parent: to, uuid, itemMetadata: metadata })
 	}
 
 	/**
@@ -891,6 +895,15 @@ export class Cloud {
 			])
 
 			await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent })
+
+			await this.checkIfItemParentIsShared({
+				type: "directory",
+				parent,
+				uuid: uuidToUse,
+				itemMetadata: {
+					name
+				}
+			})
 		}
 
 		return uuidToUse
@@ -1030,7 +1043,7 @@ export class Cloud {
 	 * Share an item to another Filen user.
 	 * @date 2/17/2024 - 4:11:05 AM
 	 *
-	 * @public
+	 * @private
 	 * @async
 	 * @param {{
 	 * 		uuid: string
@@ -1048,7 +1061,7 @@ export class Cloud {
 	 * @param {*} param0.metadata
 	 * @returns {Promise<void>}
 	 */
-	public async shareItem({
+	private async shareItem({
 		uuid,
 		parent,
 		email,
@@ -1068,7 +1081,31 @@ export class Cloud {
 		await this.api.v3().item().share({ uuid, parent, email, type, metadata: metadataEncrypted })
 	}
 
-	public async addItemToPublicLink({
+	/**
+	 * Add an item to a directory public link.
+	 * @date 2/19/2024 - 5:08:51 AM
+	 *
+	 * @private
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		parent: string
+	 * 		linkUUID: string
+	 * 		type: "file" | "folder"
+	 * 		metadata: FileMetadata | FolderMetadata
+	 * 		linkKeyEncrypted: string
+	 * 		expiration: PublicLinkExpiration
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.parent
+	 * @param {string} param0.linkUUID
+	 * @param {("file" | "folder")} param0.type
+	 * @param {*} param0.metadata
+	 * @param {string} param0.linkKeyEncrypted
+	 * @param {PublicLinkExpiration} param0.expiration
+	 * @returns {Promise<void>}
+	 */
+	private async addItemToDirectoryPublicLink({
 		uuid,
 		parent,
 		linkUUID,
@@ -1083,7 +1120,7 @@ export class Cloud {
 		type: "file" | "folder"
 		metadata: FileMetadata | FolderMetadata
 		linkKeyEncrypted: string
-		expiration: FileLinkEditExpiration
+		expiration: PublicLinkExpiration
 	}): Promise<void> {
 		const key = await this.crypto.decrypt().folderLinkKey({ metadata: linkKeyEncrypted })
 		const metadataEncrypted = await this.crypto.encrypt().metadata({ metadata: JSON.stringify(metadata), key })
@@ -1096,11 +1133,395 @@ export class Cloud {
 	}
 
 	/**
-	 * Checks if the parent of an item is shared or public linked.
-	 * If so, it adds the item and all children of the item (in case of a directory) to the share and public link.
-	 * @date 2/17/2024 - 4:26:44 AM
+	 * Enable a public link for a file or a directory.
+	 * @date 2/19/2024 - 5:13:57 AM
 	 *
 	 * @public
+	 * @async
+	 * @param {{
+	 * 		type: "file" | "directory"
+	 * 		uuid: string
+	 * 		onProgress?: ProgressCallback
+	 * 	}} param0
+	 * @param {("file" | "directory")} param0.type
+	 * @param {string} param0.uuid
+	 * @param {ProgressCallback} param0.onProgress
+	 * @returns {Promise<string>}
+	 */
+	public async enablePublicLink({
+		type,
+		uuid,
+		onProgress
+	}: {
+		type: "file" | "directory"
+		uuid: string
+		onProgress?: ProgressCallback
+	}): Promise<string> {
+		const linkUUID = await uuidv4()
+
+		if (type === "directory") {
+			const [tree, key] = await Promise.all([this.getDirectoryTree({ uuid }), this.crypto.utils.generateRandomString({ length: 32 })])
+			const linkKeyEncrypted = await this.crypto.encrypt().metadata({ metadata: key })
+			let done = 0
+			const promises: Promise<void>[] = []
+
+			for (const entry in tree) {
+				const item = tree[entry]
+
+				promises.push(
+					new Promise((resolve, reject) => {
+						this.addItemToDirectoryPublicLink({
+							uuid: item.uuid,
+							parent: item.parent,
+							linkUUID,
+							type: item.type === "directory" ? "folder" : "file",
+							expiration: "never",
+							linkKeyEncrypted,
+							metadata:
+								item.type === "directory"
+									? ({ name: item.name } satisfies FolderMetadata)
+									: ({
+											name: item.name,
+											size: item.size,
+											mime: item.mime,
+											lastModified: item.lastModified,
+											key: item.key,
+											creation: item.creation,
+											hash: item.hash
+									  } satisfies FileMetadata)
+						})
+							.then(() => {
+								done += 1
+
+								if (onProgress) {
+									onProgress(done)
+								}
+
+								resolve()
+							})
+							.catch(reject)
+					})
+				)
+			}
+
+			await promiseAllChunked(promises)
+
+			return linkUUID
+		}
+
+		await this.api
+			.v3()
+			.file()
+			.link()
+			.edit({
+				uuid: linkUUID,
+				fileUUID: uuid,
+				expiration: "never",
+				password: "empty",
+				passwordHashed: await this.crypto.utils.hashFn({ input: "empty" }),
+				downloadBtn: true,
+				type: "enable",
+				salt: await this.crypto.utils.generateRandomString({ length: 32 })
+			})
+
+		return linkUUID
+	}
+
+	/**
+	 * Edit a file/directory public link.
+	 * @date 2/19/2024 - 4:57:03 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		type: "file" | "directory"
+	 * 		itemUUID: string
+	 * 		linkUUID?: string
+	 * 		password?: string
+	 * 		enableDownload?: boolean
+	 * 		expiration: PublicLinkExpiration
+	 * 	}} param0
+	 * @param {("file" | "directory")} param0.type
+	 * @param {string} param0.itemUUID
+	 * @param {string} param0.linkUUID
+	 * @param {string} param0.password
+	 * @param {boolean} [param0.enableDownload=true]
+	 * @param {PublicLinkExpiration} [param0.expiration="never"]
+	 * @returns {Promise<void>}
+	 */
+	public async editPublicLink({
+		type,
+		itemUUID,
+		linkUUID,
+		password,
+		enableDownload = true,
+		expiration = "never"
+	}: {
+		type: "file" | "directory"
+		itemUUID: string
+		linkUUID?: string
+		password?: string
+		enableDownload?: boolean
+		expiration: PublicLinkExpiration
+	}): Promise<void> {
+		const salt = await this.crypto.utils.generateRandomString({ length: 32 })
+		const pass = password && password.length > 0 ? "notempty" : "empty"
+		const passHashed =
+			password && password.length > 0
+				? await this.crypto.utils.deriveKeyFromPassword({
+						password,
+						salt,
+						iterations: 200000,
+						hash: "sha512",
+						bitLength: 512,
+						returnHex: true
+				  })
+				: "empty"
+
+		if (type === "directory") {
+			await this.api
+				.v3()
+				.dir()
+				.link()
+				.edit({ uuid: itemUUID, expiration, password: pass, passwordHashed: passHashed, salt, downloadBtn: enableDownload })
+
+			return
+		}
+
+		if (!linkUUID) {
+			throw new Error("[cloud.disablePublicLink] linkUUID undefined, expected: UUIDv4 string")
+		}
+
+		await this.api.v3().file().link().edit({
+			uuid: linkUUID,
+			fileUUID: itemUUID,
+			expiration,
+			password: pass,
+			passwordHashed: passHashed,
+			salt,
+			downloadBtn: enableDownload,
+			type: "enable"
+		})
+	}
+
+	public async disablePublicLink({ type, itemUUID }: { type: "directory"; itemUUID: string }): Promise<void>
+	public async disablePublicLink({ type, itemUUID, linkUUID }: { type: "file"; itemUUID: string; linkUUID: string }): Promise<void>
+
+	/**
+	 * Disable a file/directory public link.
+	 * @date 2/19/2024 - 4:47:27 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		type: "file" | "directory"
+	 * 		linkUUID?: string
+	 * 		itemUUID: string
+	 * 	}} param0
+	 * @param {("file" | "directory")} param0.type
+	 * @param {string} param0.linkUUID
+	 * @param {string} param0.itemUUID
+	 * @returns {Promise<void>}
+	 */
+	public async disablePublicLink({
+		type,
+		linkUUID,
+		itemUUID
+	}: {
+		type: "file" | "directory"
+		linkUUID?: string
+		itemUUID: string
+	}): Promise<void> {
+		if (type === "directory") {
+			await this.api.v3().dir().link().remove({ uuid: itemUUID })
+
+			return
+		}
+
+		if (!linkUUID) {
+			throw new Error("[cloud.disablePublicLink] linkUUID undefined, expected: UUIDv4 string")
+		}
+
+		await this.api
+			.v3()
+			.file()
+			.link()
+			.edit({
+				uuid: linkUUID,
+				fileUUID: itemUUID,
+				expiration: "never",
+				password: "empty",
+				passwordHashed: await this.crypto.utils.hashPassword({ password: "empty" }),
+				salt: await this.crypto.utils.generateRandomString({ length: 32 }),
+				downloadBtn: true,
+				type: "disable"
+			})
+	}
+
+	/**
+	 * Stop sharing an item with another user.
+	 * @date 2/19/2024 - 4:38:21 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{ uuid: string; receiverId: number }} param0
+	 * @param {string} param0.uuid
+	 * @param {number} param0.receiverId
+	 * @returns {Promise<void>}
+	 */
+	public async stopSharingItem({ uuid, receiverId }: { uuid: string; receiverId: number }): Promise<void> {
+		await this.api.v3().item().sharedOut().remove({ uuid, receiverId })
+	}
+
+	/**
+	 * Stop receiving a shared item.
+	 * @date 2/19/2024 - 4:38:36 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<void>}
+	 */
+	public async removeSharedItem({ uuid }: { uuid: string }): Promise<void> {
+		await this.api.v3().item().sharedIn().remove({ uuid })
+	}
+
+	/**
+	 * Share a file or a directory (and all it's children) to a user.
+	 * @date 2/19/2024 - 4:35:03 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		files: { uuid: string; parent: string; metadata: FileMetadata }[]
+	 * 		directories: { uuid: string; parent: string; metadata: FolderMetadata }[]
+	 * 		email: string
+	 * 		onProgress?: ProgressCallback
+	 * 	}} param0
+	 * @param {{}} param0.files
+	 * @param {{}} param0.directories
+	 * @param {string} param0.email
+	 * @param {ProgressCallback} param0.onProgress
+	 * @returns {Promise<void>}
+	 */
+	public async shareItemsToUser({
+		files,
+		directories,
+		email,
+		onProgress
+	}: {
+		files: { uuid: string; parent: string; metadata: FileMetadata }[]
+		directories: { uuid: string; parent: string; metadata: FolderMetadata }[]
+		email: string
+		onProgress?: ProgressCallback
+	}): Promise<void> {
+		const publicKey = (await this.api.v3().user().publicKey({ email })).publicKey
+		const itemsToShare: { type: "file" | "folder"; uuid: string; parent: string; metadata: FileMetadata | FolderMetadata }[] = []
+
+		for (const file of files) {
+			itemsToShare.push({
+				...file,
+				metadata: file.metadata satisfies FileMetadata,
+				parent: "none",
+				type: "file"
+			})
+		}
+
+		const directoryPromises: Promise<void>[] = []
+
+		for (const directory of directories) {
+			itemsToShare.push({
+				...directory,
+				metadata: directory.metadata satisfies FolderMetadata,
+				parent: "none",
+				type: "folder"
+			})
+
+			directoryPromises.push(
+				new Promise((resolve, reject) => {
+					this.getDirectoryTree({ uuid: directory.uuid })
+						.then(tree => {
+							for (const entry in tree) {
+								const item = tree[entry]
+
+								if (item.parent === "base" || item.uuid === directory.uuid) {
+									continue
+								}
+
+								if (item.type === "directory") {
+									itemsToShare.push({
+										uuid: item.uuid,
+										metadata: {
+											name: item.name
+										} satisfies FolderMetadata,
+										parent: item.parent,
+										type: "folder"
+									})
+								} else {
+									itemsToShare.push({
+										uuid: item.uuid,
+										metadata: {
+											name: item.name,
+											size: item.size,
+											mime: item.mime,
+											lastModified: item.lastModified,
+											key: item.key,
+											creation: item.creation,
+											hash: item.hash
+										} satisfies FileMetadata,
+										parent: item.parent,
+										type: "file"
+									})
+								}
+							}
+
+							resolve()
+						})
+						.catch(reject)
+				})
+			)
+		}
+
+		await promiseAllChunked(directoryPromises)
+
+		const sharePromises: Promise<void>[] = []
+		let done = 0
+
+		for (const item of itemsToShare) {
+			sharePromises.push(
+				new Promise((resolve, reject) => {
+					this.shareItem({
+						uuid: item.uuid,
+						parent: item.parent,
+						email,
+						type: item.type,
+						publicKey,
+						metadata: item.metadata
+					})
+						.then(() => {
+							done += 1
+
+							if (onProgress) {
+								onProgress(done)
+							}
+
+							resolve()
+						})
+						.catch(reject)
+				})
+			)
+		}
+
+		await promiseAllChunked(sharePromises)
+	}
+
+	/**
+	 * Checks if the parent of an item is shared or public linked.
+	 * If so, it adds the item and all children of the item (in case of a directory) to the share or public link.
+	 * @date 2/17/2024 - 4:26:44 AM
+	 *
+	 * @private
 	 * @async
 	 * @param {{
 	 * 		type: "file" | "directory"
@@ -1114,7 +1535,7 @@ export class Cloud {
 	 * @param {*} param0.itemMetadata
 	 * @returns {Promise<void>}
 	 */
-	public async checkIfItemParentIsShared({
+	private async checkIfItemParentIsShared({
 		type,
 		parent,
 		uuid,
@@ -1279,7 +1700,7 @@ export class Cloud {
 			for (const file of filesToLink) {
 				for (const link of isLinkingParent.links) {
 					promises.push(
-						this.addItemToPublicLink({
+						this.addItemToDirectoryPublicLink({
 							uuid: file.uuid,
 							parent: file.parent,
 							metadata: file.metadata,
@@ -1295,7 +1716,7 @@ export class Cloud {
 			for (const directory of directoriesToLink) {
 				for (const link of isLinkingParent.links) {
 					promises.push(
-						this.addItemToPublicLink({
+						this.addItemToDirectoryPublicLink({
 							uuid: directory.uuid,
 							parent: directory.parent,
 							metadata: directory.metadata,
@@ -1318,7 +1739,7 @@ export class Cloud {
 	 * Rename a shared item.
 	 * @date 2/17/2024 - 4:32:56 AM
 	 *
-	 * @public
+	 * @private
 	 * @async
 	 * @param {({uuid: string, receiverId: number, metadata: FileMetadata | FolderMetadata, publicKey: string})} param0
 	 * @param {string} param0.uuid
@@ -1327,7 +1748,7 @@ export class Cloud {
 	 * @param {string} param0.publicKey
 	 * @returns {Promise<void>}
 	 */
-	public async renameSharedItem({
+	private async renameSharedItem({
 		uuid,
 		receiverId,
 		metadata,
@@ -1347,7 +1768,7 @@ export class Cloud {
 	 * Rename a publicly linked item.
 	 * @date 2/17/2024 - 4:35:07 AM
 	 *
-	 * @public
+	 * @private
 	 * @async
 	 * @param {({uuid: string, linkUUID: string, metadata: FileMetadata | FolderMetadata, linkKeyEncrypted: string})} param0
 	 * @param {string} param0.uuid
@@ -1356,7 +1777,7 @@ export class Cloud {
 	 * @param {string} param0.linkKeyEncrypted
 	 * @returns {Promise<void>}
 	 */
-	public async renamePubliclyLinkedItem({
+	private async renamePubliclyLinkedItem({
 		uuid,
 		linkUUID,
 		metadata,
@@ -1378,7 +1799,7 @@ export class Cloud {
 	 * If so, it renames the item.
 	 * @date 2/17/2024 - 4:37:30 AM
 	 *
-	 * @public
+	 * @private
 	 * @async
 	 * @param {{
 	 * 		uuid: string
@@ -1388,7 +1809,7 @@ export class Cloud {
 	 * @param {*} param0.itemMetadata
 	 * @returns {Promise<void>}
 	 */
-	public async checkIfItemIsSharedForRename({
+	private async checkIfItemIsSharedForRename({
 		uuid,
 		itemMetadata
 	}: {
@@ -2286,7 +2707,7 @@ export class Cloud {
 	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
 	 * @returns {Promise<CloudItem>}
 	 */
-	public async uploadFileFromLocal({
+	public async uploadLocalFile({
 		source,
 		parent,
 		pauseSignal,
@@ -2528,7 +2949,19 @@ export class Cloud {
 				creation
 			}
 
-			// TODO: checkIfItemParentIsShared
+			await this.checkIfItemParentIsShared({
+				type: "file",
+				parent,
+				uuid,
+				itemMetadata: {
+					name: fileName,
+					size: fileSize,
+					mime: mimeType,
+					lastModified,
+					creation,
+					key
+				}
+			})
 
 			if (onUploaded) {
 				await onUploaded.call(undefined, item)
@@ -2789,7 +3222,18 @@ export class Cloud {
 				region
 			}
 
-			// TODO: checkIfItemParentIsShared
+			await this.checkIfItemParentIsShared({
+				type: "file",
+				parent,
+				uuid,
+				itemMetadata: {
+					name: fileName,
+					size: fileSize,
+					mime: mimeType,
+					lastModified,
+					key
+				}
+			})
 
 			if (onUploaded) {
 				await onUploaded.call(undefined, item)
@@ -2839,7 +3283,7 @@ export class Cloud {
 	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
 	 * @returns {Promise<void>}
 	 */
-	public async uploadDirectoryFromLocal({
+	public async uploadLocalDirectory({
 		source,
 		parent,
 		pauseSignal,
@@ -2986,8 +3430,185 @@ export class Cloud {
 				}
 
 				uploadPromises.push(
-					this.uploadFileFromLocal({
+					this.uploadLocalFile({
 						source: pathModule.join(source, entry),
+						parent: fileParent,
+						abortSignal,
+						pauseSignal,
+						onProgress,
+						onUploaded
+					})
+				)
+			}
+
+			await promiseAllChunked(uploadPromises)
+
+			if (onFinished) {
+				onFinished()
+			}
+		} catch (e) {
+			if (onError) {
+				onError(e as unknown as Error)
+			}
+
+			throw e
+		}
+	}
+
+	/**
+	 * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
+	 * @date 2/19/2024 - 6:08:36 AM
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		files: FileList
+	 * 		parent: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 		onQueued?: () => void
+	 * 		onStarted?: () => void
+	 * 		onError?: (err: Error) => void
+	 * 		onFinished?: () => void
+	 * 		onUploaded?: (item: CloudItem) => Promise<void>
+	 * 	}} param0
+	 * @param {FileList} param0.files
+	 * @param {string} param0.parent
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {ProgressCallback} param0.onProgress
+	 * @param {() => void} param0.onQueued
+	 * @param {() => void} param0.onStarted
+	 * @param {(err: Error) => void} param0.onError
+	 * @param {() => void} param0.onFinished
+	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+	 * @returns {Promise<void>}
+	 */
+	public async uploadDirectoryFromWeb({
+		files,
+		parent,
+		pauseSignal,
+		abortSignal,
+		onProgress,
+		onQueued,
+		onStarted,
+		onError,
+		onFinished,
+		onUploaded
+	}: {
+		files: FileList
+		parent: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+		onQueued?: () => void
+		onStarted?: () => void
+		onError?: (err: Error) => void
+		onFinished?: () => void
+		onUploaded?: (item: CloudItem) => Promise<void>
+	}): Promise<void> {
+		if (environment !== "browser") {
+			throw new Error(`cloud.uploadDirectoryFromWeb is not implemented for ${environment}`)
+		}
+
+		try {
+			if (onQueued) {
+				onQueued()
+			}
+
+			// TODO: Implement queue logic
+
+			if (onStarted) {
+				onStarted()
+			}
+
+			const filesToUpload: { path: string; file: File }[] = []
+			let baseDirectoryName: string | null = null
+			const pathsToUUIDs: Record<string, string> = {}
+
+			for (let i = 0; i < files.length; i++) {
+				const file = files[i]
+
+				if (
+					typeof file.webkitRelativePath !== "string" ||
+					file.webkitRelativePath.length <= 0 ||
+					file.size <= 0 ||
+					!file.webkitRelativePath.includes("/")
+				) {
+					continue
+				}
+
+				const ex = file.webkitRelativePath.split("/")
+
+				filesToUpload.push({
+					path: ex.slice(1).join("/"),
+					file
+				})
+
+				if (ex[0] && ex[0].length > 0) {
+					baseDirectoryName = ex[0].trim()
+				}
+			}
+
+			if (!baseDirectoryName) {
+				throw new Error(`Can not upload directory to parent directory ${parent}. Could not parse base directory name.`)
+			}
+
+			const parentPresent = await this.api.v3().dir().present({ uuid: parent })
+
+			if (!parentPresent.present || parentPresent.trash) {
+				throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`)
+			}
+
+			parent = await this.createDirectory({ name: baseDirectoryName, parent })
+
+			pathsToUUIDs[baseDirectoryName] = parent
+
+			const directoryPaths = filesToUpload.map(file => pathModule.posix.dirname(file.path))
+
+			for (const path of directoryPaths) {
+				const possiblePaths = getEveryPossibleDirectoryPath(path)
+
+				for (const possiblePath of possiblePaths) {
+					if (!directoryPaths.includes(possiblePath)) {
+						directoryPaths.push(possiblePath)
+					}
+				}
+			}
+
+			for (const path of directoryPaths) {
+				const parentPath = pathModule.posix.dirname(path)
+				const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+
+				if (directoryParent.length <= 16) {
+					continue
+				}
+
+				const directoryName = pathModule.posix.basename(path)
+
+				if (directoryName.length <= 0) {
+					continue
+				}
+
+				const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent })
+
+				pathsToUUIDs[path] = uuid
+			}
+
+			const uploadPromises: Promise<CloudItem>[] = []
+
+			for (const entry of filesToUpload) {
+				const parentPath = pathModule.posix.dirname(entry.path)
+				const fileParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+
+				if (fileParent.length <= 16) {
+					continue
+				}
+
+				uploadPromises.push(
+					this.uploadWebFile({
+						file: entry.file,
 						parent: fileParent,
 						abortSignal,
 						pauseSignal,

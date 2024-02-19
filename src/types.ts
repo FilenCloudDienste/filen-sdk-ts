@@ -17,3 +17,4 @@ export type FolderMetadata = {
 }
 
 export type ProgressCallback = (transferred: number) => void
+export type PublicLinkExpiration = "30d" | "14d" | "7d" | "3d" | "1d" | "6h" | "1h" | "never"

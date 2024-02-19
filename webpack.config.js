@@ -34,11 +34,15 @@ module.exports = [
 		],
 		resolve: {
 			extensions: [".tsx", ".ts", ".js"],
+			fallback: {
+				process: require.resolve("process/browser")
+			},
 			alias: {
 				fs: "browserfs/dist/shims/fs.js",
 				buffer: "browserfs/dist/shims/buffer.js",
 				path: "browserfs/dist/shims/path.js",
-				processGlobal: "browserfs/dist/shims/process.js",
+				processGlobal: "process/browser",
+				process: "process/browser",
 				bufferGlobal: "browserfs/dist/shims/bufferGlobal.js",
 				bfsGlobal: require.resolve("browserfs")
 			}

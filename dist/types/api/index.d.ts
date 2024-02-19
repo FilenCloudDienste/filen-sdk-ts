@@ -66,9 +66,11 @@ export declare class API {
                 }) => Promise<void>;
                 edit: (params_0: {
                     uuid: string;
-                    expiration?: import("./v3/dir/link/edit").DirLinkEditExpiration | undefined;
-                    password?: string | undefined;
-                    downloadBtn?: boolean | undefined;
+                    expiration: import("../types").PublicLinkExpiration;
+                    password: string;
+                    downloadBtn: boolean;
+                    passwordHashed: string;
+                    salt: string;
                 }) => Promise<void>;
                 info: (params_0: {
                     uuid: string;
@@ -341,10 +343,12 @@ export declare class API {
                 edit: (params_0: {
                     uuid: string;
                     fileUUID: string;
-                    expiration?: import("./v3/file/link/edit").FileLinkEditExpiration | undefined;
-                    password?: string | undefined;
-                    downloadBtn?: boolean | undefined;
-                    type: "enable" | "disable" | "edit";
+                    expiration: import("../types").PublicLinkExpiration;
+                    password: string;
+                    passwordHashed: string;
+                    downloadBtn: boolean;
+                    type: "enable" | "disable";
+                    salt: string;
                 }) => Promise<void>;
                 info: (params_0: {
                     uuid: string;

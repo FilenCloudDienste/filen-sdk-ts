@@ -1,5 +1,5 @@
 import type APIClient from "../../../client";
-export type DirLinkEditExpiration = "30d" | "14d" | "7d" | "3d" | "1d" | "6h" | "1h" | "never";
+import type { PublicLinkExpiration } from "../../../../types";
 /**
  * DirLinkEdit
  * @date 2/1/2024 - 8:16:35 PM
@@ -24,27 +24,33 @@ export declare class DirLinkEdit {
     });
     /**
      * Edit a directory public link.
-     * @date 2/10/2024 - 1:14:26 AM
+     * @date 2/19/2024 - 4:52:28 AM
      *
      * @public
      * @async
      * @param {{
      * 		uuid: string
-     * 		expiration?: DirLinkEditExpiration
-     * 		password?: string
-     * 		downloadBtn?: boolean
+     * 		expiration: PublicLinkExpiration
+     * 		password: string
+     * 		downloadBtn: boolean
+     * 		passwordHashed: string
+     * 		salt: string
      * 	}} param0
      * @param {string} param0.uuid
-     * @param {DirLinkEditExpiration} [param0.expiration="never"]
+     * @param {PublicLinkExpiration} [param0.expiration="never"]
      * @param {string} param0.password
      * @param {boolean} [param0.downloadBtn=true]
+     * @param {string} param0.passwordHashed
+     * @param {string} param0.salt
      * @returns {Promise<void>}
      */
-    fetch({ uuid, expiration, password, downloadBtn }: {
+    fetch({ uuid, expiration, password, downloadBtn, passwordHashed, salt }: {
         uuid: string;
-        expiration?: DirLinkEditExpiration;
-        password?: string;
-        downloadBtn?: boolean;
+        expiration: PublicLinkExpiration;
+        password: string;
+        downloadBtn: boolean;
+        passwordHashed: string;
+        salt: string;
     }): Promise<void>;
 }
 export default DirLinkEdit;

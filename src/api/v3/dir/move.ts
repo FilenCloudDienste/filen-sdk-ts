@@ -44,8 +44,6 @@ export class DirMove {
 				to
 			}
 		})
-
-		// @TODO: checkIfItemParentIsShared
 	}
 }
 

@@ -44,8 +44,6 @@ export class FileMove {
 				to
 			}
 		})
-
-		// @TODO: checkIfItemParentIsShared
 	}
 }
 

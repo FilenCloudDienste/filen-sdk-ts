@@ -1,7 +1,5 @@
 import type APIClient from "../../../client"
-import { generateRandomString, deriveKeyFromPassword } from "../../../../crypto/utils"
-
-export type DirLinkEditExpiration = "30d" | "14d" | "7d" | "3d" | "1d" | "6h" | "1h" | "never"
+import type { PublicLinkExpiration } from "../../../../types"
 
 /**
  * DirLinkEdit
@@ -29,54 +27,51 @@ export class DirLinkEdit {
 
 	/**
 	 * Edit a directory public link.
-	 * @date 2/10/2024 - 1:14:26 AM
+	 * @date 2/19/2024 - 4:52:28 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		uuid: string
-	 * 		expiration?: DirLinkEditExpiration
-	 * 		password?: string
-	 * 		downloadBtn?: boolean
+	 * 		expiration: PublicLinkExpiration
+	 * 		password: string
+	 * 		downloadBtn: boolean
+	 * 		passwordHashed: string
+	 * 		salt: string
 	 * 	}} param0
 	 * @param {string} param0.uuid
-	 * @param {DirLinkEditExpiration} [param0.expiration="never"]
+	 * @param {PublicLinkExpiration} [param0.expiration="never"]
 	 * @param {string} param0.password
 	 * @param {boolean} [param0.downloadBtn=true]
+	 * @param {string} param0.passwordHashed
+	 * @param {string} param0.salt
 	 * @returns {Promise<void>}
 	 */
 	public async fetch({
 		uuid,
 		expiration = "never",
 		password,
-		downloadBtn = true
+		downloadBtn = true,
+		passwordHashed,
+		salt
 	}: {
 		uuid: string
-		expiration?: DirLinkEditExpiration
-		password?: string
-		downloadBtn?: boolean
+		expiration: PublicLinkExpiration
+		password: string
+		downloadBtn: boolean
+		passwordHashed: string
+		salt: string
 	}): Promise<void> {
-		const salt = await generateRandomString({ length: 32 })
-		const pass = password && password.length > 0 ? "notempty" : "empty"
-		const passHashed = password && password.length > 0 ? password : "empty"
-
 		await this.apiClient.request({
 			method: "POST",
 			endpoint: "/v3/dir/link/edit",
 			data: {
 				uuid,
 				expiration,
-				password: pass,
-				passwordHashed: await deriveKeyFromPassword({
-					password: passHashed,
-					salt,
-					iterations: 200000,
-					hash: "sha512",
-					bitLength: 512,
-					returnHex: true
-				}),
+				password,
+				passwordHashed,
 				salt,
-				downloadBtn: typeof downloadBtn === "boolean" ? downloadBtn : true
+				downloadBtn
 			}
 		})
 	}

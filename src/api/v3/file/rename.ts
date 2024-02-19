@@ -58,8 +58,6 @@ export class FileRename {
 				metadata: metadataEncrypted
 			}
 		})
-
-		// @TODO: checkIfItemIsSharedForRename
 	}
 }
 

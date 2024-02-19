@@ -472,9 +472,9 @@ export class FS {
 
 			if (newParentPath === "/" || newParentPath === "." || newParentPath === "") {
 				if (item.type === "directory") {
-					await this.cloud.moveDirectory({ uuid, to: this.sdkConfig.baseFolderUUID! })
+					await this.cloud.moveDirectory({ uuid, to: this.sdkConfig.baseFolderUUID!, metadata: item.metadata })
 				} else {
-					await this.cloud.moveFile({ uuid, to: this.sdkConfig.baseFolderUUID! })
+					await this.cloud.moveFile({ uuid, to: this.sdkConfig.baseFolderUUID!, metadata: item.metadata })
 				}
 			} else {
 				await this.mkdir({ path: newParentPath })
@@ -486,9 +486,9 @@ export class FS {
 				}
 
 				if (item.type === "directory") {
-					await this.cloud.moveDirectory({ uuid, to: newParentItem.uuid! })
+					await this.cloud.moveDirectory({ uuid, to: newParentItem.uuid!, metadata: item.metadata })
 				} else {
-					await this.cloud.moveFile({ uuid, to: newParentItem.uuid })
+					await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: item.metadata })
 				}
 			}
 		}
@@ -819,7 +819,7 @@ export class FS {
 		await fs.writeFile(tmpFilePath, content)
 
 		try {
-			await this.cloud.uploadFileFromLocal({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+			await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
 		} finally {
 			await fs.rm(tmpFilePath, {
 				force: true,
@@ -941,7 +941,7 @@ export class FS {
 			parentUUID = parentItem.uuid
 		}
 
-		await this.cloud.uploadFileFromLocal({ source, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+		await this.cloud.uploadLocalFile({ source, parent: parentUUID, abortSignal, pauseSignal, onProgress })
 	}
 
 	/**
@@ -1011,7 +1011,7 @@ export class FS {
 			await this.cloud.downloadDirectoryToLocal({ uuid, to: tmpDirectoryPath })
 
 			try {
-				await this.cloud.uploadDirectoryFromLocal({
+				await this.cloud.uploadLocalDirectory({
 					source: tmpDirectoryPath,
 					parent: parentUUID,
 					abortSignal,
@@ -1040,7 +1040,7 @@ export class FS {
 			})
 
 			try {
-				await this.cloud.uploadFileFromLocal({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+				await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
 			} finally {
 				await fs.rm(tmpFilePath, {
 					force: true,

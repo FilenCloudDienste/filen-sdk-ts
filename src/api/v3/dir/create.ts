@@ -65,8 +65,6 @@ export class DirCreate {
 			}
 		})
 
-		// @TODO: checkIfItemParentIsShared
-
 		return response
 	}
 }

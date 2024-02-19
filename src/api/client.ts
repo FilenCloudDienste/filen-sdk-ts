@@ -2,7 +2,7 @@ import axios, { ResponseType, AxiosResponse, InternalAxiosRequestConfig } from "
 import { sleep, getRandomArbitrary, normalizePath, parseURLParams } from "../utils"
 import { environment } from "../constants"
 import { promisify } from "util"
-import { pipeline } from "stream"
+import { pipeline, Readable, Transform } from "stream"
 import fs from "fs-extra"
 import { APIError } from "./errors"
 import { bufferToHash } from "../crypto/utils"
@@ -11,7 +11,6 @@ import type { ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
-import { Readable, Transform } from "stream"
 
 const pipelineAsync = promisify(pipeline)
 const requestSemaphore = new Semaphore(1024)
@@ -226,13 +225,7 @@ export class APIClient {
 				request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)))
 
 				if (postDataIsBuffer) {
-					const readableBuffer: Buffer | Uint8Array | ArrayBuffer =
-						typeof params.data === "string"
-							? Buffer.from(params.data, "utf-8")
-							: postDataIsBuffer
-							? (params.data as Buffer)
-							: Buffer.from(JSON.stringify(params.data), "utf-8")
-
+					const readableBuffer: Buffer | Uint8Array | ArrayBuffer = params.data as Buffer
 					const progressStreamInstance = progressStream({
 						length: readableBuffer.byteLength,
 						time: 100
@@ -328,16 +321,7 @@ export class APIClient {
 				const calculateProgressTransform = new Transform({
 					transform(chunk, encoding, callback) {
 						if (params.onDownloadProgress && chunk instanceof Buffer) {
-							let bytes = chunk.byteLength
-
-							if (lastBytesDownloaded === 0) {
-								lastBytesDownloaded = chunk.byteLength
-							} else {
-								bytes = Math.floor(chunk.byteLength - lastBytesDownloaded)
-								lastBytesDownloaded = chunk.byteLength
-							}
-
-							params.onDownloadProgress(bytes)
+							params.onDownloadProgress(chunk.byteLength)
 						}
 
 						this.push(chunk)

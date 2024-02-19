@@ -15,7 +15,7 @@
 		"bundle": "webpack --mode production --node-env production --config webpack.config.js",
 		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts",
 		"clear": "npm run rmdir -- dist docs",
-		"rmdir": "node -e \"var fs = require('fs'); try{process.argv.slice(1).map((fpath) => fs.rmdirSync(fpath, { recursive: true }))}catch(err){console.log(`Dir ${fpath} not found`)}; process.exit(0);\""
+		"rmdir": "node -e \"var fs = require('fs'); try { process.argv.slice(1).map((f) => fs.rmdirSync(f, { recursive: true })) } catch (err) { console.log(`Dir ${f} not found`) }; process.exit(0);\""
 	},
 	"repository": {
 		"type": "git",
@@ -24,6 +24,9 @@
 	"keywords": [
 		"filen"
 	],
+	"engines": {
+		"node": "^18"
+	},
 	"author": "Filen",
 	"license": "AGPLv3",
 	"bugs": {
@@ -57,6 +60,7 @@
 		"node-polyfill-webpack-plugin": "^3.0.0",
 		"os-browserify": "^0.3.0",
 		"path-browserify": "^1.0.1",
+		"process": "github:Dwynr/node-process",
 		"stream-browserify": "^3.0.0",
 		"terser-webpack-plugin": "^5.3.10",
 		"ts-loader": "^9.5.1",

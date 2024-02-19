@@ -123,9 +123,11 @@ export declare class FilenSDK {
                 }) => Promise<void>;
                 edit: (params_0: {
                     uuid: string;
-                    expiration?: import("./api/v3/dir/link/edit").DirLinkEditExpiration | undefined;
-                    password?: string | undefined;
-                    downloadBtn?: boolean | undefined;
+                    expiration: import("./types").PublicLinkExpiration;
+                    password: string;
+                    downloadBtn: boolean;
+                    passwordHashed: string;
+                    salt: string;
                 }) => Promise<void>;
                 info: (params_0: {
                     uuid: string;
@@ -398,10 +400,12 @@ export declare class FilenSDK {
                 edit: (params_0: {
                     uuid: string;
                     fileUUID: string;
-                    expiration?: import("./api/v3/file/link/edit").FileLinkEditExpiration | undefined;
-                    password?: string | undefined;
-                    downloadBtn?: boolean | undefined;
-                    type: "enable" | "disable" | "edit";
+                    expiration: import("./types").PublicLinkExpiration;
+                    password: string;
+                    passwordHashed: string;
+                    downloadBtn: boolean;
+                    type: "enable" | "disable";
+                    salt: string;
                 }) => Promise<void>;
                 info: (params_0: {
                     uuid: string;
@@ -729,13 +733,7 @@ export declare class FilenSDK {
             decodeBase64: typeof streamDecodeBase64;
             encodeBase64: typeof streamEncodeBase64;
         };
-        sleep: typeof import("./utils").sleep; /**
-         * Check if the SDK user is authenticated.
-         * @date 1/31/2024 - 4:08:17 PM
-         *
-         * @private
-         * @returns {boolean}
-         */
+        sleep: typeof import("./utils").sleep;
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
         normalizePath: typeof import("./utils").normalizePath;
         uuidv4: typeof import("./utils").uuidv4;
@@ -744,6 +742,7 @@ export declare class FilenSDK {
         getRandomArbitrary: typeof import("./utils").getRandomArbitrary;
         clearTempDirectory: typeof import("./utils").clearTempDirectory;
         parseURLParams: typeof import("./utils").parseURLParams;
+        getEveryPossibleDirectoryPath: typeof import("./utils").getEveryPossibleDirectoryPath;
     };
 }
 export default FilenSDK;

@@ -1,5 +1,4 @@
-import type APIClient from "../../../../client"
-import type { UploadChunkResponse } from "../../../../client"
+import type { APIClient, UploadChunkResponse } from "../../../../client"
 
 /**
  * FileUploadChunkBuffer

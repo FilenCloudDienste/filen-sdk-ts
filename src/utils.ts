@@ -171,6 +171,40 @@ export function parseURLParams({ url }: { url: string }): Record<string, string>
 	return params
 }
 
+/**
+ * Extract every possible directory path from a path.
+ * @date 2/19/2024 - 6:02:06 AM
+ *
+ * @export
+ * @param {string} path
+ * @returns {string[]}
+ */
+export function getEveryPossibleDirectoryPath(path: string): string[] {
+	const ex = path.split("/")
+
+	if (ex.length <= 1) {
+		return [path]
+	}
+
+	const paths: string[] = []
+
+	for (let i = 0; i < ex.length; i++) {
+		const toJoin = []
+
+		for (let x = 0; x < i + 1; x++) {
+			toJoin.push(ex[x])
+		}
+
+		paths.push(toJoin.join("/"))
+	}
+
+	if (paths.length <= 0) {
+		return [path]
+	}
+
+	return paths
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -180,7 +214,8 @@ export const utils = {
 	promiseAllChunked,
 	getRandomArbitrary,
 	clearTempDirectory,
-	parseURLParams
+	parseURLParams,
+	getEveryPossibleDirectoryPath
 }
 
 export default utils

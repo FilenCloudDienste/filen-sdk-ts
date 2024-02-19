@@ -92,6 +92,15 @@ export declare function clearTempDirectory({ tmpDir }: {
 export declare function parseURLParams({ url }: {
     url: string;
 }): Record<string, string>;
+/**
+ * Extract every possible directory path from a path.
+ * @date 2/19/2024 - 6:02:06 AM
+ *
+ * @export
+ * @param {string} path
+ * @returns {string[]}
+ */
+export declare function getEveryPossibleDirectoryPath(path: string): string[];
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -102,5 +111,6 @@ export declare const utils: {
     getRandomArbitrary: typeof getRandomArbitrary;
     clearTempDirectory: typeof clearTempDirectory;
     parseURLParams: typeof parseURLParams;
+    getEveryPossibleDirectoryPath: typeof getEveryPossibleDirectoryPath;
 };
 export default utils;
