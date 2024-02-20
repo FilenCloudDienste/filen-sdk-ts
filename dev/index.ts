@@ -22,10 +22,7 @@ const filen = new FilenSDK({
 const main = async () => {
 	const dir = await filen.cloud().listDirectory({ uuid: config.baseFolderUUID })
 
-	console.log(dir.length)
-
-	const enc = await filen.crypto().encrypt().metadata({ metadata: "foobar", key: "lol" })
-	console.log(await filen.crypto().decrypt().metadata({ metadata: enc, key: "lol" }))
+	console.log(dir)
 }
 
 main()

@@ -63,6 +63,7 @@ export type CloudItemFileShared = Omit<CloudItemFile, "rm">
 
 export type CloudItemDirectory = {
 	color: DirColor | null
+	size: number
 }
 
 export type CloudItem =
@@ -196,20 +197,28 @@ export class Cloud {
 								return
 							}
 
-							const timestamp = convertTimestampToMs(folder.timestamp)
+							this.api
+								.v3()
+								.dir()
+								.size({ uuid: folder.uuid, trash: uuid.includes("trash") ? true : undefined })
+								.then(folderSize => {
+									const timestamp = convertTimestampToMs(folder.timestamp)
 
-							items.push({
-								type: "directory",
-								uuid: folder.uuid,
-								name: decrypted.name,
-								lastModified: timestamp,
-								timestamp,
-								color: folder.color,
-								parent: folder.parent,
-								favorited: folder.favorited === 1
-							})
+									items.push({
+										type: "directory",
+										uuid: folder.uuid,
+										name: decrypted.name,
+										lastModified: timestamp,
+										timestamp,
+										color: folder.color,
+										parent: folder.parent,
+										favorited: folder.favorited === 1,
+										size: folderSize.size
+									})
 
-							resolve()
+									resolve()
+								})
+								.catch(reject)
 						})
 						.catch(reject)
 				)
@@ -283,24 +292,38 @@ export class Cloud {
 						.decrypt()
 						.folderMetadataPrivate({ metadata: folder.metadata })
 						.then(decrypted => {
-							const timestamp = convertTimestampToMs(folder.timestamp)
+							if (decrypted.name.length === 0) {
+								resolve()
 
-							items.push({
-								type: "directory",
-								uuid: folder.uuid,
-								name: decrypted.name,
-								lastModified: timestamp,
-								timestamp,
-								color: folder.color,
-								parent: folder.parent ?? "shared-in",
-								sharerEmail: folder.sharerEmail,
-								sharerId: folder.sharerId,
-								receiverEmail: folder.receiverEmail ?? "",
-								receiverId: folder.receiverId ?? 0,
-								receivers: []
-							})
+								return
+							}
 
-							resolve()
+							this.api
+								.v3()
+								.dir()
+								.size({ uuid: folder.uuid, sharerId: folder.sharerId })
+								.then(folderSize => {
+									const timestamp = convertTimestampToMs(folder.timestamp)
+
+									items.push({
+										type: "directory",
+										uuid: folder.uuid,
+										name: decrypted.name,
+										lastModified: timestamp,
+										timestamp,
+										color: folder.color,
+										parent: folder.parent ?? "shared-in",
+										sharerEmail: folder.sharerEmail,
+										sharerId: folder.sharerId,
+										receiverEmail: folder.receiverEmail ?? "",
+										receiverId: folder.receiverId ?? 0,
+										receivers: [],
+										size: folderSize.size
+									})
+
+									resolve()
+								})
+								.catch(reject)
 						})
 						.catch(reject)
 				)
@@ -384,24 +407,32 @@ export class Cloud {
 								return
 							}
 
-							const timestamp = convertTimestampToMs(folder.timestamp)
+							this.api
+								.v3()
+								.dir()
+								.size({ uuid: folder.uuid, receiverId })
+								.then(folderSize => {
+									const timestamp = convertTimestampToMs(folder.timestamp)
 
-							items.push({
-								type: "directory",
-								uuid: folder.uuid,
-								name: decrypted.name,
-								lastModified: timestamp,
-								timestamp,
-								color: folder.color,
-								parent: folder.parent ?? "shared-in",
-								sharerEmail: folder.sharerEmail,
-								sharerId: folder.sharerId,
-								receiverEmail: folder.receiverEmail ?? "",
-								receiverId: folder.receiverId ?? 0,
-								receivers: []
-							})
+									items.push({
+										type: "directory",
+										uuid: folder.uuid,
+										name: decrypted.name,
+										lastModified: timestamp,
+										timestamp,
+										color: folder.color,
+										parent: folder.parent ?? "shared-in",
+										sharerEmail: folder.sharerEmail,
+										sharerId: folder.sharerId,
+										receiverEmail: folder.receiverEmail ?? "",
+										receiverId: folder.receiverId ?? 0,
+										receivers: [],
+										size: folderSize.size
+									})
 
-							resolve()
+									resolve()
+								})
+								.catch(reject)
 						})
 						.catch(reject)
 				)
@@ -572,20 +603,28 @@ export class Cloud {
 								return
 							}
 
-							const timestamp = convertTimestampToMs(folder.timestamp)
+							this.api
+								.v3()
+								.dir()
+								.size({ uuid: folder.uuid, trash: true })
+								.then(folderSize => {
+									const timestamp = convertTimestampToMs(folder.timestamp)
 
-							items.push({
-								type: "directory",
-								uuid: folder.uuid,
-								name: decrypted.name,
-								lastModified: timestamp,
-								timestamp,
-								color: folder.color,
-								parent: folder.parent,
-								favorited: folder.favorited === 1
-							})
+									items.push({
+										type: "directory",
+										uuid: folder.uuid,
+										name: decrypted.name,
+										lastModified: timestamp,
+										timestamp,
+										color: folder.color,
+										parent: folder.parent,
+										favorited: folder.favorited === 1,
+										size: folderSize.size
+									})
 
-							resolve()
+									resolve()
+								})
+								.catch(reject)
 						})
 						.catch(reject)
 				)
@@ -663,20 +702,28 @@ export class Cloud {
 								return
 							}
 
-							const timestamp = convertTimestampToMs(folder.timestamp)
+							this.api
+								.v3()
+								.dir()
+								.size({ uuid: folder.uuid })
+								.then(folderSize => {
+									const timestamp = convertTimestampToMs(folder.timestamp)
 
-							items.push({
-								type: "directory",
-								uuid: folder.uuid,
-								name: decrypted.name,
-								lastModified: timestamp,
-								timestamp,
-								color: folder.color,
-								parent: folder.parent,
-								favorited: folder.favorited === 1
-							})
+									items.push({
+										type: "directory",
+										uuid: folder.uuid,
+										name: decrypted.name,
+										lastModified: timestamp,
+										timestamp,
+										color: folder.color,
+										parent: folder.parent,
+										favorited: folder.favorited === 1,
+										size: folderSize.size
+									})
 
-							resolve()
+									resolve()
+								})
+								.catch(reject)
 						})
 						.catch(reject)
 				)
@@ -754,20 +801,28 @@ export class Cloud {
 								return
 							}
 
-							const timestamp = convertTimestampToMs(folder.timestamp)
+							this.api
+								.v3()
+								.dir()
+								.size({ uuid: folder.uuid })
+								.then(folderSize => {
+									const timestamp = convertTimestampToMs(folder.timestamp)
 
-							items.push({
-								type: "directory",
-								uuid: folder.uuid,
-								name: decrypted.name,
-								lastModified: timestamp,
-								timestamp,
-								color: folder.color,
-								parent: folder.parent,
-								favorited: folder.favorited === 1
-							})
+									items.push({
+										type: "directory",
+										uuid: folder.uuid,
+										name: decrypted.name,
+										lastModified: timestamp,
+										timestamp,
+										color: folder.color,
+										parent: folder.parent,
+										favorited: folder.favorited === 1,
+										size: folderSize.size
+									})
 
-							resolve()
+									resolve()
+								})
+								.catch(reject)
 						})
 						.catch(reject)
 				)
@@ -2551,7 +2606,8 @@ export class Cloud {
 				type: "directory",
 				uuid: folder.uuid,
 				name: decrypted.name,
-				parent: folder.parent
+				parent: folder.parent,
+				size: 0
 			}
 		}
 
