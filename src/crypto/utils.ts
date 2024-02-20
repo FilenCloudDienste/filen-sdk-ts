@@ -60,7 +60,7 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Uint8Array>
+}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Uint8Array | Buffer>
 
 export async function deriveKeyFromPassword({
 	password,
@@ -86,7 +86,7 @@ export async function deriveKeyFromPassword({
  * @param {"sha512"} param0.hash
  * @param {(256 | 512)} param0.bitLength
  * @param {boolean} param0.returnHex
- * @returns {Promise<string | Uint8Array>}
+ * @returns {Promise<string | Buffer | Uint8Arra>}
  */
 export async function deriveKeyFromPassword({
 	password,
@@ -97,7 +97,7 @@ export async function deriveKeyFromPassword({
 	returnHex
 }: DeriveKeyFromPasswordBase & {
 	returnHex: boolean
-}): Promise<string | Uint8Array> {
+}): Promise<string | Buffer | Uint8Array> {
 	if (environment === "node") {
 		return await new Promise((resolve, reject) => {
 			nodeCrypto.pbkdf2(password, salt, iterations, bitLength / 8, hash, (err, result) => {
@@ -130,7 +130,7 @@ export async function deriveKeyFromPassword({
 			bitLength
 		)
 
-		const key = returnHex ? Buffer.from(bits).toString("hex") : new Uint8Array(bits)
+		const key = returnHex ? Buffer.from(bits).toString("hex") : Buffer.from(bits)
 
 		return key
 	} else if (environment === "reactNative") {

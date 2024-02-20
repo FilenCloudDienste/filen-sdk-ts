@@ -10,6 +10,7 @@ import fs from "fs-extra"
 import { streamDecodeBase64 } from "../streams/base64"
 import { pipeline } from "stream"
 import { promisify } from "util"
+import CryptoJS from "crypto-js"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -23,7 +24,6 @@ const pipelineAsync = promisify(pipeline)
  */
 export class Decrypt {
 	private readonly config: CryptoConfig
-	private readonly textEncoder = new TextEncoder()
 	private readonly textDecoder = new TextDecoder()
 
 	/**
@@ -50,57 +50,57 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async metadata({ metadata, key }: { metadata: string; key: string }): Promise<string> {
-		const sliced = metadata.slice(0, 8)
-
-		if (sliced === "U2FsdGVk") {
-			// Old and deprecated, not in use anymore, just here for backwards compatibility
-			return CryptoJS.AES.decrypt(metadata, key).toString(CryptoJS.enc.Utf8)
+		if (environment === "reactNative") {
+			return await globalThis.nodeThread.decryptMetadata({ data: metadata, key })
 		} else {
-			const version = metadata.slice(0, 3)
+			const sliced = metadata.slice(0, 8)
 
-			if (version === "002") {
-				const iv = metadata.slice(3, 15)
-				const keyBuffer = (await deriveKeyFromPassword({
-					password: key,
-					salt: key,
-					iterations: 1,
-					hash: "sha512",
-					bitLength: 256,
-					returnHex: false
-				})) as Uint8Array
-				const ivBuffer = this.textEncoder.encode(iv)
-				const cipherText = metadata.slice(15)
-				const encrypted = Buffer.from(cipherText, "base64")
+			if (sliced === "U2FsdGVk") {
+				// Old and deprecated, not in use anymore, just here for backwards compatibility
+				return CryptoJS.AES.decrypt(metadata, key).toString(CryptoJS.enc.Utf8)
+			} else {
+				const version = metadata.slice(0, 3)
 
-				if (environment === "node") {
-					const authTag = encrypted.subarray(encrypted.byteLength - ((128 + 7) >> 3))
-					const ciphertext = encrypted.subarray(0, encrypted.byteLength - authTag.byteLength)
-					const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer)
+				if (version === "002") {
+					const keyBuffer = await deriveKeyFromPassword({
+						password: key,
+						salt: key,
+						iterations: 1,
+						hash: "sha512",
+						bitLength: 256,
+						returnHex: false
+					})
+					const ivBuffer = Buffer.from(metadata.slice(3, 15), "utf-8")
+					const encrypted = Buffer.from(metadata.slice(15), "base64")
 
-					decipher.setAuthTag(authTag)
+					if (environment === "node") {
+						const authTag = encrypted.subarray(-16)
+						const cipherText = encrypted.subarray(0, encrypted.byteLength - 16)
+						const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer)
 
-					const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()])
+						decipher.setAuthTag(authTag)
 
-					return this.textDecoder.decode(decrypted)
-				} else if (environment === "browser") {
-					const decrypted = await globalThis.crypto.subtle.decrypt(
-						{
-							name: "AES-GCM",
-							iv: ivBuffer
-						},
-						await importRawKey({ key, algorithm: "AES-GCM", mode: ["decrypt"] }),
-						encrypted
-					)
+						return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8")
+					} else if (environment === "browser") {
+						const decrypted = await globalThis.crypto.subtle.decrypt(
+							{
+								name: "AES-GCM",
+								iv: ivBuffer
+							},
+							await importRawKey({ key, algorithm: "AES-GCM", mode: ["decrypt"] }),
+							encrypted
+						)
 
-					return this.textDecoder.decode(decrypted)
-				} else if (environment === "reactNative") {
-					return await global.nodeThread.decryptMetadata({ data: metadata, key })
+						return Buffer.from(decrypted).toString("utf-8")
+					} else if (environment === "reactNative") {
+						return await global.nodeThread.decryptMetadata({ data: metadata, key })
+					}
+
+					throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
 				}
 
-				throw new Error(`crypto.decrypt.metadata not implemented for ${environment} environment`)
+				throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`)
 			}
-
-			throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`)
 		}
 	}
 
@@ -197,10 +197,6 @@ export class Decrypt {
 			}
 		}
 
-		if (fileMetadata.name.length === 0) {
-			throw new Error("Could not decrypt file metadata using master keys.")
-		}
-
 		return fileMetadata
 	}
 
@@ -216,6 +212,12 @@ export class Decrypt {
 	 * @returns {Promise<FolderMetadata>}
 	 */
 	public async folderMetadata({ metadata, key }: { metadata: string; key?: string }): Promise<FolderMetadata> {
+		if (metadata === "default") {
+			return {
+				name: "Default"
+			}
+		}
+
 		if (this.config.metadataCache && cache.folderMetadata.has(metadata)) {
 			return cache.folderMetadata.get(metadata)!
 		}
@@ -245,10 +247,6 @@ export class Decrypt {
 			} catch {
 				continue
 			}
-		}
-
-		if (folderMetadata.name.length === 0) {
-			throw new Error("Could not decrypt folder metadata using master keys.")
 		}
 
 		return folderMetadata
@@ -296,10 +294,6 @@ export class Decrypt {
 			}
 		}
 
-		if (fileMetadata.name.length === 0) {
-			throw new Error("Could not decrypt file metadata using private key.")
-		}
-
 		return fileMetadata
 	}
 
@@ -335,10 +329,6 @@ export class Decrypt {
 			if (this.config.metadataCache) {
 				cache.folderMetadata.set(metadata, folderMetadata)
 			}
-		}
-
-		if (folderMetadata.name.length === 0) {
-			throw new Error("Could not decrypt folder metadata using private key.")
 		}
 
 		return folderMetadata
@@ -383,10 +373,6 @@ export class Decrypt {
 			if (this.config.metadataCache) {
 				cache.fileMetadata.set(metadata, fileMetadata)
 			}
-		}
-
-		if (fileMetadata.name.length === 0) {
-			throw new Error("Could not decrypt file metadata (link) using given key.")
 		}
 
 		return fileMetadata
@@ -812,8 +798,8 @@ export class Decrypt {
 			} else if (version === 2) {
 				const iv = data.subarray(0, 12)
 				const encData = data.subarray(12)
-				const authTag = encData.subarray(encData.byteLength - ((128 + 7) >> 3))
-				const ciphertext = encData.subarray(0, encData.byteLength - authTag.byteLength)
+				const authTag = encData.subarray(-16)
+				const ciphertext = encData.subarray(0, encData.byteLength - 16)
 				const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), iv)
 
 				decipher.setAuthTag(authTag)

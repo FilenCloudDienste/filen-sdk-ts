@@ -11,7 +11,6 @@ import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../typ
  */
 export declare class Decrypt {
     private readonly config;
-    private readonly textEncoder;
     private readonly textDecoder;
     /**
      * Creates an instance of Decrypt.

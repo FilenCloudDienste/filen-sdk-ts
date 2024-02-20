@@ -58,7 +58,7 @@ exports.generateRandomString = generateRandomString;
  * @param {"sha512"} param0.hash
  * @param {(256 | 512)} param0.bitLength
  * @param {boolean} param0.returnHex
- * @returns {Promise<string | Uint8Array>}
+ * @returns {Promise<string | Buffer | Uint8Arra>}
  */
 async function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }) {
     if (constants_1.environment === "node") {
@@ -85,7 +85,7 @@ async function deriveKeyFromPassword({ password, salt, iterations, hash, bitLeng
                 name: hash === "sha512" ? "SHA-512" : hash
             }
         }, await importPBKDF2Key({ key: password, mode: ["deriveBits"] }), bitLength);
-        const key = returnHex ? Buffer.from(bits).toString("hex") : new Uint8Array(bits);
+        const key = returnHex ? Buffer.from(bits).toString("hex") : Buffer.from(bits);
         return key;
     }
     else if (constants_1.environment === "reactNative") {

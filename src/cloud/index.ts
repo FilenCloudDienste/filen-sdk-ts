@@ -190,6 +190,12 @@ export class Cloud {
 						.decrypt()
 						.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
 							items.push({
@@ -217,6 +223,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -302,6 +314,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadataPrivate({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -360,6 +378,12 @@ export class Cloud {
 						.decrypt()
 						.folderMetadata({ metadata: folder.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
 							items.push({
@@ -391,6 +415,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -478,6 +508,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -530,6 +566,12 @@ export class Cloud {
 						.decrypt()
 						.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
 							items.push({
@@ -557,6 +599,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -609,6 +657,12 @@ export class Cloud {
 						.decrypt()
 						.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
 							items.push({
@@ -636,6 +690,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -688,6 +748,12 @@ export class Cloud {
 						.decrypt()
 						.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
 							items.push({
@@ -715,6 +781,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							items.push({
 								type: "file",
 								uuid: file.uuid,
@@ -2492,6 +2564,12 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
+							if (decrypted.name.length === 0) {
+								resolve()
+
+								return
+							}
+
 							const parentPath = folderNames[file.parent]
 
 							tree[`${parentPath}/${decrypted.name}`] = {

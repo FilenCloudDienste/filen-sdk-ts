@@ -45,9 +45,12 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async metadata({ metadata, key, derive = true }) {
+        const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
+        if (constants_1.environment === "reactNative") {
+            return await global.nodeThread.encryptMetadata({ data: metadata, key: keyToUse });
+        }
         const iv = await (0, utils_1.generateRandomString)({ length: 12 });
         const ivBuffer = this.textEncoder.encode(iv);
-        const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
         if (constants_1.environment === "node") {
             const derivedKey = derive
                 ? await (0, utils_1.deriveKeyFromPassword)({
