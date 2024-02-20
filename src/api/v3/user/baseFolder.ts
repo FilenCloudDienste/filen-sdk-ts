@@ -36,10 +36,11 @@ export class UserBaseFolder {
 	 * @async
 	 * @returns {Promise<UserBaseFolderResponse>}
 	 */
-	public async fetch(): Promise<UserBaseFolderResponse> {
+	public async fetch({ apiKey }: { apiKey?: string }): Promise<UserBaseFolderResponse> {
 		const response = await this.apiClient.request<UserBaseFolderResponse>({
 			method: "GET",
-			endpoint: "/v3/user/baseFolder"
+			endpoint: "/v3/user/baseFolder",
+			apiKey
 		})
 
 		return response

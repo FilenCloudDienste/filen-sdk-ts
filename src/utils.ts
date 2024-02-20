@@ -205,6 +205,22 @@ export function getEveryPossibleDirectoryPath(path: string): string[] {
 	return paths
 }
 
+/**
+ * Convert a timestamp in ms to a simple date format
+ * @date 2/19/2024 - 11:48:39 PM
+ *
+ * @export
+ * @param {number} timestamp
+ * @returns {string}
+ */
+export function simpleDate(timestamp: number): string {
+	try {
+		return new Date(convertTimestampToMs(timestamp)).toString().split(" ").slice(0, 5).join(" ")
+	} catch (e) {
+		return new Date().toString().split(" ").slice(0, 5).join(" ")
+	}
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -215,7 +231,8 @@ export const utils = {
 	getRandomArbitrary,
 	clearTempDirectory,
 	parseURLParams,
-	getEveryPossibleDirectoryPath
+	getEveryPossibleDirectoryPath,
+	simpleDate
 }
 
 export default utils

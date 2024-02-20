@@ -101,6 +101,15 @@ export declare function parseURLParams({ url }: {
  * @returns {string[]}
  */
 export declare function getEveryPossibleDirectoryPath(path: string): string[];
+/**
+ * Convert a timestamp in ms to a simple date format
+ * @date 2/19/2024 - 11:48:39 PM
+ *
+ * @export
+ * @param {number} timestamp
+ * @returns {string}
+ */
+export declare function simpleDate(timestamp: number): string;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -112,5 +121,6 @@ export declare const utils: {
     clearTempDirectory: typeof clearTempDirectory;
     parseURLParams: typeof parseURLParams;
     getEveryPossibleDirectoryPath: typeof getEveryPossibleDirectoryPath;
+    simpleDate: typeof simpleDate;
 };
 export default utils;

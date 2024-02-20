@@ -10,3 +10,4 @@ export declare const CURRENT_FILE_ENCRYPTION_VERSION = 2;
 export declare const DEFAULT_UPLOAD_REGION = "de-1";
 export declare const DEFAULT_UPLOAD_BUCKET = "filen-1";
 export declare const UPLOAD_CHUNK_SIZE: number;
+export declare const MAX_NOTE_SIZE: number;

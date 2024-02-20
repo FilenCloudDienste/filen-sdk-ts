@@ -48,22 +48,19 @@ export class ChatMessages {
 
 	/**
 	 * Fetch chat messages from the given timestamp ordered DESC. Can be used for pagination.
-	 * @date 2/13/2024 - 4:47:29 AM
+	 * @date 2/20/2024 - 5:57:33 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{conversation: string, timestamp?: number}} param0
+	 * @param {{
+	 * 		conversation: string
+	 * 		timestamp: number
+	 * 	}} param0
 	 * @param {string} param0.conversation
-	 * @param {number} [param0.timestamp=Date.now() + 3600000]
+	 * @param {number} param0.timestamp
 	 * @returns {Promise<ChatMessage[]>}
 	 */
-	public async fetch({
-		conversation,
-		timestamp = Date.now() + 3600000
-	}: {
-		conversation: string
-		timestamp?: number
-	}): Promise<ChatMessage[]> {
+	public async fetch({ conversation, timestamp }: { conversation: string; timestamp: number }): Promise<ChatMessage[]> {
 		const response = await this.apiClient.request<ChatMessage[]>({
 			method: "POST",
 			endpoint: "/v3/chat/messages",

@@ -23,14 +23,10 @@ export type FSItemFileBase = {
 };
 export type FSItem = (FSItemBase & {
     type: "directory";
-    metadata: FolderMetadata & {
-        timestamp: number;
-    };
+    metadata: FolderMetadata;
 }) | (FSItemBase & {
     type: "file";
-    metadata: FSItemFileBase & FileMetadata & {
-        timestamp: number;
-    };
+    metadata: FSItemFileBase & FileMetadata;
 });
 export type FSItems = Record<string, FSItem>;
 export type FSStats = {
@@ -90,17 +86,19 @@ export declare class FS {
     private normalizePath;
     private pathToItemUUID;
     /**
-     * List files and folders at path.
-     * @date 2/9/2024 - 6:05:44 AM
+     * List files and directories at path.
+     * @date 2/20/2024 - 2:40:03 AM
      *
      * @public
      * @async
-     * @param {{ path: string }} param0
+     * @param {{ path: string, recursive?: boolean }} param0
      * @param {string} param0.path
+     * @param {boolean} [param0.recursive=false]
      * @returns {Promise<string[]>}
      */
-    readdir({ path }: {
+    readdir({ path, recursive }: {
         path: string;
+        recursive?: boolean;
     }): Promise<string[]>;
     /**
      * Alias of readdir.
@@ -139,7 +137,7 @@ export declare class FS {
         path: string;
     }): Promise<void>;
     /**
-     * Rename or move a file/folder. Recursively creates intermediate directories if needed.
+     * Rename or move a file/directory. Recursively creates intermediate directories if needed.
      * @date 2/14/2024 - 1:39:32 AM
      *
      * @public
@@ -163,10 +161,10 @@ export declare class FS {
      */
     statfs(): Promise<StatFS>;
     /**
-     * Deletes file/folder at path (Sends it to the trash).
+     * Deletes file/directoy at path (Sends it to the trash).
      * @date 2/14/2024 - 2:16:42 AM
      *
-     * @public
+     * @private
      * @async
      * @param {{ path: string }} param0
      * @param {string} param0.path
@@ -174,7 +172,7 @@ export declare class FS {
      */
     private _unlink;
     /**
-     * Deletes file/folder at path (Sends it to the trash).
+     * Deletes file/directory at path (Sends it to the trash).
      * @date 2/14/2024 - 2:55:28 AM
      *
      * @public
@@ -200,7 +198,7 @@ export declare class FS {
         path: string;
     }): ReturnType<typeof this._unlink>;
     /**
-     * Deletes folder at path (Sends it to the trash).
+     * Deletes directory at path (Sends it to the trash).
      * @date 2/14/2024 - 2:53:48 AM
      *
      * @public
@@ -344,7 +342,7 @@ export declare class FS {
     /**
      * Copy a file or directory structure. Recursively creates intermediate directories if needed.
      * Warning: Can be really inefficient when copying large directory structures.
-     * All files and folders need to be downloaded first and then reuploaded due to our end to end encryption.
+     * All files need to be downloaded first and then reuploaded due to our end to end encryption.
      * Plain copying unfortunately does not work. Only available in a Node.JS environment.
      * @date 2/14/2024 - 5:06:04 AM
      *

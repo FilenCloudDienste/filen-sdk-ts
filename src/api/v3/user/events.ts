@@ -41,25 +41,19 @@ export class UserEvents {
 
 	/**
 	 * Get user account events.
-	 * @date 2/10/2024 - 2:06:14 AM
+	 * @date 2/20/2024 - 7:09:44 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
-	 * 		lastTimestamp?: number
-	 * 		filter?: string
+	 * 		lastTimestamp: number
+	 * 		filter: string
 	 * 	}} param0
-	 * @param {number} [param0.lastTimestamp=Math.floor(Date.now() / 1000) + 60]
-	 * @param {string} [param0.filter="all"]
+	 * @param {number} param0.lastTimestamp
+	 * @param {string} param0.filter
 	 * @returns {Promise<UserEvent[]>}
 	 */
-	public async fetch({
-		lastTimestamp = Math.floor(Date.now() / 1000) + 60,
-		filter = "all"
-	}: {
-		lastTimestamp?: number
-		filter?: string
-	}): Promise<UserEvent[]> {
+	public async fetch({ lastTimestamp, filter }: { lastTimestamp: number; filter: string }): Promise<UserEvent[]> {
 		const response = await this.apiClient.request<UserEventsResponse>({
 			method: "POST",
 			endpoint: "/v3/user/events",

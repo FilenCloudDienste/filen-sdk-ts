@@ -112,18 +112,18 @@ export declare class Encrypt {
     }): Promise<string>;
     /**
      * Encrypt a tag's name using the given key.
-     * @date 2/6/2024 - 3:03:06 AM
+     * @date 2/20/2024 - 3:21:12 AM
      *
      * @public
      * @async
-     * @param {{ name: string; key: string }} param0
+     * @param {{ name: string; key?: string }} param0
      * @param {string} param0.name
      * @param {string} param0.key
      * @returns {Promise<string>}
      */
     noteTagName({ name, key }: {
         name: string;
-        key: string;
+        key?: string;
     }): Promise<string>;
     /**
      * Encrypt the conversation name using the conversation encryption key.

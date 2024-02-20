@@ -1,5 +1,4 @@
 import type APIClient from "../../client"
-import { bufferToHash } from "../../../crypto/utils"
 
 /**
  * UserAvatar
@@ -27,23 +26,22 @@ export class UserAvatar {
 
 	/**
 	 * Upload an avatar.
-	 * @date 2/10/2024 - 1:36:56 AM
+	 * @date 2/20/2024 - 6:45:34 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ buffer: Buffer }} param0
-	 * @param {Buffer} param0.buffer
+	 * @param {{ base64: string, hash: string }} param0
+	 * @param {string} param0.base64
+	 * @param {string} param0.hash
 	 * @returns {Promise<void>}
 	 */
-	public async fetch({ buffer }: { buffer: Buffer }): Promise<void> {
-		const base64 = buffer.toString("base64")
-
+	public async fetch({ base64, hash }: { base64: string; hash: string }): Promise<void> {
 		await this.apiClient.request({
 			method: "POST",
 			endpoint: "/v3/user/avatar",
 			data: {
 				avatar: base64,
-				hash: await bufferToHash({ buffer: new TextEncoder().encode(base64), algorithm: "sha512" })
+				hash
 			}
 		})
 	}

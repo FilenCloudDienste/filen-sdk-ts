@@ -20,13 +20,7 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	console.log(
-		(
-			(await fs.readdir(__dirname, {
-				recursive: true
-			})) as string[]
-		).map(entry => entry.split("\\").join("/"))
-	)
+	console.log(await filen.fs().readdir({ path: "/", recursive: true }))
 }
 
 main()

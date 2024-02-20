@@ -23,42 +23,42 @@ export declare class UserPersonalUpdate {
     });
     /**
      * Update personal information.
-     * @date 2/10/2024 - 1:43:57 AM
+     * @date 2/20/2024 - 6:52:39 AM
      *
      * @public
      * @async
      * @param {{
-     *         city?: string
-     *         companyName?: string
-     *         country?: string
-     *         firstName?: string
-     *         lastName?: string
-     *         postalCode?: string
-     *         street?: string
-     *         streetNumber?: string
-     *         vatId?: string
-     *     }} param0
-     * @param {string} [param0.city="__NONE__"]
-     * @param {string} [param0.companyName="__NONE__"]
-     * @param {string} [param0.country="__NONE__"]
-     * @param {string} [param0.firstName="__NONE__"]
-     * @param {string} [param0.lastName="__NONE__"]
-     * @param {string} [param0.postalCode="__NONE__"]
-     * @param {string} [param0.street="__NONE__"]
-     * @param {string} [param0.streetNumber="__NONE__"]
-     * @param {string} [param0.vatId="__NONE__"]
+     * 		city: string
+     * 		companyName: string
+     * 		country: string
+     * 		firstName: string
+     * 		lastName: string
+     * 		postalCode: string
+     * 		street: string
+     * 		streetNumber: string
+     * 		vatId: string
+     * 	}} param0
+     * @param {string} param0.city
+     * @param {string} param0.companyName
+     * @param {string} param0.country
+     * @param {string} param0.firstName
+     * @param {string} param0.lastName
+     * @param {string} param0.postalCode
+     * @param {string} param0.street
+     * @param {string} param0.streetNumber
+     * @param {string} param0.vatId
      * @returns {Promise<void>}
      */
     fetch({ city, companyName, country, firstName, lastName, postalCode, street, streetNumber, vatId }: {
-        city?: string;
-        companyName?: string;
-        country?: string;
-        firstName?: string;
-        lastName?: string;
-        postalCode?: string;
-        street?: string;
-        streetNumber?: string;
-        vatId?: string;
+        city: string;
+        companyName: string;
+        country: string;
+        firstName: string;
+        lastName: string;
+        postalCode: string;
+        street: string;
+        streetNumber: string;
+        vatId: string;
     }): Promise<void>;
 }
 export default UserPersonalUpdate;

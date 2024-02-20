@@ -1,6 +1,5 @@
 import type APIClient from "../../client";
-import type ChatLastFocusValues from "./lastFocusUpdate";
-export type ChatLastFocusResponse = ChatLastFocusValues[];
+import type { ChatLastFocusValues } from "./lastFocusUpdate";
 /**
  * ChatLastFocus
  * @date 2/1/2024 - 8:16:35 PM
@@ -29,8 +28,8 @@ export declare class ChatLastFocus {
      *
      * @public
      * @async
-     * @returns {Promise<ChatLastFocusResponse>}
+     * @returns {Promise<ChatLastFocusValues[]>}
      */
-    fetch(): Promise<ChatLastFocusResponse>;
+    fetch(): Promise<ChatLastFocusValues[]>;
 }
 export default ChatLastFocus;

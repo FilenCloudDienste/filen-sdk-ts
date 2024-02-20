@@ -173,25 +173,22 @@ export declare class Decrypt {
         privateKey: string;
     }): Promise<string>;
     /**
-     * Decrypts a chat message with the given participant metadata (participant metadata includes the symmetric chat encryption key).
-     * @date 2/6/2024 - 12:57:06 AM
+     * Decrypt a chat message
+     * @date 2/20/2024 - 5:34:42 AM
      *
      * @public
      * @async
      * @param {{
      * 		message: string
-     * 		metadata: string
-     * 		privateKey: string
+     * 		key: string
      * 	}} param0
      * @param {string} param0.message
-     * @param {string} param0.metadata
-     * @param {string} param0.privateKey
+     * @param {string} param0.key
      * @returns {Promise<string>}
      */
-    chatMessage({ message, metadata, privateKey }: {
+    chatMessage({ message, key }: {
         message: string;
-        metadata: string;
-        privateKey: string;
+        key: string;
     }): Promise<string>;
     /**
      * Decrypts the symmetric note encryption key with the given owner metadata.
@@ -284,25 +281,22 @@ export declare class Decrypt {
         key?: string;
     }): Promise<string>;
     /**
-     * Decrypt a chat conversation name using the participants metadata and private key.
-     * @date 2/6/2024 - 2:59:41 AM
+     * Decrypt a chat conversation name.
+     * @date 2/20/2024 - 5:31:41 AM
      *
      * @public
      * @async
      * @param {{
      * 		name: string
-     * 		metadata: string
-     * 		privateKey: string
+     * 		key: string
      * 	}} param0
      * @param {string} param0.name
-     * @param {string} param0.metadata
-     * @param {string} param0.privateKey
+     * @param {string} param0.key
      * @returns {Promise<string>}
      */
-    chatConversationName({ name, metadata, privateKey }: {
+    chatConversationName({ name, key }: {
         name: string;
-        metadata: string;
-        privateKey: string;
+        key: string;
     }): Promise<string>;
     /**
      * Decrypt data.

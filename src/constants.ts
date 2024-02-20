@@ -23,3 +23,4 @@ export const CURRENT_FILE_ENCRYPTION_VERSION = 2
 export const DEFAULT_UPLOAD_REGION = "de-1"
 export const DEFAULT_UPLOAD_BUCKET = "filen-1"
 export const UPLOAD_CHUNK_SIZE = 1024 * 1024
+export const MAX_NOTE_SIZE = 1024 * 1024 - 1

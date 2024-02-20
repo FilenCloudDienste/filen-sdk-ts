@@ -30,6 +30,7 @@ export type BaseRequestParameters = {
 	headers?: Record<string, string>
 	onUploadProgress?: ProgressCallback
 	onDownloadProgress?: ProgressCallback
+	apiKey?: string
 }
 
 export type GetRequestParameters = BaseRequestParameters & {
@@ -116,15 +117,17 @@ export class APIClient {
 	}
 
 	/**
-	 * Build API request headers
-	 * @date 1/31/2024 - 4:09:33 PM
+	 * Build API request headers.
+	 * @date 2/20/2024 - 7:31:29 AM
 	 *
 	 * @private
+	 * @param {{apiKey?: string}} param0
+	 * @param {string} param0.apiKey
 	 * @returns {Record<string, string>}
 	 */
-	private buildHeaders(): Record<string, string> {
+	private buildHeaders({ apiKey }: { apiKey?: string }): Record<string, string> {
 		return {
-			Authorization: "Bearer " + this.config.apiKey
+			Authorization: "Bearer " + (apiKey ? apiKey : this.config.apiKey)
 		}
 	}
 
@@ -138,7 +141,7 @@ export class APIClient {
 	 * @returns {Promise<AxiosResponse<any, any>>}
 	 */
 	private async post(params: PostRequestParameters) {
-		let headers = params.headers ? params.headers : this.buildHeaders()
+		let headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey })
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
 		const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer
 
@@ -291,7 +294,7 @@ export class APIClient {
 	 * @returns {Promise<AxiosResponse<any, any>>}
 	 */
 	private async get(params: GetRequestParameters) {
-		const headers = params.headers ? params.headers : this.buildHeaders()
+		const headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey })
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
 
 		let lastBytesDownloaded = 0
@@ -756,7 +759,7 @@ export class APIClient {
 		}/v3/upload?${urlParams}&hash=${bufferHash}`
 		const parsedURLParams = parseURLParams({ url: fullURL })
 		const urlParamsHash = await bufferToHash({ buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"), algorithm: "sha512" })
-		const builtHeaders = this.buildHeaders()
+		const builtHeaders = this.buildHeaders({ apiKey: undefined })
 
 		const response = await this.request<UploadChunkResponse>({
 			method: "POST",

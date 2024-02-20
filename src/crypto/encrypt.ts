@@ -199,17 +199,19 @@ export class Encrypt {
 
 	/**
 	 * Encrypt a tag's name using the given key.
-	 * @date 2/6/2024 - 3:03:06 AM
+	 * @date 2/20/2024 - 3:21:12 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ name: string; key: string }} param0
+	 * @param {{ name: string; key?: string }} param0
 	 * @param {string} param0.name
 	 * @param {string} param0.key
 	 * @returns {Promise<string>}
 	 */
-	public async noteTagName({ name, key }: { name: string; key: string }): Promise<string> {
-		return await this.metadata({ metadata: JSON.stringify({ name }), key })
+	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
+		const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1]
+
+		return await this.metadata({ metadata: JSON.stringify({ name }), key: keyToUse })
 	}
 
 	/**

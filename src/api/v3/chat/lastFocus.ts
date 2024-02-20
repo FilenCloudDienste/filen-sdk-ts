@@ -1,7 +1,5 @@
 import type APIClient from "../../client"
-import type ChatLastFocusValues from "./lastFocusUpdate"
-
-export type ChatLastFocusResponse = ChatLastFocusValues[]
+import type { ChatLastFocusValues } from "./lastFocusUpdate"
 
 /**
  * ChatLastFocus
@@ -33,10 +31,10 @@ export class ChatLastFocus {
 	 *
 	 * @public
 	 * @async
-	 * @returns {Promise<ChatLastFocusResponse>}
+	 * @returns {Promise<ChatLastFocusValues[]>}
 	 */
-	public async fetch(): Promise<ChatLastFocusResponse> {
-		const response = await this.apiClient.request<ChatLastFocusResponse>({
+	public async fetch(): Promise<ChatLastFocusValues[]> {
+		const response = await this.apiClient.request<ChatLastFocusValues[]>({
 			method: "GET",
 			endpoint: "/v3/chat/lastFocus"
 		})

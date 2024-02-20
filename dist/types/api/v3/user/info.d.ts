@@ -38,6 +38,8 @@ export declare class UserInfo {
      * @async
      * @returns {Promise<UserInfoResponse>}
      */
-    fetch(): Promise<UserInfoResponse>;
+    fetch({ apiKey }: {
+        apiKey?: string;
+    }): Promise<UserInfoResponse>;
 }
 export default UserInfo;

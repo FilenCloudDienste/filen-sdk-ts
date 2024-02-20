@@ -42,10 +42,11 @@ export class UserInfo {
 	 * @async
 	 * @returns {Promise<UserInfoResponse>}
 	 */
-	public async fetch(): Promise<UserInfoResponse> {
+	public async fetch({ apiKey }: { apiKey?: string }): Promise<UserInfoResponse> {
 		const response = await this.apiClient.request<UserInfoResponse>({
 			method: "GET",
-			endpoint: "/v3/user/info"
+			endpoint: "/v3/user/info",
+			apiKey
 		})
 
 		return response

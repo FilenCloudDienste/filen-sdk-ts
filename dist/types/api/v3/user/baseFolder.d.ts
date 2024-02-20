@@ -32,6 +32,8 @@ export declare class UserBaseFolder {
      * @async
      * @returns {Promise<UserBaseFolderResponse>}
      */
-    fetch(): Promise<UserBaseFolderResponse>;
+    fetch({ apiKey }: {
+        apiKey?: string;
+    }): Promise<UserBaseFolderResponse>;
 }
 export default UserBaseFolder;

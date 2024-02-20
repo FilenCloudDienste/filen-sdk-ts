@@ -11,6 +11,10 @@ import { streamDecodeBase64, streamEncodeBase64 } from "./streams/base64"
 import cryptoUtils from "./crypto/utils"
 import Cloud from "./cloud"
 import pathModule from "path"
+import Chats from "./chats"
+import Notes from "./notes"
+import Contacts from "./contacts"
+import User from "./user"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -41,6 +45,10 @@ export class FilenSDK {
 	private _crypto: Crypto
 	private _fs: FS
 	private _cloud: Cloud
+	private _notes: Notes
+	private _chats: Chats
+	private _contacts: Contacts
+	private _user: User
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -83,6 +91,10 @@ export class FilenSDK {
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
 		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._contacts = new Contacts({ sdkConfig: params, api: this._api })
+		this._user = new User({ sdkConfig: params, api: this._api, crypto: this._crypto })
 	}
 
 	/**
@@ -125,6 +137,10 @@ export class FilenSDK {
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
 		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._contacts = new Contacts({ sdkConfig: params, api: this._api })
+		this._user = new User({ sdkConfig: params, api: this._api, crypto: this._crypto })
 	}
 
 	/**
@@ -154,17 +170,205 @@ export class FilenSDK {
 	}
 
 	/**
+	 * Update keypair.
+	 * @date 2/20/2024 - 7:47:41 AM
+	 *
+	 * @private
+	 * @async
+	 * @param {{apiKey: string, publicKey: string, privateKey: string, masterKeys: string[]}} param0
+	 * @param {string} param0.apiKey
+	 * @param {string} param0.publicKey
+	 * @param {string} param0.privateKey
+	 * @param {{}} param0.masterKeys
+	 * @returns {Promise<void>}
+	 */
+	private async _updateKeyPair({
+		apiKey,
+		publicKey,
+		privateKey,
+		masterKeys
+	}: {
+		apiKey: string
+		publicKey: string
+		privateKey: string
+		masterKeys: string[]
+	}): Promise<void> {
+		const encryptedPrivateKey = await this._crypto.encrypt().metadata({ metadata: privateKey, key: masterKeys[masterKeys.length - 1] })
+
+		await this._api.v3().user().keyPair().update({ publicKey, encryptedPrivateKey, apiKey })
+	}
+
+	/**
+	 * Set keypair.
+	 * @date 2/20/2024 - 7:48:10 AM
+	 *
+	 * @private
+	 * @async
+	 * @param {{apiKey: string, publicKey: string, privateKey: string, masterKeys: string[]}} param0
+	 * @param {string} param0.apiKey
+	 * @param {string} param0.publicKey
+	 * @param {string} param0.privateKey
+	 * @param {{}} param0.masterKeys
+	 * @returns {Promise<void>}
+	 */
+	private async _setKeyPair({
+		apiKey,
+		publicKey,
+		privateKey,
+		masterKeys
+	}: {
+		apiKey: string
+		publicKey: string
+		privateKey: string
+		masterKeys: string[]
+	}): Promise<void> {
+		const encryptedPrivateKey = await this._crypto.encrypt().metadata({ metadata: privateKey, key: masterKeys[masterKeys.length - 1] })
+
+		await this._api.v3().user().keyPair().set({ publicKey, encryptedPrivateKey, apiKey })
+	}
+
+	private async __updateKeyPair({
+		apiKey,
+		masterKeys
+	}: {
+		apiKey: string
+		masterKeys: string[]
+	}): Promise<{ publicKey: string; privateKey: string }> {
+		const keyPairInfo = await this._api.v3().user().keyPair().info({ apiKey })
+
+		if (
+			typeof keyPairInfo.publicKey === "string" &&
+			typeof keyPairInfo.privateKey === "string" &&
+			keyPairInfo.publicKey.length > 0 &&
+			keyPairInfo.privateKey.length > 16
+		) {
+			let privateKey: string | null = null
+
+			for (const masterKey of masterKeys) {
+				try {
+					const decryptedPrivateKey = await this._crypto.decrypt().metadata({ metadata: keyPairInfo.privateKey, key: masterKey })
+
+					if (typeof decryptedPrivateKey === "string" && decryptedPrivateKey.length > 16) {
+						privateKey = decryptedPrivateKey
+					}
+				} catch {
+					continue
+				}
+			}
+
+			if (!privateKey) {
+				throw new Error("Could not decrypt private key.")
+			}
+
+			await this._updateKeyPair({ apiKey, publicKey: keyPairInfo.publicKey, privateKey, masterKeys })
+
+			return {
+				publicKey: keyPairInfo.publicKey,
+				privateKey
+			}
+		}
+
+		const generatedKeyPair = await this._crypto.utils.generateKeyPair()
+
+		await this._setKeyPair({ apiKey, publicKey: generatedKeyPair.publicKey, privateKey: generatedKeyPair.privateKey, masterKeys })
+
+		return {
+			publicKey: generatedKeyPair.publicKey,
+			privateKey: generatedKeyPair.privateKey
+		}
+	}
+
+	private async _updateKeys({
+		apiKey,
+		masterKeys
+	}: {
+		apiKey: string
+		masterKeys: string[]
+	}): Promise<{ masterKeys: string[]; publicKey: string; privateKey: string }> {
+		const encryptedMasterKeys = await this._crypto
+			.encrypt()
+			.metadata({ metadata: masterKeys.join("|"), key: masterKeys[masterKeys.length - 1] })
+		const masterKeysResponse = await this._api.v3().user().masterKeys({ encryptedMasterKeys })
+		let newMasterKeys: string[] = [...masterKeys]
+
+		for (const masterKey of masterKeys) {
+			try {
+				const decryptedMasterKeys = await this._crypto.decrypt().metadata({ metadata: masterKeysResponse.keys, key: masterKey })
+
+				if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
+					newMasterKeys = [...masterKeys, ...decryptedMasterKeys.split("|")]
+				}
+			} catch {
+				continue
+			}
+		}
+
+		if (newMasterKeys.length === 0) {
+			throw new Error("Could not decrypt master keys.")
+		}
+
+		const { publicKey, privateKey } = await this.__updateKeyPair({ apiKey, masterKeys: newMasterKeys })
+
+		return {
+			masterKeys: newMasterKeys,
+			publicKey,
+			privateKey
+		}
+	}
+
+	/**
 	 * Authenticate.
-	 * @date 1/31/2024 - 4:08:44 PM
+	 * @date 2/20/2024 - 7:24:10 AM
 	 *
 	 * @public
 	 * @async
+	 * @param {{email?: string, password?: string, twoFactorCode?: string}} param0
+	 * @param {string} param0.email
+	 * @param {string} param0.password
+	 * @param {string} param0.twoFactorCode
 	 * @returns {Promise<void>}
 	 */
-	public async login(): Promise<void> {
-		if (!this.config.email || !this.config.password || this.config.email.length === 0 || this.config.password.length === 0) {
-			throw new Error("Empty email or password")
+	public async login({ email, password, twoFactorCode }: { email?: string; password?: string; twoFactorCode?: string }): Promise<void> {
+		const emailToUse = email ? email : this.config.email ? this.config.email : ""
+		const passwordToUse = password ? password : this.config.password ? this.config.password : ""
+		const twoFactorCodeToUse = twoFactorCode ? twoFactorCode : this.config.twoFactorCode ? this.config.twoFactorCode : "XXXXXX"
+		let authVersion: AuthVersion | null = this.config.authVersion ? this.config.authVersion : null
+
+		if (emailToUse.length === 0 || passwordToUse.length === 0 || twoFactorCodeToUse.length === 0) {
+			throw new Error("Empty email, password or twoFactorCode")
 		}
+
+		const authInfo = await this._api.v3().auth().info({ email: emailToUse })
+
+		if (!authVersion) {
+			authVersion = authInfo.authVersion
+		}
+
+		const derived = await this._crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+			rawPassword: passwordToUse,
+			authVersion: authInfo.authVersion,
+			salt: authInfo.salt
+		})
+		const loginResponse = await this._api.v3().login({ email: emailToUse, password: derived.derivedPassword, authVersion })
+		const [infoResponse, baseFolderResponse] = await Promise.all([
+			this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
+			this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
+		])
+		const updateKeys = await this._updateKeys({ apiKey: loginResponse.apiKey, masterKeys: [derived.derivedMasterKeys] })
+
+		this.init({
+			...this.config,
+			email: emailToUse,
+			password: passwordToUse,
+			twoFactorCode: twoFactorCodeToUse,
+			masterKeys: updateKeys.masterKeys,
+			apiKey: loginResponse.apiKey,
+			publicKey: updateKeys.publicKey,
+			privateKey: updateKeys.privateKey,
+			authVersion,
+			baseFolderUUID: baseFolderResponse.uuid,
+			userId: infoResponse.id
+		})
 	}
 
 	/**
@@ -190,14 +394,14 @@ export class FilenSDK {
 	}
 
 	/**
-	 * Returns an instance of the API wrapper based on the given API version.
-	 * @date 1/31/2024 - 4:28:59 PM
+	 * Returns an instance of the API based on the given version (Current version: 3).
+	 * @date 2/19/2024 - 6:34:03 AM
 	 *
 	 * @public
 	 * @param {number} version
-	 * @returns {*}
+	 * @returns {ReturnType<typeof this._api.v3>}
 	 */
-	public api(version: number) {
+	public api(version: number): ReturnType<typeof this._api.v3> {
 		if (!this.isLoggedIn()) {
 			throw new Error("Not authenticated, please call login() first")
 		}
@@ -210,7 +414,7 @@ export class FilenSDK {
 	}
 
 	/**
-	 * Crypto
+	 * Returns an instance of Crypto.
 	 * @date 1/31/2024 - 4:29:49 PM
 	 *
 	 * @public
@@ -225,7 +429,7 @@ export class FilenSDK {
 	}
 
 	/**
-	 * FS
+	 * Returns an instance of FS.
 	 * @date 2/17/2024 - 1:52:12 AM
 	 *
 	 * @public
@@ -240,7 +444,7 @@ export class FilenSDK {
 	}
 
 	/**
-	 * Cloud
+	 * Returns an instance of Cloud.
 	 * @date 2/17/2024 - 1:52:05 AM
 	 *
 	 * @public
@@ -252,6 +456,66 @@ export class FilenSDK {
 		}
 
 		return this._cloud
+	}
+
+	/**
+	 * Returns an instance of Notes.
+	 * @date 2/19/2024 - 6:32:35 AM
+	 *
+	 * @public
+	 * @returns {Notes}
+	 */
+	public notes(): Notes {
+		if (!this.isLoggedIn()) {
+			throw new Error("Not authenticated, please call login() first")
+		}
+
+		return this._notes
+	}
+
+	/**
+	 * Returns an instance of Chats.
+	 * @date 2/19/2024 - 6:32:35 AM
+	 *
+	 * @public
+	 * @returns {Chats}
+	 */
+	public chats(): Chats {
+		if (!this.isLoggedIn()) {
+			throw new Error("Not authenticated, please call login() first")
+		}
+
+		return this._chats
+	}
+
+	/**
+	 * Returns an instance of Contacts.
+	 * @date 2/20/2024 - 6:27:05 AM
+	 *
+	 * @public
+	 * @returns {Contacts}
+	 */
+	public contacts(): Contacts {
+		if (!this.isLoggedIn()) {
+			throw new Error("Not authenticated, please call login() first")
+		}
+
+		return this._contacts
+	}
+
+	/**
+	 * Return an instance of User.
+	 * @date 2/20/2024 - 6:27:17 AM
+	 *
+	 * @public
+	 * @returns {User}
+	 */
+	public user(): User {
+		if (!this.isLoggedIn()) {
+			throw new Error("Not authenticated, please call login() first")
+		}
+
+		return this._user
 	}
 
 	/**

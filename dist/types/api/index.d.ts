@@ -141,8 +141,12 @@ export declare class API {
             authVersion: import("../types").AuthVersion;
         }) => Promise<import("./v3/login").LoginResponse>;
         user: () => {
-            info: () => Promise<import("./v3/user/info").UserInfoResponse>;
-            baseFolder: () => Promise<import("./v3/user/baseFolder").UserBaseFolderResponse>;
+            info: (params_0: {
+                apiKey?: string | undefined;
+            }) => Promise<import("./v3/user/info").UserInfoResponse>;
+            baseFolder: (params_0: {
+                apiKey?: string | undefined;
+            }) => Promise<import("./v3/user/baseFolder").UserBaseFolderResponse>;
             publicKey: (params_0: {
                 email: string;
             }) => Promise<import("./v3/user/publicKey").UserPublicKeyResponse>;
@@ -150,7 +154,8 @@ export declare class API {
             account: () => Promise<import("./v3/user/account").UserAccountResponse>;
             gdpr: () => Promise<import("./v3/user/gdpr").UserGDPRResponse>;
             avatar: (params_0: {
-                buffer: Buffer;
+                base64: string;
+                hash: string;
             }) => Promise<void>;
             settingsEmail: () => {
                 change: (params_0: {
@@ -161,15 +166,15 @@ export declare class API {
             };
             personal: () => {
                 change: (params_0: {
-                    city?: string | undefined;
-                    companyName?: string | undefined;
-                    country?: string | undefined;
-                    firstName?: string | undefined;
-                    lastName?: string | undefined;
-                    postalCode?: string | undefined;
-                    street?: string | undefined;
-                    streetNumber?: string | undefined;
-                    vatId?: string | undefined;
+                    city: string;
+                    companyName: string;
+                    country: string;
+                    firstName: string;
+                    lastName: string;
+                    postalCode: string;
+                    street: string;
+                    streetNumber: string;
+                    vatId: string;
                 }) => Promise<void>;
             };
             delete: (params_0: {
@@ -195,8 +200,8 @@ export declare class API {
                 }) => Promise<void>;
             };
             events: (params_0: {
-                lastTimestamp?: number | undefined;
-                filter?: string | undefined;
+                lastTimestamp: number;
+                filter: string;
             }) => Promise<import("./v3/user/events").UserEvent[]>;
             event: (params_0: {
                 uuid: string;
@@ -239,6 +244,25 @@ export declare class API {
                     timestamp: number;
                 }) => Promise<void>;
             };
+            keyPair: () => {
+                update: (params_0: {
+                    publicKey: string;
+                    encryptedPrivateKey: string;
+                    apiKey?: string | undefined;
+                }) => Promise<void>;
+                set: (params_0: {
+                    publicKey: string;
+                    encryptedPrivateKey: string;
+                    apiKey?: string | undefined;
+                }) => Promise<void>;
+                info: (params_0: {
+                    apiKey?: string | undefined;
+                }) => Promise<import("./v3/user/keyPair/info").UserKeyPairInfoResponse>;
+            };
+            masterKeys: (params_0: {
+                encryptedMasterKeys: string;
+                apiKey?: string | undefined;
+            }) => Promise<import("./v3/user/masterKeys").UserMasterKeysResponse>;
         };
         shared: () => {
             in: (params?: {
@@ -380,7 +404,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         onProgress?: import("../types").ProgressCallback | undefined;
-                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
+                    }) => Promise<import("fs").ReadStream | ReadableStream<any>>;
                     local: (params_0: {
                         uuid: string;
                         bucket: string;
@@ -416,7 +440,7 @@ export declare class API {
             conversations: () => Promise<import("./v3/chat/conversations").ChatConversation[]>;
             messages: (params_0: {
                 conversation: string;
-                timestamp?: number | undefined;
+                timestamp: number;
             }) => Promise<import("./v3/chat/messages").ChatMessage[]>;
             conversationsName: () => {
                 edit: (params_0: {
@@ -483,7 +507,7 @@ export declare class API {
             lastFocusUpdate: (params_0: {
                 conversations: import("./v3/chat/lastFocusUpdate").ChatLastFocusValues[];
             }) => Promise<void>;
-            lastFocus: () => Promise<import("./v3/chat/lastFocus").ChatLastFocusResponse>;
+            lastFocus: () => Promise<import("./v3/chat/lastFocusUpdate").ChatLastFocusValues[]>;
         };
         notes: () => {
             all: () => Promise<import("./v3/notes").NotesResponse>;
@@ -541,6 +565,12 @@ export declare class API {
             participantsRemove: (params_0: {
                 uuid: string;
                 userId: number;
+            }) => Promise<void>;
+            participantsAdd: (params_0: {
+                uuid: string;
+                contactUUID: string;
+                metadata: string;
+                permissionsWrite: boolean;
             }) => Promise<void>;
             participantsPermissions: (params_0: {
                 uuid: string;

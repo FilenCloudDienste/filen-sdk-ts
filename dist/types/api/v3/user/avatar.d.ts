@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import type APIClient from "../../client";
 /**
  * UserAvatar
@@ -24,16 +23,18 @@ export declare class UserAvatar {
     });
     /**
      * Upload an avatar.
-     * @date 2/10/2024 - 1:36:56 AM
+     * @date 2/20/2024 - 6:45:34 AM
      *
      * @public
      * @async
-     * @param {{ buffer: Buffer }} param0
-     * @param {Buffer} param0.buffer
+     * @param {{ base64: string, hash: string }} param0
+     * @param {string} param0.base64
+     * @param {string} param0.hash
      * @returns {Promise<void>}
      */
-    fetch({ buffer }: {
-        buffer: Buffer;
+    fetch({ base64, hash }: {
+        base64: string;
+        hash: string;
     }): Promise<void>;
 }
 export default UserAvatar;

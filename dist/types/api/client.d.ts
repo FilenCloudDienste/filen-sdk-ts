@@ -17,6 +17,7 @@ export type BaseRequestParameters = {
     headers?: Record<string, string>;
     onUploadProgress?: ProgressCallback;
     onDownloadProgress?: ProgressCallback;
+    apiKey?: string;
 };
 export type GetRequestParameters = BaseRequestParameters & {
     method: "GET";
@@ -60,10 +61,12 @@ export declare class APIClient {
      */
     constructor(params: APIClientConfig);
     /**
-     * Build API request headers
-     * @date 1/31/2024 - 4:09:33 PM
+     * Build API request headers.
+     * @date 2/20/2024 - 7:31:29 AM
      *
      * @private
+     * @param {{apiKey?: string}} param0
+     * @param {string} param0.apiKey
      * @returns {Record<string, string>}
      */
     private buildHeaders;

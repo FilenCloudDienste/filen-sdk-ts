@@ -500,32 +500,21 @@ export class Decrypt {
 	}
 
 	/**
-	 * Decrypts a chat message with the given participant metadata (participant metadata includes the symmetric chat encryption key).
-	 * @date 2/6/2024 - 12:57:06 AM
+	 * Decrypt a chat message
+	 * @date 2/20/2024 - 5:34:42 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		message: string
-	 * 		metadata: string
-	 * 		privateKey: string
+	 * 		key: string
 	 * 	}} param0
 	 * @param {string} param0.message
-	 * @param {string} param0.metadata
-	 * @param {string} param0.privateKey
+	 * @param {string} param0.key
 	 * @returns {Promise<string>}
 	 */
-	public async chatMessage({
-		message,
-		metadata,
-		privateKey
-	}: {
-		message: string
-		metadata: string
-		privateKey: string
-	}): Promise<string> {
-		const keyDecrypted = await this.chatKey({ metadata, privateKey })
-		const messageDecrypted = await this.metadata({ metadata: message, key: keyDecrypted })
+	public async chatMessage({ message, key }: { message: string; key: string }): Promise<string> {
+		const messageDecrypted = await this.metadata({ metadata: message, key })
 		const parsedMessage = JSON.parse(messageDecrypted)
 
 		if (typeof parsedMessage.message !== "string") {
@@ -722,36 +711,25 @@ export class Decrypt {
 	}
 
 	/**
-	 * Decrypt a chat conversation name using the participants metadata and private key.
-	 * @date 2/6/2024 - 2:59:41 AM
+	 * Decrypt a chat conversation name.
+	 * @date 2/20/2024 - 5:31:41 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		name: string
-	 * 		metadata: string
-	 * 		privateKey: string
+	 * 		key: string
 	 * 	}} param0
 	 * @param {string} param0.name
-	 * @param {string} param0.metadata
-	 * @param {string} param0.privateKey
+	 * @param {string} param0.key
 	 * @returns {Promise<string>}
 	 */
-	public async chatConversationName({
-		name,
-		metadata,
-		privateKey
-	}: {
-		name: string
-		metadata: string
-		privateKey: string
-	}): Promise<string> {
+	public async chatConversationName({ name, key }: { name: string; key: string }): Promise<string> {
 		if (this.config.metadataCache && cache.chatConversationName.has(name)) {
 			return cache.chatConversationName.get(name)!
 		}
 
-		const keyDecrypted = await this.chatKey({ metadata, privateKey })
-		const nameDecrypted = await this.metadata({ metadata: name, key: keyDecrypted })
+		const nameDecrypted = await this.metadata({ metadata: name, key })
 		const parsed = JSON.parse(nameDecrypted)
 
 		if (typeof parsed.name !== "string") {

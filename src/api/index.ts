@@ -133,6 +133,11 @@ import V3FileDownloadChunkBuffer from "./v3/file/download/chunk/buffer"
 import V3FileDownloadChunkStream from "./v3/file/download/chunk/stream"
 import V3FileDownloadChunkLocal from "./v3/file/download/chunk/local"
 import V3FileUploadChunkBuffer from "./v3/file/upload/chunk/buffer"
+import V3NotesParticipantsAdd from "./v3/notes/participants/add"
+import V3UserKeyPairUpdate from "./v3/user/keyPair/update"
+import V3UserKeyPairSet from "./v3/user/keyPair/set"
+import V3UserKeyPairInfo from "./v3/user/keyPair/info"
+import V3UserMasterKeys from "./v3/user/masterKeys"
 
 export type APIConfig = {
 	apiKey: string
@@ -227,6 +232,12 @@ export class API {
 			lastActive: {
 				desktop: V3UserLastActiveDesktop
 			}
+			keyPair: {
+				update: V3UserKeyPairUpdate
+				set: V3UserKeyPairSet
+				info: V3UserKeyPairInfo
+			}
+			masterKeys: V3UserMasterKeys
 		}
 		shared: {
 			in: V3SharedIn
@@ -330,6 +341,7 @@ export class API {
 			historyRestore: V3NotesHistoryRestore
 			participantsRemove: V3NotesParticipantsRemove
 			participantsPermissions: V3NotesParticipantsPermissions
+			participantsAdd: V3NotesParticipantsAdd
 			tags: V3NotesTags
 			tagsCreate: V3NotesTagsCreate
 			tagsRename: V3NotesTagsRename
@@ -446,7 +458,13 @@ export class API {
 				profile: new V3UserProfile({ apiClient: this.apiClient }),
 				lastActive: {
 					desktop: new V3UserLastActiveDesktop({ apiClient: this.apiClient })
-				}
+				},
+				keyPair: {
+					update: new V3UserKeyPairUpdate({ apiClient: this.apiClient }),
+					set: new V3UserKeyPairSet({ apiClient: this.apiClient }),
+					info: new V3UserKeyPairInfo({ apiClient: this.apiClient })
+				},
+				masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient })
 			},
 			shared: {
 				in: new V3SharedIn({ apiClient: this.apiClient }),
@@ -550,6 +568,7 @@ export class API {
 				historyRestore: new V3NotesHistoryRestore({ apiClient: this.apiClient }),
 				participantsRemove: new V3NotesParticipantsRemove({ apiClient: this.apiClient }),
 				participantsPermissions: new V3NotesParticipantsPermissions({ apiClient: this.apiClient }),
+				participantsAdd: new V3NotesParticipantsAdd({ apiClient: this.apiClient }),
 				tags: new V3NotesTags({ apiClient: this.apiClient }),
 				tagsCreate: new V3NotesTagsCreate({ apiClient: this.apiClient }),
 				tagsRename: new V3NotesTagsRename({ apiClient: this.apiClient }),
@@ -689,7 +708,18 @@ export class API {
 							desktop: (...params: Parameters<typeof this._v3.user.lastActive.desktop.fetch>) =>
 								this._v3.user.lastActive.desktop.fetch(...params)
 						}
-					}
+					},
+					keyPair: () => {
+						return {
+							update: (...params: Parameters<typeof this._v3.user.keyPair.update.fetch>) =>
+								this._v3.user.keyPair.update.fetch(...params),
+							set: (...params: Parameters<typeof this._v3.user.keyPair.set.fetch>) =>
+								this._v3.user.keyPair.set.fetch(...params),
+							info: (...params: Parameters<typeof this._v3.user.keyPair.info.fetch>) =>
+								this._v3.user.keyPair.info.fetch(...params)
+						}
+					},
+					masterKeys: (...params: Parameters<typeof this._v3.user.masterKeys.fetch>) => this._v3.user.masterKeys.fetch(...params)
 				}
 			},
 			shared: () => {
@@ -860,6 +890,8 @@ export class API {
 						this._v3.notes.historyRestore.fetch(...params),
 					participantsRemove: (...params: Parameters<typeof this._v3.notes.participantsRemove.fetch>) =>
 						this._v3.notes.participantsRemove.fetch(...params),
+					participantsAdd: (...params: Parameters<typeof this._v3.notes.participantsAdd.fetch>) =>
+						this._v3.notes.participantsAdd.fetch(...params),
 					participantsPermissions: (...params: Parameters<typeof this._v3.notes.participantsPermissions.fetch>) =>
 						this._v3.notes.participantsPermissions.fetch(...params),
 					tags: (...params: Parameters<typeof this._v3.notes.tags.fetch>) => this._v3.notes.tags.fetch(...params),

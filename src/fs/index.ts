@@ -4,7 +4,7 @@ import type { FilenSDKConfig } from ".."
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
-import { BUFFER_SIZE } from "../constants"
+import { BUFFER_SIZE, environment } from "../constants"
 import type Cloud from "../cloud"
 import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
@@ -34,16 +34,11 @@ export type FSItemFileBase = {
 export type FSItem =
 	| (FSItemBase & {
 			type: "directory"
-			metadata: FolderMetadata & {
-				timestamp: number
-			}
+			metadata: FolderMetadata
 	  })
 	| (FSItemBase & {
 			type: "file"
-			metadata: FSItemFileBase &
-				FileMetadata & {
-					timestamp: number
-				}
+			metadata: FSItemFileBase & FileMetadata
 	  })
 
 export type FSItems = Record<string, FSItem>
@@ -106,8 +101,7 @@ export class FS {
 				uuid: this.sdkConfig.baseFolderUUID!,
 				type: "directory",
 				metadata: {
-					name: "Cloud Drive",
-					timestamp: 0
+					name: "Cloud Drive"
 				}
 			}
 		}
@@ -186,16 +180,17 @@ export class FS {
 	}
 
 	/**
-	 * List files and folders at path.
-	 * @date 2/9/2024 - 6:05:44 AM
+	 * List files and directories at path.
+	 * @date 2/20/2024 - 2:40:03 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ path: string }} param0
+	 * @param {{ path: string, recursive?: boolean }} param0
 	 * @param {string} param0.path
+	 * @param {boolean} [param0.recursive=false]
 	 * @returns {Promise<string[]>}
 	 */
-	public async readdir({ path }: { path: string }): Promise<string[]> {
+	public async readdir({ path, recursive = false }: { path: string; recursive?: boolean }): Promise<string[]> {
 		path = this.normalizePath({ path })
 
 		const uuid = await this.pathToItemUUID({ path })
@@ -212,8 +207,54 @@ export class FS {
 			}
 		}
 
-		const items = await this.cloud.listDirectory({ uuid })
 		const names: string[] = []
+
+		if (recursive) {
+			const tree = await this.cloud.getDirectoryTree({ uuid })
+
+			for (const entry in tree) {
+				const item = tree[entry]
+				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
+
+				if (item.parent === "base") {
+					continue
+				}
+
+				const itemPath = pathModule.posix.join(path, entryPath)
+
+				names.push(entryPath)
+
+				if (item.type === "directory") {
+					this._items[itemPath] = {
+						uuid: item.uuid,
+						type: "directory",
+						metadata: {
+							name: item.name
+						}
+					}
+				} else {
+					this._items[itemPath] = {
+						uuid: item.uuid,
+						type: "file",
+						metadata: {
+							name: item.name,
+							size: item.size,
+							mime: item.mime,
+							key: item.key,
+							lastModified: item.lastModified,
+							chunks: item.chunks,
+							region: item.region,
+							bucket: item.bucket,
+							version: item.version
+						}
+					}
+				}
+			}
+
+			return names
+		}
+
+		const items = await this.cloud.listDirectory({ uuid })
 
 		for (const item of items) {
 			const itemPath = pathModule.posix.join(path, item.name)
@@ -225,8 +266,7 @@ export class FS {
 					uuid: item.uuid,
 					type: "directory",
 					metadata: {
-						name: item.name,
-						timestamp: item.timestamp
+						name: item.name
 					}
 				}
 			} else {
@@ -239,7 +279,6 @@ export class FS {
 						mime: item.mime,
 						key: item.key,
 						lastModified: item.lastModified,
-						timestamp: item.timestamp,
 						chunks: item.chunks,
 						region: item.region,
 						bucket: item.bucket,
@@ -284,7 +323,7 @@ export class FS {
 			return {
 				size: item.metadata.size,
 				mtimeMs: item.metadata.lastModified,
-				birthtimeMs: item.metadata.creation ?? item.metadata.timestamp,
+				birthtimeMs: item.metadata.creation ?? 0,
 				isDirectory() {
 					return false
 				},
@@ -299,8 +338,8 @@ export class FS {
 
 		return {
 			size: 0,
-			mtimeMs: item.metadata.timestamp,
-			birthtimeMs: item.metadata.timestamp,
+			mtimeMs: 0,
+			birthtimeMs: 0,
 			isDirectory() {
 				return true
 			},
@@ -359,8 +398,7 @@ export class FS {
 				uuid,
 				type: "directory",
 				metadata: {
-					name: basename,
-					timestamp: Date.now()
+					name: basename
 				}
 			}
 
@@ -394,8 +432,7 @@ export class FS {
 					uuid,
 					type: "directory",
 					metadata: {
-						name: partBasename,
-						timestamp: Date.now()
+						name: partBasename
 					}
 				}
 			}
@@ -407,7 +444,7 @@ export class FS {
 	}
 
 	/**
-	 * Rename or move a file/folder. Recursively creates intermediate directories if needed.
+	 * Rename or move a file/directory. Recursively creates intermediate directories if needed.
 	 * @date 2/14/2024 - 1:39:32 AM
 	 *
 	 * @public
@@ -523,10 +560,10 @@ export class FS {
 	}
 
 	/**
-	 * Deletes file/folder at path (Sends it to the trash).
+	 * Deletes file/directoy at path (Sends it to the trash).
 	 * @date 2/14/2024 - 2:16:42 AM
 	 *
-	 * @public
+	 * @private
 	 * @async
 	 * @param {{ path: string }} param0
 	 * @param {string} param0.path
@@ -557,7 +594,7 @@ export class FS {
 	}
 
 	/**
-	 * Deletes file/folder at path (Sends it to the trash).
+	 * Deletes file/directory at path (Sends it to the trash).
 	 * @date 2/14/2024 - 2:55:28 AM
 	 *
 	 * @public
@@ -585,7 +622,7 @@ export class FS {
 	}
 
 	/**
-	 * Deletes folder at path (Sends it to the trash).
+	 * Deletes directory at path (Sends it to the trash).
 	 * @date 2/14/2024 - 2:53:48 AM
 	 *
 	 * @public
@@ -786,6 +823,10 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 	}): Promise<void> {
+		if (environment !== "node") {
+			throw new Error(`fs.writeFile is not implemented for a ${environment} environment`)
+		}
+
 		path = this.normalizePath({ path })
 
 		const parentPath = pathModule.posix.dirname(path)
@@ -863,6 +904,10 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 	}): Promise<void> {
+		if (environment !== "node") {
+			throw new Error(`fs.download is not implemented for a ${environment} environment`)
+		}
+
 		path = this.normalizePath({ path })
 		destination = normalizePath(destination)
 
@@ -920,6 +965,10 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 	}): Promise<void> {
+		if (environment !== "node") {
+			throw new Error(`fs.upload is not implemented for a ${environment} environment`)
+		}
+
 		path = this.normalizePath({ path })
 		source = normalizePath(source)
 
@@ -947,7 +996,7 @@ export class FS {
 	/**
 	 * Copy a file or directory structure. Recursively creates intermediate directories if needed.
 	 * Warning: Can be really inefficient when copying large directory structures.
-	 * All files and folders need to be downloaded first and then reuploaded due to our end to end encryption.
+	 * All files need to be downloaded first and then reuploaded due to our end to end encryption.
 	 * Plain copying unfortunately does not work. Only available in a Node.JS environment.
 	 * @date 2/14/2024 - 5:06:04 AM
 	 *
@@ -971,6 +1020,10 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 	}): Promise<void> {
+		if (environment !== "node") {
+			throw new Error(`fs.cp is not implemented for a ${environment} environment`)
+		}
+
 		from = this.normalizePath({ path: from })
 		to = this.normalizePath({ path: to })
 
