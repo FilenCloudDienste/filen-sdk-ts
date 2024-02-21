@@ -95,8 +95,8 @@ export class FilenSDK {
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
 		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
-		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
-		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._contacts = new Contacts({ sdkConfig: params, api: this._api })
 		this._user = new User({ sdkConfig: params, api: this._api, crypto: this._crypto })
 	}
@@ -141,8 +141,8 @@ export class FilenSDK {
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
 		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._fs = new FS({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
-		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
-		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud })
+		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._contacts = new Contacts({ sdkConfig: params, api: this._api })
 		this._user = new User({ sdkConfig: params, api: this._api, crypto: this._crypto })
 	}

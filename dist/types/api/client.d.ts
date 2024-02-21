@@ -51,6 +51,7 @@ export declare const APIClientDefaults: {
  */
 export declare class APIClient {
     private readonly config;
+    private readonly _semaphores;
     /**
      * Creates an instance of APIClient.
      * @date 1/31/2024 - 4:09:17 PM
@@ -62,11 +63,10 @@ export declare class APIClient {
     constructor(params: APIClientConfig);
     /**
      * Build API request headers.
-     * @date 2/20/2024 - 7:31:29 AM
+     * @date 2/21/2024 - 8:42:27 AM
      *
      * @private
-     * @param {{apiKey?: string}} param0
-     * @param {string} param0.apiKey
+     * @param {?{ apiKey?: string }} [params]
      * @returns {Record<string, string>}
      */
     private buildHeaders;

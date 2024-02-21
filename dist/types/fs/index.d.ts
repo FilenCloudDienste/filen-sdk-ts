@@ -62,9 +62,6 @@ export declare class FS {
     private readonly sdkConfig;
     private readonly cloud;
     private _items;
-    private _fileDescriptorsPaths;
-    private _fileDescriptorsIds;
-    private _nextFileDescriptor;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM
@@ -208,32 +205,48 @@ export declare class FS {
      */
     rmdir(...params: Parameters<typeof this.unlink>): ReturnType<typeof this.unlink>;
     /**
-     * Returns a file descriptor ID used for reading and writing.
-     * @date 2/14/2024 - 4:45:55 AM
+     * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
+     * @date 2/20/2024 - 9:44:16 PM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{
+     * 		path: string
+     * 		offset: number
+     * 		length: number
+     * 		position: number
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress?: ProgressCallback
+     * 	}} param0
      * @param {string} param0.path
-     * @returns {Promise<number>}
+     * @param {number} param0.offset
+     * @param {number} param0.length
+     * @param {number} param0.position
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
+     * @returns {Promise<Buffer>}
      */
-    open({ path, mode }: {
+    read({ path, offset, length, position, abortSignal, pauseSignal, onProgress }: {
         path: string;
-        mode?: "r" | "w" | "rw";
-    }): Promise<number>;
+        offset: number;
+        length: number;
+        position: number;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress?: ProgressCallback;
+    }): Promise<Buffer>;
     /**
-     * Close a file descriptor.
-     * @date 2/14/2024 - 4:58:38 AM
+     * Alias of writeFile.
+     * @date 2/20/2024 - 9:45:40 PM
      *
      * @public
      * @async
-     * @param {{fd: number}} param0
-     * @param {number} param0.fd
-     * @returns {Promise<void>}
+     * @param {...Parameters<typeof this.writeFile>} params
+     * @returns {ReturnType<typeof this.writeFile>}
      */
-    close({ fd }: {
-        fd: number;
-    }): Promise<void>;
+    write(...params: Parameters<typeof this.writeFile>): ReturnType<typeof this.writeFile>;
     /**
      * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
      * @date 2/16/2024 - 5:32:31 AM

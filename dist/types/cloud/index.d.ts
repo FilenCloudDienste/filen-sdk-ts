@@ -39,6 +39,7 @@ export type CloudItemBaseShared = Omit<CloudItemBase, "favorited">;
 export type CloudItemFileShared = Omit<CloudItemFile, "rm">;
 export type CloudItemDirectory = {
     color: DirColor | null;
+    size: number;
 };
 export type CloudItem = ({
     type: "directory";
@@ -650,6 +651,40 @@ export declare class Cloud {
      * @returns {Promise<void>}
      */
     private checkIfItemIsSharedForRename;
+    /**
+     * Fetch directory size in bytes.
+     * @date 2/20/2024 - 9:21:16 PM
+     *
+     * @public
+     * @async
+     * @param {{uuid: string, sharerId?: number, receiverId?: number, trash?: boolean}} param0
+     * @param {string} param0.uuid
+     * @param {number} param0.sharerId
+     * @param {number} param0.receiverId
+     * @param {boolean} param0.trash
+     * @returns {Promise<number>}
+     */
+    directorySize({ uuid, sharerId, receiverId, trash }: {
+        uuid: string;
+        sharerId?: number;
+        receiverId?: number;
+        trash?: boolean;
+    }): Promise<number>;
+    /**
+     * Fetch size of a directory inside a public link in bytes.
+     * @date 2/20/2024 - 9:21:53 PM
+     *
+     * @public
+     * @async
+     * @param {{uuid: string, linkUUID: string}} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.linkUUID
+     * @returns {Promise<number>}
+     */
+    directorySizePublicLink({ uuid, linkUUID }: {
+        uuid: string;
+        linkUUID: string;
+    }): Promise<number>;
     /**
      * Download a file to a local path. Only works in a Node.JS environment.
      * @date 2/15/2024 - 7:39:34 AM

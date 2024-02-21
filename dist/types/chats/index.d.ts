@@ -1,7 +1,6 @@
 import type API from "../api";
 import type Crypto from "../crypto";
 import type { FilenSDKConfig } from "..";
-import type Cloud from "../cloud";
 import type { ChatConversation } from "../api/v3/chat/conversations";
 import type { Contact } from "../api/v3/contacts";
 import { ChatTypingType } from "../api/v3/chat/typing";
@@ -12,7 +11,6 @@ export type ChatsConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
     crypto: Crypto;
-    cloud: Cloud;
 };
 /**
  * Chats
@@ -26,8 +24,8 @@ export declare class Chats {
     private readonly api;
     private readonly crypto;
     private readonly sdkConfig;
-    private readonly cloud;
     private readonly _chatKeyCache;
+    private readonly _semaphores;
     /**
      * Creates an instance of Chats.
      * @date 2/9/2024 - 5:54:11 AM

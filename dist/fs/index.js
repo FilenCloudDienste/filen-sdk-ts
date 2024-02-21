@@ -41,9 +41,6 @@ class FS {
                 }
             }
         };
-        this._fileDescriptorsPaths = {};
-        this._fileDescriptorsIds = {};
-        this._nextFileDescriptor = 0;
     }
     /**
      * Normalizes a path to be used with FS.
@@ -488,78 +485,90 @@ class FS {
         return await this._unlink({ path: params[0].path, type: "directory" });
     }
     /**
-     * Returns a file descriptor ID used for reading and writing.
-     * @date 2/14/2024 - 4:45:55 AM
+     * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
+     * @date 2/20/2024 - 9:44:16 PM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{
+     * 		path: string
+     * 		offset: number
+     * 		length: number
+     * 		position: number
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress?: ProgressCallback
+     * 	}} param0
      * @param {string} param0.path
-     * @returns {Promise<number>}
+     * @param {number} param0.offset
+     * @param {number} param0.length
+     * @param {number} param0.position
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
+     * @returns {Promise<Buffer>}
      */
-    async open({ path, mode = "r" }) {
+    async read({ path, offset, length, position, abortSignal, pauseSignal, onProgress }) {
         path = this.normalizePath({ path });
-        if (mode === "r" || mode === "rw") {
-            const uuid = await this.pathToItemUUID({ path });
-            if (!uuid || !this._items[path]) {
-                throw new errors_1.ENOENT({ path });
+        const uuid = await this.pathToItemUUID({ path });
+        const item = this._items[path];
+        if (!uuid || !item || item.type === "directory") {
+            throw new errors_1.ENOENT({ path });
+        }
+        const chunksStart = Math.floor(position / constants_1.UPLOAD_CHUNK_SIZE);
+        const chunksEnd = Math.ceil((position + length) / constants_1.UPLOAD_CHUNK_SIZE) - 1;
+        if (chunksStart <= 0 || chunksStart > item.metadata.chunks || chunksEnd <= 0 || chunksEnd > item.metadata.chunks) {
+            throw new Error("Invalid position or length.");
+        }
+        const stream = await this.cloud.downloadFileToReadableStream({
+            uuid: uuid,
+            bucket: item.metadata.bucket,
+            region: item.metadata.region,
+            chunks: item.metadata.chunks,
+            version: item.metadata.version,
+            key: item.metadata.key,
+            abortSignal,
+            pauseSignal,
+            onProgress,
+            chunksStart,
+            chunksEnd
+        });
+        let buffer = Buffer.from([]);
+        const reader = stream.getReader();
+        let doneReading = false;
+        let bytesRead = 0;
+        while (!doneReading) {
+            const { done, value } = await reader.read();
+            if (done) {
+                doneReading = true;
+                break;
+            }
+            if (value instanceof Uint8Array && value.byteLength > 0) {
+                const chunkOffset = bytesRead - position;
+                const start = Math.max(0, position - bytesRead);
+                const end = Math.min(start + length, value.byteLength);
+                if (chunkOffset < length && end > start) {
+                    const relevantPart = value.subarray(start, end);
+                    buffer = Buffer.concat([buffer, relevantPart]);
+                    length -= relevantPart.byteLength;
+                }
+                bytesRead += value.byteLength;
             }
         }
-        if (this._fileDescriptorsPaths[path]) {
-            return this._fileDescriptorsPaths[path];
-        }
-        const nextFd = this._nextFileDescriptor++;
-        this._fileDescriptorsPaths[path] = nextFd;
-        this._fileDescriptorsIds[nextFd] = path;
-        return this._fileDescriptorsPaths[path];
+        return buffer.subarray(offset, offset + Math.min(buffer.length, length));
     }
     /**
-     * Close a file descriptor.
-     * @date 2/14/2024 - 4:58:38 AM
+     * Alias of writeFile.
+     * @date 2/20/2024 - 9:45:40 PM
      *
      * @public
      * @async
-     * @param {{fd: number}} param0
-     * @param {number} param0.fd
-     * @returns {Promise<void>}
+     * @param {...Parameters<typeof this.writeFile>} params
+     * @returns {ReturnType<typeof this.writeFile>}
      */
-    async close({ fd }) {
-        const path = this._fileDescriptorsIds[fd];
-        if (path) {
-            delete this._fileDescriptorsPaths[path];
-        }
-        delete this._fileDescriptorsIds[fd];
+    async write(...params) {
+        return await this.writeFile(...params);
     }
-    /*public async read({
-        fd,
-        buffer,
-        offset,
-        length,
-        position
-    }: {
-        fd: number
-        buffer: Buffer
-        offset: number
-        length: number
-        position: number
-    }): Promise<Buffer> {
-        // @TODO
-    }*/
-    /*public async write({
-        fd,
-        buffer,
-        offset,
-        length,
-        position
-    }: {
-        fd: number
-        buffer: Buffer
-        offset?: number
-        length?: number
-        position?: number
-    }): Promise<void> {
-        // @TODO
-    }*/
     /**
      * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
      * @date 2/16/2024 - 5:32:31 AM

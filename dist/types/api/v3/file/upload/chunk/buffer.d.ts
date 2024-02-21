@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import type { APIClient, UploadChunkResponse } from "../../../../client";
+import type { ProgressCallback } from "../../../../../types";
 /**
  * FileUploadChunkBuffer
  * @date 2/15/2024 - 4:38:09 AM
@@ -24,20 +25,21 @@ export declare class FileUploadChunkBuffer {
     });
     /**
      * Upload a file chunk buffer.
-     * @date 2/16/2024 - 4:57:23 AM
+     * @date 2/20/2024 - 9:14:45 PM
      *
      * @public
      * @async
      * @param {{
      * 		uuid: string
-     * 		index: number,
-     *         parent: string,
-     *         uploadKey: string,
-     *         abortSignal?: AbortSignal,
-     *         maxRetries?: number,
-     *         retryTimeout?: number,
-     *         timeout?: number
-     *         buffer: Buffer
+     * 		index: number
+     * 		parent: string
+     * 		uploadKey: string
+     * 		abortSignal?: AbortSignal
+     * 		maxRetries?: number
+     * 		retryTimeout?: number
+     * 		timeout?: number
+     * 		buffer: Buffer
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.uuid
      * @param {number} param0.index
@@ -48,9 +50,10 @@ export declare class FileUploadChunkBuffer {
      * @param {number} param0.retryTimeout
      * @param {number} param0.timeout
      * @param {Buffer} param0.buffer
+     * @param {ProgressCallback} param0.onProgress
      * @returns {Promise<UploadChunkResponse>}
      */
-    fetch({ uuid, index, parent, uploadKey, abortSignal, maxRetries, retryTimeout, timeout, buffer }: {
+    fetch({ uuid, index, parent, uploadKey, abortSignal, maxRetries, retryTimeout, timeout, buffer, onProgress }: {
         uuid: string;
         index: number;
         parent: string;
@@ -60,6 +63,7 @@ export declare class FileUploadChunkBuffer {
         retryTimeout?: number;
         timeout?: number;
         buffer: Buffer;
+        onProgress?: ProgressCallback;
     }): Promise<UploadChunkResponse>;
 }
 export default FileUploadChunkBuffer;

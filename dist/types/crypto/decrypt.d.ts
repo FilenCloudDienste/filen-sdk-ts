@@ -12,6 +12,7 @@ import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../typ
 export declare class Decrypt {
     private readonly config;
     private readonly textDecoder;
+    private readonly _semaphores;
     /**
      * Creates an instance of Decrypt.
      * @date 1/31/2024 - 3:59:10 PM

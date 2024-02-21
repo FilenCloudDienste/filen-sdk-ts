@@ -1,14 +1,12 @@
 import type API from "../api";
 import type Crypto from "../crypto";
 import type { FilenSDKConfig } from "..";
-import type Cloud from "../cloud";
 import type { NoteType, Note, NoteTag } from "../api/v3/notes";
 import type { NoteHistory } from "../api/v3/notes/history";
 export type NotesConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
     crypto: Crypto;
-    cloud: Cloud;
 };
 /**
  * Notes
@@ -22,8 +20,8 @@ export declare class Notes {
     private readonly api;
     private readonly crypto;
     private readonly sdkConfig;
-    private readonly cloud;
     private readonly _noteKeyCache;
+    private readonly _semaphores;
     /**
      * Creates an instance of Notes.
      * @date 2/9/2024 - 5:54:11 AM

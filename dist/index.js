@@ -31,11 +31,11 @@ const user_1 = __importDefault(require("./user"));
 class FilenSDK {
     /**
      * Creates an instance of FilenSDK.
-     * @date 1/31/2024 - 4:04:52 PM
+     * @date 2/21/2024 - 8:58:43 AM
      *
      * @constructor
      * @public
-     * @param {FilenSDKConfig} params
+     * @param {?FilenSDKConfig} [params]
      */
     constructor(params) {
         this.utils = Object.assign(Object.assign({}, utils_1.default), { crypto: utils_2.default, streams: {
@@ -43,6 +43,9 @@ class FilenSDK {
                 decodeBase64: base64_1.streamDecodeBase64,
                 encodeBase64: base64_1.streamEncodeBase64
             } });
+        if (!params) {
+            params = {};
+        }
         this.config = params;
         this._crypto =
             params.masterKeys && params.publicKey && params.privateKey
@@ -73,8 +76,8 @@ class FilenSDK {
             : new api_1.default({ apiKey: "anonymous", crypto: this._crypto });
         this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
         this._fs = new fs_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud });
-        this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud });
-        this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud });
+        this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
+        this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
         this._contacts = new contacts_1.default({ sdkConfig: params, api: this._api });
         this._user = new user_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
     }
@@ -116,8 +119,8 @@ class FilenSDK {
             : new api_1.default({ apiKey: "anonymous", crypto: this._crypto });
         this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
         this._fs = new fs_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud });
-        this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud });
-        this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, cloud: this._cloud });
+        this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
+        this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
         this._contacts = new contacts_1.default({ sdkConfig: params, api: this._api });
         this._user = new user_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
     }
@@ -216,7 +219,7 @@ class FilenSDK {
         const encryptedMasterKeys = await this._crypto
             .encrypt()
             .metadata({ metadata: masterKeys.join("|"), key: masterKeys[masterKeys.length - 1] });
-        const masterKeysResponse = await this._api.v3().user().masterKeys({ encryptedMasterKeys });
+        const masterKeysResponse = await this._api.v3().user().masterKeys({ encryptedMasterKeys, apiKey });
         let newMasterKeys = [...masterKeys];
         for (const masterKey of masterKeys) {
             try {
@@ -412,4 +415,5 @@ class FilenSDK {
 exports.FilenSDK = FilenSDK;
 exports.default = FilenSDK;
 module.exports = FilenSDK;
+exports.default = FilenSDK;
 //# sourceMappingURL=index.js.map

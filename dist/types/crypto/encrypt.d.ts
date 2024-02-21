@@ -11,6 +11,7 @@ import type { CryptoConfig } from ".";
 export declare class Encrypt {
     private readonly config;
     private readonly textEncoder;
+    private readonly _semaphores;
     /**
      * Creates an instance of Encrypt.
      * @date 1/31/2024 - 3:59:21 PM

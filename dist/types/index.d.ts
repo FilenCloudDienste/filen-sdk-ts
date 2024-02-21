@@ -32,7 +32,7 @@ export type FilenSDKConfig = {
  * @typedef {FilenSDK}
  */
 export declare class FilenSDK {
-    private config;
+    config: FilenSDKConfig;
     private _api;
     private _crypto;
     private _fs;
@@ -43,13 +43,13 @@ export declare class FilenSDK {
     private _user;
     /**
      * Creates an instance of FilenSDK.
-     * @date 1/31/2024 - 4:04:52 PM
+     * @date 2/21/2024 - 8:58:43 AM
      *
      * @constructor
      * @public
-     * @param {FilenSDKConfig} params
+     * @param {?FilenSDKConfig} [params]
      */
-    constructor(params: FilenSDKConfig);
+    constructor(params?: FilenSDKConfig);
     /**
      * Initialize the SDK again (after logging in for example).
      * @date 2/1/2024 - 3:23:58 PM
@@ -215,13 +215,6 @@ export declare class FilenSDK {
             encodeBase64: typeof streamEncodeBase64;
         };
         sleep: typeof import("./utils").sleep;
-        /**
-         * Check if the SDK user is authenticated.
-         * @date 1/31/2024 - 4:08:17 PM
-         *
-         * @private
-         * @returns {boolean}
-         */
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
         normalizePath: typeof import("./utils").normalizePath;
         uuidv4: typeof import("./utils").uuidv4;

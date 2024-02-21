@@ -13,7 +13,6 @@ import urlModule from "url"
 import progressStream from "progress-stream"
 
 const pipelineAsync = promisify(pipeline)
-const requestSemaphore = new Semaphore(1024)
 
 export type APIClientConfig = {
 	apiKey: string
@@ -99,6 +98,10 @@ export class APIClient {
 	private readonly config: APIClientConfig = {
 		apiKey: ""
 	} as const
+
+	private readonly _semaphores = {
+		request: new Semaphore(128)
+	}
 
 	/**
 	 * Creates an instance of APIClient.
@@ -493,12 +496,12 @@ export class APIClient {
 			}
 		}
 
-		await requestSemaphore.acquire()
+		await this._semaphores.request.acquire()
 
 		try {
 			return await send()
 		} finally {
-			requestSemaphore.release()
+			this._semaphores.request.release()
 		}
 	}
 

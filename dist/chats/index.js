@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Chats = void 0;
 const utils_1 = require("../utils");
+const semaphore_1 = require("../semaphore");
 /**
  * Chats
  * @date 2/1/2024 - 2:44:47 AM
@@ -21,10 +22,12 @@ class Chats {
      */
     constructor(params) {
         this._chatKeyCache = new Map();
+        this._semaphores = {
+            list: new semaphore_1.Semaphore(32)
+        };
         this.api = params.api;
         this.crypto = params.crypto;
         this.sdkConfig = params.sdkConfig;
-        this.cloud = params.cloud;
     }
     /**
      * Get the encryption key of a chat.
@@ -69,31 +72,38 @@ class Chats {
         const promises = [];
         for (const convo of convos) {
             promises.push(new Promise((resolve, reject) => {
-                const metadata = convo.participants.filter(p => p.userId === this.sdkConfig.userId);
-                if (metadata.length === 0) {
-                    reject(new Error("Conversation metadata not found."));
-                    return;
-                }
-                const keyPromise = this._chatKeyCache.has(convo.uuid)
-                    ? Promise.resolve(this._chatKeyCache.get(convo.uuid))
-                    : this.crypto.decrypt().chatKey({ metadata: metadata[0].metadata, privateKey: this.sdkConfig.privateKey });
-                keyPromise
-                    .then(decryptedChatKey => {
-                    this._chatKeyCache.set(convo.uuid, decryptedChatKey);
-                    const namePromise = typeof convo.name === "string" && convo.name.length > 0
-                        ? this.crypto.decrypt().chatConversationName({ name: convo.name, key: decryptedChatKey })
-                        : Promise.resolve("");
-                    const messagePromise = typeof convo.lastMessage === "string" && convo.lastMessage.length > 0
-                        ? this.crypto.decrypt().chatMessage({ message: convo.lastMessage, key: decryptedChatKey })
-                        : Promise.resolve("");
-                    Promise.all([namePromise, messagePromise])
-                        .then(([nameDecrypted, lastMessageDecrypted]) => {
-                        chatConversations.push(Object.assign(Object.assign({}, convo), { lastMessage: lastMessageDecrypted, name: nameDecrypted }));
-                        resolve();
+                this._semaphores.list
+                    .acquire()
+                    .then(() => {
+                    const metadata = convo.participants.filter(p => p.userId === this.sdkConfig.userId);
+                    if (metadata.length === 0) {
+                        reject(new Error("Conversation metadata not found."));
+                        return;
+                    }
+                    const keyPromise = this._chatKeyCache.has(convo.uuid)
+                        ? Promise.resolve(this._chatKeyCache.get(convo.uuid))
+                        : this.crypto.decrypt().chatKey({ metadata: metadata[0].metadata, privateKey: this.sdkConfig.privateKey });
+                    keyPromise
+                        .then(decryptedChatKey => {
+                        this._chatKeyCache.set(convo.uuid, decryptedChatKey);
+                        const namePromise = typeof convo.name === "string" && convo.name.length > 0
+                            ? this.crypto.decrypt().chatConversationName({ name: convo.name, key: decryptedChatKey })
+                            : Promise.resolve("");
+                        const messagePromise = typeof convo.lastMessage === "string" && convo.lastMessage.length > 0
+                            ? this.crypto.decrypt().chatMessage({ message: convo.lastMessage, key: decryptedChatKey })
+                            : Promise.resolve("");
+                        Promise.all([namePromise, messagePromise])
+                            .then(([nameDecrypted, lastMessageDecrypted]) => {
+                            chatConversations.push(Object.assign(Object.assign({}, convo), { lastMessage: lastMessageDecrypted, name: nameDecrypted }));
+                            resolve();
+                        })
+                            .catch(reject);
                     })
                         .catch(reject);
                 })
                     .catch(reject);
+            }).finally(() => {
+                this._semaphores.list.release();
             }));
         }
         await (0, utils_1.promiseAllChunked)(promises);
@@ -274,15 +284,22 @@ class Chats {
         const promises = [];
         for (const message of _messages) {
             promises.push(new Promise((resolve, reject) => {
-                const replyToPromise = message.replyTo.uuid.length > 0 && message.replyTo.message.length > 0
-                    ? this.crypto.decrypt().chatMessage({ message: message.replyTo.message, key })
-                    : Promise.resolve("");
-                Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
-                    .then(([messageDecrypted, replyToDecrypted]) => {
-                    chatMessages.push(Object.assign(Object.assign({}, message), { message: messageDecrypted, replyTo: Object.assign(Object.assign({}, message.replyTo), { message: replyToDecrypted }) }));
-                    resolve();
+                this._semaphores.list
+                    .acquire()
+                    .then(() => {
+                    const replyToPromise = message.replyTo.uuid.length > 0 && message.replyTo.message.length > 0
+                        ? this.crypto.decrypt().chatMessage({ message: message.replyTo.message, key })
+                        : Promise.resolve("");
+                    Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
+                        .then(([messageDecrypted, replyToDecrypted]) => {
+                        chatMessages.push(Object.assign(Object.assign({}, message), { message: messageDecrypted, replyTo: Object.assign(Object.assign({}, message.replyTo), { message: replyToDecrypted }) }));
+                        resolve();
+                    })
+                        .catch(reject);
                 })
                     .catch(reject);
+            }).finally(() => {
+                this._semaphores.list.release();
             }));
         }
         await (0, utils_1.promiseAllChunked)(promises);

@@ -17,7 +17,6 @@ const https_1 = __importDefault(require("https"));
 const url_1 = __importDefault(require("url"));
 const progress_stream_1 = __importDefault(require("progress-stream"));
 const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
-const requestSemaphore = new semaphore_1.Semaphore(1024);
 exports.APIClientDefaults = {
     gatewayURLs: [
         "https://gateway.filen.io",
@@ -76,23 +75,22 @@ class APIClient {
         this.config = {
             apiKey: ""
         };
+        this._semaphores = {
+            request: new semaphore_1.Semaphore(128)
+        };
         this.config = params;
-        if (this.config.apiKey.length === 0) {
-            throw new Error("Invalid apiKey, please call login() first");
-        }
     }
     /**
      * Build API request headers.
-     * @date 2/20/2024 - 7:31:29 AM
+     * @date 2/21/2024 - 8:42:27 AM
      *
      * @private
-     * @param {{apiKey?: string}} param0
-     * @param {string} param0.apiKey
+     * @param {?{ apiKey?: string }} [params]
      * @returns {Record<string, string>}
      */
-    buildHeaders({ apiKey }) {
+    buildHeaders(params) {
         return {
-            Authorization: "Bearer " + (apiKey ? apiKey : this.config.apiKey)
+            Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey)
         };
     }
     /**
@@ -106,6 +104,9 @@ class APIClient {
      */
     async post(params) {
         let headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey });
+        if (params.apiKey && !headers["apiKey"]) {
+            headers["apiKey"] = params.apiKey;
+        }
         const url = params.url ? params.url : exports.APIClientDefaults.gatewayURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.gatewayURLs.length - 1)];
         const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer;
         if (!params.headers && !postDataIsBuffer) {
@@ -154,11 +155,14 @@ class APIClient {
                         });
                         response.on("end", () => {
                             try {
-                                const json = JSON.parse(Buffer.concat(chunks).toString());
                                 resolve({
                                     status: 200,
                                     statusText: "",
-                                    data: json,
+                                    data: !params.responseType
+                                        ? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+                                        : params.responseType === "json"
+                                            ? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+                                            : Buffer.concat(chunks),
                                     headers,
                                     config: null
                                 });
@@ -233,6 +237,9 @@ class APIClient {
      */
     async get(params) {
         const headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey });
+        if (params.apiKey && !headers["apiKey"]) {
+            headers["apiKey"] = params.apiKey;
+        }
         const url = params.url ? params.url : exports.APIClientDefaults.gatewayURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.gatewayURLs.length - 1)];
         let lastBytesDownloaded = 0;
         if (constants_1.environment === "node") {
@@ -304,7 +311,11 @@ class APIClient {
                                 resolve({
                                     status: 200,
                                     statusText: "",
-                                    data: Buffer.concat(chunks),
+                                    data: !params.responseType
+                                        ? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+                                        : params.responseType === "json"
+                                            ? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+                                            : Buffer.concat(chunks),
                                     headers,
                                     config: null
                                 });
@@ -387,12 +398,12 @@ class APIClient {
                 return await send();
             }
         };
-        await requestSemaphore.acquire();
+        await this._semaphores.request.acquire();
         try {
             return await send();
         }
         finally {
-            requestSemaphore.release();
+            this._semaphores.request.release();
         }
     }
     /**

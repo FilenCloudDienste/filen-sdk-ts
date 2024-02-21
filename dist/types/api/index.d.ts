@@ -429,6 +429,7 @@ export declare class API {
                         retryTimeout?: number | undefined;
                         timeout?: number | undefined;
                         buffer: Buffer;
+                        onProgress?: import("../types").ProgressCallback | undefined;
                     }) => Promise<import("./client").UploadChunkResponse>;
                 };
             };
