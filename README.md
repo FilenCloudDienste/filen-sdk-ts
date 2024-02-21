@@ -16,7 +16,7 @@
 
 # Attention
 
-The SDK is still a work in progress. DO NOT USE IT IN PRODUCTION YET. Class names, function names, types, definitions, constants etc. are subject to change until we release a full tested and stable version.
+The SDK is still a work in progress. DO NOT USE IT IN PRODUCTION YET. Class names, function names, types, definitions, constants etc. are subject to change until we release a fully tested and stable version.
 
 ### Installation
 
