@@ -40,7 +40,7 @@ export type FilenSDKConfig = {
  * @typedef {FilenSDK}
  */
 export class FilenSDK {
-	private config: FilenSDKConfig
+	public config: FilenSDKConfig
 	private _api: API
 	private _crypto: Crypto
 	private _fs: FS
@@ -52,13 +52,17 @@ export class FilenSDK {
 
 	/**
 	 * Creates an instance of FilenSDK.
-	 * @date 1/31/2024 - 4:04:52 PM
+	 * @date 2/21/2024 - 8:58:43 AM
 	 *
 	 * @constructor
 	 * @public
-	 * @param {FilenSDKConfig} params
+	 * @param {?FilenSDKConfig} [params]
 	 */
-	public constructor(params: FilenSDKConfig) {
+	public constructor(params?: FilenSDKConfig) {
+		if (!params) {
+			params = {}
+		}
+
 		this.config = params
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
@@ -288,7 +292,7 @@ export class FilenSDK {
 		const encryptedMasterKeys = await this._crypto
 			.encrypt()
 			.metadata({ metadata: masterKeys.join("|"), key: masterKeys[masterKeys.length - 1] })
-		const masterKeysResponse = await this._api.v3().user().masterKeys({ encryptedMasterKeys })
+		const masterKeysResponse = await this._api.v3().user().masterKeys({ encryptedMasterKeys, apiKey })
 		let newMasterKeys: string[] = [...masterKeys]
 
 		for (const masterKey of masterKeys) {
@@ -550,3 +554,4 @@ export class FilenSDK {
 export default FilenSDK
 
 module.exports = FilenSDK
+exports.default = FilenSDK

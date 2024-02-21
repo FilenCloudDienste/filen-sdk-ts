@@ -4,7 +4,7 @@ import type { FilenSDKConfig } from ".."
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
-import { BUFFER_SIZE, environment } from "../constants"
+import { BUFFER_SIZE, environment, UPLOAD_CHUNK_SIZE } from "../constants"
 import type Cloud from "../cloud"
 import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
@@ -78,9 +78,6 @@ export class FS {
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly cloud: Cloud
 	private _items: FSItems
-	private _fileDescriptorsPaths: Record<string, number>
-	private _fileDescriptorsIds: Record<number, string>
-	private _nextFileDescriptor: number
 
 	/**
 	 * Creates an instance of FS.
@@ -105,10 +102,6 @@ export class FS {
 				}
 			}
 		}
-
-		this._fileDescriptorsPaths = {}
-		this._fileDescriptorsIds = {}
-		this._nextFileDescriptor = 0
 	}
 
 	/**
@@ -635,89 +628,121 @@ export class FS {
 	}
 
 	/**
-	 * Returns a file descriptor ID used for reading and writing.
-	 * @date 2/14/2024 - 4:45:55 AM
+	 * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
+	 * @date 2/20/2024 - 9:44:16 PM
 	 *
 	 * @public
 	 * @async
-	 * @param {{path: string}} param0
+	 * @param {{
+	 * 		path: string
+	 * 		offset: number
+	 * 		length: number
+	 * 		position: number
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 	}} param0
 	 * @param {string} param0.path
-	 * @returns {Promise<number>}
+	 * @param {number} param0.offset
+	 * @param {number} param0.length
+	 * @param {number} param0.position
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {ProgressCallback} param0.onProgress
+	 * @returns {Promise<Buffer>}
 	 */
-	public async open({ path, mode = "r" }: { path: string; mode?: "r" | "w" | "rw" }): Promise<number> {
-		path = this.normalizePath({ path })
-
-		if (mode === "r" || mode === "rw") {
-			const uuid = await this.pathToItemUUID({ path })
-
-			if (!uuid || !this._items[path]) {
-				throw new ENOENT({ path })
-			}
-		}
-
-		if (this._fileDescriptorsPaths[path]) {
-			return this._fileDescriptorsPaths[path]
-		}
-
-		const nextFd = this._nextFileDescriptor++
-
-		this._fileDescriptorsPaths[path] = nextFd
-		this._fileDescriptorsIds[nextFd] = path
-
-		return this._fileDescriptorsPaths[path]
-	}
-
-	/**
-	 * Close a file descriptor.
-	 * @date 2/14/2024 - 4:58:38 AM
-	 *
-	 * @public
-	 * @async
-	 * @param {{fd: number}} param0
-	 * @param {number} param0.fd
-	 * @returns {Promise<void>}
-	 */
-	public async close({ fd }: { fd: number }): Promise<void> {
-		const path = this._fileDescriptorsIds[fd]
-
-		if (path) {
-			delete this._fileDescriptorsPaths[path]
-		}
-
-		delete this._fileDescriptorsIds[fd]
-	}
-
-	/*public async read({
-		fd,
-		buffer,
+	public async read({
+		path,
 		offset,
 		length,
-		position
+		position,
+		abortSignal,
+		pauseSignal,
+		onProgress
 	}: {
-		fd: number
-		buffer: Buffer
+		path: string
 		offset: number
 		length: number
 		position: number
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
 	}): Promise<Buffer> {
-		// @TODO
-	}*/
+		path = this.normalizePath({ path })
 
-	/*public async write({
-		fd,
-		buffer,
-		offset,
-		length,
-		position
-	}: {
-		fd: number
-		buffer: Buffer
-		offset?: number
-		length?: number
-		position?: number
-	}): Promise<void> {
-		// @TODO
-	}*/
+		const uuid = await this.pathToItemUUID({ path })
+		const item = this._items[path]
+
+		if (!uuid || !item || item.type === "directory") {
+			throw new ENOENT({ path })
+		}
+
+		const chunksStart = Math.floor(position / UPLOAD_CHUNK_SIZE)
+		const chunksEnd = Math.ceil((position + length) / UPLOAD_CHUNK_SIZE) - 1
+
+		if (chunksStart <= 0 || chunksStart > item.metadata.chunks || chunksEnd <= 0 || chunksEnd > item.metadata.chunks) {
+			throw new Error("Invalid position or length.")
+		}
+
+		const stream = await this.cloud.downloadFileToReadableStream({
+			uuid: uuid,
+			bucket: item.metadata.bucket,
+			region: item.metadata.region,
+			chunks: item.metadata.chunks,
+			version: item.metadata.version,
+			key: item.metadata.key,
+			abortSignal,
+			pauseSignal,
+			onProgress,
+			chunksStart,
+			chunksEnd
+		})
+
+		let buffer = Buffer.from([])
+		const reader = stream.getReader()
+		let doneReading = false
+		let bytesRead = 0
+
+		while (!doneReading) {
+			const { done, value } = await reader.read()
+
+			if (done) {
+				doneReading = true
+
+				break
+			}
+
+			if (value instanceof Uint8Array && value.byteLength > 0) {
+				const chunkOffset = bytesRead - position
+				const start = Math.max(0, position - bytesRead)
+				const end = Math.min(start + length, value.byteLength)
+
+				if (chunkOffset < length && end > start) {
+					const relevantPart = value.subarray(start, end)
+
+					buffer = Buffer.concat([buffer, relevantPart])
+					length -= relevantPart.byteLength
+				}
+
+				bytesRead += value.byteLength
+			}
+		}
+
+		return buffer.subarray(offset, offset + Math.min(buffer.length, length))
+	}
+
+	/**
+	 * Alias of writeFile.
+	 * @date 2/20/2024 - 9:45:40 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {...Parameters<typeof this.writeFile>} params
+	 * @returns {ReturnType<typeof this.writeFile>}
+	 */
+	public async write(...params: Parameters<typeof this.writeFile>): ReturnType<typeof this.writeFile> {
+		return await this.writeFile(...params)
+	}
 
 	/**
 	 * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.

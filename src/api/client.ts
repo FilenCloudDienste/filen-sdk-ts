@@ -110,24 +110,19 @@ export class APIClient {
 	 */
 	public constructor(params: APIClientConfig) {
 		this.config = params
-
-		if (this.config.apiKey.length === 0) {
-			throw new Error("Invalid apiKey, please call login() first")
-		}
 	}
 
 	/**
 	 * Build API request headers.
-	 * @date 2/20/2024 - 7:31:29 AM
+	 * @date 2/21/2024 - 8:42:27 AM
 	 *
 	 * @private
-	 * @param {{apiKey?: string}} param0
-	 * @param {string} param0.apiKey
+	 * @param {?{ apiKey?: string }} [params]
 	 * @returns {Record<string, string>}
 	 */
-	private buildHeaders({ apiKey }: { apiKey?: string }): Record<string, string> {
+	private buildHeaders(params?: { apiKey?: string }): Record<string, string> {
 		return {
-			Authorization: "Bearer " + (apiKey ? apiKey : this.config.apiKey)
+			Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey)
 		}
 	}
 
@@ -142,6 +137,11 @@ export class APIClient {
 	 */
 	private async post(params: PostRequestParameters) {
 		let headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey })
+
+		if (params.apiKey && !headers["apiKey"]) {
+			headers["apiKey"] = params.apiKey
+		}
+
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
 		const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer
 
@@ -205,12 +205,14 @@ export class APIClient {
 
 							response.on("end", () => {
 								try {
-									const json = JSON.parse(Buffer.concat(chunks).toString())
-
 									resolve({
 										status: 200,
 										statusText: "",
-										data: json,
+										data: !params.responseType
+											? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+											: params.responseType === "json"
+											? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+											: Buffer.concat(chunks),
 										headers,
 										config: null as unknown as InternalAxiosRequestConfig
 									})
@@ -295,6 +297,11 @@ export class APIClient {
 	 */
 	private async get(params: GetRequestParameters) {
 		const headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey })
+
+		if (params.apiKey && !headers["apiKey"]) {
+			headers["apiKey"] = params.apiKey
+		}
+
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
 
 		let lastBytesDownloaded = 0
@@ -381,7 +388,11 @@ export class APIClient {
 									resolve({
 										status: 200,
 										statusText: "",
-										data: Buffer.concat(chunks),
+										data: !params.responseType
+											? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+											: params.responseType === "json"
+											? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
+											: Buffer.concat(chunks),
 										headers,
 										config: null as unknown as InternalAxiosRequestConfig
 									})
