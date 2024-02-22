@@ -1,6 +1,6 @@
 import { environment, BUFFER_SIZE } from "../constants"
 import type { CryptoConfig } from "."
-import { deriveKeyFromPassword, importPrivateKey, derKeyToPem, importRawKey, EVP_BytesToKey, bufferToHash } from "./utils"
+import { deriveKeyFromPassword, importPrivateKey, derKeyToPem, importRawKey, EVP_BytesToKey } from "./utils"
 import nodeCrypto from "crypto"
 import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types"
 import { convertTimestampToMs, uuidv4, normalizePath } from "../utils"
@@ -212,6 +212,8 @@ export class Decrypt {
 					if (this.config.metadataCache) {
 						cache.fileMetadata.set(cacheKey, fileMetadata)
 					}
+
+					break
 				}
 			} catch {
 				continue
@@ -239,7 +241,7 @@ export class Decrypt {
 			}
 		}
 
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
@@ -286,7 +288,7 @@ export class Decrypt {
 	 * @returns {Promise<FileMetadata>}
 	 */
 	public async fileMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
@@ -336,7 +338,7 @@ export class Decrypt {
 	 * @returns {Promise<FolderMetadata>}
 	 */
 	public async folderMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FolderMetadata> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
@@ -374,7 +376,7 @@ export class Decrypt {
 	 * @returns {Promise<FileMetadata>}
 	 */
 	public async fileMetadataLink({ metadata, linkKey }: { metadata: string; linkKey: string }): Promise<FileMetadata> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
@@ -423,7 +425,7 @@ export class Decrypt {
 	 * @returns {Promise<FolderMetadata>}
 	 */
 	public async folderMetadataLink({ metadata, linkKey }: { metadata: string; linkKey: string }): Promise<FolderMetadata> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
@@ -464,7 +466,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async folderLinkKey({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.folderLinkKey.has(cacheKey)) {
 			return cache.folderLinkKey.get(cacheKey)!
@@ -503,7 +505,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async chatKey({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.chatKey.has(cacheKey)) {
 			return cache.chatKey.get(cacheKey)!
@@ -560,7 +562,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteKeyOwner({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.noteKeyOwner.has(cacheKey)) {
 			return cache.noteKeyOwner.get(cacheKey)!
@@ -599,7 +601,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteKeyParticipant({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.noteKeyParticipant.has(cacheKey)) {
 			return cache.noteKeyParticipant.get(cacheKey)!
@@ -653,7 +655,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteTitle({ title, key }: { title: string; key: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(title, "utf-8"), algorithm: "md5" })
+		const cacheKey = title
 
 		if (this.config.metadataCache && cache.noteTitle.has(cacheKey)) {
 			return cache.noteTitle.get(cacheKey)!
@@ -685,7 +687,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async notePreview({ preview, key }: { preview: string; key: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(preview, "utf-8"), algorithm: "md5" })
+		const cacheKey = preview
 
 		if (this.config.metadataCache && cache.notePreview.has(cacheKey)) {
 			return cache.notePreview.get(cacheKey)!
@@ -717,7 +719,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(name, "utf-8"), algorithm: "md5" })
+		const cacheKey = name
 
 		if (this.config.metadataCache && cache.noteTagName.has(cacheKey)) {
 			return cache.noteTagName.get(cacheKey)!
@@ -759,7 +761,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async chatConversationName({ name, key }: { name: string; key: string }): Promise<string> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(name, "utf-8"), algorithm: "md5" })
+		const cacheKey = name
 
 		if (this.config.metadataCache && cache.chatConversationName.has(cacheKey)) {
 			return cache.chatConversationName.get(cacheKey)!
