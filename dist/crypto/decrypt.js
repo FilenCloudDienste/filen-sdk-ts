@@ -187,6 +187,7 @@ class Decrypt {
                     if (this.config.metadataCache) {
                         cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
                     }
+                    break;
                 }
             }
             catch (_c) {
@@ -212,7 +213,7 @@ class Decrypt {
                 name: "Default"
             };
         }
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.folderMetadata.has(cacheKey)) {
             return cache_1.default.folderMetadata.get(cacheKey);
         }
@@ -252,7 +253,7 @@ class Decrypt {
      */
     async fileMetadataPrivate({ metadata, key }) {
         var _a, _b;
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.fileMetadata.has(cacheKey)) {
             return cache_1.default.fileMetadata.get(cacheKey);
         }
@@ -295,7 +296,7 @@ class Decrypt {
      * @returns {Promise<FolderMetadata>}
      */
     async folderMetadataPrivate({ metadata, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.folderMetadata.has(cacheKey)) {
             return cache_1.default.folderMetadata.get(cacheKey);
         }
@@ -327,7 +328,7 @@ class Decrypt {
      */
     async fileMetadataLink({ metadata, linkKey }) {
         var _a, _b;
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.fileMetadata.has(cacheKey)) {
             return cache_1.default.fileMetadata.get(cacheKey);
         }
@@ -369,7 +370,7 @@ class Decrypt {
      * @returns {Promise<FolderMetadata>}
      */
     async folderMetadataLink({ metadata, linkKey }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.folderMetadata.has(cacheKey)) {
             return cache_1.default.folderMetadata.get(cacheKey);
         }
@@ -402,7 +403,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async folderLinkKey({ metadata, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.folderLinkKey.has(cacheKey)) {
             return cache_1.default.folderLinkKey.get(cacheKey);
         }
@@ -435,7 +436,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async chatKey({ metadata, privateKey }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.chatKey.has(cacheKey)) {
             return cache_1.default.chatKey.get(cacheKey);
         }
@@ -483,7 +484,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteKeyOwner({ metadata, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.noteKeyOwner.has(cacheKey)) {
             return cache_1.default.noteKeyOwner.get(cacheKey);
         }
@@ -516,7 +517,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteKeyParticipant({ metadata, privateKey }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.noteKeyParticipant.has(cacheKey)) {
             return cache_1.default.noteKeyParticipant.get(cacheKey);
         }
@@ -561,7 +562,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteTitle({ title, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(title, "utf-8"), algorithm: "md5" });
+        const cacheKey = title;
         if (this.config.metadataCache && cache_1.default.noteTitle.has(cacheKey)) {
             return cache_1.default.noteTitle.get(cacheKey);
         }
@@ -587,7 +588,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async notePreview({ preview, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(preview, "utf-8"), algorithm: "md5" });
+        const cacheKey = preview;
         if (this.config.metadataCache && cache_1.default.notePreview.has(cacheKey)) {
             return cache_1.default.notePreview.get(cacheKey);
         }
@@ -613,7 +614,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteTagName({ name, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(name, "utf-8"), algorithm: "md5" });
+        const cacheKey = name;
         if (this.config.metadataCache && cache_1.default.noteTagName.has(cacheKey)) {
             return cache_1.default.noteTagName.get(cacheKey);
         }
@@ -649,7 +650,7 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async chatConversationName({ name, key }) {
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(name, "utf-8"), algorithm: "md5" });
+        const cacheKey = name;
         if (this.config.metadataCache && cache_1.default.chatConversationName.has(cacheKey)) {
             return cache_1.default.chatConversationName.get(cacheKey);
         }
