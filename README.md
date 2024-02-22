@@ -23,14 +23,15 @@ The SDK is still a work in progress. DO NOT USE IT IN PRODUCTION YET. Class name
 1. Install using NPM
 
 ```sh
-npm install @filen/filen-sdk@latest
+npm install @filen/sdk@latest
 ```
 
 2. Initialize the SDK.
 
 ```typescript
-import FilenSDK from "@filen/filen-sdk"
+import FilenSDK from "@filen/sdk"
 import path from "path"
+import os from "os"
 
 type FilenSDKConfig = {
 	email?: string
@@ -75,13 +76,30 @@ await filen.fs().upload({
 })
 
 // Read contents of the directory
-await filen.fs().readdir({
+const content: string[] = await filen.fs().readdir({
 	path: "/Pictures"
 })
 
 // Stat a file
-await filen.fs().stat({
+const stats: FSStats = await filen.fs().stat({
 	path: "/Pictures/file.jpg"
+})
+
+// Download a file
+await filen.fs().download({
+	path: "/Pictures/file.jpg",
+	destination: "/Local/path/to/a/file.jpg"
+})
+
+// Read a file
+const content: Buffer = await filen.fs().readFile({
+	path: "/Pictures/file.jpg"
+})
+
+// Write to a path
+await filen.fs().writeFile({
+	path: "/text.txt",
+	content: Buffer.from("foobar", "utf-8")
 })
 ```
 
