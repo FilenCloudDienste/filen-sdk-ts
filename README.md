@@ -30,6 +30,7 @@ npm install @filen/filen-sdk@latest
 
 ```typescript
 import FilenSDK from "@filen/filen-sdk"
+import path from "path"
 
 type FilenSDKConfig = {
 	email?: string
