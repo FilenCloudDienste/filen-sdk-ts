@@ -1999,13 +1999,7 @@ class Cloud {
     }
     /**
      * Build a recursive directory tree which includes sub-directories and sub-files.
-     * Tree looks like this:
-     * {
-     * 		"path": CloudItemTree,
-     * 		"path": CloudItemTree,
-     * 		"path": CloudItemTree
-     * }
-     * @date 2/16/2024 - 12:24:25 AM
+     * @date 2/22/2024 - 1:45:28 AM
      *
      * @public
      * @async
@@ -2016,6 +2010,7 @@ class Cloud {
      * 		linkHasPassword?: boolean
      * 		linkPassword?: string
      * 		linkSalt?: string
+     * 		skipCache?: boolean
      * 	}} param0
      * @param {string} param0.uuid
      * @param {DirDownloadType} [param0.type="normal"]
@@ -2023,10 +2018,11 @@ class Cloud {
      * @param {boolean} param0.linkHasPassword
      * @param {string} param0.linkPassword
      * @param {string} param0.linkSalt
+     * @param {boolean} param0.skipCache
      * @returns {Promise<Record<string, CloudItemTree>>}
      */
-    async getDirectoryTree({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt }) {
-        const contents = await this.api.v3().dir().download({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt });
+    async getDirectoryTree({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }) {
+        const contents = await this.api.v3().dir().download({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache });
         const tree = {};
         const folderNames = { base: "/" };
         for (const folder of contents.folders) {

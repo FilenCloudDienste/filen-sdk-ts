@@ -55,7 +55,7 @@ export class DirDownload {
 
 	/**
 	 * Download directory contents recursively in one call. Supports normal, shared and linked directories.
-	 * @date 2/1/2024 - 6:04:59 PM
+	 * @date 2/22/2024 - 1:45:11 AM
 	 *
 	 * @public
 	 * @async
@@ -66,6 +66,7 @@ export class DirDownload {
 	 * 		linkHasPassword?: boolean
 	 * 		linkPassword?: string
 	 * 		linkSalt?: string
+	 * 		skipCache?: boolean
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {DirDownloadType} [param0.type="normal"]
@@ -73,6 +74,7 @@ export class DirDownload {
 	 * @param {boolean} param0.linkHasPassword
 	 * @param {string} param0.linkPassword
 	 * @param {string} param0.linkSalt
+	 * @param {boolean} param0.skipCache
 	 * @returns {Promise<DirDownloadResponse>}
 	 */
 	public async fetch({
@@ -81,7 +83,8 @@ export class DirDownload {
 		linkUUID,
 		linkHasPassword,
 		linkPassword,
-		linkSalt
+		linkSalt,
+		skipCache
 	}: {
 		uuid: string
 		type?: DirDownloadType
@@ -89,13 +92,15 @@ export class DirDownload {
 		linkHasPassword?: boolean
 		linkPassword?: string
 		linkSalt?: string
+		skipCache?: boolean
 	}): Promise<DirDownloadResponse> {
 		const endpoint = type === "shared" ? "/v3/dir/download/shared" : type === "linked" ? "/v3/dir/download/link" : "/v3/dir/download"
 
 		const data =
 			type === "shared" || type === "normal"
 				? {
-						uuid
+						uuid,
+						...(skipCache ? { skipCache } : {})
 				  }
 				: {
 						uuid: linkUUID,
@@ -112,7 +117,8 @@ export class DirDownload {
 											returnHex: true
 									  })
 									: await hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
-								: await hashFn({ input: "empty" })
+								: await hashFn({ input: "empty" }),
+						...(skipCache ? { skipCache } : {})
 				  }
 
 		const response = await this.apiClient.request<DirDownloadResponse>({

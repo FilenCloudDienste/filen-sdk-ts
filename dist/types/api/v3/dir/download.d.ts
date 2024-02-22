@@ -47,7 +47,7 @@ export declare class DirDownload {
     });
     /**
      * Download directory contents recursively in one call. Supports normal, shared and linked directories.
-     * @date 2/1/2024 - 6:04:59 PM
+     * @date 2/22/2024 - 1:45:11 AM
      *
      * @public
      * @async
@@ -58,6 +58,7 @@ export declare class DirDownload {
      * 		linkHasPassword?: boolean
      * 		linkPassword?: string
      * 		linkSalt?: string
+     * 		skipCache?: boolean
      * 	}} param0
      * @param {string} param0.uuid
      * @param {DirDownloadType} [param0.type="normal"]
@@ -65,15 +66,17 @@ export declare class DirDownload {
      * @param {boolean} param0.linkHasPassword
      * @param {string} param0.linkPassword
      * @param {string} param0.linkSalt
+     * @param {boolean} param0.skipCache
      * @returns {Promise<DirDownloadResponse>}
      */
-    fetch({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt }: {
+    fetch({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }: {
         uuid: string;
         type?: DirDownloadType;
         linkUUID?: string;
         linkHasPassword?: boolean;
         linkPassword?: string;
         linkSalt?: string;
+        skipCache?: boolean;
     }): Promise<DirDownloadResponse>;
 }
 export default DirDownload;

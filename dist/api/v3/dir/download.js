@@ -25,7 +25,7 @@ class DirDownload {
     }
     /**
      * Download directory contents recursively in one call. Supports normal, shared and linked directories.
-     * @date 2/1/2024 - 6:04:59 PM
+     * @date 2/22/2024 - 1:45:11 AM
      *
      * @public
      * @async
@@ -36,6 +36,7 @@ class DirDownload {
      * 		linkHasPassword?: boolean
      * 		linkPassword?: string
      * 		linkSalt?: string
+     * 		skipCache?: boolean
      * 	}} param0
      * @param {string} param0.uuid
      * @param {DirDownloadType} [param0.type="normal"]
@@ -43,30 +44,24 @@ class DirDownload {
      * @param {boolean} param0.linkHasPassword
      * @param {string} param0.linkPassword
      * @param {string} param0.linkSalt
+     * @param {boolean} param0.skipCache
      * @returns {Promise<DirDownloadResponse>}
      */
-    async fetch({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt }) {
+    async fetch({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }) {
         const endpoint = type === "shared" ? "/v3/dir/download/shared" : type === "linked" ? "/v3/dir/download/link" : "/v3/dir/download";
         const data = type === "shared" || type === "normal"
-            ? {
-                uuid
-            }
-            : {
-                uuid: linkUUID,
-                parent: uuid,
-                password: linkHasPassword && linkSalt && linkPassword
-                    ? linkSalt.length === 32
-                        ? await (0, utils_1.deriveKeyFromPassword)({
-                            password: linkPassword,
-                            salt: linkSalt,
-                            iterations: 200000,
-                            hash: "sha512",
-                            bitLength: 512,
-                            returnHex: true
-                        })
-                        : await (0, utils_1.hashFn)({ input: linkPassword.length === 0 ? "empty" : linkPassword })
-                    : await (0, utils_1.hashFn)({ input: "empty" })
-            };
+            ? Object.assign({ uuid }, (skipCache ? { skipCache } : {})) : Object.assign({ uuid: linkUUID, parent: uuid, password: linkHasPassword && linkSalt && linkPassword
+                ? linkSalt.length === 32
+                    ? await (0, utils_1.deriveKeyFromPassword)({
+                        password: linkPassword,
+                        salt: linkSalt,
+                        iterations: 200000,
+                        hash: "sha512",
+                        bitLength: 512,
+                        returnHex: true
+                    })
+                    : await (0, utils_1.hashFn)({ input: linkPassword.length === 0 ? "empty" : linkPassword })
+                : await (0, utils_1.hashFn)({ input: "empty" }) }, (skipCache ? { skipCache } : {}));
         const response = await this.apiClient.request({
             method: "POST",
             endpoint,

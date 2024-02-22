@@ -804,13 +804,7 @@ export declare class Cloud {
     }): Promise<ReadableStream>;
     /**
      * Build a recursive directory tree which includes sub-directories and sub-files.
-     * Tree looks like this:
-     * {
-     * 		"path": CloudItemTree,
-     * 		"path": CloudItemTree,
-     * 		"path": CloudItemTree
-     * }
-     * @date 2/16/2024 - 12:24:25 AM
+     * @date 2/22/2024 - 1:45:28 AM
      *
      * @public
      * @async
@@ -821,6 +815,7 @@ export declare class Cloud {
      * 		linkHasPassword?: boolean
      * 		linkPassword?: string
      * 		linkSalt?: string
+     * 		skipCache?: boolean
      * 	}} param0
      * @param {string} param0.uuid
      * @param {DirDownloadType} [param0.type="normal"]
@@ -828,15 +823,17 @@ export declare class Cloud {
      * @param {boolean} param0.linkHasPassword
      * @param {string} param0.linkPassword
      * @param {string} param0.linkSalt
+     * @param {boolean} param0.skipCache
      * @returns {Promise<Record<string, CloudItemTree>>}
      */
-    getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt }: {
+    getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }: {
         uuid: string;
         type?: DirDownloadType;
         linkUUID?: string;
         linkHasPassword?: boolean;
         linkPassword?: string;
         linkSalt?: string;
+        skipCache?: boolean;
     }): Promise<Record<string, CloudItemTree>>;
     /**
      * Download a directory to path. Only available in a Node.JS environment.

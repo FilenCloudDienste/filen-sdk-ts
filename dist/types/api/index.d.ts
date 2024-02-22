@@ -41,6 +41,7 @@ export declare class API {
                 linkHasPassword?: boolean | undefined;
                 linkPassword?: string | undefined;
                 linkSalt?: string | undefined;
+                skipCache?: boolean | undefined;
             }) => Promise<import("./v3/dir/download").DirDownloadResponse>;
             shared: (params_0: {
                 uuid: string;
