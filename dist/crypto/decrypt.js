@@ -157,7 +157,7 @@ class Decrypt {
      */
     async fileMetadata({ metadata, key }) {
         var _a, _b;
-        const cacheKey = await (0, utils_1.bufferToHash)({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" });
+        const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.fileMetadata.has(cacheKey)) {
             return cache_1.default.fileMetadata.get(cacheKey);
         }
@@ -170,16 +170,23 @@ class Decrypt {
             creation: undefined,
             hash: undefined
         };
-        const keysToUse = key ? [key] : this.config.masterKeys.reverse();
+        const keysToUse = key ? [key] : this.config.masterKeys;
         for (const masterKey of keysToUse) {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
                 if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-                    fileMetadata = Object.assign(Object.assign({}, decrypted), { size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0), lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())), creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined });
+                    fileMetadata = {
+                        size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
+                        lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                        creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
+                        name: decrypted.name,
+                        key: decrypted.key,
+                        mime: decrypted.mime,
+                        hash: decrypted.hash
+                    };
                     if (this.config.metadataCache) {
                         cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
                     }
-                    break;
                 }
             }
             catch (_c) {
@@ -212,12 +219,14 @@ class Decrypt {
         let folderMetadata = {
             name: ""
         };
-        const keysToUse = key ? [key] : this.config.masterKeys.reverse();
+        const keysToUse = key ? [key] : this.config.masterKeys;
         for (const masterKey of keysToUse) {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
                 if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-                    folderMetadata = Object.assign(Object.assign({}, folderMetadata), { name: decrypted.name });
+                    folderMetadata = {
+                        name: decrypted.name
+                    };
                     if (this.config.metadataCache) {
                         cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
                     }
@@ -259,7 +268,15 @@ class Decrypt {
         const privateKey = key ? key : this.config.privateKey;
         const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            fileMetadata = Object.assign(Object.assign({}, decrypted), { size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0), lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())), creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined });
+            fileMetadata = {
+                size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
+                lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
+                name: decrypted.name,
+                key: decrypted.key,
+                mime: decrypted.mime,
+                hash: decrypted.hash
+            };
             if (this.config.metadataCache) {
                 cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
             }
@@ -288,7 +305,9 @@ class Decrypt {
         const privateKey = key ? key : this.config.privateKey;
         const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            folderMetadata = Object.assign(Object.assign({}, folderMetadata), { name: decrypted.name });
+            folderMetadata = {
+                name: decrypted.name
+            };
             if (this.config.metadataCache) {
                 cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
             }
@@ -323,7 +342,15 @@ class Decrypt {
         };
         const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            fileMetadata = Object.assign(Object.assign({}, decrypted), { size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0), lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())), creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined });
+            fileMetadata = {
+                size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
+                lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
+                name: decrypted.name,
+                key: decrypted.key,
+                mime: decrypted.mime,
+                hash: decrypted.hash
+            };
             if (this.config.metadataCache) {
                 cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
             }
@@ -351,7 +378,9 @@ class Decrypt {
         };
         const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            folderMetadata = Object.assign(Object.assign({}, folderMetadata), { name: decrypted.name });
+            folderMetadata = {
+                name: decrypted.name
+            };
             if (this.config.metadataCache) {
                 cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
             }
@@ -377,7 +406,7 @@ class Decrypt {
         if (this.config.metadataCache && cache_1.default.folderLinkKey.has(cacheKey)) {
             return cache_1.default.folderLinkKey.get(cacheKey);
         }
-        const keysToUse = key ? [key] : this.config.masterKeys.reverse();
+        const keysToUse = key ? [key] : this.config.masterKeys;
         for (const masterKey of keysToUse) {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
@@ -458,7 +487,7 @@ class Decrypt {
         if (this.config.metadataCache && cache_1.default.noteKeyOwner.has(cacheKey)) {
             return cache_1.default.noteKeyOwner.get(cacheKey);
         }
-        const keysToUse = key ? [key] : this.config.masterKeys.reverse();
+        const keysToUse = key ? [key] : this.config.masterKeys;
         for (const masterKey of keysToUse) {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
@@ -588,7 +617,7 @@ class Decrypt {
         if (this.config.metadataCache && cache_1.default.noteTagName.has(cacheKey)) {
             return cache_1.default.noteTagName.get(cacheKey);
         }
-        const keysToUse = key ? [key] : this.config.masterKeys.reverse();
+        const keysToUse = key ? [key] : this.config.masterKeys;
         for (const masterKey of keysToUse) {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata: name, key: masterKey }));

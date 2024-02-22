@@ -176,7 +176,7 @@ export class Decrypt {
 	 * @returns {Promise<FileMetadata>}
 	 */
 	public async fileMetadata({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
-		const cacheKey = await bufferToHash({ buffer: Buffer.from(metadata, "utf-8"), algorithm: "md5" })
+		const cacheKey = metadata
 
 		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
@@ -192,7 +192,7 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+		const keysToUse = key ? [key] : this.config.masterKeys
 
 		for (const masterKey of keysToUse) {
 			try {
@@ -200,17 +200,18 @@ export class Decrypt {
 
 				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 					fileMetadata = {
-						...decrypted,
 						size: parseInt(decrypted.size ?? 0),
 						lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
-						creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
+						creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+						name: decrypted.name,
+						key: decrypted.key,
+						mime: decrypted.mime,
+						hash: decrypted.hash
 					}
 
 					if (this.config.metadataCache) {
 						cache.fileMetadata.set(cacheKey, fileMetadata)
 					}
-
-					break
 				}
 			} catch {
 				continue
@@ -248,7 +249,7 @@ export class Decrypt {
 			name: ""
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+		const keysToUse = key ? [key] : this.config.masterKeys
 
 		for (const masterKey of keysToUse) {
 			try {
@@ -256,7 +257,6 @@ export class Decrypt {
 
 				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 					folderMetadata = {
-						...folderMetadata,
 						name: decrypted.name
 					}
 
@@ -307,10 +307,13 @@ export class Decrypt {
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			fileMetadata = {
-				...decrypted,
 				size: parseInt(decrypted.size ?? 0),
 				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
-				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
+				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+				name: decrypted.name,
+				key: decrypted.key,
+				mime: decrypted.mime,
+				hash: decrypted.hash
 			}
 
 			if (this.config.metadataCache) {
@@ -348,7 +351,6 @@ export class Decrypt {
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			folderMetadata = {
-				...folderMetadata,
 				name: decrypted.name
 			}
 
@@ -392,10 +394,13 @@ export class Decrypt {
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			fileMetadata = {
-				...decrypted,
 				size: parseInt(decrypted.size ?? 0),
 				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
-				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined
+				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+				name: decrypted.name,
+				key: decrypted.key,
+				mime: decrypted.mime,
+				hash: decrypted.hash
 			}
 
 			if (this.config.metadataCache) {
@@ -432,7 +437,6 @@ export class Decrypt {
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			folderMetadata = {
-				...folderMetadata,
 				name: decrypted.name
 			}
 
@@ -466,7 +470,7 @@ export class Decrypt {
 			return cache.folderLinkKey.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+		const keysToUse = key ? [key] : this.config.masterKeys
 
 		for (const masterKey of keysToUse) {
 			try {
@@ -562,7 +566,7 @@ export class Decrypt {
 			return cache.noteKeyOwner.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+		const keysToUse = key ? [key] : this.config.masterKeys
 
 		for (const masterKey of keysToUse) {
 			try {
@@ -719,7 +723,7 @@ export class Decrypt {
 			return cache.noteTagName.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys.reverse()
+		const keysToUse = key ? [key] : this.config.masterKeys
 
 		for (const masterKey of keysToUse) {
 			try {

@@ -20,9 +20,13 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	const dir = await filen.cloud().listDirectory({ uuid: config.baseFolderUUID })
+	const dir = await filen.cloud().getDirectoryTree({ uuid: "fc7f2ba0-619c-4a75-8a72-91f5ad31fff7", skipCache: true })
 
-	console.log(dir)
+	console.log(Object.keys(dir).length)
+
+	const dir2 = await filen.cloud().getDirectoryTree({ uuid: "fc7f2ba0-619c-4a75-8a72-91f5ad31fff7", skipCache: true })
+
+	console.log(Object.keys(dir2).length)
 }
 
 main()
