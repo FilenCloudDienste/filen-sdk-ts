@@ -10,6 +10,7 @@ import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
 import { uuidv4, normalizePath } from "../utils"
 import os from "os"
+import { Semaphore } from "../semaphore"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
@@ -78,6 +79,8 @@ export class FS {
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly cloud: Cloud
 	private _items: FSItems
+	private readonly _pathToItemUUIDMutex = new Semaphore(1)
+	private readonly _readdirMutex = new Semaphore(1)
 
 	/**
 	 * Creates an instance of FS.
@@ -140,36 +143,42 @@ export class FS {
 			return this._items[path].uuid
 		}
 
-		const pathEx = path.split("/")
-		let builtPath = "/"
+		await this._pathToItemUUIDMutex.acquire()
 
-		for (const part of pathEx) {
-			if (pathEx.length <= 0) {
-				continue
+		try {
+			const pathEx = path.split("/")
+			let builtPath = "/"
+
+			for (const part of pathEx) {
+				if (pathEx.length <= 0) {
+					continue
+				}
+
+				builtPath = pathModule.posix.join(builtPath, part)
+
+				if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
+					return this._items[builtPath].uuid
+				}
+
+				const parentDirname = pathModule.posix.dirname(builtPath)
+
+				if (this._items[parentDirname]) {
+					await this.readdir({ path: parentDirname })
+				}
+
+				if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
+					return this._items[builtPath].uuid
+				}
 			}
-
-			builtPath = pathModule.posix.join(builtPath, part)
 
 			if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
 				return this._items[builtPath].uuid
 			}
 
-			const parentDirname = pathModule.posix.dirname(builtPath)
-
-			if (this._items[parentDirname]) {
-				await this.readdir({ path: parentDirname })
-			}
-
-			if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
-				return this._items[builtPath].uuid
-			}
+			return null
+		} finally {
+			this._pathToItemUUIDMutex.release()
 		}
-
-		if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
-			return this._items[builtPath].uuid
-		}
-
-		return null
 	}
 
 	/**
@@ -184,38 +193,78 @@ export class FS {
 	 * @returns {Promise<string[]>}
 	 */
 	public async readdir({ path, recursive = false }: { path: string; recursive?: boolean }): Promise<string[]> {
-		path = this.normalizePath({ path })
+		await this._readdirMutex.acquire()
 
-		const uuid = await this.pathToItemUUID({ path })
+		try {
+			path = this.normalizePath({ path })
 
-		if (!uuid) {
-			return []
-		}
+			const uuid = await this.pathToItemUUID({ path })
 
-		if (uuid !== this.sdkConfig.baseFolderUUID!) {
+			if (!uuid) {
+				return []
+			}
+
+			/*if (uuid !== this.sdkConfig.baseFolderUUID!) {
 			const present = await this.api.v3().dir().present({ uuid })
 
 			if (!present.present) {
 				return []
 			}
-		}
+		}*/
 
-		const names: string[] = []
+			const names: string[] = []
 
-		if (recursive) {
-			const tree = await this.cloud.getDirectoryTree({ uuid })
+			if (recursive) {
+				const tree = await this.cloud.getDirectoryTree({ uuid })
 
-			for (const entry in tree) {
-				const item = tree[entry]
-				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
+				for (const entry in tree) {
+					const item = tree[entry]
+					const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
 
-				if (item.parent === "base") {
-					continue
+					if (item.parent === "base") {
+						continue
+					}
+
+					const itemPath = pathModule.posix.join(path, entryPath)
+
+					names.push(entryPath)
+
+					if (item.type === "directory") {
+						this._items[itemPath] = {
+							uuid: item.uuid,
+							type: "directory",
+							metadata: {
+								name: item.name
+							}
+						}
+					} else {
+						this._items[itemPath] = {
+							uuid: item.uuid,
+							type: "file",
+							metadata: {
+								name: item.name,
+								size: item.size,
+								mime: item.mime,
+								key: item.key,
+								lastModified: item.lastModified,
+								chunks: item.chunks,
+								region: item.region,
+								bucket: item.bucket,
+								version: item.version
+							}
+						}
+					}
 				}
 
-				const itemPath = pathModule.posix.join(path, entryPath)
+				return names
+			}
 
-				names.push(entryPath)
+			const items = await this.cloud.listDirectory({ uuid })
+
+			for (const item of items) {
+				const itemPath = pathModule.posix.join(path, item.name)
+
+				names.push(item.name)
 
 				if (item.type === "directory") {
 					this._items[itemPath] = {
@@ -245,43 +294,9 @@ export class FS {
 			}
 
 			return names
+		} finally {
+			this._readdirMutex.release()
 		}
-
-		const items = await this.cloud.listDirectory({ uuid })
-
-		for (const item of items) {
-			const itemPath = pathModule.posix.join(path, item.name)
-
-			names.push(item.name)
-
-			if (item.type === "directory") {
-				this._items[itemPath] = {
-					uuid: item.uuid,
-					type: "directory",
-					metadata: {
-						name: item.name
-					}
-				}
-			} else {
-				this._items[itemPath] = {
-					uuid: item.uuid,
-					type: "file",
-					metadata: {
-						name: item.name,
-						size: item.size,
-						mime: item.mime,
-						key: item.key,
-						lastModified: item.lastModified,
-						chunks: item.chunks,
-						region: item.region,
-						bucket: item.bucket,
-						version: item.version
-					}
-				}
-			}
-		}
-
-		return names
 	}
 
 	/**
@@ -484,6 +499,10 @@ export class FS {
 					name: newBasename
 				})
 			}
+
+			this._items[to] = this._items[from]
+
+			delete this._items[from]
 		} else {
 			if (oldBasename !== newBasename) {
 				if (item.type === "directory") {
@@ -521,11 +540,15 @@ export class FS {
 					await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: item.metadata })
 				}
 			}
+
+			for (const path in this._items) {
+				if (path.startsWith(from)) {
+					this._items[path.split(from).join(to)] = this._items[path]
+
+					delete this._items[path]
+				}
+			}
 		}
-
-		this._items[to] = this._items[from]
-
-		delete this._items[from]
 	}
 
 	/**

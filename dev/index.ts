@@ -6,6 +6,7 @@ import type { AuthVersion } from "../src/types"
 import fs from "fs-extra"
 import pathModule from "path"
 import { generateRandomString } from "../src/crypto/utils"
+import os from "os"
 
 const filen = new FilenSDK({
 	email: config.email,
@@ -20,13 +21,36 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	const dir = await filen.cloud().getDirectoryTree({ uuid: "fc7f2ba0-619c-4a75-8a72-91f5ad31fff7", skipCache: true })
+	const dir = await filen.fs().readdir({ path: "/Pictures" })
 
-	console.log(Object.keys(dir).length)
+	console.log(dir)
+	const proms: Promise<void>[] = []
 
-	const dir2 = await filen.cloud().getDirectoryTree({ uuid: "fc7f2ba0-619c-4a75-8a72-91f5ad31fff7", skipCache: true })
+	for (const file of dir) {
+		proms.push(
+			new Promise((resolve, reject) => {
+				filen
+					.fs()
+					.stat({ path: "/Pictures/" + file })
+					.then(stats => {
+						if (stats.isDirectory()) {
+							resolve()
 
-	console.log(Object.keys(dir2).length)
+							return
+						}
+
+						filen
+							.fs()
+							.download({ path: "/Pictures/" + file, destination: pathModule.join(os.tmpdir(), file) })
+							.then(() => resolve())
+							.catch(reject)
+					})
+					.catch(reject)
+			})
+		)
+	}
+
+	await Promise.all(proms)
 }
 
 main()
