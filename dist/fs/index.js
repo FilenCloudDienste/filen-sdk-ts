@@ -82,18 +82,49 @@ class FS {
                     continue;
                 }
                 builtPath = path_1.default.posix.join(builtPath, part);
-                if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
-                    return this._items[builtPath].uuid;
-                }
                 const parentDirname = path_1.default.posix.dirname(builtPath);
-                if (this._items[parentDirname]) {
-                    await this.readdir({ path: parentDirname });
+                if (!this._items[parentDirname]) {
+                    return null;
                 }
-                if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
-                    return this._items[builtPath].uuid;
+                const content = await this.cloud.listDirectory({ uuid: this._items[parentDirname].uuid });
+                let foundUUID = "";
+                for (const item of content) {
+                    const itemPath = path_1.default.posix.join(parentDirname, item.name);
+                    if (itemPath === path) {
+                        foundUUID = item.uuid;
+                    }
+                    if (item.type === "directory") {
+                        this._items[itemPath] = {
+                            uuid: item.uuid,
+                            type: "directory",
+                            metadata: {
+                                name: item.name
+                            }
+                        };
+                    }
+                    else {
+                        this._items[itemPath] = {
+                            uuid: item.uuid,
+                            type: "file",
+                            metadata: {
+                                name: item.name,
+                                size: item.size,
+                                mime: item.mime,
+                                key: item.key,
+                                lastModified: item.lastModified,
+                                chunks: item.chunks,
+                                region: item.region,
+                                bucket: item.bucket,
+                                version: item.version
+                            }
+                        };
+                    }
+                }
+                if (foundUUID.length > 0) {
+                    return foundUUID;
                 }
             }
-            if (this._items[builtPath] && builtPath === path && acceptedTypes.includes(this._items[builtPath].type)) {
+            if (this._items[path] && acceptedTypes.includes(this._items[builtPath].type)) {
                 return this._items[builtPath].uuid;
             }
             return null;
@@ -121,13 +152,12 @@ class FS {
             if (!uuid) {
                 return [];
             }
-            /*if (uuid !== this.sdkConfig.baseFolderUUID!) {
-            const present = await this.api.v3().dir().present({ uuid })
-
-            if (!present.present) {
-                return []
+            if (uuid !== this.sdkConfig.baseFolderUUID) {
+                const present = await this.api.v3().dir().present({ uuid });
+                if (!present.present) {
+                    return [];
+                }
             }
-        }*/
             const names = [];
             if (recursive) {
                 const tree = await this.cloud.getDirectoryTree({ uuid });

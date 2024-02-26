@@ -1,3 +1,4 @@
+/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import FilenSDK from "../src"
@@ -21,9 +22,7 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	const dir = await filen.fs().readdir({ path: "/Pictures" })
-
-	console.log(dir)
+	const dir = await filen.fs().readdir({ path: "/Pictures/2" })
 	const proms: Promise<void>[] = []
 
 	for (const file of dir) {
@@ -31,7 +30,7 @@ const main = async () => {
 			new Promise((resolve, reject) => {
 				filen
 					.fs()
-					.stat({ path: "/Pictures/" + file })
+					.stat({ path: "/Pictures/2/" + file })
 					.then(stats => {
 						if (stats.isDirectory()) {
 							resolve()
@@ -41,7 +40,7 @@ const main = async () => {
 
 						filen
 							.fs()
-							.download({ path: "/Pictures/" + file, destination: pathModule.join(os.tmpdir(), file) })
+							.download({ path: "/Pictures/2/" + file, destination: pathModule.join(os.tmpdir(), file) })
 							.then(() => resolve())
 							.catch(reject)
 					})
