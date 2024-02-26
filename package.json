@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "Filen SDK",
 	"main": "dist/index.js",
 	"browser": "dist/bundle.browser.js",
@@ -16,7 +16,7 @@
 		"bundle": "webpack --mode production --node-env production --config webpack.config.js",
 		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts",
 		"clear": "npm run rmdir -- dist docs",
-		"rmdir": "node -e \"var fs = require('fs'); try { process.argv.slice(1).map((f) => fs.rmdirSync(f, { recursive: true })) } catch (err) { console.log(`Dir ${f} not found`) }; process.exit(0);\""
+		"rmdir": "node -e \"var fs = require('fs'); try { process.argv.slice(1).map((f) => fs.rmdirSync(f, { recursive: true })) } catch (err) { console.log(`Dir not found`) }; process.exit(0);\""
 	},
 	"repository": {
 		"type": "git",

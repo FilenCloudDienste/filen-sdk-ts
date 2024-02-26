@@ -62,6 +62,8 @@ export declare class FS {
     private readonly sdkConfig;
     private readonly cloud;
     private _items;
+    private readonly _pathToItemUUIDMutex;
+    private readonly _readdirMutex;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM
