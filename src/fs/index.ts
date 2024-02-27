@@ -4,11 +4,11 @@ import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallb
 import pathModule from "path"
 import { ENOENT } from "./errors"
 import { BUFFER_SIZE, environment, UPLOAD_CHUNK_SIZE } from "../constants"
-import type Cloud from "../cloud"
 import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
 import { uuidv4, normalizePath } from "../utils"
 import os from "os"
+import type { CloudItem, Cloud } from "../cloud"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
@@ -896,7 +896,7 @@ export class FS {
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
-	}): Promise<void> {
+	}): Promise<CloudItem> {
 		if (environment !== "node") {
 			throw new Error(`fs.writeFile is not implemented for a ${environment} environment`)
 		}
@@ -927,9 +927,9 @@ export class FS {
 		}
 
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4(), fileName)
+		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4())
 
-		await fs.rm(pathModule.join(tmpFilePath, ".."), {
+		await fs.rm(tmpFilePath, {
 			force: true,
 			maxRetries: 60 * 10,
 			recursive: true,
@@ -943,9 +943,16 @@ export class FS {
 		await fs.writeFile(tmpFilePath, content)
 
 		try {
-			await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+			return await this.cloud.uploadLocalFile({
+				source: tmpFilePath,
+				parent: parentUUID,
+				name: fileName,
+				abortSignal,
+				pauseSignal,
+				onProgress
+			})
 		} finally {
-			await fs.rm(pathModule.join(tmpFilePath, ".."), {
+			await fs.rm(tmpFilePath, {
 				force: true,
 				maxRetries: 60 * 10,
 				recursive: true,
@@ -1053,7 +1060,7 @@ export class FS {
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
-	}): Promise<void> {
+	}): Promise<CloudItem> {
 		if (environment !== "node") {
 			throw new Error(`fs.upload is not implemented for a ${environment} environment`)
 		}
@@ -1063,6 +1070,11 @@ export class FS {
 
 		const parentPath = pathModule.posix.dirname(path)
 		let parentUUID = ""
+		const fileName = pathModule.posix.basename(path)
+
+		if (fileName.length === 0 || fileName === "." || fileName === "/") {
+			throw new Error("Could not parse file name.")
+		}
 
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
 			parentUUID = this.sdkConfig.baseFolderUUID!
@@ -1079,7 +1091,7 @@ export class FS {
 			parentUUID = parentItem.uuid
 		}
 
-		await this.cloud.uploadLocalFile({ source, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+		return await this.cloud.uploadLocalFile({ source, parent: parentUUID, name: fileName, abortSignal, pauseSignal, onProgress })
 	}
 
 	/**

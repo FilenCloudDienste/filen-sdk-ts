@@ -2914,13 +2914,14 @@ export class Cloud {
 
 	/**
 	 * Upload a local file. Only available in a Node.JS environment.
-	 * @date 2/16/2024 - 5:13:26 AM
+	 * @date 2/27/2024 - 6:41:06 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		source: string
 	 * 		parent: string
+	 * 		name?: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
@@ -2932,6 +2933,7 @@ export class Cloud {
 	 * 	}} param0
 	 * @param {string} param0.source
 	 * @param {string} param0.parent
+	 * @param {string} param0.name
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {ProgressCallback} param0.onProgress
@@ -2945,6 +2947,7 @@ export class Cloud {
 	public async uploadLocalFile({
 		source,
 		parent,
+		name,
 		pauseSignal,
 		abortSignal,
 		onProgress,
@@ -2956,6 +2959,7 @@ export class Cloud {
 	}: {
 		source: string
 		parent: string
+		name?: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -2992,7 +2996,7 @@ export class Cloud {
 				throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`)
 			}
 
-			const fileName = pathModule.basename(source)
+			const fileName = name ? name : pathModule.basename(source)
 
 			if (fileName === "." || fileName === "/" || fileName.length <= 0) {
 				throw new Error(`Invalid source file at path ${source}. Could not parse file name.`)
@@ -3215,13 +3219,14 @@ export class Cloud {
 
 	/**
 	 * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.
-	 * @date 2/16/2024 - 5:50:00 AM
+	 * @date 2/27/2024 - 6:41:52 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		file: File
 	 * 		parent: string
+	 * 		name?: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
@@ -3233,6 +3238,7 @@ export class Cloud {
 	 * 	}} param0
 	 * @param {File} param0.file
 	 * @param {string} param0.parent
+	 * @param {string} param0.name
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {ProgressCallback} param0.onProgress
@@ -3246,6 +3252,7 @@ export class Cloud {
 	public async uploadWebFile({
 		file,
 		parent,
+		name,
 		pauseSignal,
 		abortSignal,
 		onProgress,
@@ -3257,6 +3264,7 @@ export class Cloud {
 	}: {
 		file: File
 		parent: string
+		name?: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -3287,7 +3295,7 @@ export class Cloud {
 				throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`)
 			}
 
-			const fileName = file.name
+			const fileName = name ? name : file.name
 			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
 			const fileSize = file.size
 			let dummyOffset = 0
@@ -3484,13 +3492,14 @@ export class Cloud {
 
 	/**
 	 * Upload a local directory. Only available in a Node.JS environment.
-	 * @date 2/17/2024 - 12:06:04 AM
+	 * @date 2/27/2024 - 6:42:26 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		source: string
 	 * 		parent: string
+	 * 		name?: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
@@ -3502,6 +3511,7 @@ export class Cloud {
 	 * 	}} param0
 	 * @param {string} param0.source
 	 * @param {string} param0.parent
+	 * @param {string} param0.name
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {ProgressCallback} param0.onProgress
@@ -3515,6 +3525,7 @@ export class Cloud {
 	public async uploadLocalDirectory({
 		source,
 		parent,
+		name,
 		pauseSignal,
 		abortSignal,
 		onProgress,
@@ -3526,6 +3537,7 @@ export class Cloud {
 	}: {
 		source: string
 		parent: string
+		name?: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -3562,7 +3574,7 @@ export class Cloud {
 				throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`)
 			}
 
-			const baseDirectoryName = pathModule.basename(source)
+			const baseDirectoryName = name ? name : pathModule.basename(source)
 
 			if (baseDirectoryName === "." || baseDirectoryName === "/" || baseDirectoryName.length <= 0) {
 				throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`)
@@ -3688,13 +3700,14 @@ export class Cloud {
 
 	/**
 	 * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
-	 * @date 2/19/2024 - 6:08:36 AM
+	 * @date 2/27/2024 - 6:43:17 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		files: FileList
-	 * 		parent: string
+	 * 		parent: string,
+	 * 		name?: string
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
@@ -3706,6 +3719,7 @@ export class Cloud {
 	 * 	}} param0
 	 * @param {FileList} param0.files
 	 * @param {string} param0.parent
+	 * @param {string} param0.name
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {ProgressCallback} param0.onProgress
@@ -3719,6 +3733,7 @@ export class Cloud {
 	public async uploadDirectoryFromWeb({
 		files,
 		parent,
+		name,
 		pauseSignal,
 		abortSignal,
 		onProgress,
@@ -3730,6 +3745,7 @@ export class Cloud {
 	}: {
 		files: FileList
 		parent: string
+		name?: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -3755,7 +3771,7 @@ export class Cloud {
 			}
 
 			const filesToUpload: { path: string; file: File }[] = []
-			let baseDirectoryName: string | null = null
+			let baseDirectoryName: string | null = name ? name : null
 			const pathsToUUIDs: Record<string, string> = {}
 
 			for (let i = 0; i < files.length; i++) {
@@ -3777,7 +3793,7 @@ export class Cloud {
 					file
 				})
 
-				if (ex[0] && ex[0].length > 0) {
+				if (ex[0] && ex[0].length > 0 && !name) {
 					baseDirectoryName = ex[0].trim()
 				}
 			}

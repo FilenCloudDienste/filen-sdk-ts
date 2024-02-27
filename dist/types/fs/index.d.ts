@@ -2,8 +2,8 @@
 import type API from "../api";
 import type { FilenSDKConfig } from "..";
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types";
-import type Cloud from "../cloud";
 import type { PauseSignal } from "../cloud/signals";
+import type { CloudItem, Cloud } from "../cloud";
 export type FSConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -301,7 +301,7 @@ export declare class FS {
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
-    }): Promise<void>;
+    }): Promise<CloudItem>;
     /**
      * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
      * @date 2/15/2024 - 5:59:23 AM
@@ -355,7 +355,7 @@ export declare class FS {
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
-    }): Promise<void>;
+    }): Promise<CloudItem>;
     /**
      * Copy a file or directory structure. Recursively creates intermediate directories if needed.
      * Warning: Can be really inefficient when copying large directory structures.

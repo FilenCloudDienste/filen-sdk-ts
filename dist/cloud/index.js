@@ -2184,13 +2184,14 @@ class Cloud {
     }
     /**
      * Upload a local file. Only available in a Node.JS environment.
-     * @date 2/16/2024 - 5:13:26 AM
+     * @date 2/27/2024 - 6:41:06 AM
      *
      * @public
      * @async
      * @param {{
      * 		source: string
      * 		parent: string
+     * 		name?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
@@ -2202,6 +2203,7 @@ class Cloud {
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
+     * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
@@ -2212,7 +2214,7 @@ class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    async uploadLocalFile({ source, parent, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
         if (constants_1.environment !== "node") {
             throw new Error(`cloud.uploadFileFromLocal is not implemented for ${constants_1.environment}`);
         }
@@ -2232,7 +2234,7 @@ class Cloud {
             if (!parentPresent.present || parentPresent.trash) {
                 throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`);
             }
-            const fileName = path_1.default.basename(source);
+            const fileName = name ? name : path_1.default.basename(source);
             if (fileName === "." || fileName === "/" || fileName.length <= 0) {
                 throw new Error(`Invalid source file at path ${source}. Could not parse file name.`);
             }
@@ -2415,13 +2417,14 @@ class Cloud {
     }
     /**
      * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.
-     * @date 2/16/2024 - 5:50:00 AM
+     * @date 2/27/2024 - 6:41:52 AM
      *
      * @public
      * @async
      * @param {{
      * 		file: File
      * 		parent: string
+     * 		name?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
@@ -2433,6 +2436,7 @@ class Cloud {
      * 	}} param0
      * @param {File} param0.file
      * @param {string} param0.parent
+     * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
@@ -2443,7 +2447,7 @@ class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    async uploadWebFile({ file, parent, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadWebFile({ file, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
         if (constants_1.environment !== "browser") {
             throw new Error(`cloud.uploadWebFile is not implemented for ${constants_1.environment}`);
         }
@@ -2459,7 +2463,7 @@ class Cloud {
             if (!parentPresent.present || parentPresent.trash) {
                 throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`);
             }
-            const fileName = file.name;
+            const fileName = name ? name : file.name;
             const mimeType = mime_types_1.default.lookup(fileName) || "application/octet-stream";
             const fileSize = file.size;
             let dummyOffset = 0;
@@ -2623,13 +2627,14 @@ class Cloud {
     }
     /**
      * Upload a local directory. Only available in a Node.JS environment.
-     * @date 2/17/2024 - 12:06:04 AM
+     * @date 2/27/2024 - 6:42:26 AM
      *
      * @public
      * @async
      * @param {{
      * 		source: string
      * 		parent: string
+     * 		name?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
@@ -2641,6 +2646,7 @@ class Cloud {
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
+     * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
@@ -2651,7 +2657,7 @@ class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<void>}
      */
-    async uploadLocalDirectory({ source, parent, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
         var _a, _b;
         if (constants_1.environment !== "node") {
             throw new Error(`cloud.uploadDirectoryFromLocal is not implemented for ${constants_1.environment}`);
@@ -2672,7 +2678,7 @@ class Cloud {
             if (!parentPresent.present || parentPresent.trash) {
                 throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`);
             }
-            const baseDirectoryName = path_1.default.basename(source);
+            const baseDirectoryName = name ? name : path_1.default.basename(source);
             if (baseDirectoryName === "." || baseDirectoryName === "/" || baseDirectoryName.length <= 0) {
                 throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`);
             }
@@ -2764,13 +2770,14 @@ class Cloud {
     }
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
-     * @date 2/19/2024 - 6:08:36 AM
+     * @date 2/27/2024 - 6:43:17 AM
      *
      * @public
      * @async
      * @param {{
      * 		files: FileList
-     * 		parent: string
+     * 		parent: string,
+     * 		name?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
@@ -2782,6 +2789,7 @@ class Cloud {
      * 	}} param0
      * @param {FileList} param0.files
      * @param {string} param0.parent
+     * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
@@ -2792,7 +2800,7 @@ class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<void>}
      */
-    async uploadDirectoryFromWeb({ files, parent, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
         var _a, _b;
         if (constants_1.environment !== "browser") {
             throw new Error(`cloud.uploadDirectoryFromWeb is not implemented for ${constants_1.environment}`);
@@ -2806,7 +2814,7 @@ class Cloud {
                 onStarted();
             }
             const filesToUpload = [];
-            let baseDirectoryName = null;
+            let baseDirectoryName = name ? name : null;
             const pathsToUUIDs = {};
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -2821,7 +2829,7 @@ class Cloud {
                     path: ex.slice(1).join("/"),
                     file
                 });
-                if (ex[0] && ex[0].length > 0) {
+                if (ex[0] && ex[0].length > 0 && !name) {
                     baseDirectoryName = ex[0].trim();
                 }
             }
