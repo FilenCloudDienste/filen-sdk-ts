@@ -700,6 +700,9 @@ class FS {
             recursive: true,
             retryDelay: 100
         });
+        await fs_extra_1.default.mkdir(path_1.default.join(tmpFilePath, ".."), {
+            recursive: true
+        });
         await fs_extra_1.default.writeFile(tmpFilePath, content);
         try {
             await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress });

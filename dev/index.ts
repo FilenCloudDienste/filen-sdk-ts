@@ -23,6 +23,8 @@ const filen = new FilenSDK({
 	userId: config.userId
 })
 
-const main = async () => {}
+const main = async () => {
+	await filen.fs().writeFile({ path: "/ok.txt", content: Buffer.from("ok", "utf-8") })
+}
 
 main()

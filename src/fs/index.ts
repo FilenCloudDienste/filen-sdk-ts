@@ -936,6 +936,10 @@ export class FS {
 			retryDelay: 100
 		})
 
+		await fs.mkdir(pathModule.join(tmpFilePath, ".."), {
+			recursive: true
+		})
+
 		await fs.writeFile(tmpFilePath, content)
 
 		try {
