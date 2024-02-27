@@ -8,6 +8,8 @@ import fs from "fs-extra"
 import pathModule from "path"
 import { generateRandomString } from "../src/crypto/utils"
 import os from "os"
+import axios from "axios"
+import https from "https"
 
 const filen = new FilenSDK({
 	email: config.email,
@@ -21,35 +23,6 @@ const filen = new FilenSDK({
 	userId: config.userId
 })
 
-const main = async () => {
-	const dir = await filen.fs().readdir({ path: "/Pictures/2" })
-	const proms: Promise<void>[] = []
-
-	for (const file of dir) {
-		proms.push(
-			new Promise((resolve, reject) => {
-				filen
-					.fs()
-					.stat({ path: "/Pictures/2/" + file })
-					.then(stats => {
-						if (stats.isDirectory()) {
-							resolve()
-
-							return
-						}
-
-						filen
-							.fs()
-							.download({ path: "/Pictures/2/" + file, destination: pathModule.join(os.tmpdir(), file) })
-							.then(() => resolve())
-							.catch(reject)
-					})
-					.catch(reject)
-			})
-		)
-	}
-
-	await Promise.all(proms)
-}
+const main = async () => {}
 
 main()

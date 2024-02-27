@@ -29,7 +29,7 @@ export type FSItem = (FSItemBase & {
     metadata: FSItemFileBase & FileMetadata;
 });
 export type FSItems = Record<string, FSItem>;
-export type FSStats = {
+export type FSStatsBase = {
     size: number;
     mtimeMs: number;
     birthtimeMs: number;
@@ -37,6 +37,13 @@ export type FSStats = {
     isFile: () => boolean;
     isSymbolicLink: () => boolean;
 };
+export type FSStats = (FolderMetadata & FSStatsBase & {
+    type: "directory";
+    uuid: string;
+}) | (FSItemFileBase & FileMetadata & FSStatsBase & {
+    type: "file";
+    uuid: string;
+});
 export type StatFS = {
     type: number;
     bsize: number;
@@ -301,7 +308,7 @@ export declare class FS {
         onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
-     * Download a file from path to a local destination path. Only available in a Node.JS environment.
+     * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
      * @date 2/15/2024 - 5:59:23 AM
      *
      * @public

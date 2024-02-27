@@ -34,8 +34,8 @@ class Encrypt {
     constructor(params) {
         this.textEncoder = new TextEncoder();
         this._semaphores = {
-            metadata: new semaphore_1.Semaphore(256),
-            data: new semaphore_1.Semaphore(128)
+            metadata: new semaphore_1.Semaphore(512),
+            data: new semaphore_1.Semaphore(256)
         };
         this.config = params;
     }

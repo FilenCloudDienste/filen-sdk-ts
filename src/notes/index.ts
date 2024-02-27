@@ -29,7 +29,7 @@ export class Notes {
 	private readonly _noteKeyCache = new Map<string, string>()
 
 	private readonly _semaphores = {
-		list: new Semaphore(32)
+		list: new Semaphore(128)
 	}
 
 	/**

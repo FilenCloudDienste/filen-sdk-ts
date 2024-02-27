@@ -23,7 +23,7 @@ class Chats {
     constructor(params) {
         this._chatKeyCache = new Map();
         this._semaphores = {
-            list: new semaphore_1.Semaphore(32)
+            list: new semaphore_1.Semaphore(128)
         };
         this.api = params.api;
         this.crypto = params.crypto;

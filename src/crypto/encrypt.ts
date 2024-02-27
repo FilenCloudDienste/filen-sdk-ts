@@ -24,8 +24,8 @@ export class Encrypt {
 	private readonly textEncoder = new TextEncoder()
 
 	private readonly _semaphores = {
-		metadata: new Semaphore(256),
-		data: new Semaphore(128)
+		metadata: new Semaphore(512),
+		data: new Semaphore(256)
 	}
 
 	/**

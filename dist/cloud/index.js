@@ -2047,9 +2047,6 @@ class Cloud {
                     .then(decrypted => {
                     if (decrypted.name.length === 0) {
                         resolve();
-                        if (file.metadata.startsWith("U")) {
-                            console.log(file.uuid, "empty name", file.metadata.slice(0, 10));
-                        }
                         return;
                     }
                     const parentPath = folderNames[file.parent];

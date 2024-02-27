@@ -37,8 +37,8 @@ class Decrypt {
     constructor(params) {
         this.textDecoder = new TextDecoder();
         this._semaphores = {
-            metadata: new semaphore_1.Semaphore(256),
-            data: new semaphore_1.Semaphore(128)
+            metadata: new semaphore_1.Semaphore(512),
+            data: new semaphore_1.Semaphore(256)
         };
         this.config = params;
     }

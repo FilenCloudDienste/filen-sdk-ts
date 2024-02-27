@@ -16,6 +16,7 @@ const semaphore_1 = require("../semaphore");
 const https_1 = __importDefault(require("https"));
 const url_1 = __importDefault(require("url"));
 const progress_stream_1 = __importDefault(require("progress-stream"));
+const package_json_1 = __importDefault(require("../../package.json"));
 const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
 exports.APIClientDefaults = {
     gatewayURLs: [
@@ -76,7 +77,7 @@ class APIClient {
             apiKey: ""
         };
         this._semaphores = {
-            request: new semaphore_1.Semaphore(128)
+            request: new semaphore_1.Semaphore(512)
         };
         this.config = params;
     }
@@ -89,9 +90,7 @@ class APIClient {
      * @returns {Record<string, string>}
      */
     buildHeaders(params) {
-        return {
-            Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey)
-        };
+        return Object.assign({ Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey), Accept: "application/json, text/plain, */*" }, (constants_1.environment === "node" ? { "User-Agent": `filen-sdk/${package_json_1.default.version}` } : {}));
     }
     /**
      * Send a POST request.
@@ -104,8 +103,8 @@ class APIClient {
      */
     async post(params) {
         let headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey });
-        if (params.apiKey && !headers["apiKey"]) {
-            headers["apiKey"] = params.apiKey;
+        if (params.apiKey && !headers["Authorization"]) {
+            headers["Authorization"] = `Bearer ${params.apiKey}`;
         }
         const url = params.url ? params.url : exports.APIClientDefaults.gatewayURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.gatewayURLs.length - 1)];
         const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer;
@@ -237,10 +236,14 @@ class APIClient {
      */
     async get(params) {
         const headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey });
-        if (params.apiKey && !headers["apiKey"]) {
-            headers["apiKey"] = params.apiKey;
+        if (params.apiKey && !headers["Authorization"]) {
+            headers["Authorization"] = `Bearer ${params.apiKey}`;
         }
         const url = params.url ? params.url : exports.APIClientDefaults.gatewayURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.gatewayURLs.length - 1)];
+        if (url.includes("egest.") || url.includes("down.")) {
+            // No auth headers when requesting encrypted chunks.
+            delete headers["Authorization"];
+        }
         let lastBytesDownloaded = 0;
         if (constants_1.environment === "node") {
             return new Promise((resolve, reject) => {

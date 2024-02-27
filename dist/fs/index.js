@@ -88,10 +88,12 @@ class FS {
                 }
                 const content = await this.cloud.listDirectory({ uuid: this._items[parentDirname].uuid });
                 let foundUUID = "";
+                let foundType = null;
                 for (const item of content) {
                     const itemPath = path_1.default.posix.join(parentDirname, item.name);
                     if (itemPath === path) {
                         foundUUID = item.uuid;
+                        foundType = item.type;
                     }
                     if (item.type === "directory") {
                         this._items[itemPath] = {
@@ -120,12 +122,12 @@ class FS {
                         };
                     }
                 }
-                if (foundUUID.length > 0) {
+                if (foundType && foundUUID.length > 0 && acceptedTypes.includes(foundType)) {
                     return foundUUID;
                 }
             }
-            if (this._items[path] && acceptedTypes.includes(this._items[builtPath].type)) {
-                return this._items[builtPath].uuid;
+            if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
+                return this._items[path].uuid;
             }
             return null;
         }
@@ -150,14 +152,15 @@ class FS {
             path = this.normalizePath({ path });
             const uuid = await this.pathToItemUUID({ path });
             if (!uuid) {
-                return [];
+                throw new errors_1.ENOENT({ path });
             }
-            if (uuid !== this.sdkConfig.baseFolderUUID) {
-                const present = await this.api.v3().dir().present({ uuid });
+            /*if (uuid !== this.sdkConfig.baseFolderUUID!) {
+                const present = await this.api.v3().dir().present({ uuid })
+
                 if (!present.present) {
-                    return [];
+                    return []
                 }
-            }
+            }*/
             const names = [];
             if (recursive) {
                 const tree = await this.cloud.getDirectoryTree({ uuid });
@@ -259,11 +262,7 @@ class FS {
             throw new errors_1.ENOENT({ path });
         }
         if (item.type === "file") {
-            return {
-                size: item.metadata.size,
-                mtimeMs: item.metadata.lastModified,
-                birthtimeMs: (_a = item.metadata.creation) !== null && _a !== void 0 ? _a : 0,
-                isDirectory() {
+            return Object.assign(Object.assign({}, item.metadata), { uuid, size: item.metadata.size, mtimeMs: item.metadata.lastModified, birthtimeMs: (_a = item.metadata.creation) !== null && _a !== void 0 ? _a : 0, type: "file", isDirectory() {
                     return false;
                 },
                 isFile() {
@@ -271,14 +270,9 @@ class FS {
                 },
                 isSymbolicLink() {
                     return false;
-                }
-            };
+                } });
         }
-        return {
-            size: 0,
-            mtimeMs: 0,
-            birthtimeMs: 0,
-            isDirectory() {
+        return Object.assign(Object.assign({}, item.metadata), { uuid, size: 0, mtimeMs: 0, birthtimeMs: 0, type: "directory", isDirectory() {
                 return true;
             },
             isFile() {
@@ -286,8 +280,7 @@ class FS {
             },
             isSymbolicLink() {
                 return false;
-            }
-        };
+            } });
     }
     /**
      * Alias of stat.
@@ -733,7 +726,7 @@ class FS {
         }
     }
     /**
-     * Download a file from path to a local destination path. Only available in a Node.JS environment.
+     * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
      * @date 2/15/2024 - 5:59:23 AM
      *
      * @public
@@ -760,8 +753,12 @@ class FS {
         destination = (0, utils_1.normalizePath)(destination);
         const uuid = await this.pathToItemUUID({ path });
         const item = this._items[path];
-        if (!uuid || !item || item.type === "directory") {
+        if (!uuid || !item) {
             throw new errors_1.ENOENT({ path });
+        }
+        if (item.type === "directory") {
+            await this.cloud.downloadDirectoryToLocal({ uuid, to: destination, abortSignal, pauseSignal, onProgress });
+            return;
         }
         await this.cloud.downloadFileToLocal({
             uuid,

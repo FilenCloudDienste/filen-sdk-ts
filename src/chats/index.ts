@@ -31,7 +31,7 @@ export class Chats {
 	private readonly _chatKeyCache = new Map<string, string>()
 
 	private readonly _semaphores = {
-		list: new Semaphore(32)
+		list: new Semaphore(128)
 	}
 
 	/**

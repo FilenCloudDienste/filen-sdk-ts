@@ -44,7 +44,7 @@ export type FSItem =
 
 export type FSItems = Record<string, FSItem>
 
-export type FSStats = {
+export type FSStatsBase = {
 	size: number
 	mtimeMs: number
 	birthtimeMs: number
@@ -52,6 +52,10 @@ export type FSStats = {
 	isFile: () => boolean
 	isSymbolicLink: () => boolean
 }
+
+export type FSStats =
+	| (FolderMetadata & FSStatsBase & { type: "directory"; uuid: string })
+	| (FSItemFileBase & FileMetadata & FSStatsBase & { type: "file"; uuid: string })
 
 export type StatFS = {
 	type: number
@@ -164,12 +168,14 @@ export class FS {
 
 				const content = await this.cloud.listDirectory({ uuid: this._items[parentDirname].uuid })
 				let foundUUID = ""
+				let foundType: FSItemType | null = null
 
 				for (const item of content) {
 					const itemPath = pathModule.posix.join(parentDirname, item.name)
 
 					if (itemPath === path) {
 						foundUUID = item.uuid
+						foundType = item.type
 					}
 
 					if (item.type === "directory") {
@@ -199,13 +205,13 @@ export class FS {
 					}
 				}
 
-				if (foundUUID.length > 0) {
+				if (foundType && foundUUID.length > 0 && acceptedTypes.includes(foundType)) {
 					return foundUUID
 				}
 			}
 
-			if (this._items[path] && acceptedTypes.includes(this._items[builtPath].type)) {
-				return this._items[builtPath].uuid
+			if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
+				return this._items[path].uuid
 			}
 
 			return null
@@ -234,16 +240,16 @@ export class FS {
 			const uuid = await this.pathToItemUUID({ path })
 
 			if (!uuid) {
-				return []
+				throw new ENOENT({ path })
 			}
 
-			if (uuid !== this.sdkConfig.baseFolderUUID!) {
+			/*if (uuid !== this.sdkConfig.baseFolderUUID!) {
 				const present = await this.api.v3().dir().present({ uuid })
 
 				if (!present.present) {
 					return []
 				}
-			}
+			}*/
 
 			const names: string[] = []
 
@@ -362,9 +368,12 @@ export class FS {
 
 		if (item.type === "file") {
 			return {
+				...item.metadata,
+				uuid,
 				size: item.metadata.size,
 				mtimeMs: item.metadata.lastModified,
 				birthtimeMs: item.metadata.creation ?? 0,
+				type: "file",
 				isDirectory() {
 					return false
 				},
@@ -378,9 +387,12 @@ export class FS {
 		}
 
 		return {
+			...item.metadata,
+			uuid,
 			size: 0,
 			mtimeMs: 0,
 			birthtimeMs: 0,
+			type: "directory",
 			isDirectory() {
 				return true
 			},
@@ -953,7 +965,7 @@ export class FS {
 	}
 
 	/**
-	 * Download a file from path to a local destination path. Only available in a Node.JS environment.
+	 * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
 	 * @date 2/15/2024 - 5:59:23 AM
 	 *
 	 * @public
@@ -995,8 +1007,14 @@ export class FS {
 		const uuid = await this.pathToItemUUID({ path })
 		const item = this._items[path]
 
-		if (!uuid || !item || item.type === "directory") {
+		if (!uuid || !item) {
 			throw new ENOENT({ path })
+		}
+
+		if (item.type === "directory") {
+			await this.cloud.downloadDirectoryToLocal({ uuid, to: destination, abortSignal, pauseSignal, onProgress })
+
+			return
 		}
 
 		await this.cloud.downloadFileToLocal({

@@ -11,6 +11,7 @@ import type { ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
+import packageJSON from "../../package.json"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -100,7 +101,7 @@ export class APIClient {
 	} as const
 
 	private readonly _semaphores = {
-		request: new Semaphore(128)
+		request: new Semaphore(512)
 	}
 
 	/**
@@ -125,7 +126,9 @@ export class APIClient {
 	 */
 	private buildHeaders(params?: { apiKey?: string }): Record<string, string> {
 		return {
-			Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey)
+			Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey),
+			Accept: "application/json, text/plain, */*",
+			...(environment === "node" ? { "User-Agent": `filen-sdk/${packageJSON.version}` } : {})
 		}
 	}
 
@@ -141,8 +144,8 @@ export class APIClient {
 	private async post(params: PostRequestParameters) {
 		let headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey })
 
-		if (params.apiKey && !headers["apiKey"]) {
-			headers["apiKey"] = params.apiKey
+		if (params.apiKey && !headers["Authorization"]) {
+			headers["Authorization"] = `Bearer ${params.apiKey}`
 		}
 
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
@@ -301,11 +304,16 @@ export class APIClient {
 	private async get(params: GetRequestParameters) {
 		const headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey })
 
-		if (params.apiKey && !headers["apiKey"]) {
-			headers["apiKey"] = params.apiKey
+		if (params.apiKey && !headers["Authorization"]) {
+			headers["Authorization"] = `Bearer ${params.apiKey}`
 		}
 
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
+
+		if (url.includes("egest.") || url.includes("down.")) {
+			// No auth headers when requesting encrypted chunks.
+			delete headers["Authorization"]
+		}
 
 		let lastBytesDownloaded = 0
 
