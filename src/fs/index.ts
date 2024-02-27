@@ -632,7 +632,11 @@ export class FS {
 			await this.cloud.trashFile({ uuid })
 		}
 
-		delete this._items[path]
+		for (const entry in this._items) {
+			if (entry.startsWith(path)) {
+				delete this._items[entry]
+			}
+		}
 	}
 
 	/**
@@ -943,7 +947,7 @@ export class FS {
 		await fs.writeFile(tmpFilePath, content)
 
 		try {
-			return await this.cloud.uploadLocalFile({
+			const item = await this.cloud.uploadLocalFile({
 				source: tmpFilePath,
 				parent: parentUUID,
 				name: fileName,
@@ -951,6 +955,26 @@ export class FS {
 				pauseSignal,
 				onProgress
 			})
+
+			if (item.type === "file") {
+				this._items[path] = {
+					uuid: item.uuid,
+					type: "file",
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+			}
+
+			return item
 		} finally {
 			await fs.rm(tmpFilePath, {
 				force: true,
@@ -1091,7 +1115,27 @@ export class FS {
 			parentUUID = parentItem.uuid
 		}
 
-		return await this.cloud.uploadLocalFile({ source, parent: parentUUID, name: fileName, abortSignal, pauseSignal, onProgress })
+		const item = await this.cloud.uploadLocalFile({ source, parent: parentUUID, name: fileName, abortSignal, pauseSignal, onProgress })
+
+		if (item.type === "file") {
+			this._items[path] = {
+				uuid: item.uuid,
+				type: "file",
+				metadata: {
+					name: item.name,
+					size: item.size,
+					mime: item.mime,
+					key: item.key,
+					lastModified: item.lastModified,
+					chunks: item.chunks,
+					region: item.region,
+					bucket: item.bucket,
+					version: item.version
+				}
+			}
+		}
+
+		return item
 	}
 
 	/**
@@ -1172,6 +1216,8 @@ export class FS {
 					pauseSignal,
 					onProgress
 				})
+
+				await this.readdir({ path: to, recursive: true })
 			} finally {
 				await fs.rm(pathModule.join(tmpDirectoryPath, ".."), {
 					force: true,
@@ -1194,7 +1240,31 @@ export class FS {
 			})
 
 			try {
-				await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
+				const item = await this.cloud.uploadLocalFile({
+					source: tmpFilePath,
+					parent: parentUUID,
+					abortSignal,
+					pauseSignal,
+					onProgress
+				})
+
+				if (item.type === "file") {
+					this._items[to] = {
+						uuid: item.uuid,
+						type: "file",
+						metadata: {
+							name: item.name,
+							size: item.size,
+							mime: item.mime,
+							key: item.key,
+							lastModified: item.lastModified,
+							chunks: item.chunks,
+							region: item.region,
+							bucket: item.bucket,
+							version: item.version
+						}
+					}
+				}
 			} finally {
 				await fs.rm(tmpFilePath, {
 					force: true,

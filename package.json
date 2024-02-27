@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.10",
+	"version": "0.1.11",
 	"description": "Filen SDK",
 	"main": "dist/index.js",
 	"browser": "dist/bundle.browser.js",

@@ -473,7 +473,11 @@ class FS {
         else {
             await this.cloud.trashFile({ uuid });
         }
-        delete this._items[path];
+        for (const entry in this._items) {
+            if (entry.startsWith(path)) {
+                delete this._items[entry];
+            }
+        }
     }
     /**
      * Deletes file/directory at path (Sends it to the trash).
@@ -705,7 +709,7 @@ class FS {
         });
         await fs_extra_1.default.writeFile(tmpFilePath, content);
         try {
-            return await this.cloud.uploadLocalFile({
+            const item = await this.cloud.uploadLocalFile({
                 source: tmpFilePath,
                 parent: parentUUID,
                 name: fileName,
@@ -713,6 +717,24 @@ class FS {
                 pauseSignal,
                 onProgress
             });
+            if (item.type === "file") {
+                this._items[path] = {
+                    uuid: item.uuid,
+                    type: "file",
+                    metadata: {
+                        name: item.name,
+                        size: item.size,
+                        mime: item.mime,
+                        key: item.key,
+                        lastModified: item.lastModified,
+                        chunks: item.chunks,
+                        region: item.region,
+                        bucket: item.bucket,
+                        version: item.version
+                    }
+                };
+            }
+            return item;
         }
         finally {
             await fs_extra_1.default.rm(tmpFilePath, {
@@ -815,7 +837,25 @@ class FS {
             }
             parentUUID = parentItem.uuid;
         }
-        return await this.cloud.uploadLocalFile({ source, parent: parentUUID, name: fileName, abortSignal, pauseSignal, onProgress });
+        const item = await this.cloud.uploadLocalFile({ source, parent: parentUUID, name: fileName, abortSignal, pauseSignal, onProgress });
+        if (item.type === "file") {
+            this._items[path] = {
+                uuid: item.uuid,
+                type: "file",
+                metadata: {
+                    name: item.name,
+                    size: item.size,
+                    mime: item.mime,
+                    key: item.key,
+                    lastModified: item.lastModified,
+                    chunks: item.chunks,
+                    region: item.region,
+                    bucket: item.bucket,
+                    version: item.version
+                }
+            };
+        }
+        return item;
     }
     /**
      * Copy a file or directory structure. Recursively creates intermediate directories if needed.
@@ -872,6 +912,7 @@ class FS {
                     pauseSignal,
                     onProgress
                 });
+                await this.readdir({ path: to, recursive: true });
             }
             finally {
                 await fs_extra_1.default.rm(path_1.default.join(tmpDirectoryPath, ".."), {
@@ -895,7 +936,30 @@ class FS {
                 onProgress
             });
             try {
-                await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress });
+                const item = await this.cloud.uploadLocalFile({
+                    source: tmpFilePath,
+                    parent: parentUUID,
+                    abortSignal,
+                    pauseSignal,
+                    onProgress
+                });
+                if (item.type === "file") {
+                    this._items[to] = {
+                        uuid: item.uuid,
+                        type: "file",
+                        metadata: {
+                            name: item.name,
+                            size: item.size,
+                            mime: item.mime,
+                            key: item.key,
+                            lastModified: item.lastModified,
+                            chunks: item.chunks,
+                            region: item.region,
+                            bucket: item.bucket,
+                            version: item.version
+                        }
+                    };
+                }
             }
             finally {
                 await fs_extra_1.default.rm(tmpFilePath, {
