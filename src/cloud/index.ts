@@ -2159,20 +2159,21 @@ export class Cloud {
 			onQueued()
 		}
 
+		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
+		const tmpChunksPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
+		const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks
+		const firstChunk = chunksStart ? chunksStart : 0
+
+		let currentWriteIndex = firstChunk
+		let writerStopped = false
+
 		await this._semaphores.downloads.acquire()
 
 		try {
 			if (onStarted) {
 				onStarted()
 			}
-
-			const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks
-			const firstChunk = chunksStart ? chunksStart : 0
-			const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-			const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
-			const tmpChunksPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
-			let currentWriteIndex = firstChunk
-			let writerStopped = false
 
 			await Promise.all([
 				fs.rm(destinationPath, {
@@ -2363,13 +2364,6 @@ export class Cloud {
 				}
 
 				throw e
-			} finally {
-				await fs.rm(tmpChunksPath, {
-					force: true,
-					maxRetries: 60 * 10,
-					recursive: true,
-					retryDelay: 100
-				})
 			}
 
 			if (onFinished) {
@@ -2378,6 +2372,13 @@ export class Cloud {
 
 			return destinationPath
 		} finally {
+			await fs.rm(tmpChunksPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+
 			this._semaphores.downloads.release()
 		}
 	}

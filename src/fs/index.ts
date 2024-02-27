@@ -905,6 +905,11 @@ export class FS {
 
 		const parentPath = pathModule.posix.dirname(path)
 		let parentUUID = ""
+		const fileName = pathModule.posix.basename(path)
+
+		if (fileName.length === 0 || fileName === "." || fileName === "/") {
+			throw new Error("Could not parse file name.")
+		}
 
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
 			parentUUID = this.sdkConfig.baseFolderUUID!
@@ -922,9 +927,9 @@ export class FS {
 		}
 
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4())
+		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4(), fileName)
 
-		await fs.rm(tmpFilePath, {
+		await fs.rm(pathModule.join(tmpFilePath, ".."), {
 			force: true,
 			maxRetries: 60 * 10,
 			recursive: true,
@@ -936,7 +941,7 @@ export class FS {
 		try {
 			await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress })
 		} finally {
-			await fs.rm(tmpFilePath, {
+			await fs.rm(pathModule.join(tmpFilePath, ".."), {
 				force: true,
 				maxRetries: 60 * 10,
 				recursive: true,

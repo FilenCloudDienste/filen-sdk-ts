@@ -1625,18 +1625,18 @@ class Cloud {
         if (onQueued) {
             onQueued();
         }
+        const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
+        const destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
+        const tmpChunksPath = (0, utils_1.normalizePath)(path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
+        const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks;
+        const firstChunk = chunksStart ? chunksStart : 0;
+        let currentWriteIndex = firstChunk;
+        let writerStopped = false;
         await this._semaphores.downloads.acquire();
         try {
             if (onStarted) {
                 onStarted();
             }
-            const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks;
-            const firstChunk = chunksStart ? chunksStart : 0;
-            const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
-            const destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
-            const tmpChunksPath = (0, utils_1.normalizePath)(path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
-            let currentWriteIndex = firstChunk;
-            let writerStopped = false;
             await Promise.all([
                 fs_extra_1.default.rm(destinationPath, {
                     force: true,
@@ -1793,20 +1793,18 @@ class Cloud {
                 }
                 throw e;
             }
-            finally {
-                await fs_extra_1.default.rm(tmpChunksPath, {
-                    force: true,
-                    maxRetries: 60 * 10,
-                    recursive: true,
-                    retryDelay: 100
-                });
-            }
             if (onFinished) {
                 onFinished();
             }
             return destinationPath;
         }
         finally {
+            await fs_extra_1.default.rm(tmpChunksPath, {
+                force: true,
+                maxRetries: 60 * 10,
+                recursive: true,
+                retryDelay: 100
+            });
             this._semaphores.downloads.release();
         }
     }

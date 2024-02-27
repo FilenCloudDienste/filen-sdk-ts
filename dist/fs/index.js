@@ -676,6 +676,10 @@ class FS {
         path = this.normalizePath({ path });
         const parentPath = path_1.default.posix.dirname(path);
         let parentUUID = "";
+        const fileName = path_1.default.posix.basename(path);
+        if (fileName.length === 0 || fileName === "." || fileName === "/") {
+            throw new Error("Could not parse file name.");
+        }
         if (parentPath === "/" || parentPath === "." || parentPath === "") {
             parentUUID = this.sdkConfig.baseFolderUUID;
         }
@@ -689,8 +693,8 @@ class FS {
             parentUUID = parentItem.uuid;
         }
         const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
-        const tmpFilePath = path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)());
-        await fs_extra_1.default.rm(tmpFilePath, {
+        const tmpFilePath = path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)(), fileName);
+        await fs_extra_1.default.rm(path_1.default.join(tmpFilePath, ".."), {
             force: true,
             maxRetries: 60 * 10,
             recursive: true,
@@ -701,7 +705,7 @@ class FS {
             await this.cloud.uploadLocalFile({ source: tmpFilePath, parent: parentUUID, abortSignal, pauseSignal, onProgress });
         }
         finally {
-            await fs_extra_1.default.rm(tmpFilePath, {
+            await fs_extra_1.default.rm(path_1.default.join(tmpFilePath, ".."), {
                 force: true,
                 maxRetries: 60 * 10,
                 recursive: true,
