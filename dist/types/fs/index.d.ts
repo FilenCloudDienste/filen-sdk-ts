@@ -1,6 +1,5 @@
 /// <reference types="node" />
 import type API from "../api";
-import type Crypto from "../crypto";
 import type { FilenSDKConfig } from "..";
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types";
 import type Cloud from "../cloud";
@@ -8,7 +7,6 @@ import type { PauseSignal } from "../cloud/signals";
 export type FSConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
-    crypto: Crypto;
     cloud: Cloud;
 };
 export type FSItemType = "file" | "directory";
@@ -65,12 +63,9 @@ export type StatFS = {
  */
 export declare class FS {
     private readonly api;
-    private readonly crypto;
     private readonly sdkConfig;
     private readonly cloud;
     private _items;
-    private readonly _pathToItemUUIDMutex;
-    private readonly _readdirMutex;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM

@@ -1,5 +1,4 @@
 import type API from "../api"
-import type Crypto from "../crypto"
 import type { FilenSDKConfig } from ".."
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types"
 import pathModule from "path"
@@ -10,12 +9,10 @@ import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
 import { uuidv4, normalizePath } from "../utils"
 import os from "os"
-import { Semaphore } from "../semaphore"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
-	crypto: Crypto
 	cloud: Cloud
 }
 
@@ -79,12 +76,9 @@ export type StatFS = {
  */
 export class FS {
 	private readonly api: API
-	private readonly crypto: Crypto
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly cloud: Cloud
 	private _items: FSItems
-	private readonly _pathToItemUUIDMutex = new Semaphore(1)
-	private readonly _readdirMutex = new Semaphore(1)
 
 	/**
 	 * Creates an instance of FS.
@@ -96,7 +90,6 @@ export class FS {
 	 */
 	public constructor(params: FSConfig) {
 		this.api = params.api
-		this.crypto = params.crypto
 		this.sdkConfig = params.sdkConfig
 		this.cloud = params.cloud
 
@@ -147,77 +140,71 @@ export class FS {
 			return this._items[path].uuid
 		}
 
-		await this._pathToItemUUIDMutex.acquire()
+		const pathEx = path.split("/")
+		let builtPath = "/"
 
-		try {
-			const pathEx = path.split("/")
-			let builtPath = "/"
+		for (const part of pathEx) {
+			if (pathEx.length <= 0) {
+				continue
+			}
 
-			for (const part of pathEx) {
-				if (pathEx.length <= 0) {
-					continue
+			builtPath = pathModule.posix.join(builtPath, part)
+
+			const parentDirname = pathModule.posix.dirname(builtPath)
+
+			if (!this._items[parentDirname]) {
+				return null
+			}
+
+			const content = await this.cloud.listDirectory({ uuid: this._items[parentDirname].uuid })
+			let foundUUID = ""
+			let foundType: FSItemType | null = null
+
+			for (const item of content) {
+				const itemPath = pathModule.posix.join(parentDirname, item.name)
+
+				if (itemPath === path) {
+					foundUUID = item.uuid
+					foundType = item.type
 				}
 
-				builtPath = pathModule.posix.join(builtPath, part)
-
-				const parentDirname = pathModule.posix.dirname(builtPath)
-
-				if (!this._items[parentDirname]) {
-					return null
-				}
-
-				const content = await this.cloud.listDirectory({ uuid: this._items[parentDirname].uuid })
-				let foundUUID = ""
-				let foundType: FSItemType | null = null
-
-				for (const item of content) {
-					const itemPath = pathModule.posix.join(parentDirname, item.name)
-
-					if (itemPath === path) {
-						foundUUID = item.uuid
-						foundType = item.type
-					}
-
-					if (item.type === "directory") {
-						this._items[itemPath] = {
-							uuid: item.uuid,
-							type: "directory",
-							metadata: {
-								name: item.name
-							}
+				if (item.type === "directory") {
+					this._items[itemPath] = {
+						uuid: item.uuid,
+						type: "directory",
+						metadata: {
+							name: item.name
 						}
-					} else {
-						this._items[itemPath] = {
-							uuid: item.uuid,
-							type: "file",
-							metadata: {
-								name: item.name,
-								size: item.size,
-								mime: item.mime,
-								key: item.key,
-								lastModified: item.lastModified,
-								chunks: item.chunks,
-								region: item.region,
-								bucket: item.bucket,
-								version: item.version
-							}
+					}
+				} else {
+					this._items[itemPath] = {
+						uuid: item.uuid,
+						type: "file",
+						metadata: {
+							name: item.name,
+							size: item.size,
+							mime: item.mime,
+							key: item.key,
+							lastModified: item.lastModified,
+							chunks: item.chunks,
+							region: item.region,
+							bucket: item.bucket,
+							version: item.version
 						}
 					}
 				}
-
-				if (foundType && foundUUID.length > 0 && acceptedTypes.includes(foundType)) {
-					return foundUUID
-				}
 			}
 
-			if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
-				return this._items[path].uuid
+			if (foundType && foundUUID.length > 0 && acceptedTypes.includes(foundType)) {
+				return foundUUID
 			}
-
-			return null
-		} finally {
-			this._pathToItemUUIDMutex.release()
 		}
+
+		if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
+			return this._items[path].uuid
+		}
+
+		return null
 	}
 
 	/**
@@ -232,18 +219,15 @@ export class FS {
 	 * @returns {Promise<string[]>}
 	 */
 	public async readdir({ path, recursive = false }: { path: string; recursive?: boolean }): Promise<string[]> {
-		await this._readdirMutex.acquire()
+		path = this.normalizePath({ path })
 
-		try {
-			path = this.normalizePath({ path })
+		const uuid = await this.pathToItemUUID({ path })
 
-			const uuid = await this.pathToItemUUID({ path })
+		if (!uuid) {
+			throw new ENOENT({ path })
+		}
 
-			if (!uuid) {
-				throw new ENOENT({ path })
-			}
-
-			/*if (uuid !== this.sdkConfig.baseFolderUUID!) {
+		/*if (uuid !== this.sdkConfig.baseFolderUUID!) {
 				const present = await this.api.v3().dir().present({ uuid })
 
 				if (!present.present) {
@@ -251,59 +235,22 @@ export class FS {
 				}
 			}*/
 
-			const names: string[] = []
+		const names: string[] = []
 
-			if (recursive) {
-				const tree = await this.cloud.getDirectoryTree({ uuid })
+		if (recursive) {
+			const tree = await this.cloud.getDirectoryTree({ uuid })
 
-				for (const entry in tree) {
-					const item = tree[entry]
-					const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
+			for (const entry in tree) {
+				const item = tree[entry]
+				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
 
-					if (item.parent === "base") {
-						continue
-					}
-
-					const itemPath = pathModule.posix.join(path, entryPath)
-
-					names.push(entryPath)
-
-					if (item.type === "directory") {
-						this._items[itemPath] = {
-							uuid: item.uuid,
-							type: "directory",
-							metadata: {
-								name: item.name
-							}
-						}
-					} else {
-						this._items[itemPath] = {
-							uuid: item.uuid,
-							type: "file",
-							metadata: {
-								name: item.name,
-								size: item.size,
-								mime: item.mime,
-								key: item.key,
-								lastModified: item.lastModified,
-								chunks: item.chunks,
-								region: item.region,
-								bucket: item.bucket,
-								version: item.version
-							}
-						}
-					}
+				if (item.parent === "base") {
+					continue
 				}
 
-				return names
-			}
+				const itemPath = pathModule.posix.join(path, entryPath)
 
-			const items = await this.cloud.listDirectory({ uuid })
-
-			for (const item of items) {
-				const itemPath = pathModule.posix.join(path, item.name)
-
-				names.push(item.name)
+				names.push(entryPath)
 
 				if (item.type === "directory") {
 					this._items[itemPath] = {
@@ -333,9 +280,43 @@ export class FS {
 			}
 
 			return names
-		} finally {
-			this._readdirMutex.release()
 		}
+
+		const items = await this.cloud.listDirectory({ uuid })
+
+		for (const item of items) {
+			const itemPath = pathModule.posix.join(path, item.name)
+
+			names.push(item.name)
+
+			if (item.type === "directory") {
+				this._items[itemPath] = {
+					uuid: item.uuid,
+					type: "directory",
+					metadata: {
+						name: item.name
+					}
+				}
+			} else {
+				this._items[itemPath] = {
+					uuid: item.uuid,
+					type: "file",
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+			}
+		}
+
+		return names
 	}
 
 	/**
