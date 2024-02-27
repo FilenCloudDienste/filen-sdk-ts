@@ -105,6 +105,33 @@ export class FS {
 	}
 
 	/**
+	 * Add an item to the internal item tree.
+	 * @date 2/14/2024 - 12:50:52 AM
+	 *
+	 * @public
+	 * @param {{ path: string, item: FSItem }} param0
+	 * @param {string} param0.path
+	 * @param {FSItem} param0.item
+	 * @returns {void}
+	 */
+	public _addItem({ path, item }: { path: string; item: FSItem }): void {
+		this._items[path] = item
+	}
+
+	/**
+	 * Remove an item from the internal item tree.
+	 * @date 2/14/2024 - 12:50:52 AM
+	 *
+	 * @public
+	 * @param {{ path: string }} param0
+	 * @param {string} param0.path
+	 * @returns {void}
+	 */
+	public _removeItem({ path }: { path: string }): void {
+		delete this._items[path]
+	}
+
+	/**
 	 * Normalizes a path to be used with FS.
 	 * @date 2/14/2024 - 12:50:52 AM
 	 *

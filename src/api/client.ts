@@ -273,6 +273,9 @@ export class APIClient {
 			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
 			responseType: params.responseType ? params.responseType : "json",
 			maxRedirects: 0,
+			maxBodyLength: Infinity,
+			maxContentLength: Infinity,
+			maxRate: Infinity,
 			onUploadProgress: event => {
 				if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
 					return
@@ -430,6 +433,9 @@ export class APIClient {
 			timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
 			responseType: params.responseType ? params.responseType : "json",
 			maxRedirects: 0,
+			maxBodyLength: Infinity,
+			maxContentLength: Infinity,
+			maxRate: Infinity,
 			onDownloadProgress: event => {
 				if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
 					return
