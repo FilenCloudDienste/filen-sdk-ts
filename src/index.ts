@@ -545,9 +545,10 @@ export class FilenSDK {
 
 export default FilenSDK
 
-export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree } from "./cloud"
-export { FSItem, FSItemType, FSStats, StatFS } from "./fs"
+export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree, CloudConfig } from "./cloud"
+export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs"
 export * from "./types"
+export { CryptoConfig } from "./crypto"
 
 module.exports = FilenSDK
 exports.default = FilenSDK

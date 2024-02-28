@@ -188,44 +188,50 @@ export declare class FS {
      */
     statfs(): Promise<StatFS>;
     /**
-     * Deletes file/directoy at path (Sends it to the trash).
-     * @date 2/14/2024 - 2:16:42 AM
+     * Deletes file/directoy at path.
+     * @date 2/28/2024 - 4:57:19 PM
      *
      * @private
      * @async
-     * @param {{ path: string }} param0
+     * @param {{ path: string; type?: FSItemType, permanent?: boolean }} param0
      * @param {string} param0.path
+     * @param {FSItemType} param0.type
+     * @param {boolean} [param0.permanent=false]
      * @returns {Promise<void>}
      */
     private _unlink;
     /**
-     * Deletes file/directory at path (Sends it to the trash).
-     * @date 2/14/2024 - 2:55:28 AM
+     * Deletes file/directory at path.
+     * @date 2/28/2024 - 4:58:37 PM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{ path: string, permanent?: boolean }} param0
      * @param {string} param0.path
+     * @param {boolean} [param0.permanent=false]
      * @returns {ReturnType<typeof this._unlink>}
      */
-    unlink({ path }: {
+    unlink({ path, permanent }: {
         path: string;
+        permanent?: boolean;
     }): ReturnType<typeof this._unlink>;
     /**
      * Alias of unlink.
-     * @date 2/14/2024 - 2:55:33 AM
+     * @date 2/28/2024 - 4:58:30 PM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{ path: string, permanent?: boolean }} param0
      * @param {string} param0.path
+     * @param {boolean} [param0.permanent=false]
      * @returns {ReturnType<typeof this._unlink>}
      */
-    rm({ path }: {
+    rm({ path, permanent }: {
         path: string;
+        permanent?: boolean;
     }): ReturnType<typeof this._unlink>;
     /**
-     * Deletes directory at path (Sends it to the trash).
+     * Deletes directory at path.
      * @date 2/14/2024 - 2:53:48 AM
      *
      * @public

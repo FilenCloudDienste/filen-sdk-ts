@@ -64,7 +64,11 @@ class FS {
      * @returns {void}
      */
     _removeItem({ path }) {
-        delete this._items[path];
+        for (const entry in this._items) {
+            if (entry.startsWith(path)) {
+                delete this._items[entry];
+            }
+        }
     }
     /**
      * Normalizes a path to be used with FS.
@@ -473,16 +477,18 @@ class FS {
         };
     }
     /**
-     * Deletes file/directoy at path (Sends it to the trash).
-     * @date 2/14/2024 - 2:16:42 AM
+     * Deletes file/directoy at path.
+     * @date 2/28/2024 - 4:57:19 PM
      *
      * @private
      * @async
-     * @param {{ path: string }} param0
+     * @param {{ path: string; type?: FSItemType, permanent?: boolean }} param0
      * @param {string} param0.path
+     * @param {FSItemType} param0.type
+     * @param {boolean} [param0.permanent=false]
      * @returns {Promise<void>}
      */
-    async _unlink({ path, type }) {
+    async _unlink({ path, type, permanent = false }) {
         path = this.normalizePath({ path });
         const uuid = await this.pathToItemUUID({ path });
         if (!uuid || !this._items[path]) {
@@ -493,10 +499,20 @@ class FS {
             throw new errors_1.ENOENT({ path });
         }
         if (this._items[path].type === "directory") {
-            await this.cloud.trashDirectory({ uuid });
+            if (permanent) {
+                await this.cloud.deleteDirectory({ uuid });
+            }
+            else {
+                await this.cloud.trashDirectory({ uuid });
+            }
         }
         else {
-            await this.cloud.trashFile({ uuid });
+            if (permanent) {
+                await this.cloud.deleteFile({ uuid });
+            }
+            else {
+                await this.cloud.trashFile({ uuid });
+            }
         }
         for (const entry in this._items) {
             if (entry.startsWith(path)) {
@@ -505,33 +521,35 @@ class FS {
         }
     }
     /**
-     * Deletes file/directory at path (Sends it to the trash).
-     * @date 2/14/2024 - 2:55:28 AM
+     * Deletes file/directory at path.
+     * @date 2/28/2024 - 4:58:37 PM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{ path: string, permanent?: boolean }} param0
      * @param {string} param0.path
+     * @param {boolean} [param0.permanent=false]
      * @returns {ReturnType<typeof this._unlink>}
      */
-    async unlink({ path }) {
-        return await this._unlink({ path });
+    async unlink({ path, permanent = false }) {
+        return await this._unlink({ path, permanent });
     }
     /**
      * Alias of unlink.
-     * @date 2/14/2024 - 2:55:33 AM
+     * @date 2/28/2024 - 4:58:30 PM
      *
      * @public
      * @async
-     * @param {{path: string}} param0
+     * @param {{ path: string, permanent?: boolean }} param0
      * @param {string} param0.path
+     * @param {boolean} [param0.permanent=false]
      * @returns {ReturnType<typeof this._unlink>}
      */
-    async rm({ path }) {
-        return await this._unlink({ path });
+    async rm({ path, permanent = false }) {
+        return await this._unlink({ path, permanent });
     }
     /**
-     * Deletes directory at path (Sends it to the trash).
+     * Deletes directory at path.
      * @date 2/14/2024 - 2:53:48 AM
      *
      * @public
@@ -540,7 +558,7 @@ class FS {
      * @returns {ReturnType<typeof this.unlink>}
      */
     async rmdir(...params) {
-        return await this._unlink({ path: params[0].path, type: "directory" });
+        return await this._unlink({ path: params[0].path, type: "directory", permanent: params[0].permanent });
     }
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
