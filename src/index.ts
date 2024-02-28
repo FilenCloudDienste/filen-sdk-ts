@@ -397,15 +397,7 @@ export class FilenSDK {
 		})
 	}
 
-	/**
-	 * Returns an instance of the API based on the given version (Current version: 3).
-	 * @date 2/19/2024 - 6:34:03 AM
-	 *
-	 * @public
-	 * @param {number} version
-	 * @returns {ReturnType<typeof this._api.v3>}
-	 */
-	public api(version: number): ReturnType<typeof this._api.v3> {
+	public api(version: number) {
 		if (!this.isLoggedIn()) {
 			throw new Error("Not authenticated, please call login() first")
 		}
@@ -552,6 +544,10 @@ export class FilenSDK {
 }
 
 export default FilenSDK
+
+export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree } from "./cloud"
+export { FSItem, FSItemType, FSStats, StatFS } from "./fs"
+export * from "./types"
 
 module.exports = FilenSDK
 exports.default = FilenSDK

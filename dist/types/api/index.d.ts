@@ -67,7 +67,7 @@ export declare class API {
                 }) => Promise<void>;
                 edit: (params_0: {
                     uuid: string;
-                    expiration: import("../types").PublicLinkExpiration;
+                    expiration: import("..").PublicLinkExpiration;
                     password: string;
                     downloadBtn: boolean;
                     passwordHashed: string;
@@ -139,7 +139,7 @@ export declare class API {
             email: string;
             password: string;
             twoFactorCode?: string | undefined;
-            authVersion: import("../types").AuthVersion;
+            authVersion: import("..").AuthVersion;
         }) => Promise<import("./v3/login").LoginResponse>;
         user: () => {
             info: (params_0: {
@@ -162,7 +162,7 @@ export declare class API {
                 change: (params_0: {
                     email: string;
                     password: string;
-                    authVersion: import("../types").AuthVersion;
+                    authVersion: import("..").AuthVersion;
                 }) => Promise<void>;
             };
             personal: () => {
@@ -187,7 +187,7 @@ export declare class API {
                 change: (params_0: {
                     password: string;
                     currentPassword: string;
-                    authVersion: import("../types").AuthVersion;
+                    authVersion: import("..").AuthVersion;
                     salt: string;
                     masterKeys: string;
                 }) => Promise<import("./v3/user/settings/password/change").UserSettingsPasswordChangeResponse>;
@@ -284,7 +284,7 @@ export declare class API {
                 mime: string;
                 rm: string;
                 metadata: string;
-                version: import("../types").FileEncryptionVersion;
+                version: import("..").FileEncryptionVersion;
                 uploadKey: string;
             }) => Promise<import("./v3/upload/done").UploadDoneResponse>;
         };
@@ -368,7 +368,7 @@ export declare class API {
                 edit: (params_0: {
                     uuid: string;
                     fileUUID: string;
-                    expiration: import("../types").PublicLinkExpiration;
+                    expiration: import("..").PublicLinkExpiration;
                     password: string;
                     passwordHashed: string;
                     downloadBtn: boolean;
@@ -395,7 +395,7 @@ export declare class API {
                         chunk: number;
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
-                        onProgress?: import("../types").ProgressCallback | undefined;
+                        onProgress?: import("..").ProgressCallback | undefined;
                     }) => Promise<Buffer>;
                     stream: (params_0: {
                         uuid: string;
@@ -404,8 +404,8 @@ export declare class API {
                         chunk: number;
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
-                        onProgress?: import("../types").ProgressCallback | undefined;
-                    }) => Promise<import("fs").ReadStream | ReadableStream<any>>;
+                        onProgress?: import("..").ProgressCallback | undefined;
+                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
                         bucket: string;
@@ -414,7 +414,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         to: string;
-                        onProgress?: import("../types").ProgressCallback | undefined;
+                        onProgress?: import("..").ProgressCallback | undefined;
                     }) => Promise<void>;
                 };
             };
@@ -430,7 +430,7 @@ export declare class API {
                         retryTimeout?: number | undefined;
                         timeout?: number | undefined;
                         buffer: Buffer;
-                        onProgress?: import("../types").ProgressCallback | undefined;
+                        onProgress?: import("..").ProgressCallback | undefined;
                     }) => Promise<import("./client").UploadChunkResponse>;
                 };
             };

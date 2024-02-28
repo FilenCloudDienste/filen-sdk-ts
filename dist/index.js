@@ -1,4 +1,18 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -288,14 +302,6 @@ class FilenSDK {
     logout() {
         this.init(Object.assign(Object.assign({}, this.config), { email: undefined, password: undefined, twoFactorCode: undefined, masterKeys: undefined, apiKey: undefined, publicKey: undefined, privateKey: undefined, authVersion: undefined, baseFolderUUID: undefined, userId: undefined }));
     }
-    /**
-     * Returns an instance of the API based on the given version (Current version: 3).
-     * @date 2/19/2024 - 6:34:03 AM
-     *
-     * @public
-     * @param {number} version
-     * @returns {ReturnType<typeof this._api.v3>}
-     */
     api(version) {
         if (!this.isLoggedIn()) {
             throw new Error("Not authenticated, please call login() first");
@@ -414,6 +420,7 @@ class FilenSDK {
 }
 exports.FilenSDK = FilenSDK;
 exports.default = FilenSDK;
+__exportStar(require("./types"), exports);
 module.exports = FilenSDK;
 exports.default = FilenSDK;
 //# sourceMappingURL=index.js.map
