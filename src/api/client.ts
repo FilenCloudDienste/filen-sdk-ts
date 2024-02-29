@@ -15,7 +15,7 @@ import packageJSON from "../../package.json"
 import Agent from "agentkeepalive"
 
 const pipelineAsync = promisify(pipeline)
-const keepAliveAgent = new Agent({
+const keepAliveAgent = new Agent.HttpsAgent({
 	maxSockets: 256,
 	maxFreeSockets: 32,
 	timeout: 60000,

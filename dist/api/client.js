@@ -19,7 +19,7 @@ const progress_stream_1 = __importDefault(require("progress-stream"));
 const package_json_1 = __importDefault(require("../../package.json"));
 const agentkeepalive_1 = __importDefault(require("agentkeepalive"));
 const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
-const keepAliveAgent = new agentkeepalive_1.default({
+const keepAliveAgent = new agentkeepalive_1.default.HttpsAgent({
     maxSockets: 256,
     maxFreeSockets: 32,
     timeout: 60000,
