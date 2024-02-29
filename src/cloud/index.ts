@@ -1707,7 +1707,7 @@ export class Cloud {
 	 * If so, it adds the item and all children of the item (in case of a directory) to the share or public link.
 	 * @date 2/17/2024 - 4:26:44 AM
 	 *
-	 * @private
+	 * @public
 	 * @async
 	 * @param {{
 	 * 		type: "file" | "directory"
@@ -1721,7 +1721,7 @@ export class Cloud {
 	 * @param {*} param0.itemMetadata
 	 * @returns {Promise<void>}
 	 */
-	private async checkIfItemParentIsShared({
+	public async checkIfItemParentIsShared({
 		type,
 		parent,
 		uuid,
@@ -1985,7 +1985,7 @@ export class Cloud {
 	 * If so, it renames the item.
 	 * @date 2/17/2024 - 4:37:30 AM
 	 *
-	 * @private
+	 * @public
 	 * @async
 	 * @param {{
 	 * 		uuid: string
@@ -1995,7 +1995,7 @@ export class Cloud {
 	 * @param {*} param0.itemMetadata
 	 * @returns {Promise<void>}
 	 */
-	private async checkIfItemIsSharedForRename({
+	public async checkIfItemIsSharedForRename({
 		uuid,
 		itemMetadata
 	}: {

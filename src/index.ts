@@ -549,6 +549,7 @@ export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudIte
 export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs"
 export * from "./types"
 export { CryptoConfig } from "./crypto"
+export * from "./constants"
 
 module.exports = FilenSDK
 exports.default = FilenSDK

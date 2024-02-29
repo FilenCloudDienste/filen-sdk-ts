@@ -592,7 +592,7 @@ export declare class Cloud {
      * If so, it adds the item and all children of the item (in case of a directory) to the share or public link.
      * @date 2/17/2024 - 4:26:44 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{
      * 		type: "file" | "directory"
@@ -606,7 +606,12 @@ export declare class Cloud {
      * @param {*} param0.itemMetadata
      * @returns {Promise<void>}
      */
-    private checkIfItemParentIsShared;
+    checkIfItemParentIsShared({ type, parent, uuid, itemMetadata }: {
+        type: "file" | "directory";
+        parent: string;
+        uuid: string;
+        itemMetadata: FileMetadata | FolderMetadata;
+    }): Promise<void>;
     /**
      * Rename a shared item.
      * @date 2/17/2024 - 4:32:56 AM
@@ -640,7 +645,7 @@ export declare class Cloud {
      * If so, it renames the item.
      * @date 2/17/2024 - 4:37:30 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{
      * 		uuid: string
@@ -650,7 +655,10 @@ export declare class Cloud {
      * @param {*} param0.itemMetadata
      * @returns {Promise<void>}
      */
-    private checkIfItemIsSharedForRename;
+    checkIfItemIsSharedForRename({ uuid, itemMetadata }: {
+        uuid: string;
+        itemMetadata: FileMetadata | FolderMetadata;
+    }): Promise<void>;
     /**
      * Fetch directory size in bytes.
      * @date 2/20/2024 - 9:21:16 PM

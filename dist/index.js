@@ -421,6 +421,7 @@ class FilenSDK {
 exports.FilenSDK = FilenSDK;
 exports.default = FilenSDK;
 __exportStar(require("./types"), exports);
+__exportStar(require("./constants"), exports);
 module.exports = FilenSDK;
 exports.default = FilenSDK;
 //# sourceMappingURL=index.js.map

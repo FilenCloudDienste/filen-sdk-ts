@@ -17,7 +17,14 @@ const https_1 = __importDefault(require("https"));
 const url_1 = __importDefault(require("url"));
 const progress_stream_1 = __importDefault(require("progress-stream"));
 const package_json_1 = __importDefault(require("../../package.json"));
+const agentkeepalive_1 = __importDefault(require("agentkeepalive"));
 const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
+const keepAliveAgent = new agentkeepalive_1.default({
+    maxSockets: 256,
+    maxFreeSockets: 32,
+    timeout: 60000,
+    freeSocketTimeout: 30000
+});
 exports.APIClientDefaults = {
     gatewayURLs: [
         "https://gateway.filen.io",
@@ -122,6 +129,7 @@ class APIClient {
                     path: params.endpoint,
                     port: 443,
                     timeout,
+                    agent: keepAliveAgent,
                     headers: Object.assign(Object.assign({}, headers), (postDataIsBuffer ? {} : { "Content-Type": "application/json" }))
                 }, response => {
                     var _a;
@@ -281,7 +289,8 @@ class APIClient {
                     path: params.endpoint,
                     port: 443,
                     timeout,
-                    headers
+                    headers,
+                    agent: keepAliveAgent
                 }, response => {
                     var _a;
                     if (response.statusCode !== 200) {

@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.14",
+	"version": "0.1.15",
 	"description": "Filen SDK",
 	"main": "dist/index.js",
 	"browser": "dist/bundle.browser.js",
@@ -74,6 +74,7 @@
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
+		"agentkeepalive": "^4.5.0",
 		"axios": "^1.6.7",
 		"crypto-api-v1": "^1.0.0",
 		"crypto-js": "^4.2.0",

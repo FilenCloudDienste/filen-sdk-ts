@@ -12,8 +12,15 @@ import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
 import packageJSON from "../../package.json"
+import Agent from "agentkeepalive"
 
 const pipelineAsync = promisify(pipeline)
+const keepAliveAgent = new Agent({
+	maxSockets: 256,
+	maxFreeSockets: 32,
+	timeout: 60000,
+	freeSocketTimeout: 30000
+})
 
 export type APIClientConfig = {
 	apiKey: string
@@ -172,6 +179,7 @@ export class APIClient {
 						path: params.endpoint,
 						port: 443,
 						timeout,
+						agent: keepAliveAgent,
 						headers: {
 							...headers,
 							...(postDataIsBuffer ? {} : { "Content-Type": "application/json" })
@@ -361,7 +369,8 @@ export class APIClient {
 						path: params.endpoint,
 						port: 443,
 						timeout,
-						headers
+						headers,
+						agent: keepAliveAgent
 					},
 					response => {
 						if (response.statusCode !== 200) {
