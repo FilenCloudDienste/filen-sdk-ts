@@ -24,6 +24,7 @@ export type FilenSDKConfig = {
     userId?: number;
     metadataCache?: boolean;
     tmpPath?: string;
+    connectToSocket?: boolean;
 };
 /**
  * FilenSDK
@@ -238,14 +239,7 @@ export declare class FilenSDK {
         }) => Promise<import("./api/v3/login").LoginResponse>;
         user: () => {
             info: (params_0: {
-                apiKey?: string | undefined; /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
+                apiKey?: string | undefined;
             }) => Promise<import("./api/v3/user/info").UserInfoResponse>;
             baseFolder: (params_0: {
                 apiKey?: string | undefined;
@@ -421,6 +415,14 @@ export declare class FilenSDK {
             }) => Promise<void>;
             sharedOut: () => {
                 remove: (params_0: {
+                    /**
+                     * FilenSDK
+                     * @date 2/1/2024 - 2:45:02 AM
+                     *
+                     * @export
+                     * @class FilenSDK
+                     * @typedef {FilenSDK}
+                     */
                     uuid: string;
                     receiverId: number;
                 }) => Promise<void>;
@@ -460,6 +462,14 @@ export declare class FilenSDK {
             version: () => {
                 restore: (params_0: {
                     uuid: string;
+                    /**
+                     * FilenSDK
+                     * @date 2/1/2024 - 2:45:02 AM
+                     *
+                     * @export
+                     * @class FilenSDK
+                     * @typedef {FilenSDK}
+                     */
                     currentUUID: string;
                 }) => Promise<void>;
             };

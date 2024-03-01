@@ -9,11 +9,23 @@ import fs from "fs-extra"
 import { uuidv4, normalizePath } from "../utils"
 import os from "os"
 import type { CloudItem, Cloud } from "../cloud"
+import {
+	Socket,
+	SocketFileArchiveRestored,
+	SocketFileRename,
+	SocketFileMove,
+	SocketFileTrash,
+	SocketFileArchived,
+	SocketFolderMove,
+	SocketFolderRename,
+	SocketFolderTrash
+} from "../socket"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
 	cloud: Cloud
+	connectToSocket?: boolean
 }
 
 export type FSItemType = "file" | "directory"
@@ -66,6 +78,8 @@ export type StatFS = {
 	max: number
 }
 
+export type FSItemUUID = FSItem & { path: string }
+
 /**
  * FS
  * @date 2/1/2024 - 2:44:47 AM
@@ -79,6 +93,8 @@ export class FS {
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly cloud: Cloud
 	private _items: FSItems
+	private _uuidToItem: Record<string, FSItemUUID>
+	private readonly socket = new Socket()
 
 	/**
 	 * Creates an instance of FS.
@@ -102,6 +118,92 @@ export class FS {
 				}
 			}
 		}
+
+		this._uuidToItem = {
+			[this.sdkConfig.baseFolderUUID!]: {
+				uuid: this.sdkConfig.baseFolderUUID!,
+				type: "directory",
+				path: "/",
+				metadata: {
+					name: "Cloud Drive"
+				}
+			}
+		}
+
+		if (params.sdkConfig.apiKey && params.connectToSocket) {
+			this.socket.connect({ apiKey: params.sdkConfig.apiKey })
+		}
+
+		this._initSocketEvents()
+	}
+
+	/**
+	 * Attach listeners for relevant realtime events.
+	 * @date 3/1/2024 - 7:23:35 PM
+	 *
+	 * @private
+	 */
+	private _initSocketEvents(): void {
+		this.socket.on("fileArchiveRestored", (data: SocketFileArchiveRestored) => {
+			if (this._uuidToItem[data.currentUUID]) {
+				delete this._items[this._uuidToItem[data.currentUUID].path]
+				delete this._uuidToItem[data.currentUUID]
+			}
+
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("fileRename", (data: SocketFileRename) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("fileMove", (data: SocketFileMove) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("fileTrash", (data: SocketFileTrash) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("fileArchived", (data: SocketFileArchived) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("folderMove", (data: SocketFolderMove) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("folderRename", (data: SocketFolderRename) => {
+			if (this._uuidToItem[data.uuid]) {
+				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
 	}
 
 	/**
@@ -116,6 +218,10 @@ export class FS {
 	 */
 	public _addItem({ path, item }: { path: string; item: FSItem }): void {
 		this._items[path] = item
+		this._uuidToItem[item.uuid] = {
+			...item,
+			path
+		}
 	}
 
 	/**
@@ -130,6 +236,7 @@ export class FS {
 	public _removeItem({ path }: { path: string }): void {
 		for (const entry in this._items) {
 			if (entry.startsWith(path)) {
+				delete this._uuidToItem[this._items[entry].uuid]
 				delete this._items[entry]
 			}
 		}
@@ -207,10 +314,36 @@ export class FS {
 							name: item.name
 						}
 					}
+
+					this._uuidToItem[item.uuid] = {
+						uuid: item.uuid,
+						type: "directory",
+						path: itemPath,
+						metadata: {
+							name: item.name
+						}
+					}
 				} else {
 					this._items[itemPath] = {
 						uuid: item.uuid,
 						type: "file",
+						metadata: {
+							name: item.name,
+							size: item.size,
+							mime: item.mime,
+							key: item.key,
+							lastModified: item.lastModified,
+							chunks: item.chunks,
+							region: item.region,
+							bucket: item.bucket,
+							version: item.version
+						}
+					}
+
+					this._uuidToItem[item.uuid] = {
+						uuid: item.uuid,
+						type: "file",
+						path: itemPath,
 						metadata: {
 							name: item.name,
 							size: item.size,
@@ -291,10 +424,36 @@ export class FS {
 							name: item.name
 						}
 					}
+
+					this._uuidToItem[item.uuid] = {
+						uuid: item.uuid,
+						type: "directory",
+						path: itemPath,
+						metadata: {
+							name: item.name
+						}
+					}
 				} else {
 					this._items[itemPath] = {
 						uuid: item.uuid,
 						type: "file",
+						metadata: {
+							name: item.name,
+							size: item.size,
+							mime: item.mime,
+							key: item.key,
+							lastModified: item.lastModified,
+							chunks: item.chunks,
+							region: item.region,
+							bucket: item.bucket,
+							version: item.version
+						}
+					}
+
+					this._uuidToItem[item.uuid] = {
+						uuid: item.uuid,
+						type: "file",
+						path: itemPath,
 						metadata: {
 							name: item.name,
 							size: item.size,
@@ -328,10 +487,36 @@ export class FS {
 						name: item.name
 					}
 				}
+
+				this._uuidToItem[item.uuid] = {
+					uuid: item.uuid,
+					type: "directory",
+					path: itemPath,
+					metadata: {
+						name: item.name
+					}
+				}
 			} else {
 				this._items[itemPath] = {
 					uuid: item.uuid,
 					type: "file",
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+
+				this._uuidToItem[item.uuid] = {
+					uuid: item.uuid,
+					type: "file",
+					path: itemPath,
 					metadata: {
 						name: item.name,
 						size: item.size,
@@ -467,6 +652,15 @@ export class FS {
 				}
 			}
 
+			this._uuidToItem[uuid] = {
+				uuid,
+				type: "directory",
+				path,
+				metadata: {
+					name: basename
+				}
+			}
+
 			return
 		}
 
@@ -496,6 +690,15 @@ export class FS {
 				this._items[builtPath] = {
 					uuid,
 					type: "directory",
+					metadata: {
+						name: partBasename
+					}
+				}
+
+				this._uuidToItem[uuid] = {
+					uuid,
+					type: "directory",
+					path: builtPath,
 					metadata: {
 						name: partBasename
 					}
@@ -557,7 +760,22 @@ export class FS {
 				})
 			}
 
-			this._items[to] = this._items[from]
+			this._items[to] = {
+				...this._items[from],
+				metadata: {
+					...this._items[from].metadata,
+					name: newBasename
+				}
+			} as FSItem
+
+			this._uuidToItem[item.uuid] = {
+				...this._uuidToItem[item.uuid],
+				path: to,
+				metadata: {
+					...this._uuidToItem[item.uuid].metadata,
+					name: newBasename
+				}
+			} as FSItemUUID
 
 			delete this._items[from]
 		} else {
@@ -598,11 +816,28 @@ export class FS {
 				}
 			}
 
-			for (const path in this._items) {
-				if (path.startsWith(from)) {
-					this._items[path.split(from).join(to)] = this._items[path]
+			for (const oldPath in this._items) {
+				if (oldPath.startsWith(from)) {
+					const newPath = oldPath.split(from).join(to)
 
-					delete this._items[path]
+					this._items[newPath] = {
+						...this._items[oldPath],
+						metadata: {
+							...this._items[oldPath],
+							name: newBasename
+						}
+					} as FSItem
+
+					this._uuidToItem[this._items[oldPath].uuid] = {
+						...this._uuidToItem[this._items[oldPath].uuid],
+						path: newPath,
+						metadata: {
+							...this._uuidToItem[this._items[oldPath].uuid].metadata,
+							name: newBasename
+						}
+					} as FSItemUUID
+
+					delete this._items[oldPath]
 				}
 			}
 		}
@@ -675,6 +910,7 @@ export class FS {
 
 		for (const entry in this._items) {
 			if (entry.startsWith(path)) {
+				delete this._uuidToItem[this._items[entry].uuid]
 				delete this._items[entry]
 			}
 		}
@@ -1176,6 +1412,23 @@ export class FS {
 					version: item.version
 				}
 			}
+
+			this._uuidToItem[item.uuid] = {
+				uuid: item.uuid,
+				type: "file",
+				path,
+				metadata: {
+					name: item.name,
+					size: item.size,
+					mime: item.mime,
+					key: item.key,
+					lastModified: item.lastModified,
+					chunks: item.chunks,
+					region: item.region,
+					bucket: item.bucket,
+					version: item.version
+				}
+			}
 		}
 
 		return item
@@ -1295,6 +1548,23 @@ export class FS {
 					this._items[to] = {
 						uuid: item.uuid,
 						type: "file",
+						metadata: {
+							name: item.name,
+							size: item.size,
+							mime: item.mime,
+							key: item.key,
+							lastModified: item.lastModified,
+							chunks: item.chunks,
+							region: item.region,
+							bucket: item.bucket,
+							version: item.version
+						}
+					}
+
+					this._uuidToItem[item.uuid] = {
+						uuid: item.uuid,
+						type: "file",
+						path: to,
 						metadata: {
 							name: item.name,
 							size: item.size,

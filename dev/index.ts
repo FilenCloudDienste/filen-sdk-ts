@@ -20,11 +20,12 @@ const filen = new FilenSDK({
 	privateKey: config.privateKey,
 	authVersion: config.authVersion as AuthVersion,
 	baseFolderUUID: config.baseFolderUUID,
-	userId: config.userId
+	userId: config.userId,
+	connectToSocket: false
 })
 
 const main = async () => {
-	await filen.fs().writeFile({ path: "/ok.txt", content: Buffer.from("ok", "utf-8") })
+	await filen.fs().readdir({ path: "/" })
 }
 
 main()

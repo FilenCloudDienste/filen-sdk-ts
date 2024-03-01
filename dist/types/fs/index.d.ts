@@ -8,6 +8,7 @@ export type FSConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
     cloud: Cloud;
+    connectToSocket?: boolean;
 };
 export type FSItemType = "file" | "directory";
 export type FSItemBase = {
@@ -53,6 +54,9 @@ export type StatFS = {
     used: number;
     max: number;
 };
+export type FSItemUUID = FSItem & {
+    path: string;
+};
 /**
  * FS
  * @date 2/1/2024 - 2:44:47 AM
@@ -66,6 +70,8 @@ export declare class FS {
     private readonly sdkConfig;
     private readonly cloud;
     private _items;
+    private _uuidToItem;
+    private readonly socket;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM
@@ -75,6 +81,13 @@ export declare class FS {
      * @param {FSConfig} params
      */
     constructor(params: FSConfig);
+    /**
+     * Attach listeners for relevant realtime events.
+     * @date 3/1/2024 - 7:23:35 PM
+     *
+     * @private
+     */
+    private _initSocketEvents;
     /**
      * Add an item to the internal item tree.
      * @date 2/14/2024 - 12:50:52 AM
