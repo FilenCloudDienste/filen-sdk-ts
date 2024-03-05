@@ -354,7 +354,7 @@ export class FilenSDK {
 			authVersion: authInfo.authVersion,
 			salt: authInfo.salt
 		})
-		const loginResponse = await this._api.v3().login({ email: emailToUse, password: derived.derivedPassword, authVersion })
+		const loginResponse = await this._api.v3().login({ email: emailToUse, password: derived.derivedPassword, twoFactorCode: twoFactorCodeToUse, authVersion })
 		const [infoResponse, baseFolderResponse] = await Promise.all([
 			this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
 			this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
