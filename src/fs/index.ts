@@ -798,19 +798,13 @@ export class FS {
 
 				this._items[to] = {
 					...this._items[from],
-					metadata: {
-						...this._items[from],
-						name: newBasename
-					}
+					metadata: itemMetadata
 				} as FSItem
 
 				this._uuidToItem[item.uuid] = {
 					...this._uuidToItem[item.uuid],
 					path: to,
-					metadata: {
-						...this._uuidToItem[item.uuid],
-						name: newBasename
-					}
+					metadata: itemMetadata
 				} as FSItemUUID
 
 				delete this._items[from]
@@ -853,6 +847,19 @@ export class FS {
 					}
 				}
 
+				this._items[to] = {
+					...this._items[from],
+					metadata: itemMetadata
+				} as FSItem
+
+				this._uuidToItem[item.uuid] = {
+					...this._uuidToItem[item.uuid],
+					path: to,
+					metadata: itemMetadata
+				} as FSItemUUID
+
+				delete this._items[from]
+
 				for (const oldPath in this._items) {
 					if (oldPath.startsWith(from)) {
 						const newPath = oldPath.split(from).join(to)
@@ -860,7 +867,7 @@ export class FS {
 						this._items[newPath] = {
 							...this._items[oldPath],
 							metadata: {
-								...this._items[oldPath],
+								...this._items[oldPath].metadata,
 								name: newBasename
 							}
 						} as FSItem
@@ -950,6 +957,9 @@ export class FS {
 					await this.cloud.trashFile({ uuid })
 				}
 			}
+
+			delete this._uuidToItem[this._items[path].uuid]
+			delete this._items[path]
 
 			for (const entry in this._items) {
 				if (entry.startsWith(path)) {

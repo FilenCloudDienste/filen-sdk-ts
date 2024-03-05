@@ -610,8 +610,8 @@ class FS {
                         name: newBasename
                     });
                 }
-                this._items[to] = Object.assign(Object.assign({}, this._items[from]), { metadata: Object.assign(Object.assign({}, this._items[from]), { name: newBasename }) });
-                this._uuidToItem[item.uuid] = Object.assign(Object.assign({}, this._uuidToItem[item.uuid]), { path: to, metadata: Object.assign(Object.assign({}, this._uuidToItem[item.uuid]), { name: newBasename }) });
+                this._items[to] = Object.assign(Object.assign({}, this._items[from]), { metadata: itemMetadata });
+                this._uuidToItem[item.uuid] = Object.assign(Object.assign({}, this._uuidToItem[item.uuid]), { path: to, metadata: itemMetadata });
                 delete this._items[from];
             }
             else {
@@ -652,10 +652,13 @@ class FS {
                         await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: itemMetadata });
                     }
                 }
+                this._items[to] = Object.assign(Object.assign({}, this._items[from]), { metadata: itemMetadata });
+                this._uuidToItem[item.uuid] = Object.assign(Object.assign({}, this._uuidToItem[item.uuid]), { path: to, metadata: itemMetadata });
+                delete this._items[from];
                 for (const oldPath in this._items) {
                     if (oldPath.startsWith(from)) {
                         const newPath = oldPath.split(from).join(to);
-                        this._items[newPath] = Object.assign(Object.assign({}, this._items[oldPath]), { metadata: Object.assign(Object.assign({}, this._items[oldPath]), { name: newBasename }) });
+                        this._items[newPath] = Object.assign(Object.assign({}, this._items[oldPath]), { metadata: Object.assign(Object.assign({}, this._items[oldPath].metadata), { name: newBasename }) });
                         this._uuidToItem[this._items[oldPath].uuid] = Object.assign(Object.assign({}, this._uuidToItem[this._items[oldPath].uuid]), { path: newPath, metadata: Object.assign(Object.assign({}, this._uuidToItem[this._items[oldPath].uuid].metadata), { name: newBasename }) });
                         delete this._items[oldPath];
                     }
@@ -728,6 +731,8 @@ class FS {
                     await this.cloud.trashFile({ uuid });
                 }
             }
+            delete this._uuidToItem[this._items[path].uuid];
+            delete this._items[path];
             for (const entry in this._items) {
                 if (entry.startsWith(path)) {
                     delete this._uuidToItem[this._items[entry].uuid];
