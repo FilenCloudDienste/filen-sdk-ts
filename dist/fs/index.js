@@ -291,15 +291,17 @@ class FS {
             throw new errors_1.ENOENT({ path });
         }
         const names = [];
+        const existingPaths = {};
         try {
             if (recursive) {
                 const tree = await this.cloud.getDirectoryTree({ uuid });
                 for (const entry in tree) {
                     const item = tree[entry];
                     const entryPath = entry.startsWith("/") ? entry.substring(1) : entry;
-                    if (item.parent === "base") {
+                    if (item.parent === "base" && existingPaths[entry]) {
                         continue;
                     }
+                    existingPaths[entry] = true;
                     const itemPath = path_1.default.posix.join(path, entryPath);
                     names.push(entryPath);
                     if (item.type === "directory") {
@@ -355,9 +357,13 @@ class FS {
                 }
                 return names;
             }
-            const items = await this.cloud.listDirectory({ uuid });
+            const items = (await this.cloud.listDirectory({ uuid })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
             for (const item of items) {
                 const itemPath = path_1.default.posix.join(path, item.name);
+                if (existingPaths[item.name]) {
+                    continue;
+                }
+                existingPaths[item.name] = true;
                 names.push(item.name);
                 if (item.type === "directory") {
                     this._items[itemPath] = {

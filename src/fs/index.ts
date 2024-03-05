@@ -412,6 +412,7 @@ export class FS {
 		}
 
 		const names: string[] = []
+		const existingPaths: Record<string, boolean> = {}
 
 		try {
 			if (recursive) {
@@ -421,9 +422,11 @@ export class FS {
 					const item = tree[entry]
 					const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
 
-					if (item.parent === "base") {
+					if (item.parent === "base" && existingPaths[entry]) {
 						continue
 					}
+
+					existingPaths[entry] = true
 
 					const itemPath = pathModule.posix.join(path, entryPath)
 
@@ -485,10 +488,16 @@ export class FS {
 				return names
 			}
 
-			const items = await this.cloud.listDirectory({ uuid })
+			const items = (await this.cloud.listDirectory({ uuid })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
 
 			for (const item of items) {
 				const itemPath = pathModule.posix.join(path, item.name)
+
+				if (existingPaths[item.name]) {
+					continue
+				}
+
+				existingPaths[item.name] = true
 
 				names.push(item.name)
 
