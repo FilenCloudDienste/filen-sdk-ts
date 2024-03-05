@@ -40,7 +40,8 @@ class Cloud {
             downloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
             uploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_UPLOADS),
             directoryDownloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
-            directoryUploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_UPLOADS)
+            directoryUploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_UPLOADS),
+            createDirectory: new semaphore_1.Semaphore(1)
         };
         this.utils = {
             signals: {
@@ -797,27 +798,33 @@ class Cloud {
      * @returns {Promise<string>}
      */
     async createDirectory({ uuid, name, parent }) {
-        let uuidToUse = uuid ? uuid : await (0, utils_1.uuidv4)();
-        const exists = await this.api.v3().dir().exists({ name, parent });
-        if (exists.exists) {
-            uuidToUse = exists.existsUUID;
+        await this._semaphores.createDirectory.acquire();
+        try {
+            let uuidToUse = uuid ? uuid : await (0, utils_1.uuidv4)();
+            const exists = await this.api.v3().dir().exists({ name, parent });
+            if (exists.exists) {
+                uuidToUse = exists.existsUUID;
+            }
+            else {
+                const [metadataEncrypted, nameHashed] = await Promise.all([
+                    this.crypto.encrypt().metadata({ metadata: JSON.stringify({ name }) }),
+                    this.crypto.utils.hashFn({ input: name.toLowerCase() })
+                ]);
+                await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent });
+                await this.checkIfItemParentIsShared({
+                    type: "directory",
+                    parent,
+                    uuid: uuidToUse,
+                    itemMetadata: {
+                        name
+                    }
+                });
+            }
+            return uuidToUse;
         }
-        else {
-            const [metadataEncrypted, nameHashed] = await Promise.all([
-                this.crypto.encrypt().metadata({ metadata: JSON.stringify({ name }) }),
-                this.crypto.utils.hashFn({ input: name.toLowerCase() })
-            ]);
-            await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent });
-            await this.checkIfItemParentIsShared({
-                type: "directory",
-                parent,
-                uuid: uuidToUse,
-                itemMetadata: {
-                    name
-                }
-            });
+        finally {
+            this._semaphores.createDirectory.release();
         }
-        return uuidToUse;
     }
     /**
      * Change the color of a directory.

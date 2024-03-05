@@ -155,7 +155,8 @@ export class Cloud {
 		downloads: new Semaphore(MAX_CONCURRENT_DOWNLOADS),
 		uploads: new Semaphore(MAX_CONCURRENT_UPLOADS),
 		directoryDownloads: new Semaphore(MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
-		directoryUploads: new Semaphore(MAX_CONCURRENT_DIRECTORY_UPLOADS)
+		directoryUploads: new Semaphore(MAX_CONCURRENT_DIRECTORY_UPLOADS),
+		createDirectory: new Semaphore(1)
 	}
 
 	/**
@@ -1069,30 +1070,36 @@ export class Cloud {
 	 * @returns {Promise<string>}
 	 */
 	public async createDirectory({ uuid, name, parent }: { uuid?: string; name: string; parent: string }): Promise<string> {
-		let uuidToUse = uuid ? uuid : await uuidv4()
-		const exists = await this.api.v3().dir().exists({ name, parent })
+		await this._semaphores.createDirectory.acquire()
 
-		if (exists.exists) {
-			uuidToUse = exists.existsUUID
-		} else {
-			const [metadataEncrypted, nameHashed] = await Promise.all([
-				this.crypto.encrypt().metadata({ metadata: JSON.stringify({ name }) }),
-				this.crypto.utils.hashFn({ input: name.toLowerCase() })
-			])
+		try {
+			let uuidToUse = uuid ? uuid : await uuidv4()
+			const exists = await this.api.v3().dir().exists({ name, parent })
 
-			await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent })
+			if (exists.exists) {
+				uuidToUse = exists.existsUUID
+			} else {
+				const [metadataEncrypted, nameHashed] = await Promise.all([
+					this.crypto.encrypt().metadata({ metadata: JSON.stringify({ name }) }),
+					this.crypto.utils.hashFn({ input: name.toLowerCase() })
+				])
 
-			await this.checkIfItemParentIsShared({
-				type: "directory",
-				parent,
-				uuid: uuidToUse,
-				itemMetadata: {
-					name
-				}
-			})
+				await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent })
+
+				await this.checkIfItemParentIsShared({
+					type: "directory",
+					parent,
+					uuid: uuidToUse,
+					itemMetadata: {
+						name
+					}
+				})
+			}
+
+			return uuidToUse
+		} finally {
+			this._semaphores.createDirectory.release()
 		}
-
-		return uuidToUse
 	}
 
 	/**

@@ -20,6 +20,7 @@ import {
 	SocketFolderRename,
 	SocketFolderTrash
 } from "../socket"
+import { Semaphore } from "../semaphore"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
@@ -95,6 +96,7 @@ export class FS {
 	private _items: FSItems
 	private _uuidToItem: Record<string, FSItemUUID>
 	private readonly socket = new Socket()
+	private readonly mutex = new Semaphore(1)
 
 	/**
 	 * Creates an instance of FS.
@@ -186,6 +188,12 @@ export class FS {
 
 		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
 			if (this._uuidToItem[data.uuid]) {
+				for (const path in this._items) {
+					if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+						delete this._items[path]
+					}
+				}
+
 				delete this._items[this._uuidToItem[data.uuid].path]
 				delete this._uuidToItem[data.uuid]
 			}
@@ -193,6 +201,12 @@ export class FS {
 
 		this.socket.on("folderMove", (data: SocketFolderMove) => {
 			if (this._uuidToItem[data.uuid]) {
+				for (const path in this._items) {
+					if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+						delete this._items[path]
+					}
+				}
+
 				delete this._items[this._uuidToItem[data.uuid].path]
 				delete this._uuidToItem[data.uuid]
 			}
@@ -200,6 +214,12 @@ export class FS {
 
 		this.socket.on("folderRename", (data: SocketFolderRename) => {
 			if (this._uuidToItem[data.uuid]) {
+				for (const path in this._items) {
+					if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+						delete this._items[path]
+					}
+				}
+
 				delete this._items[this._uuidToItem[data.uuid].path]
 				delete this._uuidToItem[data.uuid]
 			}
@@ -274,7 +294,7 @@ export class FS {
 			return this.sdkConfig.baseFolderUUID!
 		}
 
-		if (this._items[path]) {
+		if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
 			return this._items[path].uuid
 		}
 
@@ -391,30 +411,86 @@ export class FS {
 			throw new ENOENT({ path })
 		}
 
-		/*if (uuid !== this.sdkConfig.baseFolderUUID!) {
-				const present = await this.api.v3().dir().present({ uuid })
-
-				if (!present.present) {
-					return []
-				}
-			}*/
-
 		const names: string[] = []
 
-		if (recursive) {
-			const tree = await this.cloud.getDirectoryTree({ uuid })
+		try {
+			if (recursive) {
+				const tree = await this.cloud.getDirectoryTree({ uuid })
 
-			for (const entry in tree) {
-				const item = tree[entry]
-				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
+				for (const entry in tree) {
+					const item = tree[entry]
+					const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
 
-				if (item.parent === "base") {
-					continue
+					if (item.parent === "base") {
+						continue
+					}
+
+					const itemPath = pathModule.posix.join(path, entryPath)
+
+					names.push(entryPath)
+
+					if (item.type === "directory") {
+						this._items[itemPath] = {
+							uuid: item.uuid,
+							type: "directory",
+							metadata: {
+								name: item.name
+							}
+						}
+
+						this._uuidToItem[item.uuid] = {
+							uuid: item.uuid,
+							type: "directory",
+							path: itemPath,
+							metadata: {
+								name: item.name
+							}
+						}
+					} else {
+						this._items[itemPath] = {
+							uuid: item.uuid,
+							type: "file",
+							metadata: {
+								name: item.name,
+								size: item.size,
+								mime: item.mime,
+								key: item.key,
+								lastModified: item.lastModified,
+								chunks: item.chunks,
+								region: item.region,
+								bucket: item.bucket,
+								version: item.version
+							}
+						}
+
+						this._uuidToItem[item.uuid] = {
+							uuid: item.uuid,
+							type: "file",
+							path: itemPath,
+							metadata: {
+								name: item.name,
+								size: item.size,
+								mime: item.mime,
+								key: item.key,
+								lastModified: item.lastModified,
+								chunks: item.chunks,
+								region: item.region,
+								bucket: item.bucket,
+								version: item.version
+							}
+						}
+					}
 				}
 
-				const itemPath = pathModule.posix.join(path, entryPath)
+				return names
+			}
 
-				names.push(entryPath)
+			const items = await this.cloud.listDirectory({ uuid })
+
+			for (const item of items) {
+				const itemPath = pathModule.posix.join(path, item.name)
+
+				names.push(item.name)
 
 				if (item.type === "directory") {
 					this._items[itemPath] = {
@@ -468,68 +544,8 @@ export class FS {
 					}
 				}
 			}
-
-			return names
-		}
-
-		const items = await this.cloud.listDirectory({ uuid })
-
-		for (const item of items) {
-			const itemPath = pathModule.posix.join(path, item.name)
-
-			names.push(item.name)
-
-			if (item.type === "directory") {
-				this._items[itemPath] = {
-					uuid: item.uuid,
-					type: "directory",
-					metadata: {
-						name: item.name
-					}
-				}
-
-				this._uuidToItem[item.uuid] = {
-					uuid: item.uuid,
-					type: "directory",
-					path: itemPath,
-					metadata: {
-						name: item.name
-					}
-				}
-			} else {
-				this._items[itemPath] = {
-					uuid: item.uuid,
-					type: "file",
-					metadata: {
-						name: item.name,
-						size: item.size,
-						mime: item.mime,
-						key: item.key,
-						lastModified: item.lastModified,
-						chunks: item.chunks,
-						region: item.region,
-						bucket: item.bucket,
-						version: item.version
-					}
-				}
-
-				this._uuidToItem[item.uuid] = {
-					uuid: item.uuid,
-					type: "file",
-					path: itemPath,
-					metadata: {
-						name: item.name,
-						size: item.size,
-						mime: item.mime,
-						key: item.key,
-						lastModified: item.lastModified,
-						chunks: item.chunks,
-						region: item.region,
-						bucket: item.bucket,
-						version: item.version
-					}
-				}
-			}
+		} catch (e) {
+			console.error(e)
 		}
 
 		return names
@@ -542,9 +558,9 @@ export class FS {
 	 * @public
 	 * @async
 	 * @param {...Parameters<typeof this.readdir>} params
-	 * @returns {ReturnType<typeof this.readdir>}
+	 * @returns {Promise<string[]>}
 	 */
-	public async ls(...params: Parameters<typeof this.readdir>): ReturnType<typeof this.readdir> {
+	public async ls(...params: Parameters<typeof this.readdir>): Promise<string[]> {
 		return await this.readdir(...params)
 	}
 
@@ -552,16 +568,13 @@ export class FS {
 		path = this.normalizePath({ path })
 
 		const uuid = await this.pathToItemUUID({ path })
-
-		if (!uuid) {
-			throw new ENOENT({ path })
-		}
-
 		const item = this._items[path]
 
-		if (!item) {
+		if (!uuid || !item) {
 			throw new ENOENT({ path })
 		}
+
+		const now = Date.now()
 
 		if (item.type === "file") {
 			return {
@@ -569,7 +582,7 @@ export class FS {
 				uuid,
 				size: item.metadata.size,
 				mtimeMs: item.metadata.lastModified,
-				birthtimeMs: item.metadata.creation ?? 0,
+				birthtimeMs: item.metadata.creation ?? now,
 				type: "file",
 				isDirectory() {
 					return false
@@ -587,8 +600,8 @@ export class FS {
 			...item.metadata,
 			uuid,
 			size: 0,
-			mtimeMs: 0,
-			birthtimeMs: 0,
+			mtimeMs: now,
+			birthtimeMs: now,
 			type: "directory",
 			isDirectory() {
 				return true
@@ -609,9 +622,9 @@ export class FS {
 	 * @public
 	 * @async
 	 * @param {...Parameters<typeof this.stat>} params
-	 * @returns {ReturnType<typeof this.stat>}
+	 * @returns {Promise<FSStats>}
 	 */
-	public async lstat(...params: Parameters<typeof this.stat>): ReturnType<typeof this.stat> {
+	public async lstat(...params: Parameters<typeof this.stat>): Promise<FSStats> {
 		return await this.stat(...params)
 	}
 
@@ -623,91 +636,99 @@ export class FS {
 	 * @async
 	 * @param {{ path: string }} param0
 	 * @param {string} param0.path
-	 * @returns {Promise<void>}
+	 * @returns {Promise<string>}
 	 */
-	public async mkdir({ path }: { path: string }): Promise<void> {
-		path = this.normalizePath({ path })
+	public async mkdir({ path }: { path: string }): Promise<string> {
+		await this.mutex.acquire()
 
-		if (path === "/") {
-			return
-		}
+		try {
+			path = this.normalizePath({ path })
 
-		const exists = await this.pathToItemUUID({ path })
-
-		if (exists) {
-			return
-		}
-
-		const parentPath = pathModule.posix.dirname(path)
-		const basename = pathModule.posix.basename(path)
-
-		if (parentPath === "/" || parentPath === "." || parentPath === "") {
-			const uuid = await this.cloud.createDirectory({ name: basename, parent: this.sdkConfig.baseFolderUUID! })
-
-			this._items[path] = {
-				uuid,
-				type: "directory",
-				metadata: {
-					name: basename
-				}
+			if (path === "/") {
+				return this.sdkConfig.baseFolderUUID!
 			}
 
-			this._uuidToItem[uuid] = {
-				uuid,
-				type: "directory",
-				path,
-				metadata: {
-					name: basename
-				}
+			const exists = await this.pathToItemUUID({ path })
+
+			if (exists) {
+				return exists
 			}
 
-			return
-		}
+			const parentPath = pathModule.posix.dirname(path)
+			const basename = pathModule.posix.basename(path)
 
-		const pathEx = path.split("/")
-		let builtPath = "/"
+			if (parentPath === "/" || parentPath === "." || parentPath === "") {
+				const uuid = await this.cloud.createDirectory({ name: basename, parent: this.sdkConfig.baseFolderUUID! })
 
-		for (const part of pathEx) {
-			if (pathEx.length <= 0) {
-				continue
-			}
-
-			builtPath = pathModule.posix.join(builtPath, part)
-
-			if (!this._items[builtPath]) {
-				const partBasename = pathModule.posix.basename(builtPath)
-				const partParentPath = pathModule.posix.dirname(builtPath)
-				const parentItem = this._items[partParentPath]
-
-				if (!parentItem) {
-					continue
-				}
-
-				const parentIsBase = partParentPath === "/" || partParentPath === "." || partParentPath === ""
-				const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID! : parentItem.uuid
-				const uuid = await this.cloud.createDirectory({ name: partBasename, parent: parentUUID })
-
-				this._items[builtPath] = {
+				this._items[path] = {
 					uuid,
 					type: "directory",
 					metadata: {
-						name: partBasename
+						name: basename
 					}
 				}
 
 				this._uuidToItem[uuid] = {
 					uuid,
 					type: "directory",
-					path: builtPath,
+					path,
 					metadata: {
-						name: partBasename
+						name: basename
+					}
+				}
+
+				return uuid
+			}
+
+			const pathEx = path.split("/")
+			let builtPath = "/"
+
+			for (const part of pathEx) {
+				if (pathEx.length <= 0) {
+					continue
+				}
+
+				builtPath = pathModule.posix.join(builtPath, part)
+
+				if (!this._items[builtPath]) {
+					const partBasename = pathModule.posix.basename(builtPath)
+					const partParentPath = pathModule.posix.dirname(builtPath)
+					const parentItem = this._items[partParentPath]
+
+					if (!parentItem) {
+						continue
+					}
+
+					const parentIsBase = partParentPath === "/" || partParentPath === "." || partParentPath === ""
+					const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID! : parentItem.uuid
+					const uuid = await this.cloud.createDirectory({ name: partBasename, parent: parentUUID })
+
+					this._items[builtPath] = {
+						uuid,
+						type: "directory",
+						metadata: {
+							name: partBasename
+						}
+					}
+
+					this._uuidToItem[uuid] = {
+						uuid,
+						type: "directory",
+						path: builtPath,
+						metadata: {
+							name: partBasename
+						}
 					}
 				}
 			}
-		}
 
-		if (!this._items[path]) {
-			throw new ENOENT({ path })
+			if (!this._items[path]) {
+				throw new ENOENT({ path })
+			}
+
+			return this._items[path].uuid
+		} finally {
+			this.mutex.release()
 		}
 	}
 
@@ -723,123 +744,142 @@ export class FS {
 	 * @returns {Promise<void>}
 	 */
 	public async rename({ from, to }: { from: string; to: string }): Promise<void> {
-		from = this.normalizePath({ path: from })
-		to = this.normalizePath({ path: to })
+		await this.mutex.acquire()
 
-		if (from === "/" || from === to) {
-			return
-		}
+		try {
+			from = this.normalizePath({ path: from })
+			to = this.normalizePath({ path: to })
 
-		const uuid = await this.pathToItemUUID({ path: from })
-		const item = this._items[from]
-
-		if (!uuid || !item) {
-			throw new ENOENT({ path: from })
-		}
-
-		const currentParentPath = pathModule.posix.dirname(from)
-		const newParentPath = pathModule.posix.dirname(to)
-		const newBasename = pathModule.posix.basename(to)
-		const oldBasename = pathModule.posix.basename(from)
-
-		if (newParentPath === currentParentPath) {
-			if (to === "/" || newBasename.length <= 0) {
+			if (from === "/" || from === to) {
 				return
 			}
 
-			if (item.type === "directory") {
-				await this.cloud.renameDirectory({ uuid, name: newBasename })
-			} else {
-				await this.cloud.renameFile({
-					uuid,
-					metadata: {
-						...item.metadata,
-						name: newBasename
-					},
-					name: newBasename
-				})
+			const uuid = await this.pathToItemUUID({ path: from })
+			const item = this._items[from]
+
+			if (!uuid || !item) {
+				throw new ENOENT({ path: from })
 			}
 
-			this._items[to] = {
-				...this._items[from],
-				metadata: {
-					...this._items[from].metadata,
-					name: newBasename
-				}
-			} as FSItem
+			const currentParentPath = pathModule.posix.dirname(from)
+			const newParentPath = pathModule.posix.dirname(to)
+			const newBasename = pathModule.posix.basename(to)
+			const oldBasename = pathModule.posix.basename(from)
 
-			this._uuidToItem[item.uuid] = {
-				...this._uuidToItem[item.uuid],
-				path: to,
-				metadata: {
-					...this._uuidToItem[item.uuid].metadata,
-					name: newBasename
-				}
-			} as FSItemUUID
+			const itemMetadata =
+				item.type === "file"
+					? ({
+							name: oldBasename !== newBasename ? newBasename : item.metadata.name,
+							size: item.metadata.size,
+							mime: item.metadata.mime,
+							lastModified: item.metadata.lastModified,
+							creation: item.metadata.creation,
+							hash: item.metadata.hash,
+							key: item.metadata.key
+					  } satisfies FileMetadata)
+					: ({
+							name: oldBasename !== newBasename ? newBasename : item.metadata.name
+					  } satisfies FolderMetadata)
 
-			delete this._items[from]
-		} else {
-			if (oldBasename !== newBasename) {
+			if (newParentPath === currentParentPath) {
+				if (to === "/" || newBasename.length <= 0) {
+					return
+				}
+
 				if (item.type === "directory") {
 					await this.cloud.renameDirectory({ uuid, name: newBasename })
 				} else {
 					await this.cloud.renameFile({
 						uuid,
-						metadata: {
-							...item.metadata,
-							name: newBasename
-						},
+						metadata: itemMetadata as FileMetadata,
 						name: newBasename
 					})
 				}
-			}
 
-			if (newParentPath === "/" || newParentPath === "." || newParentPath === "") {
-				if (item.type === "directory") {
-					await this.cloud.moveDirectory({ uuid, to: this.sdkConfig.baseFolderUUID!, metadata: item.metadata })
-				} else {
-					await this.cloud.moveFile({ uuid, to: this.sdkConfig.baseFolderUUID!, metadata: item.metadata })
-				}
+				this._items[to] = {
+					...this._items[from],
+					metadata: {
+						...this._items[from],
+						name: newBasename
+					}
+				} as FSItem
+
+				this._uuidToItem[item.uuid] = {
+					...this._uuidToItem[item.uuid],
+					path: to,
+					metadata: {
+						...this._uuidToItem[item.uuid],
+						name: newBasename
+					}
+				} as FSItemUUID
+
+				delete this._items[from]
 			} else {
-				await this.mkdir({ path: newParentPath })
-
-				const newParentItem = this._items[newParentPath]
-
-				if (!newParentItem) {
-					throw new ENOENT({ path: newParentPath })
+				if (oldBasename !== newBasename) {
+					if (item.type === "directory") {
+						await this.cloud.renameDirectory({ uuid, name: newBasename })
+					} else {
+						await this.cloud.renameFile({
+							uuid,
+							metadata: itemMetadata as FileMetadata,
+							name: newBasename
+						})
+					}
 				}
 
-				if (item.type === "directory") {
-					await this.cloud.moveDirectory({ uuid, to: newParentItem.uuid!, metadata: item.metadata })
+				if (newParentPath === "/" || newParentPath === "." || newParentPath === "") {
+					if (item.type === "directory") {
+						await this.cloud.moveDirectory({
+							uuid,
+							to: this.sdkConfig.baseFolderUUID!,
+							metadata: itemMetadata as FolderMetadata
+						})
+					} else {
+						await this.cloud.moveFile({ uuid, to: this.sdkConfig.baseFolderUUID!, metadata: itemMetadata as FileMetadata })
+					}
 				} else {
-					await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: item.metadata })
+					await this.mkdir({ path: newParentPath })
+
+					const newParentItem = this._items[newParentPath]
+
+					if (!newParentItem) {
+						throw new ENOENT({ path: newParentPath })
+					}
+
+					if (item.type === "directory") {
+						await this.cloud.moveDirectory({ uuid, to: newParentItem.uuid!, metadata: itemMetadata as FolderMetadata })
+					} else {
+						await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: itemMetadata as FileMetadata })
+					}
 				}
-			}
 
-			for (const oldPath in this._items) {
-				if (oldPath.startsWith(from)) {
-					const newPath = oldPath.split(from).join(to)
+				for (const oldPath in this._items) {
+					if (oldPath.startsWith(from)) {
+						const newPath = oldPath.split(from).join(to)
 
-					this._items[newPath] = {
-						...this._items[oldPath],
-						metadata: {
+						this._items[newPath] = {
 							...this._items[oldPath],
-							name: newBasename
-						}
-					} as FSItem
+							metadata: {
+								...this._items[oldPath],
+								name: newBasename
+							}
+						} as FSItem
 
-					this._uuidToItem[this._items[oldPath].uuid] = {
-						...this._uuidToItem[this._items[oldPath].uuid],
-						path: newPath,
-						metadata: {
-							...this._uuidToItem[this._items[oldPath].uuid].metadata,
-							name: newBasename
-						}
-					} as FSItemUUID
+						this._uuidToItem[this._items[oldPath].uuid] = {
+							...this._uuidToItem[this._items[oldPath].uuid],
+							path: newPath,
+							metadata: {
+								...this._uuidToItem[this._items[oldPath].uuid].metadata,
+								name: newBasename
+							}
+						} as FSItemUUID
 
-					delete this._items[oldPath]
+						delete this._items[oldPath]
+					}
 				}
 			}
+		} finally {
+			this.mutex.release()
 		}
 	}
 
@@ -880,39 +920,45 @@ export class FS {
 	 * @returns {Promise<void>}
 	 */
 	private async _unlink({ path, type, permanent = false }: { path: string; type?: FSItemType; permanent?: boolean }): Promise<void> {
-		path = this.normalizePath({ path })
+		await this.mutex.acquire()
 
-		const uuid = await this.pathToItemUUID({ path })
+		try {
+			path = this.normalizePath({ path })
 
-		if (!uuid || !this._items[path]) {
-			throw new ENOENT({ path })
-		}
+			const uuid = await this.pathToItemUUID({ path })
 
-		const acceptedTypes: FSItemType[] = !type ? ["directory", "file"] : type === "directory" ? ["directory"] : ["file"]
+			if (!uuid || !this._items[path]) {
+				return
+			}
 
-		if (!acceptedTypes.includes(this._items[path].type)) {
-			throw new ENOENT({ path })
-		}
+			const acceptedTypes: FSItemType[] = !type ? ["directory", "file"] : type === "directory" ? ["directory"] : ["file"]
 
-		if (this._items[path].type === "directory") {
-			if (permanent) {
-				await this.cloud.deleteDirectory({ uuid })
+			if (!acceptedTypes.includes(this._items[path].type)) {
+				return
+			}
+
+			if (this._items[path].type === "directory") {
+				if (permanent) {
+					await this.cloud.deleteDirectory({ uuid })
+				} else {
+					await this.cloud.trashDirectory({ uuid })
+				}
 			} else {
-				await this.cloud.trashDirectory({ uuid })
+				if (permanent) {
+					await this.cloud.deleteFile({ uuid })
+				} else {
+					await this.cloud.trashFile({ uuid })
+				}
 			}
-		} else {
-			if (permanent) {
-				await this.cloud.deleteFile({ uuid })
-			} else {
-				await this.cloud.trashFile({ uuid })
-			}
-		}
 
-		for (const entry in this._items) {
-			if (entry.startsWith(path)) {
-				delete this._uuidToItem[this._items[entry].uuid]
-				delete this._items[entry]
+			for (const entry in this._items) {
+				if (entry.startsWith(path)) {
+					delete this._uuidToItem[this._items[entry].uuid]
+					delete this._items[entry]
+				}
 			}
+		} finally {
+			this.mutex.release()
 		}
 	}
 
@@ -925,9 +971,9 @@ export class FS {
 	 * @param {{ path: string, permanent?: boolean }} param0
 	 * @param {string} param0.path
 	 * @param {boolean} [param0.permanent=false]
-	 * @returns {ReturnType<typeof this._unlink>}
+	 * @returns {Promise<void>}
 	 */
-	public async unlink({ path, permanent = false }: { path: string; permanent?: boolean }): ReturnType<typeof this._unlink> {
+	public async unlink({ path, permanent = false }: { path: string; permanent?: boolean }): Promise<void> {
 		return await this._unlink({ path, permanent })
 	}
 
@@ -940,9 +986,9 @@ export class FS {
 	 * @param {{ path: string, permanent?: boolean }} param0
 	 * @param {string} param0.path
 	 * @param {boolean} [param0.permanent=false]
-	 * @returns {ReturnType<typeof this._unlink>}
+	 * @returns {Promise<void>}
 	 */
-	public async rm({ path, permanent = false }: { path: string; permanent?: boolean }): ReturnType<typeof this._unlink> {
+	public async rm({ path, permanent = false }: { path: string; permanent?: boolean }): Promise<void> {
 		return await this._unlink({ path, permanent })
 	}
 
@@ -953,9 +999,9 @@ export class FS {
 	 * @public
 	 * @async
 	 * @param {...Parameters<typeof this.unlink>} params
-	 * @returns {ReturnType<typeof this.unlink>}
+	 * @returns {Promise<void>}
 	 */
-	public async rmdir(...params: Parameters<typeof this.unlink>): ReturnType<typeof this.unlink> {
+	public async rmdir(...params: Parameters<typeof this.unlink>): Promise<void> {
 		return await this._unlink({ path: params[0].path, type: "directory", permanent: params[0].permanent })
 	}
 
@@ -1070,9 +1116,9 @@ export class FS {
 	 * @public
 	 * @async
 	 * @param {...Parameters<typeof this.writeFile>} params
-	 * @returns {ReturnType<typeof this.writeFile>}
+	 * @returns {Promise<CloudItem>}
 	 */
-	public async write(...params: Parameters<typeof this.writeFile>): ReturnType<typeof this.writeFile> {
+	public async write(...params: Parameters<typeof this.writeFile>): Promise<CloudItem> {
 		return await this.writeFile(...params)
 	}
 
@@ -1596,9 +1642,9 @@ export class FS {
 	 * @public
 	 * @async
 	 * @param {...Parameters<typeof this.cp>} params
-	 * @returns {ReturnType<typeof this.cp>}
+	 * @returns {Promise<void>}
 	 */
-	public async copy(...params: Parameters<typeof this.cp>): ReturnType<typeof this.cp> {
+	public async copy(...params: Parameters<typeof this.cp>): Promise<void> {
 		return await this.cp(...params)
 	}
 }

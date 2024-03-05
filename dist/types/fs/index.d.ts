@@ -72,6 +72,7 @@ export declare class FS {
     private _items;
     private _uuidToItem;
     private readonly socket;
+    private readonly mutex;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM
@@ -147,9 +148,9 @@ export declare class FS {
      * @public
      * @async
      * @param {...Parameters<typeof this.readdir>} params
-     * @returns {ReturnType<typeof this.readdir>}
+     * @returns {Promise<string[]>}
      */
-    ls(...params: Parameters<typeof this.readdir>): ReturnType<typeof this.readdir>;
+    ls(...params: Parameters<typeof this.readdir>): Promise<string[]>;
     stat({ path }: {
         path: string;
     }): Promise<FSStats>;
@@ -160,9 +161,9 @@ export declare class FS {
      * @public
      * @async
      * @param {...Parameters<typeof this.stat>} params
-     * @returns {ReturnType<typeof this.stat>}
+     * @returns {Promise<FSStats>}
      */
-    lstat(...params: Parameters<typeof this.stat>): ReturnType<typeof this.stat>;
+    lstat(...params: Parameters<typeof this.stat>): Promise<FSStats>;
     /**
      * Creates a directory at path. Recursively creates intermediate directories if they don't exist.
      * @date 2/14/2024 - 1:34:11 AM
@@ -171,11 +172,11 @@ export declare class FS {
      * @async
      * @param {{ path: string }} param0
      * @param {string} param0.path
-     * @returns {Promise<void>}
+     * @returns {Promise<string>}
      */
     mkdir({ path }: {
         path: string;
-    }): Promise<void>;
+    }): Promise<string>;
     /**
      * Rename or move a file/directory. Recursively creates intermediate directories if needed.
      * @date 2/14/2024 - 1:39:32 AM
@@ -222,12 +223,12 @@ export declare class FS {
      * @param {{ path: string, permanent?: boolean }} param0
      * @param {string} param0.path
      * @param {boolean} [param0.permanent=false]
-     * @returns {ReturnType<typeof this._unlink>}
+     * @returns {Promise<void>}
      */
     unlink({ path, permanent }: {
         path: string;
         permanent?: boolean;
-    }): ReturnType<typeof this._unlink>;
+    }): Promise<void>;
     /**
      * Alias of unlink.
      * @date 2/28/2024 - 4:58:30 PM
@@ -237,12 +238,12 @@ export declare class FS {
      * @param {{ path: string, permanent?: boolean }} param0
      * @param {string} param0.path
      * @param {boolean} [param0.permanent=false]
-     * @returns {ReturnType<typeof this._unlink>}
+     * @returns {Promise<void>}
      */
     rm({ path, permanent }: {
         path: string;
         permanent?: boolean;
-    }): ReturnType<typeof this._unlink>;
+    }): Promise<void>;
     /**
      * Deletes directory at path.
      * @date 2/14/2024 - 2:53:48 AM
@@ -250,9 +251,9 @@ export declare class FS {
      * @public
      * @async
      * @param {...Parameters<typeof this.unlink>} params
-     * @returns {ReturnType<typeof this.unlink>}
+     * @returns {Promise<void>}
      */
-    rmdir(...params: Parameters<typeof this.unlink>): ReturnType<typeof this.unlink>;
+    rmdir(...params: Parameters<typeof this.unlink>): Promise<void>;
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
      * @date 2/20/2024 - 9:44:16 PM
@@ -293,9 +294,9 @@ export declare class FS {
      * @public
      * @async
      * @param {...Parameters<typeof this.writeFile>} params
-     * @returns {ReturnType<typeof this.writeFile>}
+     * @returns {Promise<CloudItem>}
      */
-    write(...params: Parameters<typeof this.writeFile>): ReturnType<typeof this.writeFile>;
+    write(...params: Parameters<typeof this.writeFile>): Promise<CloudItem>;
     /**
      * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
      * @date 2/16/2024 - 5:32:31 AM
@@ -429,8 +430,8 @@ export declare class FS {
      * @public
      * @async
      * @param {...Parameters<typeof this.cp>} params
-     * @returns {ReturnType<typeof this.cp>}
+     * @returns {Promise<void>}
      */
-    copy(...params: Parameters<typeof this.cp>): ReturnType<typeof this.cp>;
+    copy(...params: Parameters<typeof this.cp>): Promise<void>;
 }
 export default FS;
