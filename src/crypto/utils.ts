@@ -426,17 +426,17 @@ export async function importPrivateKey({
 
 /**
  * Imports a raw key to WebCrypto's fromat.
- * @date 2/9/2024 - 12:48:51 AM
+ * @date 3/6/2024 - 11:13:40 PM
  *
  * @export
  * @async
  * @param {{
- * 	key: string
+ * 	key: Buffer
  * 	algorithm: "AES-GCM" | "AES-CBC"
  * 	mode?: KeyUsage[]
  * 	keyCache?: boolean
  * }} param0
- * @param {string} param0.key
+ * @param {Buffer} param0.key
  * @param {("AES-GCM" | "AES-CBC")} param0.algorithm
  * @param {{}} [param0.mode=["encrypt"]]
  * @param {boolean} [param0.keyCache=true]
@@ -448,7 +448,7 @@ export async function importRawKey({
 	mode = ["encrypt"],
 	keyCache = true
 }: {
-	key: string
+	key: Buffer
 	algorithm: "AES-GCM" | "AES-CBC"
 	mode?: KeyUsage[]
 	keyCache?: boolean
@@ -463,7 +463,7 @@ export async function importRawKey({
 		return cache.importRawKey.get(cacheKey)!
 	}
 
-	const importedRawKey = await globalThis.crypto.subtle.importKey("raw", textEncoder.encode(key), algorithm, false, mode)
+	const importedRawKey = await globalThis.crypto.subtle.importKey("raw", key, algorithm, false, mode)
 
 	if (keyCache) {
 		cache.importRawKey.set(cacheKey, importedRawKey)

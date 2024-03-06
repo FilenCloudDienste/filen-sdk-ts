@@ -88,16 +88,16 @@ export class Encrypt {
 							iterations: 1,
 							hash: "sha512",
 							bitLength: 256,
-							returnHex: true
+							returnHex: false
 					  })
-					: keyToUse
+					: Buffer.from(keyToUse, "utf-8")
 				const dataBuffer = this.textEncoder.encode(metadata)
 				const encrypted = await globalThis.crypto.subtle.encrypt(
 					{
 						name: "AES-GCM",
 						iv: ivBuffer
 					},
-					await importRawKey({ key: derivedKey, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
+					await importRawKey({ key: derivedKey as Buffer, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
 					dataBuffer
 				)
 
@@ -283,7 +283,7 @@ export class Encrypt {
 						name: "AES-GCM",
 						iv: this.textEncoder.encode(iv)
 					},
-					await importRawKey({ key, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
+					await importRawKey({ key: Buffer.from(key, "utf-8"), algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
 					data
 				)
 

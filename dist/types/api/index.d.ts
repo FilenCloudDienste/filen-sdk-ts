@@ -405,7 +405,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         onProgress?: import("..").ProgressCallback | undefined;
-                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
+                    }) => Promise<import("fs").ReadStream | ReadableStream<any>>;
                     local: (params_0: {
                         uuid: string;
                         bucket: string;

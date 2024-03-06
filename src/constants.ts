@@ -6,12 +6,7 @@ const env = {
 	isReactNative: typeof global.nodeThread !== "undefined" && global.nodeThread !== null
 } as const
 
-export const environment: Environment =
-	env.isBrowser && !env.isNode && !env.isReactNative
-		? "browser"
-		: env.isNode && !env.isBrowser && !env.isReactNative
-		? "node"
-		: "reactNative"
+export const environment: Environment = env.isBrowser ? "browser" : env.isNode ? "node" : "reactNative"
 
 export const BUFFER_SIZE = 4096
 export const BASE64_BUFFER_SIZE = 3 * 1024

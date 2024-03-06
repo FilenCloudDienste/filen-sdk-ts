@@ -354,7 +354,9 @@ export class FilenSDK {
 			authVersion: authInfo.authVersion,
 			salt: authInfo.salt
 		})
-		const loginResponse = await this._api.v3().login({ email: emailToUse, password: derived.derivedPassword, twoFactorCode: twoFactorCodeToUse, authVersion })
+		const loginResponse = await this._api
+			.v3()
+			.login({ email: emailToUse, password: derived.derivedPassword, twoFactorCode: twoFactorCodeToUse, authVersion })
 		const [infoResponse, baseFolderResponse] = await Promise.all([
 			this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
 			this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
@@ -551,6 +553,4 @@ export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs"
 export * from "./types"
 export { CryptoConfig } from "./crypto"
 export * from "./constants"
-
-module.exports = FilenSDK
-exports.default = FilenSDK
+export * from "./api/errors"

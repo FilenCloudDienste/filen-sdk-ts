@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"rootDir": "src",
+		"outDir": "dist/browser",
+		"lib": ["ES2017", "DOM"],
+		"module": "ESNext",
+		"target": "ESNext",
+		"strict": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "Node",
+		"sourceMap": true,
+		"skipDefaultLibCheck": true,
+		"skipLibCheck": true,
+		"declaration": true,
+		"declarationDir": "dist/types"
+	},
+	"ts-node": {
+		"files": true
+	},
+	"include": ["src", "types.d.ts"],
+	"exclude": ["node_modules", "dist", "__tests__", "docs", ".github", "dev", ".vscode"]
+}

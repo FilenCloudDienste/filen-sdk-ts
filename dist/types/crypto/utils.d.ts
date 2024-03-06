@@ -132,24 +132,24 @@ export declare function importPrivateKey({ privateKey, mode, keyCache }: {
 }): Promise<CryptoKey>;
 /**
  * Imports a raw key to WebCrypto's fromat.
- * @date 2/9/2024 - 12:48:51 AM
+ * @date 3/6/2024 - 11:13:40 PM
  *
  * @export
  * @async
  * @param {{
- * 	key: string
+ * 	key: Buffer
  * 	algorithm: "AES-GCM" | "AES-CBC"
  * 	mode?: KeyUsage[]
  * 	keyCache?: boolean
  * }} param0
- * @param {string} param0.key
+ * @param {Buffer} param0.key
  * @param {("AES-GCM" | "AES-CBC")} param0.algorithm
  * @param {{}} [param0.mode=["encrypt"]]
  * @param {boolean} [param0.keyCache=true]
  * @returns {Promise<CryptoKey>}
  */
 export declare function importRawKey({ key, algorithm, mode, keyCache }: {
-    key: string;
+    key: Buffer;
     algorithm: "AES-GCM" | "AES-CBC";
     mode?: KeyUsage[];
     keyCache?: boolean;

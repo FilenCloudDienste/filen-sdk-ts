@@ -96,7 +96,7 @@ export class Decrypt {
 									name: "AES-GCM",
 									iv: ivBuffer
 								},
-								await importRawKey({ key, algorithm: "AES-GCM", mode: ["decrypt"] }),
+								await importRawKey({ key: keyBuffer as Buffer, algorithm: "AES-GCM", mode: ["decrypt"] }),
 								encrypted
 							)
 
@@ -906,7 +906,7 @@ export class Decrypt {
 								name: "AES-CBC",
 								iv: ivBytes
 							},
-							await importRawKey({ key: keyBytes.toString("utf-8"), algorithm: "AES-GCM", mode: ["decrypt"] }),
+							await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }),
 							data.subarray(16)
 						)
 
@@ -921,7 +921,7 @@ export class Decrypt {
 								name: "AES-CBC",
 								iv: ivBytes
 							},
-							await importRawKey({ key, algorithm: "AES-CBC", mode: ["decrypt"] }),
+							await importRawKey({ key: keyBytes, algorithm: "AES-CBC", mode: ["decrypt"] }),
 							data
 						)
 
@@ -930,12 +930,13 @@ export class Decrypt {
 				} else if (version === 2) {
 					const iv = data.subarray(0, 12)
 					const encData = data.subarray(12)
+					const keyBytes = Buffer.from(key, "utf-8")
 					const decrypted = await globalThis.crypto.subtle.decrypt(
 						{
 							name: "AES-GCM",
 							iv
 						},
-						await importRawKey({ key, algorithm: "AES-GCM", mode: ["decrypt"] }),
+						await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }),
 						encData
 					)
 

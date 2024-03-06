@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"rootDir": "src",
-		"outDir": "dist",
+		"outDir": "dist/node",
 		"lib": ["ES2017", "DOM"],
 		"module": "commonjs",
 		"target": "ES2017",
@@ -19,6 +19,6 @@
 	"ts-node": {
 		"files": true
 	},
-	"include": ["src", "__tests__", "index.d.ts"],
+	"include": ["src", "types.d.ts"],
 	"exclude": ["node_modules", "dist", "__tests__", "docs", ".github", "dev", ".vscode"]
 }

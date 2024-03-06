@@ -11,7 +11,6 @@ import type { ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
-import packageJSON from "../../package.json"
 import Agent from "agentkeepalive"
 
 const pipelineAsync = promisify(pipeline)
@@ -130,7 +129,7 @@ export class APIClient {
 		return {
 			Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey),
 			Accept: "application/json, text/plain, */*",
-			...(environment === "node" ? { "User-Agent": `filen-sdk/${packageJSON.version}` } : {})
+			...(environment === "node" ? { "User-Agent": "filen-sdk" } : {})
 		}
 	}
 
