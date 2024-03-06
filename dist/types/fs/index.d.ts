@@ -73,6 +73,7 @@ export declare class FS {
     private _uuidToItem;
     private readonly socket;
     private readonly mutex;
+    private readonly mkdirMutex;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM

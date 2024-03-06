@@ -32,6 +32,7 @@ class FS {
     constructor(params) {
         this.socket = new socket_1.Socket();
         this.mutex = new semaphore_1.Semaphore(1);
+        this.mkdirMutex = new semaphore_1.Semaphore(1);
         this.api = params.api;
         this.sdkConfig = params.sdkConfig;
         this.cloud = params.cloud;
@@ -103,7 +104,7 @@ class FS {
         this.socket.on("folderTrash", (data) => {
             if (this._uuidToItem[data.uuid]) {
                 for (const path in this._items) {
-                    if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+                    if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
                         delete this._items[path];
                     }
                 }
@@ -114,7 +115,7 @@ class FS {
         this.socket.on("folderMove", (data) => {
             if (this._uuidToItem[data.uuid]) {
                 for (const path in this._items) {
-                    if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+                    if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
                         delete this._items[path];
                     }
                 }
@@ -125,7 +126,7 @@ class FS {
         this.socket.on("folderRename", (data) => {
             if (this._uuidToItem[data.uuid]) {
                 for (const path in this._items) {
-                    if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+                    if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
                         delete this._items[path];
                     }
                 }
@@ -159,7 +160,7 @@ class FS {
      */
     _removeItem({ path }) {
         for (const entry in this._items) {
-            if (entry.startsWith(path)) {
+            if (entry.startsWith(path + "/") || entry === path) {
                 delete this._uuidToItem[this._items[entry].uuid];
                 delete this._items[entry];
             }
@@ -487,7 +488,7 @@ class FS {
      * @returns {Promise<string>}
      */
     async mkdir({ path }) {
-        await this.mutex.acquire();
+        await this.mkdirMutex.acquire();
         try {
             path = this.normalizePath({ path });
             if (path === "/") {
@@ -558,7 +559,7 @@ class FS {
             return this._items[path].uuid;
         }
         finally {
-            this.mutex.release();
+            this.mkdirMutex.release();
         }
     }
     /**
@@ -591,7 +592,7 @@ class FS {
             const oldBasename = path_1.default.posix.basename(from);
             const itemMetadata = item.type === "file"
                 ? ({
-                    name: oldBasename !== newBasename ? newBasename : item.metadata.name,
+                    name: newBasename,
                     size: item.metadata.size,
                     mime: item.metadata.mime,
                     lastModified: item.metadata.lastModified,
@@ -600,7 +601,7 @@ class FS {
                     key: item.metadata.key
                 })
                 : ({
-                    name: oldBasename !== newBasename ? newBasename : item.metadata.name
+                    name: newBasename
                 });
             if (newParentPath === currentParentPath) {
                 if (to === "/" || newBasename.length <= 0) {
@@ -662,7 +663,7 @@ class FS {
                 this._uuidToItem[item.uuid] = Object.assign(Object.assign({}, this._uuidToItem[item.uuid]), { path: to, metadata: itemMetadata });
                 delete this._items[from];
                 for (const oldPath in this._items) {
-                    if (oldPath.startsWith(from)) {
+                    if (oldPath.startsWith(from + "/") || oldPath === from) {
                         const newPath = oldPath.split(from).join(to);
                         this._items[newPath] = Object.assign(Object.assign({}, this._items[oldPath]), { metadata: Object.assign(Object.assign({}, this._items[oldPath].metadata), { name: newBasename }) });
                         this._uuidToItem[this._items[oldPath].uuid] = Object.assign(Object.assign({}, this._uuidToItem[this._items[oldPath].uuid]), { path: newPath, metadata: Object.assign(Object.assign({}, this._uuidToItem[this._items[oldPath].uuid].metadata), { name: newBasename }) });
@@ -740,7 +741,7 @@ class FS {
             delete this._uuidToItem[this._items[path].uuid];
             delete this._items[path];
             for (const entry in this._items) {
-                if (entry.startsWith(path)) {
+                if (entry.startsWith(path + "/") || entry === path) {
                     delete this._uuidToItem[this._items[entry].uuid];
                     delete this._items[entry];
                 }

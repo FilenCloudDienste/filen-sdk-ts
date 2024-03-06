@@ -97,6 +97,7 @@ export class FS {
 	private _uuidToItem: Record<string, FSItemUUID>
 	private readonly socket = new Socket()
 	private readonly mutex = new Semaphore(1)
+	private readonly mkdirMutex = new Semaphore(1)
 
 	/**
 	 * Creates an instance of FS.
@@ -189,7 +190,7 @@ export class FS {
 		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
 			if (this._uuidToItem[data.uuid]) {
 				for (const path in this._items) {
-					if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+					if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
 						delete this._items[path]
 					}
 				}
@@ -202,7 +203,7 @@ export class FS {
 		this.socket.on("folderMove", (data: SocketFolderMove) => {
 			if (this._uuidToItem[data.uuid]) {
 				for (const path in this._items) {
-					if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+					if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
 						delete this._items[path]
 					}
 				}
@@ -215,7 +216,7 @@ export class FS {
 		this.socket.on("folderRename", (data: SocketFolderRename) => {
 			if (this._uuidToItem[data.uuid]) {
 				for (const path in this._items) {
-					if (path.startsWith(this._uuidToItem[data.uuid].path)) {
+					if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
 						delete this._items[path]
 					}
 				}
@@ -255,7 +256,7 @@ export class FS {
 	 */
 	public _removeItem({ path }: { path: string }): void {
 		for (const entry in this._items) {
-			if (entry.startsWith(path)) {
+			if (entry.startsWith(path + "/") || entry === path) {
 				delete this._uuidToItem[this._items[entry].uuid]
 				delete this._items[entry]
 			}
@@ -648,7 +649,7 @@ export class FS {
 	 * @returns {Promise<string>}
 	 */
 	public async mkdir({ path }: { path: string }): Promise<string> {
-		await this.mutex.acquire()
+		await this.mkdirMutex.acquire()
 
 		try {
 			path = this.normalizePath({ path })
@@ -737,7 +738,7 @@ export class FS {
 
 			return this._items[path].uuid
 		} finally {
-			this.mutex.release()
+			this.mkdirMutex.release()
 		}
 	}
 
@@ -778,7 +779,7 @@ export class FS {
 			const itemMetadata =
 				item.type === "file"
 					? ({
-							name: oldBasename !== newBasename ? newBasename : item.metadata.name,
+							name: newBasename,
 							size: item.metadata.size,
 							mime: item.metadata.mime,
 							lastModified: item.metadata.lastModified,
@@ -787,7 +788,7 @@ export class FS {
 							key: item.metadata.key
 					  } satisfies FileMetadata)
 					: ({
-							name: oldBasename !== newBasename ? newBasename : item.metadata.name
+							name: newBasename
 					  } satisfies FolderMetadata)
 
 			if (newParentPath === currentParentPath) {
@@ -870,7 +871,7 @@ export class FS {
 				delete this._items[from]
 
 				for (const oldPath in this._items) {
-					if (oldPath.startsWith(from)) {
+					if (oldPath.startsWith(from + "/") || oldPath === from) {
 						const newPath = oldPath.split(from).join(to)
 
 						this._items[newPath] = {
@@ -971,7 +972,7 @@ export class FS {
 			delete this._items[path]
 
 			for (const entry in this._items) {
-				if (entry.startsWith(path)) {
+				if (entry.startsWith(path + "/") || entry === path) {
 					delete this._uuidToItem[this._items[entry].uuid]
 					delete this._items[entry]
 				}
