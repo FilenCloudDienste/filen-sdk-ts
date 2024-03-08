@@ -424,4 +424,5 @@ exports.FilenSDK = FilenSDK;
 exports.default = FilenSDK;
 __exportStar(require("./types"), exports);
 __exportStar(require("./constants"), exports);
+__exportStar(require("./api/errors"), exports);
 //# sourceMappingURL=index.js.map

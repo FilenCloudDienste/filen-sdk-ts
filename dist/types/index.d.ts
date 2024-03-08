@@ -848,3 +848,4 @@ export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs";
 export * from "./types";
 export { CryptoConfig } from "./crypto";
 export * from "./constants";
+export * from "./api/errors";
