@@ -33,7 +33,7 @@ export async function generateRandomString({ length }: { length: number }): Prom
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
 
-		window.crypto.getRandomValues(array)
+		globalThis.crypto.getRandomValues(array)
 
 		const randomNumbers = Array.from(array).map(x => x % chars.length)
 

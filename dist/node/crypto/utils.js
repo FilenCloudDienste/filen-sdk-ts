@@ -33,7 +33,7 @@ async function generateRandomString({ length }) {
     }
     else if (constants_1.environment === "browser") {
         const array = new Uint8Array(length);
-        window.crypto.getRandomValues(array);
+        globalThis.crypto.getRandomValues(array);
         const randomNumbers = Array.from(array).map(x => x % chars.length);
         return randomNumbers.map(x => chars[x]).join("");
     }

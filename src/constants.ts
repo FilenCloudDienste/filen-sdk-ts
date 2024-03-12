@@ -1,7 +1,10 @@
 import type { Environment } from "./types"
 
 const env = {
-	isBrowser: typeof window !== "undefined" && typeof window.document !== "undefined",
+	isBrowser:
+		(typeof window !== "undefined" && typeof window.document !== "undefined") ||
+		// @ts-expect-error WorkerEnv's are not typed
+		("undefined" !== typeof WorkerGlobalScope && "function" === typeof importScripts && navigator instanceof WorkerNavigator),
 	isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null,
 	isReactNative: typeof global.nodeThread !== "undefined" && global.nodeThread !== null
 } as const

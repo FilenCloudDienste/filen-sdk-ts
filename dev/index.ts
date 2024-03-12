@@ -1,3 +1,4 @@
+/* eslint-disable no-constant-condition */
 /* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
@@ -25,7 +26,7 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	await filen.fs().readdir({ path: "/" })
+	console.log(await filen.fs().readdir({ path: "/" }))
 }
 
 main()

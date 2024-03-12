@@ -1673,11 +1673,10 @@ export class Cloud {
                 })
             ]);
             const waitForPause = async () => {
+                if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
+                    return;
+                }
                 return await new Promise(resolve => {
-                    if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
-                        resolve();
-                        return;
-                    }
                     const wait = setInterval(() => {
                         if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
                             clearInterval(wait);
@@ -1878,12 +1877,13 @@ export class Cloud {
         const firstChunk = chunksStart ? chunksStart : 0;
         let currentWriteIndex = firstChunk;
         let writerStopped = false;
+        let currentPullIndex = -1;
+        const chunksPulled = {};
         const waitForPause = async () => {
+            if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
+                return;
+            }
             return await new Promise(resolve => {
-                if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
-                    resolve();
-                    return;
-                }
                 const wait = setInterval(() => {
                     if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
                         clearInterval(wait);
@@ -1892,120 +1892,160 @@ export class Cloud {
                 }, 10);
             });
         };
+        const waitForPull = async ({ index }) => {
+            if (chunksPulled[index]) {
+                return;
+            }
+            await new Promise(resolve => {
+                const wait = setInterval(() => {
+                    if (chunksPulled[index]) {
+                        clearInterval(wait);
+                        resolve();
+                    }
+                }, 10);
+            });
+        };
+        const waitForWritesToBeDone = async () => {
+            if (currentWriteIndex >= lastChunk) {
+                return;
+            }
+            await new Promise(resolve => {
+                const wait = setInterval(() => {
+                    if (currentWriteIndex >= lastChunk) {
+                        clearInterval(wait);
+                        resolve();
+                    }
+                }, 10);
+            });
+        };
+        const applyBackpressure = async ({ controller }) => {
+            if ((controller.desiredSize ?? 1) <= 0) {
+                await new Promise(resolve => {
+                    const wait = setInterval(() => {
+                        if (controller.desiredSize && controller.desiredSize > 0) {
+                            clearInterval(wait);
+                            resolve();
+                        }
+                    }, 10);
+                });
+            }
+        };
         return new ReadableStream({
-            async start(controller) {
-                const write = async ({ index, buffer }) => {
+            start(controller) {
+                // eslint-disable-next-line no-extra-semi
+                ;
+                (async () => {
+                    const write = async ({ index, buffer }) => {
+                        try {
+                            await applyBackpressure({ controller });
+                            if (pauseSignal && pauseSignal.isPaused()) {
+                                await waitForPause();
+                            }
+                            if (abortSignal && abortSignal.aborted) {
+                                throw new Error("Aborted");
+                            }
+                            if (writerStopped) {
+                                return;
+                            }
+                            if (index !== currentWriteIndex) {
+                                setTimeout(() => {
+                                    write({ index, buffer });
+                                }, 10);
+                                return;
+                            }
+                            if (buffer.byteLength > 0) {
+                                controller.enqueue(buffer);
+                            }
+                            currentWriteIndex += 1;
+                        }
+                        finally {
+                            writersSemaphore.release();
+                        }
+                    };
                     try {
-                        if (pauseSignal && pauseSignal.isPaused()) {
-                            await waitForPause();
-                        }
-                        if (abortSignal && abortSignal.aborted) {
-                            throw new Error("Aborted");
-                        }
-                        if (writerStopped) {
-                            return;
-                        }
-                        if (index !== currentWriteIndex) {
-                            setTimeout(() => {
-                                write({ index, buffer });
-                            }, 10);
-                            return;
-                        }
-                        if (buffer.byteLength > 0) {
-                            controller.enqueue(buffer);
-                        }
-                        currentWriteIndex += 1;
-                    }
-                    finally {
-                        writersSemaphore.release();
-                    }
-                };
-                try {
-                    await new Promise((resolve, reject) => {
-                        let done = 0;
-                        for (let i = firstChunk; i < lastChunk; i++) {
-                            const index = i;
-                            (async () => {
-                                try {
-                                    await Promise.all([threadsSemaphore.acquire(), writersSemaphore.acquire()]);
-                                    if (pauseSignal && pauseSignal.isPaused()) {
-                                        await waitForPause();
+                        await new Promise((resolve, reject) => {
+                            let done = 0;
+                            for (let i = firstChunk; i < lastChunk; i++) {
+                                const index = i;
+                                (async () => {
+                                    try {
+                                        await waitForPull({ index });
+                                        await Promise.all([threadsSemaphore.acquire(), writersSemaphore.acquire()]);
+                                        if (pauseSignal && pauseSignal.isPaused()) {
+                                            await waitForPause();
+                                        }
+                                        if (abortSignal && abortSignal.aborted) {
+                                            controller.close();
+                                            reject(new Error("Aborted"));
+                                            return;
+                                        }
+                                        const encryptedBuffer = await api
+                                            .v3()
+                                            .file()
+                                            .download()
+                                            .chunk()
+                                            .buffer({ uuid, bucket, region, chunk: i, abortSignal, onProgress });
+                                        if (pauseSignal && pauseSignal.isPaused()) {
+                                            await waitForPause();
+                                        }
+                                        if (abortSignal && abortSignal.aborted) {
+                                            controller.close();
+                                            reject(new Error("Aborted"));
+                                            return;
+                                        }
+                                        if (pauseSignal && pauseSignal.isPaused()) {
+                                            await waitForPause();
+                                        }
+                                        const decryptedBuffer = await crypto.decrypt().data({ data: encryptedBuffer, key, version });
+                                        write({ index, buffer: decryptedBuffer }).catch(err => {
+                                            threadsSemaphore.release();
+                                            writersSemaphore.release();
+                                            controller.close();
+                                            writerStopped = true;
+                                            reject(err);
+                                        });
+                                        done += 1;
+                                        threadsSemaphore.release();
+                                        if (done >= lastChunk) {
+                                            resolve();
+                                        }
                                     }
-                                    if (abortSignal && abortSignal.aborted) {
-                                        controller.close();
-                                        reject(new Error("Aborted"));
-                                        return;
-                                    }
-                                    const encryptedBuffer = await api
-                                        .v3()
-                                        .file()
-                                        .download()
-                                        .chunk()
-                                        .buffer({ uuid, bucket, region, chunk: i, abortSignal, onProgress });
-                                    if (pauseSignal && pauseSignal.isPaused()) {
-                                        await waitForPause();
-                                    }
-                                    if (abortSignal && abortSignal.aborted) {
-                                        controller.close();
-                                        reject(new Error("Aborted"));
-                                        return;
-                                    }
-                                    if (pauseSignal && pauseSignal.isPaused()) {
-                                        await waitForPause();
-                                    }
-                                    const decryptedBuffer = await crypto.decrypt().data({ data: encryptedBuffer, key, version });
-                                    write({ index, buffer: decryptedBuffer }).catch(err => {
+                                    catch (e) {
                                         threadsSemaphore.release();
                                         writersSemaphore.release();
                                         controller.close();
                                         writerStopped = true;
-                                        reject(err);
-                                    });
-                                    done += 1;
-                                    threadsSemaphore.release();
-                                    if (done >= lastChunk) {
-                                        resolve();
+                                        throw e;
                                     }
-                                }
-                                catch (e) {
-                                    threadsSemaphore.release();
-                                    writersSemaphore.release();
-                                    controller.close();
-                                    writerStopped = true;
-                                    throw e;
-                                }
-                            })().catch(reject);
-                        }
-                    });
-                    await new Promise(resolve => {
-                        if (currentWriteIndex >= lastChunk) {
-                            resolve();
-                            return;
-                        }
-                        const wait = setInterval(() => {
-                            if (currentWriteIndex >= lastChunk) {
-                                clearInterval(wait);
-                                resolve();
+                                })().catch(reject);
                             }
-                        }, 10);
-                    });
-                }
-                catch (e) {
-                    if (onError) {
-                        onError(e);
+                        });
+                        await waitForWritesToBeDone();
                     }
-                    throw e;
-                }
-                finally {
-                    controller.close();
-                    downloadsSemaphore.release();
-                }
-                if (onFinished) {
-                    onFinished();
-                }
+                    catch (e) {
+                        if (onError) {
+                            onError(e);
+                        }
+                        throw e;
+                    }
+                    finally {
+                        controller.close();
+                        downloadsSemaphore.release();
+                    }
+                    if (onFinished) {
+                        onFinished();
+                    }
+                })();
+            },
+            async pull() {
+                currentPullIndex += 1;
+                chunksPulled[currentPullIndex] = true;
             }
         }, {
-            highWaterMark: 1024 * 1024
+            highWaterMark: 128,
+            size() {
+                return 1024 * 1024;
+            }
         });
     }
     /**
@@ -2298,11 +2338,10 @@ export class Cloud {
                 this.crypto.utils.hashFn({ input: fileName.toLowerCase() })
             ]);
             const waitForPause = async () => {
+                if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+                    return;
+                }
                 return await new Promise(resolve => {
-                    if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
-                        resolve();
-                        return;
-                    }
                     const wait = setInterval(() => {
                         if (!pauseSignal.isPaused() || abortSignal?.aborted) {
                             clearInterval(wait);
@@ -2510,11 +2549,10 @@ export class Cloud {
                 this.crypto.utils.hashFn({ input: fileName.toLowerCase() })
             ]);
             const waitForPause = async () => {
+                if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+                    return;
+                }
                 return await new Promise(resolve => {
-                    if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
-                        resolve();
-                        return;
-                    }
                     const wait = setInterval(() => {
                         if (!pauseSignal.isPaused() || abortSignal?.aborted) {
                             clearInterval(wait);
