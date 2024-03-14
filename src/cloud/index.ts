@@ -182,16 +182,17 @@ export class Cloud {
 
 	/**
 	 * Lists all files and directories in a directory.
-	 * @date 2/14/2024 - 11:39:25 PM
+	 * @date 3/14/2024 - 5:21:55 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string }} param0
+	 * @param {{ uuid: string, onlyDirectories?: boolean }} param0
 	 * @param {string} param0.uuid
+	 * @param {boolean} param0.onlyDirectories
 	 * @returns {Promise<CloudItem[]>}
 	 */
-	public async listDirectory({ uuid }: { uuid: string }): Promise<CloudItem[]> {
-		const content = await this.api.v3().dir().content({ uuid })
+	public async listDirectory({ uuid, onlyDirectories }: { uuid: string; onlyDirectories?: boolean }): Promise<CloudItem[]> {
+		const content = await this.api.v3().dir().content({ uuid, dirsOnly: onlyDirectories })
 		const items: CloudItem[] = []
 		const promises: Promise<void>[] = []
 
