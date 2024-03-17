@@ -3,9 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.readWebFileChunk = exports.readLocalFileChunk = void 0;
+exports.utils = exports.calculateChunkIndices = exports.readWebFileChunk = exports.readLocalFileChunk = void 0;
 const utils_1 = require("../utils");
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const constants_1 = require("../constants");
 /**
  * Reads a chunk from a local file.
  * @date 2/16/2024 - 5:45:19 AM
@@ -84,9 +85,25 @@ function readWebFileChunk({ file, index, length }) {
     });
 }
 exports.readWebFileChunk = readWebFileChunk;
+/**
+ * Calculate the first and the last chunk of a file to fetch between startBytes and endBytes.
+ * @date 3/17/2024 - 11:41:57 PM
+ *
+ * @export
+ * @param {number} start
+ * @param {number} end
+ * @returns {[number, number]}
+ */
+function calculateChunkIndices(start, end) {
+    const firstChunkIndex = Math.floor(start / constants_1.UPLOAD_CHUNK_SIZE);
+    const lastChunkIndex = end < constants_1.UPLOAD_CHUNK_SIZE ? 1 : Math.floor(end / constants_1.UPLOAD_CHUNK_SIZE);
+    return [firstChunkIndex, lastChunkIndex];
+}
+exports.calculateChunkIndices = calculateChunkIndices;
 exports.utils = {
     readLocalFileChunk,
-    readWebFileChunk
+    readWebFileChunk,
+    calculateChunkIndices
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map

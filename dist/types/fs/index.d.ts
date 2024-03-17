@@ -257,15 +257,15 @@ export declare class FS {
     rmdir(...params: Parameters<typeof this.unlink>): Promise<void>;
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
-     * @date 2/20/2024 - 9:44:16 PM
+     * @date 3/18/2024 - 12:07:38 AM
      *
      * @public
      * @async
      * @param {{
      * 		path: string
-     * 		offset: number
-     * 		length: number
-     * 		position: number
+     * 		offset?: number
+     * 		length?: number
+     * 		position?: number
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
@@ -281,9 +281,9 @@ export declare class FS {
      */
     read({ path, offset, length, position, abortSignal, pauseSignal, onProgress }: {
         path: string;
-        offset: number;
-        length: number;
-        position: number;
+        offset?: number;
+        length?: number;
+        position?: number;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;

@@ -106,6 +106,7 @@ export declare class Cloud {
         utils: {
             readLocalFileChunk: typeof import("./utils").readLocalFileChunk;
             readWebFileChunk: typeof import("./utils").readWebFileChunk;
+            calculateChunkIndices: typeof import("./utils").calculateChunkIndices;
         };
     };
     /**
@@ -757,7 +758,7 @@ export declare class Cloud {
     }): Promise<string>;
     /**
      * Download a file to a ReadableStream.
-     * @date 2/15/2024 - 7:36:05 AM
+     * @date 3/17/2024 - 11:52:17 PM
      *
      * @public
      * @async
@@ -765,13 +766,14 @@ export declare class Cloud {
      * 		uuid: string
      * 		bucket: string
      * 		region: string
-     * 		chunks: number
      * 		version: FileEncryptionVersion
      * 		key: string
+     * 		size: number
+     * 		chunks: number
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		chunksStart?: number
-     * 		chunksEnd?: number
+     * 		start?: number
+     * 		end?: number
      * 		onProgress?: ProgressCallback
      * 		onQueued?: () => void
      * 		onStarted?: () => void
@@ -781,13 +783,14 @@ export declare class Cloud {
      * @param {string} param0.uuid
      * @param {string} param0.bucket
      * @param {string} param0.region
-     * @param {number} param0.chunks
      * @param {FileEncryptionVersion} param0.version
      * @param {string} param0.key
+     * @param {number} param0.size
+     * @param {number} param0.chunks
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
-     * @param {number} param0.chunksStart
-     * @param {number} param0.chunksEnd
+     * @param {number} param0.start
+     * @param {number} param0.end
      * @param {ProgressCallback} param0.onProgress
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
@@ -795,17 +798,18 @@ export declare class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<ReadableStream>}
      */
-    downloadFileToReadableStream({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, chunksStart, chunksEnd, onProgress, onQueued, onStarted, onError, onFinished }: {
+    downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }: {
         uuid: string;
         bucket: string;
         region: string;
-        chunks: number;
         version: FileEncryptionVersion;
         key: string;
+        size: number;
+        chunks: number;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
-        chunksStart?: number;
-        chunksEnd?: number;
+        start?: number;
+        end?: number;
         onProgress?: ProgressCallback;
         onQueued?: () => void;
         onStarted?: () => void;

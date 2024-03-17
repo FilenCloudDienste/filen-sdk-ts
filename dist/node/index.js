@@ -425,4 +425,5 @@ exports.default = FilenSDK;
 __exportStar(require("./types"), exports);
 __exportStar(require("./constants"), exports);
 __exportStar(require("./api/errors"), exports);
+__exportStar(require("./cloud/signals"), exports);
 //# sourceMappingURL=index.js.map

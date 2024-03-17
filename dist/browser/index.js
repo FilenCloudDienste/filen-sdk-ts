@@ -441,4 +441,5 @@ export default FilenSDK;
 export * from "./types";
 export * from "./constants";
 export * from "./api/errors";
+export * from "./cloud/signals";
 //# sourceMappingURL=index.js.map

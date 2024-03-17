@@ -1817,7 +1817,7 @@ class Cloud {
     }
     /**
      * Download a file to a ReadableStream.
-     * @date 2/15/2024 - 7:36:05 AM
+     * @date 3/17/2024 - 11:52:17 PM
      *
      * @public
      * @async
@@ -1825,13 +1825,14 @@ class Cloud {
      * 		uuid: string
      * 		bucket: string
      * 		region: string
-     * 		chunks: number
      * 		version: FileEncryptionVersion
      * 		key: string
+     * 		size: number
+     * 		chunks: number
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		chunksStart?: number
-     * 		chunksEnd?: number
+     * 		start?: number
+     * 		end?: number
      * 		onProgress?: ProgressCallback
      * 		onQueued?: () => void
      * 		onStarted?: () => void
@@ -1841,13 +1842,14 @@ class Cloud {
      * @param {string} param0.uuid
      * @param {string} param0.bucket
      * @param {string} param0.region
-     * @param {number} param0.chunks
      * @param {FileEncryptionVersion} param0.version
      * @param {string} param0.key
+     * @param {number} param0.size
+     * @param {number} param0.chunks
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
-     * @param {number} param0.chunksStart
-     * @param {number} param0.chunksEnd
+     * @param {number} param0.start
+     * @param {number} param0.end
      * @param {ProgressCallback} param0.onProgress
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
@@ -1855,7 +1857,7 @@ class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<ReadableStream>}
      */
-    async downloadFileToReadableStream({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, chunksStart, chunksEnd, onProgress, onQueued, onStarted, onError, onFinished }) {
+    async downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }) {
         if (onQueued) {
             onQueued();
         }
@@ -1863,17 +1865,37 @@ class Cloud {
         if (onStarted) {
             onStarted();
         }
+        if (!start) {
+            start = 0;
+        }
+        if (!end) {
+            end = size;
+        }
+        if (start >= end) {
+            start = end - 1;
+        }
+        let [firstChunkIndex, lastChunkIndex] = utils_2.default.calculateChunkIndices(start, end);
         const threadsSemaphore = this._semaphores.downloadThreads;
         const writersSemaphore = this._semaphores.downloadWriters;
         const downloadsSemaphore = this._semaphores.downloads;
         const api = this.api;
         const crypto = this.crypto;
-        const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks;
-        const firstChunk = chunksStart ? chunksStart : 0;
-        let currentWriteIndex = firstChunk;
+        let currentWriteIndex = firstChunkIndex;
         let writerStopped = false;
         let currentPullIndex = -1;
         const chunksPulled = {};
+        if (firstChunkIndex <= 0) {
+            firstChunkIndex = 0;
+        }
+        if (lastChunkIndex >= chunks) {
+            lastChunkIndex = chunks;
+        }
+        if (firstChunkIndex > 0) {
+            for (let i = 0; i < firstChunkIndex; i++) {
+                currentPullIndex += 1;
+                chunksPulled[currentPullIndex] = true;
+            }
+        }
         const waitForPause = async () => {
             if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                 return;
@@ -1901,12 +1923,12 @@ class Cloud {
             });
         };
         const waitForWritesToBeDone = async () => {
-            if (currentWriteIndex >= lastChunk) {
+            if (currentWriteIndex >= lastChunkIndex) {
                 return;
             }
             await new Promise(resolve => {
                 const wait = setInterval(() => {
-                    if (currentWriteIndex >= lastChunk) {
+                    if (currentWriteIndex >= lastChunkIndex) {
                         clearInterval(wait);
                         resolve();
                     }
@@ -1949,8 +1971,22 @@ class Cloud {
                                 }, 10);
                                 return;
                             }
+                            if (!start) {
+                                start = 0;
+                            }
+                            if (!end) {
+                                end = size;
+                            }
                             if (buffer.byteLength > 0) {
-                                controller.enqueue(buffer);
+                                let bufferToEnqueue = buffer;
+                                if (index === firstChunkIndex) {
+                                    bufferToEnqueue = buffer.subarray(start % buffer.byteLength);
+                                }
+                                if (index === lastChunkIndex) {
+                                    const endOffset = (end + 1) % buffer.byteLength;
+                                    bufferToEnqueue = bufferToEnqueue.subarray(0, endOffset || undefined);
+                                }
+                                controller.enqueue(bufferToEnqueue);
                             }
                             currentWriteIndex += 1;
                         }
@@ -1960,8 +1996,8 @@ class Cloud {
                     };
                     try {
                         await new Promise((resolve, reject) => {
-                            let done = 0;
-                            for (let i = firstChunk; i < lastChunk; i++) {
+                            let done = firstChunkIndex;
+                            for (let i = firstChunkIndex; i < lastChunkIndex; i++) {
                                 const index = i;
                                 (async () => {
                                     try {
@@ -2002,7 +2038,7 @@ class Cloud {
                                         });
                                         done += 1;
                                         threadsSemaphore.release();
-                                        if (done >= lastChunk) {
+                                        if (done >= lastChunkIndex) {
                                             resolve();
                                         }
                                     }
@@ -2038,7 +2074,7 @@ class Cloud {
                 chunksPulled[currentPullIndex] = true;
             }
         }, {
-            highWaterMark: 128,
+            highWaterMark: 64,
             size() {
                 return 1024 * 1024;
             }
