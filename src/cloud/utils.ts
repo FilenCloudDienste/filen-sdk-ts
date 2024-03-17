@@ -1,5 +1,6 @@
 import { normalizePath } from "../utils"
 import fs from "fs-extra"
+import { UPLOAD_CHUNK_SIZE } from "../constants"
 
 /**
  * Reads a chunk from a local file.
@@ -93,9 +94,26 @@ export function readWebFileChunk({ file, index, length }: { file: File; index: n
 	})
 }
 
+/**
+ * Calculate the first and the last chunk of a file to fetch between startBytes and endBytes.
+ * @date 3/17/2024 - 11:41:57 PM
+ *
+ * @export
+ * @param {number} start
+ * @param {number} end
+ * @returns {[number, number]}
+ */
+export function calculateChunkIndices(start: number, end: number): [number, number] {
+	const firstChunkIndex = Math.floor(start / UPLOAD_CHUNK_SIZE)
+	const lastChunkIndex = end < UPLOAD_CHUNK_SIZE ? 1 : Math.floor(end / UPLOAD_CHUNK_SIZE)
+
+	return [firstChunkIndex, lastChunkIndex]
+}
+
 export const utils = {
 	readLocalFileChunk,
-	readWebFileChunk
+	readWebFileChunk,
+	calculateChunkIndices
 }
 
 export default utils

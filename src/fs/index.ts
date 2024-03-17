@@ -3,7 +3,7 @@ import type { FilenSDKConfig } from ".."
 import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
-import { BUFFER_SIZE, environment, UPLOAD_CHUNK_SIZE } from "../constants"
+import { BUFFER_SIZE, environment } from "../constants"
 import type { PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
 import { uuidv4, normalizePath } from "../utils"
@@ -1027,15 +1027,15 @@ export class FS {
 
 	/**
 	 * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
-	 * @date 2/20/2024 - 9:44:16 PM
+	 * @date 3/18/2024 - 12:07:38 AM
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		path: string
-	 * 		offset: number
-	 * 		length: number
-	 * 		position: number
+	 * 		offset?: number
+	 * 		length?: number
+	 * 		position?: number
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
@@ -1059,9 +1059,9 @@ export class FS {
 		onProgress
 	}: {
 		path: string
-		offset: number
-		length: number
-		position: number
+		offset?: number
+		length?: number
+		position?: number
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -1075,31 +1075,32 @@ export class FS {
 			throw new ENOENT({ path })
 		}
 
-		const chunksStart = Math.floor(position / UPLOAD_CHUNK_SIZE)
-		const chunksEnd = Math.ceil((position + length) / UPLOAD_CHUNK_SIZE) - 1
+		if (!position) {
+			position = 0
+		}
 
-		if (chunksStart <= 0 || chunksStart > item.metadata.chunks || chunksEnd <= 0 || chunksEnd > item.metadata.chunks) {
-			throw new Error("Invalid position or length.")
+		if (!length) {
+			length = item.metadata.size
 		}
 
 		const stream = await this.cloud.downloadFileToReadableStream({
-			uuid: uuid,
+			uuid,
 			bucket: item.metadata.bucket,
 			region: item.metadata.region,
+			size: item.metadata.size,
 			chunks: item.metadata.chunks,
 			version: item.metadata.version,
 			key: item.metadata.key,
 			abortSignal,
 			pauseSignal,
 			onProgress,
-			chunksStart,
-			chunksEnd
+			start: position,
+			end: position + length
 		})
 
 		let buffer = Buffer.from([])
 		const reader = stream.getReader()
 		let doneReading = false
-		let bytesRead = 0
 
 		while (!doneReading) {
 			const { done, value } = await reader.read()
@@ -1111,22 +1112,15 @@ export class FS {
 			}
 
 			if (value instanceof Uint8Array && value.byteLength > 0) {
-				const chunkOffset = bytesRead - position
-				const start = Math.max(0, position - bytesRead)
-				const end = Math.min(start + length, value.byteLength)
-
-				if (chunkOffset < length && end > start) {
-					const relevantPart = value.subarray(start, end)
-
-					buffer = Buffer.concat([buffer, relevantPart])
-					length -= relevantPart.byteLength
-				}
-
-				bytesRead += value.byteLength
+				buffer = Buffer.concat([buffer, value])
 			}
 		}
 
-		return buffer.subarray(offset, offset + Math.min(buffer.length, length))
+		if (offset) {
+			return buffer.subarray(offset, offset + Math.min(buffer.byteLength, length))
+		}
+
+		return buffer
 	}
 
 	/**
@@ -1171,46 +1165,7 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 	}): Promise<Buffer> {
-		path = this.normalizePath({ path })
-
-		const uuid = await this.pathToItemUUID({ path })
-		const item = this._items[path]
-
-		if (!uuid || !item || item.type === "directory") {
-			throw new ENOENT({ path })
-		}
-
-		const stream = await this.cloud.downloadFileToReadableStream({
-			uuid: uuid,
-			bucket: item.metadata.bucket,
-			region: item.metadata.region,
-			chunks: item.metadata.chunks,
-			version: item.metadata.version,
-			key: item.metadata.key,
-			abortSignal,
-			pauseSignal,
-			onProgress
-		})
-
-		let buffer = Buffer.from([])
-		const reader = stream.getReader()
-		let doneReading = false
-
-		while (!doneReading) {
-			const { done, value } = await reader.read()
-
-			if (done) {
-				doneReading = true
-
-				break
-			}
-
-			if (value instanceof Uint8Array && value.byteLength > 0) {
-				buffer = Buffer.concat([buffer, value])
-			}
-		}
-
-		return buffer
+		return await this.read({ path, abortSignal, pauseSignal, onProgress })
 	}
 
 	/**
