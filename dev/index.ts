@@ -12,6 +12,7 @@ import os from "os"
 import axios from "axios"
 import https from "https"
 import { calculateChunkIndices } from "../src/cloud/utils"
+import { Readable } from "stream"
 
 const filen = new FilenSDK({
 	email: config.email,
@@ -26,8 +27,6 @@ const filen = new FilenSDK({
 	connectToSocket: false
 })
 
-const main = async () => {
-	//console.log(await filen.cloud().listDirectory({ uuid: "015fdb2d-a636-46e1-8041-82f08f98d8ea" }))
-}
+const main = async () => {}
 
 main()

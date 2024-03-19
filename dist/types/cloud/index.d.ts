@@ -796,7 +796,7 @@ export declare class Cloud {
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
-     * @returns {Promise<ReadableStream>}
+     * @returns {Promise<ReadableStream<Uint8Array>>}
      */
     downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }: {
         uuid: string;
@@ -815,7 +815,7 @@ export declare class Cloud {
         onStarted?: () => void;
         onError?: (err: Error) => void;
         onFinished?: () => void;
-    }): Promise<ReadableStream>;
+    }): Promise<ReadableStream<Uint8Array>>;
     /**
      * Build a recursive directory tree which includes sub-directories and sub-files.
      * @date 2/22/2024 - 1:45:28 AM

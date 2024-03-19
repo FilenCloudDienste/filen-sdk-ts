@@ -2429,7 +2429,7 @@ export class Cloud {
 	 * @param {() => void} param0.onStarted
 	 * @param {(err: Error) => void} param0.onError
 	 * @param {() => void} param0.onFinished
-	 * @returns {Promise<ReadableStream>}
+	 * @returns {Promise<ReadableStream<Uint8Array>>}
 	 */
 	public async downloadFileToReadableStream({
 		uuid,
@@ -2465,7 +2465,7 @@ export class Cloud {
 		onStarted?: () => void
 		onError?: (err: Error) => void
 		onFinished?: () => void
-	}): Promise<ReadableStream> {
+	}): Promise<ReadableStream<Uint8Array>> {
 		if (onQueued) {
 			onQueued()
 		}
@@ -2496,16 +2496,9 @@ export class Cloud {
 		const crypto = this.crypto
 		let currentWriteIndex = firstChunkIndex
 		let writerStopped = false
-		let currentPullIndex = -1
-		const chunksPulled: Record<number, boolean> = {}
-		const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex > chunks ? chunks : lastChunkIndex
-
-		if (firstChunkIndex > 0) {
-			for (let i = 0; i < firstChunkIndex; i++) {
-				currentPullIndex += 1
-				chunksPulled[currentPullIndex] = true
-			}
-		}
+		let currentPullIndex = firstChunkIndex
+		const chunksPulled: Record<number, boolean> = { [firstChunkIndex]: true }
+		const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex >= chunks ? chunks : lastChunkIndex
 
 		const waitForPause = async (): Promise<void> => {
 			if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
@@ -2569,21 +2562,19 @@ export class Cloud {
 			}
 		}
 
-		return new ReadableStream(
+		return new ReadableStream<Uint8Array>(
 			{
 				start(controller) {
 					// eslint-disable-next-line no-extra-semi
 					;(async () => {
 						const write = async ({ index, buffer }: { index: number; buffer: Buffer }): Promise<void> => {
 							try {
-								await applyBackpressure({ controller })
+								if (abortSignal && abortSignal.aborted) {
+									throw new Error("Aborted")
+								}
 
 								if (pauseSignal && pauseSignal.isPaused()) {
 									await waitForPause()
-								}
-
-								if (abortSignal && abortSignal.aborted) {
-									throw new Error("Aborted")
 								}
 
 								if (writerStopped) {
@@ -2591,34 +2582,47 @@ export class Cloud {
 								}
 
 								if (index !== currentWriteIndex) {
-									setTimeout(() => {
-										write({ index, buffer })
-									}, 10)
+									await new Promise<void>(resolve => {
+										const wait = setInterval(() => {
+											if (index === currentWriteIndex) {
+												clearInterval(wait)
 
-									return
+												resolve()
+											}
+										}, 10)
+									})
 								}
 
 								if (buffer.byteLength > 0) {
 									let bufferToEnqueue = buffer
 
-									if (index === firstChunkIndex) {
+									if (index === firstChunkIndex && start !== 0) {
 										bufferToEnqueue = buffer.subarray(start! % buffer.byteLength)
 									}
 
 									if (index === lastChunkIndex - 1 && end! + 1 !== size) {
-										const endOffset = buffer.byteLength - (size - 1 - end!)
+										const endBytePositionInChunk = (end! % UPLOAD_CHUNK_SIZE) + 1
+										const isEndByteInThisChunk = endBytePositionInChunk > 0
 
-										if (endOffset > 0) {
-											bufferToEnqueue = bufferToEnqueue.subarray(0, endOffset)
+										if (isEndByteInThisChunk) {
+											bufferToEnqueue = bufferToEnqueue.subarray(0, endBytePositionInChunk)
 										}
 									}
 
-									controller.enqueue(bufferToEnqueue)
+									await applyBackpressure({ controller })
+
+									if (!writerStopped) {
+										controller.enqueue(bufferToEnqueue)
+									}
 								}
 
 								currentWriteIndex += 1
-							} finally {
+
 								writersSemaphore.release()
+							} catch (e) {
+								writersSemaphore.release()
+
+								throw e
 							}
 						}
 
@@ -2626,24 +2630,20 @@ export class Cloud {
 							await new Promise<void>((resolve, reject) => {
 								let done = firstChunkIndex
 
-								for (let i = firstChunkIndex; i < chunksToDownload; i++) {
-									const index = i
-
+								for (let index = firstChunkIndex; index < chunksToDownload; index++) {
+									// eslint-disable-next-line no-extra-semi
 									;(async () => {
 										try {
 											await waitForPull({ index })
+
 											await Promise.all([threadsSemaphore.acquire(), writersSemaphore.acquire()])
+
+											if (abortSignal && abortSignal.aborted) {
+												throw new Error("Aborted")
+											}
 
 											if (pauseSignal && pauseSignal.isPaused()) {
 												await waitForPause()
-											}
-
-											if (abortSignal && abortSignal.aborted) {
-												controller.close()
-
-												reject(new Error("Aborted"))
-
-												return
 											}
 
 											const encryptedBuffer = await api
@@ -2651,18 +2651,10 @@ export class Cloud {
 												.file()
 												.download()
 												.chunk()
-												.buffer({ uuid, bucket, region, chunk: i, abortSignal, onProgress })
-
-											if (pauseSignal && pauseSignal.isPaused()) {
-												await waitForPause()
-											}
+												.buffer({ uuid, bucket, region, chunk: index, abortSignal, onProgress })
 
 											if (abortSignal && abortSignal.aborted) {
-												controller.close()
-
-												reject(new Error("Aborted"))
-
-												return
+												throw new Error("Aborted")
 											}
 
 											if (pauseSignal && pauseSignal.isPaused()) {
@@ -2674,8 +2666,6 @@ export class Cloud {
 											write({ index, buffer: decryptedBuffer }).catch(err => {
 												threadsSemaphore.release()
 												writersSemaphore.release()
-
-												controller.close()
 
 												writerStopped = true
 
@@ -2693,25 +2683,26 @@ export class Cloud {
 											threadsSemaphore.release()
 											writersSemaphore.release()
 
-											controller.close()
-
 											writerStopped = true
 
-											throw e
+											reject(e)
 										}
-									})().catch(reject)
+									})()
 								}
 							})
 
 							await waitForWritesToBeDone()
+
+							controller.close()
 						} catch (e) {
 							if (onError) {
 								onError(e as unknown as Error)
 							}
 
+							controller.error(e)
+
 							throw e
 						} finally {
-							controller.close()
 							downloadsSemaphore.release()
 						}
 
@@ -2720,15 +2711,23 @@ export class Cloud {
 						}
 					})()
 				},
-				async pull() {
+				pull() {
 					currentPullIndex += 1
 					chunksPulled[currentPullIndex] = true
+				},
+				cancel() {
+					writerStopped = true
+
+					for (let index = firstChunkIndex; index < chunksToDownload; index++) {
+						threadsSemaphore.release()
+						writersSemaphore.release()
+					}
 				}
 			},
 			{
-				highWaterMark: 64,
+				highWaterMark: 16,
 				size() {
-					return 1024 * 1024
+					return UPLOAD_CHUNK_SIZE
 				}
 			}
 		)

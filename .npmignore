@@ -4,3 +4,11 @@ dev/**/*
 docs/**/*
 .github/**/*
 .vscode/**/*
+__tests__/**/*
+src/**/*
+.babelrc
+.eslintrc
+.gitignore
+.npmignore
+.prettierrc
+package-lock.json
