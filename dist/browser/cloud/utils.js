@@ -79,16 +79,30 @@ export function readWebFileChunk({ file, index, length }) {
 }
 /**
  * Calculate the first and the last chunk of a file to fetch between startBytes and endBytes.
- * @date 3/17/2024 - 11:41:57 PM
+ * @date 3/18/2024 - 1:19:27 AM
  *
  * @export
- * @param {number} start
- * @param {number} end
+ * @param {{start: number, end: number, chunks: number}} param0
+ * @param {number} param0.start
+ * @param {number} param0.end
+ * @param {number} param0.chunks
  * @returns {[number, number]}
  */
-export function calculateChunkIndices(start, end) {
-    const firstChunkIndex = Math.floor(start / UPLOAD_CHUNK_SIZE);
-    const lastChunkIndex = end < UPLOAD_CHUNK_SIZE ? 1 : Math.floor(end / UPLOAD_CHUNK_SIZE);
+export function calculateChunkIndices({ start, end, chunks }) {
+    let firstChunkIndex = Math.floor(start / UPLOAD_CHUNK_SIZE);
+    let lastChunkIndex = Math.floor(end / UPLOAD_CHUNK_SIZE) + 1;
+    if (firstChunkIndex <= 0) {
+        firstChunkIndex = 0;
+    }
+    if (firstChunkIndex >= chunks) {
+        firstChunkIndex = chunks;
+    }
+    if (firstChunkIndex >= lastChunkIndex) {
+        firstChunkIndex = lastChunkIndex;
+    }
+    if (lastChunkIndex >= chunks) {
+        lastChunkIndex = chunks;
+    }
     return [firstChunkIndex, lastChunkIndex];
 }
 export const utils = {

@@ -33,14 +33,20 @@ export declare function readWebFileChunk({ file, index, length }: {
 }): Promise<Buffer>;
 /**
  * Calculate the first and the last chunk of a file to fetch between startBytes and endBytes.
- * @date 3/17/2024 - 11:41:57 PM
+ * @date 3/18/2024 - 1:19:27 AM
  *
  * @export
- * @param {number} start
- * @param {number} end
+ * @param {{start: number, end: number, chunks: number}} param0
+ * @param {number} param0.start
+ * @param {number} param0.end
+ * @param {number} param0.chunks
  * @returns {[number, number]}
  */
-export declare function calculateChunkIndices(start: number, end: number): [number, number];
+export declare function calculateChunkIndices({ start, end, chunks }: {
+    start: number;
+    end: number;
+    chunks: number;
+}): [number, number];
 export declare const utils: {
     readLocalFileChunk: typeof readLocalFileChunk;
     readWebFileChunk: typeof readWebFileChunk;

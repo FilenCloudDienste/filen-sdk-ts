@@ -2481,14 +2481,14 @@ export class Cloud {
 		}
 
 		if (!end) {
-			end = size
+			end = size - 1
 		}
 
 		if (start >= end) {
-			start = end - 1
+			start = end
 		}
 
-		let [firstChunkIndex, lastChunkIndex] = utils.calculateChunkIndices(start, end)
+		const [firstChunkIndex, lastChunkIndex] = utils.calculateChunkIndices({ start, end, chunks })
 		const threadsSemaphore = this._semaphores.downloadThreads
 		const writersSemaphore = this._semaphores.downloadWriters
 		const downloadsSemaphore = this._semaphores.downloads
@@ -2498,14 +2498,7 @@ export class Cloud {
 		let writerStopped = false
 		let currentPullIndex = -1
 		const chunksPulled: Record<number, boolean> = {}
-
-		if (firstChunkIndex <= 0) {
-			firstChunkIndex = 0
-		}
-
-		if (lastChunkIndex >= chunks) {
-			lastChunkIndex = chunks
-		}
+		const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex > chunks ? chunks : lastChunkIndex
 
 		if (firstChunkIndex > 0) {
 			for (let i = 0; i < firstChunkIndex; i++) {
@@ -2547,13 +2540,13 @@ export class Cloud {
 		}
 
 		const waitForWritesToBeDone = async () => {
-			if (currentWriteIndex >= lastChunkIndex) {
+			if (currentWriteIndex >= chunksToDownload) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (currentWriteIndex >= lastChunkIndex) {
+					if (currentWriteIndex >= chunksToDownload) {
 						clearInterval(wait)
 
 						resolve()
@@ -2605,25 +2598,19 @@ export class Cloud {
 									return
 								}
 
-								if (!start) {
-									start = 0
-								}
-
-								if (!end) {
-									end = size
-								}
-
 								if (buffer.byteLength > 0) {
 									let bufferToEnqueue = buffer
 
 									if (index === firstChunkIndex) {
-										bufferToEnqueue = buffer.subarray(start % buffer.byteLength)
+										bufferToEnqueue = buffer.subarray(start! % buffer.byteLength)
 									}
 
-									if (index === lastChunkIndex) {
-										const endOffset = (end + 1) % buffer.byteLength
+									if (index === lastChunkIndex - 1 && end! + 1 !== size) {
+										const endOffset = buffer.byteLength - (size - 1 - end!)
 
-										bufferToEnqueue = bufferToEnqueue.subarray(0, endOffset || undefined)
+										if (endOffset > 0) {
+											bufferToEnqueue = bufferToEnqueue.subarray(0, endOffset)
+										}
 									}
 
 									controller.enqueue(bufferToEnqueue)
@@ -2639,7 +2626,7 @@ export class Cloud {
 							await new Promise<void>((resolve, reject) => {
 								let done = firstChunkIndex
 
-								for (let i = firstChunkIndex; i < lastChunkIndex; i++) {
+								for (let i = firstChunkIndex; i < chunksToDownload; i++) {
 									const index = i
 
 									;(async () => {
@@ -2699,7 +2686,7 @@ export class Cloud {
 
 											threadsSemaphore.release()
 
-											if (done >= lastChunkIndex) {
+											if (done >= chunksToDownload) {
 												resolve()
 											}
 										} catch (e) {

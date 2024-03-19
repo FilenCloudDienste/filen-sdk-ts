@@ -4,11 +4,13 @@ exports.MAX_CONCURRENT_DIRECTORY_DOWNLOADS = exports.MAX_CONCURRENT_DIRECTORY_UP
 const env = {
     isBrowser: (typeof window !== "undefined" && typeof window.document !== "undefined") ||
         // @ts-expect-error WorkerEnv's are not typed
-        ("undefined" !== typeof WorkerGlobalScope && "function" === typeof importScripts && navigator instanceof WorkerNavigator),
+        (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
+        // @ts-expect-error WorkerEnv's are not typed
+        (typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope),
     isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null,
     isReactNative: typeof global.nodeThread !== "undefined" && global.nodeThread !== null
 };
-exports.environment = env.isBrowser ? "browser" : env.isNode ? "node" : "reactNative";
+exports.environment = env.isBrowser ? "browser" : "node";
 exports.BUFFER_SIZE = 4096;
 exports.BASE64_BUFFER_SIZE = 3 * 1024;
 exports.MAX_CONCURRENT_DOWNLOADS = 32;
