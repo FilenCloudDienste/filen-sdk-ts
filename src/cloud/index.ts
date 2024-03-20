@@ -3937,7 +3937,7 @@ export class Cloud {
 
 				const directoryName = pathModule.posix.basename(path)
 
-				if (directoryName.length <= 0) {
+				if (directoryName === "." || directoryName.length <= 0) {
 					continue
 				}
 

@@ -2951,7 +2951,7 @@ class Cloud {
                     continue;
                 }
                 const directoryName = path_1.default.posix.basename(path);
-                if (directoryName.length <= 0) {
+                if (directoryName === "." || directoryName.length <= 0) {
                     continue;
                 }
                 const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent });
