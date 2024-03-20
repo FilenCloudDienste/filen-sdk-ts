@@ -45,7 +45,8 @@ type FilenSDKConfig = {
 	baseFolderUUID?: string
 	userId?: number
 	metadataCache?: boolean // Cache decrypted metadata in memory. Recommended.
-	tmpPath?: string // Temporary local path used to store metadata and chunks. Only available in Node.JS.
+	tmpPath?: string // Temporary local path used to store metadata and chunks. Only available in Node.JS.,
+	connectToSocket?: boolean // Recommended if you are using the virtual FS class. Keeps the internal item tree up to date with remote changes.
 }
 
 // You can either directly supply all needed config parameters to the constructor or call the .login() function to fetch them using your login information.

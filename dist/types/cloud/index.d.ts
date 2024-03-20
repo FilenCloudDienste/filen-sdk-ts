@@ -1039,13 +1039,13 @@ export declare class Cloud {
     }): Promise<void>;
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
-     * @date 2/27/2024 - 6:43:17 AM
+     * @date 3/20/2024 - 7:30:07 AM
      *
      * @public
      * @async
      * @param {{
      * 		files: FileList
-     * 		parent: string,
+     * 		parent: string
      * 		name?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
@@ -1055,6 +1055,7 @@ export declare class Cloud {
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
      * @param {FileList} param0.files
      * @param {string} param0.parent
@@ -1067,9 +1068,10 @@ export declare class Cloud {
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @param {(item: CloudItem) => void} param0.onDirectoryCreated
      * @returns {Promise<void>}
      */
-    uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
         files: FileList;
         parent: string;
         name?: string;
@@ -1081,6 +1083,7 @@ export declare class Cloud {
         onError?: (err: Error) => void;
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
+        onDirectoryCreated?: (item: CloudItem) => void;
     }): Promise<void>;
 }
 export default Cloud;

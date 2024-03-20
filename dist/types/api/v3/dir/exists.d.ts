@@ -1,10 +1,10 @@
 import type APIClient from "../../client";
 export type DirExistsResponse = {
     exists: false;
-    existsUUID?: string;
+    uuid?: string;
 } | {
     exists: true;
-    existsUUID: string;
+    uuid: string;
 };
 /**
  * DirExists

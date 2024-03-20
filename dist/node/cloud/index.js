@@ -804,7 +804,7 @@ class Cloud {
             let uuidToUse = uuid ? uuid : await (0, utils_1.uuidv4)();
             const exists = await this.api.v3().dir().exists({ name, parent });
             if (exists.exists) {
-                uuidToUse = exists.existsUUID;
+                uuidToUse = exists.uuid;
             }
             else {
                 const [metadataEncrypted, nameHashed] = await Promise.all([
@@ -2847,13 +2847,13 @@ class Cloud {
     }
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
-     * @date 2/27/2024 - 6:43:17 AM
+     * @date 3/20/2024 - 7:30:07 AM
      *
      * @public
      * @async
      * @param {{
      * 		files: FileList
-     * 		parent: string,
+     * 		parent: string
      * 		name?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
@@ -2863,6 +2863,7 @@ class Cloud {
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
      * @param {FileList} param0.files
      * @param {string} param0.parent
@@ -2875,9 +2876,10 @@ class Cloud {
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @param {(item: CloudItem) => void} param0.onDirectoryCreated
      * @returns {Promise<void>}
      */
-    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
         var _a, _b;
         if (constants_1.environment !== "browser") {
             throw new Error(`cloud.uploadDirectoryFromWeb is not implemented for ${constants_1.environment}`);
@@ -2917,8 +2919,22 @@ class Cloud {
             if (!parentPresent.present || parentPresent.trash) {
                 throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`);
             }
-            parent = await this.createDirectory({ name: baseDirectoryName, parent });
+            const baseParent = parent;
+            parent = await this.createDirectory({ name: baseDirectoryName, parent: baseParent });
             pathsToUUIDs[baseDirectoryName] = parent;
+            if (onDirectoryCreated) {
+                onDirectoryCreated({
+                    type: "directory",
+                    uuid: parent,
+                    name: baseDirectoryName,
+                    timestamp: Date.now(),
+                    parent: baseParent,
+                    lastModified: Date.now(),
+                    favorited: false,
+                    color: null,
+                    size: 0
+                });
+            }
             const directoryPaths = filesToUpload.map(file => path_1.default.posix.dirname(file.path));
             for (const path of directoryPaths) {
                 const possiblePaths = (0, utils_1.getEveryPossibleDirectoryPath)(path);
@@ -2940,6 +2956,19 @@ class Cloud {
                 }
                 const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent });
                 pathsToUUIDs[path] = uuid;
+                if (onDirectoryCreated) {
+                    onDirectoryCreated({
+                        type: "directory",
+                        uuid,
+                        name: directoryName,
+                        timestamp: Date.now(),
+                        parent: directoryParent,
+                        lastModified: Date.now(),
+                        favorited: false,
+                        color: null,
+                        size: 0
+                    });
+                }
             }
             const uploadPromises = [];
             for (const entry of filesToUpload) {
