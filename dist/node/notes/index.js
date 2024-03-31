@@ -101,7 +101,7 @@ class Notes {
                                 this._allTags({ tags: note.tags })
                             ])
                                 .then(([decryptedNotePreview, decryptedNoteTags]) => {
-                                allNotes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle, preview: decryptedNotePreview, tags: decryptedNoteTags }));
+                                notes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle, preview: decryptedNotePreview, tags: decryptedNoteTags }));
                                 resolve();
                             })
                                 .catch(reject);

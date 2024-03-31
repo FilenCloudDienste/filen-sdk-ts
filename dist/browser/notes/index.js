@@ -104,7 +104,7 @@ export class Notes {
                                 this._allTags({ tags: note.tags })
                             ])
                                 .then(([decryptedNotePreview, decryptedNoteTags]) => {
-                                allNotes.push({
+                                notes.push({
                                     ...note,
                                     title: decryptedNoteTitle,
                                     preview: decryptedNotePreview,

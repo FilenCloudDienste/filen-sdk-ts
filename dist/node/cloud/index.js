@@ -164,7 +164,7 @@ class Cloud {
                     .decrypt()
                     .folderMetadataPrivate({ metadata: folder.metadata })
                     .then(decrypted => {
-                    var _a, _b, _c;
+                    var _a, _b, _c, _d, _e;
                     if (decrypted.name.length === 0) {
                         resolve();
                         return;
@@ -178,10 +178,10 @@ class Cloud {
                         timestamp,
                         color: folder.color,
                         parent: (_a = folder.parent) !== null && _a !== void 0 ? _a : "shared-in",
-                        sharerEmail: folder.sharerEmail,
-                        sharerId: folder.sharerId,
-                        receiverEmail: (_b = folder.receiverEmail) !== null && _b !== void 0 ? _b : "",
-                        receiverId: (_c = folder.receiverId) !== null && _c !== void 0 ? _c : 0,
+                        sharerEmail: (_b = folder.sharerEmail) !== null && _b !== void 0 ? _b : "",
+                        sharerId: (_c = folder.sharerId) !== null && _c !== void 0 ? _c : 0,
+                        receiverEmail: (_d = folder.receiverEmail) !== null && _d !== void 0 ? _d : "",
+                        receiverId: (_e = folder.receiverId) !== null && _e !== void 0 ? _e : 0,
                         receivers: [],
                         size: 0
                     });
@@ -201,7 +201,7 @@ class Cloud {
                     .decrypt()
                     .fileMetadataPrivate({ metadata: file.metadata })
                     .then(decrypted => {
-                    var _a, _b;
+                    var _a, _b, _c, _d;
                     if (decrypted.name.length === 0) {
                         resolve();
                         return;
@@ -222,10 +222,10 @@ class Cloud {
                         region: file.region,
                         creation: decrypted.creation,
                         hash: decrypted.hash,
-                        sharerEmail: file.sharerEmail,
-                        sharerId: file.sharerId,
-                        receiverEmail: (_a = file.receiverEmail) !== null && _a !== void 0 ? _a : "",
-                        receiverId: (_b = file.receiverId) !== null && _b !== void 0 ? _b : 0,
+                        sharerEmail: (_a = file.sharerEmail) !== null && _a !== void 0 ? _a : "",
+                        sharerId: (_b = file.sharerId) !== null && _b !== void 0 ? _b : 0,
+                        receiverEmail: (_c = file.receiverEmail) !== null && _c !== void 0 ? _c : "",
+                        receiverId: (_d = file.receiverId) !== null && _d !== void 0 ? _d : 0,
                         receivers: []
                     });
                     resolve();
@@ -262,7 +262,7 @@ class Cloud {
                     .decrypt()
                     .folderMetadata({ metadata: folder.metadata })
                     .then(decrypted => {
-                    var _a, _b, _c;
+                    var _a, _b, _c, _d, _e;
                     if (decrypted.name.length === 0) {
                         resolve();
                         return;
@@ -276,10 +276,10 @@ class Cloud {
                         timestamp,
                         color: folder.color,
                         parent: (_a = folder.parent) !== null && _a !== void 0 ? _a : "shared-in",
-                        sharerEmail: folder.sharerEmail,
-                        sharerId: folder.sharerId,
-                        receiverEmail: (_b = folder.receiverEmail) !== null && _b !== void 0 ? _b : "",
-                        receiverId: (_c = folder.receiverId) !== null && _c !== void 0 ? _c : 0,
+                        sharerEmail: (_b = folder.sharerEmail) !== null && _b !== void 0 ? _b : "",
+                        sharerId: (_c = folder.sharerId) !== null && _c !== void 0 ? _c : 0,
+                        receiverEmail: (_d = folder.receiverEmail) !== null && _d !== void 0 ? _d : "",
+                        receiverId: (_e = folder.receiverId) !== null && _e !== void 0 ? _e : 0,
                         receivers: [],
                         size: 0
                     });
@@ -299,7 +299,7 @@ class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    var _a, _b;
+                    var _a, _b, _c, _d;
                     if (decrypted.name.length === 0) {
                         resolve();
                         return;
@@ -320,10 +320,10 @@ class Cloud {
                         region: file.region,
                         creation: decrypted.creation,
                         hash: decrypted.hash,
-                        sharerEmail: file.sharerEmail,
-                        sharerId: file.sharerId,
-                        receiverEmail: (_a = file.receiverEmail) !== null && _a !== void 0 ? _a : "",
-                        receiverId: (_b = file.receiverId) !== null && _b !== void 0 ? _b : 0,
+                        sharerEmail: (_a = file.sharerEmail) !== null && _a !== void 0 ? _a : "",
+                        sharerId: (_b = file.sharerId) !== null && _b !== void 0 ? _b : 0,
+                        receiverEmail: (_c = file.receiverEmail) !== null && _c !== void 0 ? _c : "",
+                        receiverId: (_d = file.receiverId) !== null && _d !== void 0 ? _d : 0,
                         receivers: []
                     });
                     resolve();
