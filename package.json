@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.46",
+	"version": "0.1.47",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -9,7 +9,7 @@
 	"scripts": {
 		"test": "jest --forceExit ./__tests__",
 		"dev": "ts-node --files dev/index.ts",
-		"build": "npm run clear && npm run lint && npm run build:node && npm run build:browser && npm run typedoc",
+		"build": "npm run clear && npm run lint && npm run build:node && npm run build:browser",
 		"build:node": "tsc",
 		"build:browser": "tsc --p tsconfig.browser.json",
 		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
@@ -34,7 +34,7 @@
 	"bugs": {
 		"url": "https://github.com/FilenCloudDienste/filen-sdk-ts/issues"
 	},
-	"homepage": "https://filen.io",
+	"homepage": "https://sdk-ts-docs.filen.io",
 	"devDependencies": {
 		"@babel/core": "^7.23.9",
 		"@babel/preset-env": "^7.23.9",
@@ -97,6 +97,7 @@
 		"mime-types": "^2.1.35",
 		"progress-stream": "^2.0.0",
 		"socket.io-client": "^2.5.0",
+		"striptags": "^3.2.0",
 		"uuid": "^9.0.1"
 	}
 }

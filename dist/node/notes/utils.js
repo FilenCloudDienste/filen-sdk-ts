@@ -1,15 +1,19 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.utils = exports.createNotePreviewFromContentText = void 0;
+const striptags_1 = __importDefault(require("striptags"));
 function createNotePreviewFromContentText({ content, type }) {
     if (content.length === 0) {
         return "";
     }
     if (type === "rich") {
         if (content.indexOf("<p><br></p>") === -1) {
-            return content.split("\n")[0].slice(0, 128);
+            return (0, striptags_1.default)(content.split("\n")[0].slice(0, 128));
         }
-        return content.split("<p><br></p>")[0].slice(0, 128);
+        return (0, striptags_1.default)(content.split("<p><br></p>")[0].slice(0, 128));
     }
     if (type === "checklist") {
         const ex = content
@@ -25,12 +29,12 @@ function createNotePreviewFromContentText({ content, type }) {
         for (const listPoint of ex) {
             const listPointEx = listPoint.split("</li>");
             if (listPointEx[0].trim().length > 0) {
-                return listPointEx[0].trim();
+                return (0, striptags_1.default)(listPointEx[0].trim());
             }
         }
         return "";
     }
-    return content.split("\n")[0].slice(0, 128);
+    return (0, striptags_1.default)(content.split("\n")[0].slice(0, 128));
 }
 exports.createNotePreviewFromContentText = createNotePreviewFromContentText;
 exports.utils = {

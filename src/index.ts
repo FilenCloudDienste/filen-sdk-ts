@@ -15,6 +15,7 @@ import Chats from "./chats"
 import Notes from "./notes"
 import Contacts from "./contacts"
 import User from "./user"
+import Socket from "./socket"
 
 export type FilenSDKConfig = {
 	email?: string
@@ -50,6 +51,7 @@ export class FilenSDK {
 	private _chats: Chats
 	private _contacts: Contacts
 	private _user: User
+	public socket: Socket = new Socket()
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -555,3 +557,4 @@ export { CryptoConfig } from "./crypto"
 export * from "./constants"
 export * from "./api/errors"
 export * from "./cloud/signals"
+export { SocketEvent } from "./socket"

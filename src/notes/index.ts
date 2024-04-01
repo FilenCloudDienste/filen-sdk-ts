@@ -504,6 +504,24 @@ export class Notes {
 	}
 
 	/**
+	 * Edit a note's title.
+	 * @date 4/1/2024 - 5:46:41 PM
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string, title: string}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.title
+	 * @returns {Promise<void>}
+	 */
+	public async editTitle({ uuid, title }: { uuid: string; title: string }): Promise<void> {
+		const decryptedNoteKey = await this._noteKey({ uuid })
+		const titleEncrypted = await this.crypto.encrypt().noteTitle({ title, key: decryptedNoteKey })
+
+		await this.api.v3().notes().titleEdit({ uuid, title: titleEncrypted })
+	}
+
+	/**
 	 * Delete a note.
 	 * @date 2/20/2024 - 12:48:38 AM
 	 *

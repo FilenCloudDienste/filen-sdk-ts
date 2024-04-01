@@ -14,6 +14,7 @@ import Chats from "./chats";
 import Notes from "./notes";
 import Contacts from "./contacts";
 import User from "./user";
+import Socket from "./socket";
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -32,6 +33,7 @@ export class FilenSDK {
     _chats;
     _contacts;
     _user;
+    socket = new Socket();
     /**
      * Creates an instance of FilenSDK.
      * @date 2/21/2024 - 8:58:43 AM

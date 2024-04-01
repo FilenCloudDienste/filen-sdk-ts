@@ -1,4 +1,5 @@
 import type { NoteType } from "../api/v3/notes"
+import striptags from "striptags"
 
 export function createNotePreviewFromContentText({ content, type }: { content: string; type: NoteType }) {
 	if (content.length === 0) {
@@ -7,10 +8,10 @@ export function createNotePreviewFromContentText({ content, type }: { content: s
 
 	if (type === "rich") {
 		if (content.indexOf("<p><br></p>") === -1) {
-			return content.split("\n")[0].slice(0, 128)
+			return striptags(content.split("\n")[0].slice(0, 128))
 		}
 
-		return content.split("<p><br></p>")[0].slice(0, 128)
+		return striptags(content.split("<p><br></p>")[0].slice(0, 128))
 	}
 
 	if (type === "checklist") {
@@ -29,14 +30,14 @@ export function createNotePreviewFromContentText({ content, type }: { content: s
 			const listPointEx = listPoint.split("</li>")
 
 			if (listPointEx[0].trim().length > 0) {
-				return listPointEx[0].trim()
+				return striptags(listPointEx[0].trim())
 			}
 		}
 
 		return ""
 	}
 
-	return content.split("\n")[0].slice(0, 128)
+	return striptags(content.split("\n")[0].slice(0, 128))
 }
 
 export const utils = {

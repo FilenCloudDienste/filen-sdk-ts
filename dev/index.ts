@@ -27,8 +27,6 @@ const filen = new FilenSDK({
 	connectToSocket: false
 })
 
-const main = async () => {
-	console.log(await filen.notes().all())
-}
+const main = async () => {}
 
 main()

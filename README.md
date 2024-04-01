@@ -6,7 +6,7 @@
     SDK to interact with Filen for Node.JS, Browsers and React Native.
     <br/>
     <br/>
-    <a href="https://filenclouddienste.github.io/filen-sdk-ts/"><strong>Explore the docs »</strong></a>
+    <a href="https://sdk-ts-docs.filen.io"><strong>Explore the docs »</strong></a>
     <br/>
     <br/>
   </p>

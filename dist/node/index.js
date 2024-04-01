@@ -34,6 +34,7 @@ const chats_1 = __importDefault(require("./chats"));
 const notes_1 = __importDefault(require("./notes"));
 const contacts_1 = __importDefault(require("./contacts"));
 const user_1 = __importDefault(require("./user"));
+const socket_1 = __importDefault(require("./socket"));
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -52,6 +53,7 @@ class FilenSDK {
      * @param {?FilenSDKConfig} [params]
      */
     constructor(params) {
+        this.socket = new socket_1.default();
         this.utils = Object.assign(Object.assign({}, utils_1.default), { crypto: utils_2.default, streams: {
                 append: append_1.default,
                 decodeBase64: base64_1.streamDecodeBase64,
