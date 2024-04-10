@@ -39,13 +39,15 @@ export declare class Chats {
      * Get the encryption key of a chat.
      * @date 2/20/2024 - 6:05:30 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{ conversation: string }} param0
      * @param {string} param0.conversation
      * @returns {Promise<string>}
      */
-    private _chatKey;
+    chatKey({ conversation }: {
+        conversation: string;
+    }): Promise<string>;
     /**
      * Fetch all chat conversations.
      * @date 2/20/2024 - 5:35:54 AM

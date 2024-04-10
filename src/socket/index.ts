@@ -404,6 +404,12 @@ export class Socket extends EventEmitter {
 		this.socket.on("connect", async () => {
 			this.emit("connected")
 
+			this.socket?.emit("auth", {
+				apiKey: this.apiKey
+			})
+
+			this.emitSocketAuthed = true
+
 			this.socket?.emit("authed", Date.now())
 
 			this.pingInterval = setInterval(() => {

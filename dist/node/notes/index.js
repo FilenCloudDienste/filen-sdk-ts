@@ -35,13 +35,13 @@ class Notes {
      * Decrypt all tags of a note.
      * @date 2/20/2024 - 12:26:37 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{ tags: NoteTag[] }} param0
      * @param {{}} param0.tags
      * @returns {Promise<NoteTag[]>}
      */
-    async _allTags({ tags }) {
+    async allTags({ tags }) {
         const decryptedTags = [];
         const promises = [];
         for (const tag of tags) {
@@ -98,7 +98,7 @@ class Notes {
                                 note.preview.length === 0
                                     ? Promise.resolve(decryptedNoteTitle)
                                     : this.crypto.decrypt().notePreview({ preview: note.preview, key: decryptedNoteKey }),
-                                this._allTags({ tags: note.tags })
+                                this.allTags({ tags: note.tags })
                             ])
                                 .then(([decryptedNotePreview, decryptedNoteTags]) => {
                                 notes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle, preview: decryptedNotePreview, tags: decryptedNoteTags }));
@@ -200,13 +200,13 @@ class Notes {
      * Get the note encryption key from owner metadata.
      * @date 2/20/2024 - 12:26:15 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{ uuid: string }} param0
      * @param {string} param0.uuid
      * @returns {Promise<string>}
      */
-    async _noteKey({ uuid }) {
+    async noteKey({ uuid }) {
         if (this._noteKeyCache.has(uuid)) {
             return this._noteKeyCache.get(uuid);
         }
@@ -239,7 +239,7 @@ class Notes {
      * @returns {Promise<void>}
      */
     async addParticipant({ uuid, contactUUID, permissionsWrite, publicKey }) {
-        const decryptedNoteKey = await this._noteKey({ uuid });
+        const decryptedNoteKey = await this.noteKey({ uuid });
         const metadata = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify({ key: decryptedNoteKey }), publicKey });
         await this.api.v3().notes().participantsAdd({ uuid, metadata, contactUUID, permissionsWrite });
     }
@@ -327,7 +327,7 @@ class Notes {
                 preview: ""
             };
         }
-        const decryptedNoteKey = await this._noteKey({ uuid });
+        const decryptedNoteKey = await this.noteKey({ uuid });
         const notePreviewPromise = contentEncrypted.preview.length === 0
             ? Promise.resolve("")
             : this.crypto.decrypt().notePreview({ preview: contentEncrypted.preview, key: decryptedNoteKey });
@@ -363,7 +363,7 @@ class Notes {
      * @returns {Promise<void>}
      */
     async changeType({ uuid, newType }) {
-        const [decryptedNoteKey, decryptedNoteContent] = await Promise.all([this._noteKey({ uuid }), this.content({ uuid })]);
+        const [decryptedNoteKey, decryptedNoteContent] = await Promise.all([this.noteKey({ uuid }), this.content({ uuid })]);
         const preview = (0, utils_2.createNotePreviewFromContentText)({ content: decryptedNoteContent.content, type: newType });
         const [contentEncrypted, previewEncrypted] = await Promise.all([
             this.crypto.encrypt().noteContent({ content: decryptedNoteContent.content, key: decryptedNoteKey }),
@@ -384,7 +384,7 @@ class Notes {
      * @returns {Promise<void>}
      */
     async edit({ uuid, content, type }) {
-        const decryptedNoteKey = await this._noteKey({ uuid });
+        const decryptedNoteKey = await this.noteKey({ uuid });
         const preview = (0, utils_2.createNotePreviewFromContentText)({ content, type });
         const [contentEncrypted, previewEncrypted] = await Promise.all([
             this.crypto.encrypt().noteContent({ content, key: decryptedNoteKey }),
@@ -407,7 +407,7 @@ class Notes {
      * @returns {Promise<void>}
      */
     async editTitle({ uuid, title }) {
-        const decryptedNoteKey = await this._noteKey({ uuid });
+        const decryptedNoteKey = await this.noteKey({ uuid });
         const titleEncrypted = await this.crypto.encrypt().noteTitle({ title, key: decryptedNoteKey });
         await this.api.v3().notes().titleEdit({ uuid, title: titleEncrypted });
     }
@@ -525,7 +525,7 @@ class Notes {
      * @returns {Promise<NoteHistory[]>}
      */
     async history({ uuid }) {
-        const [_history, decryptedNoteKey] = await Promise.all([this.api.v3().notes().history({ uuid }), this._noteKey({ uuid })]);
+        const [_history, decryptedNoteKey] = await Promise.all([this.api.v3().notes().history({ uuid }), this.noteKey({ uuid })]);
         const notesHistory = [];
         const promises = [];
         for (const noteHistory of _history) {

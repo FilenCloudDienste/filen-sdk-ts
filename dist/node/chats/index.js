@@ -33,13 +33,13 @@ class Chats {
      * Get the encryption key of a chat.
      * @date 2/20/2024 - 6:05:30 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{ conversation: string }} param0
      * @param {string} param0.conversation
      * @returns {Promise<string>}
      */
-    async _chatKey({ conversation }) {
+    async chatKey({ conversation }) {
         if (this._chatKeyCache.has(conversation)) {
             return this._chatKeyCache.get(conversation);
         }
@@ -207,7 +207,7 @@ class Chats {
      * @returns {Promise<void>}
      */
     async editConversationName({ conversation, name }) {
-        const key = await this._chatKey({ conversation });
+        const key = await this.chatKey({ conversation });
         const nameEncrypted = await this.crypto.encrypt().chatConversationName({ name, key });
         await this.api.v3().chat().conversationsName().edit({ uuid: conversation, name: nameEncrypted });
     }
@@ -224,7 +224,7 @@ class Chats {
      * @returns {Promise<void>}
      */
     async editMessage({ uuid, conversation, message }) {
-        const key = await this._chatKey({ conversation });
+        const key = await this.chatKey({ conversation });
         const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
         await this.api.v3().chat().edit({ uuid, conversation, message: messageEncrypted });
     }
@@ -242,7 +242,7 @@ class Chats {
      * @returns {Promise<string>}
      */
     async sendMessage({ uuid, conversation, message, replyTo }) {
-        const [key, uuidToUse] = await Promise.all([this._chatKey({ conversation }), uuid ? Promise.resolve(uuid) : (0, utils_1.uuidv4)()]);
+        const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : (0, utils_1.uuidv4)()]);
         const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
         await this.api.v3().chat().send({ uuid: uuidToUse, conversation, message: messageEncrypted, replyTo });
         return uuidToUse;
@@ -274,7 +274,7 @@ class Chats {
      */
     async messages({ conversation, timestamp }) {
         const [key, _messages] = await Promise.all([
-            this._chatKey({ conversation }),
+            this.chatKey({ conversation }),
             this.api
                 .v3()
                 .chat()
@@ -317,7 +317,7 @@ class Chats {
      * @returns {Promise<void>}
      */
     async addParticipant({ conversation, contact }) {
-        const key = await this._chatKey({ conversation });
+        const key = await this.chatKey({ conversation });
         const publicKey = (await this.api.v3().user().publicKey({ email: contact.email })).publicKey;
         const metadata = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify({ key }), publicKey });
         await this.api.v3().chat().conversationsParticipants().add({ uuid: conversation, contactUUID: contact.uuid, metadata });

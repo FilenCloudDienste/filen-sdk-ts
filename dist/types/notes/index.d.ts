@@ -35,13 +35,15 @@ export declare class Notes {
      * Decrypt all tags of a note.
      * @date 2/20/2024 - 12:26:37 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{ tags: NoteTag[] }} param0
      * @param {{}} param0.tags
      * @returns {Promise<NoteTag[]>}
      */
-    private _allTags;
+    allTags({ tags }: {
+        tags: NoteTag[];
+    }): Promise<NoteTag[]>;
     /**
      * Fetch all notes.
      * @date 2/20/2024 - 12:26:30 AM
@@ -113,13 +115,15 @@ export declare class Notes {
      * Get the note encryption key from owner metadata.
      * @date 2/20/2024 - 12:26:15 AM
      *
-     * @private
+     * @public
      * @async
      * @param {{ uuid: string }} param0
      * @param {string} param0.uuid
      * @returns {Promise<string>}
      */
-    private _noteKey;
+    noteKey({ uuid }: {
+        uuid: string;
+    }): Promise<string>;
     /**
      * Add a participant.
      * @date 2/20/2024 - 1:39:20 AM

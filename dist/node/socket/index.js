@@ -54,9 +54,13 @@ class Socket extends events_1.EventEmitter {
             upgrade: false
         });
         this.socket.on("connect", async () => {
-            var _a;
+            var _a, _b;
             this.emit("connected");
-            (_a = this.socket) === null || _a === void 0 ? void 0 : _a.emit("authed", Date.now());
+            (_a = this.socket) === null || _a === void 0 ? void 0 : _a.emit("auth", {
+                apiKey: this.apiKey
+            });
+            this.emitSocketAuthed = true;
+            (_b = this.socket) === null || _b === void 0 ? void 0 : _b.emit("authed", Date.now());
             this.pingInterval = setInterval(() => {
                 var _a;
                 (_a = this.socket) === null || _a === void 0 ? void 0 : _a.emit("authed", Date.now());
