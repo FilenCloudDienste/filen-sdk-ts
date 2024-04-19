@@ -156,21 +156,7 @@ export function normalizeHash({ hash }) {
  * @returns {Promise<string>}
  */
 export async function hashPassword({ password }) {
-    if (environment === "node") {
-        const passwordBuffer = textEncoder.encode(password);
-        return (nodeCrypto
-            .createHash("sha512")
-            .update(nodeCrypto
-            .createHash("sha384")
-            .update(nodeCrypto.createHash("sha256").update(passwordBuffer).digest("hex"))
-            .digest("hex"))
-            .digest("hex") +
-            nodeCrypto
-                .createHash("sha512")
-                .update(nodeCrypto.createHash("md5").update(nodeCrypto.createHash("md4").update(passwordBuffer).digest("hex")).digest("hex"))
-                .digest("hex"));
-    }
-    else if (environment === "browser") {
+    if (environment === "browser" || environment === "node") {
         return (CryptoAPI.hash("sha512", CryptoAPI.hash("sha384", CryptoAPI.hash("sha256", CryptoAPI.hash("sha1", password)))) +
             CryptoAPI.hash("sha512", CryptoAPI.hash("md5", CryptoAPI.hash("md4", CryptoAPI.hash("md2", password)))));
     }

@@ -202,7 +202,7 @@ class FilenSDK {
         if (typeof keyPairInfo.publicKey === "string" &&
             typeof keyPairInfo.privateKey === "string" &&
             keyPairInfo.publicKey.length > 0 &&
-            keyPairInfo.privateKey.length > 16) {
+            keyPairInfo.privateKey.length > 0) {
             let privateKey = null;
             for (const masterKey of masterKeys) {
                 try {

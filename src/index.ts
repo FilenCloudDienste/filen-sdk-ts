@@ -247,7 +247,7 @@ export class FilenSDK {
 			typeof keyPairInfo.publicKey === "string" &&
 			typeof keyPairInfo.privateKey === "string" &&
 			keyPairInfo.publicKey.length > 0 &&
-			keyPairInfo.privateKey.length > 16
+			keyPairInfo.privateKey.length > 0
 		) {
 			let privateKey: string | null = null
 
@@ -356,13 +356,16 @@ export class FilenSDK {
 			authVersion: authInfo.authVersion,
 			salt: authInfo.salt
 		})
+
 		const loginResponse = await this._api
 			.v3()
 			.login({ email: emailToUse, password: derived.derivedPassword, twoFactorCode: twoFactorCodeToUse, authVersion })
+
 		const [infoResponse, baseFolderResponse] = await Promise.all([
 			this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
 			this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
 		])
+
 		const updateKeys = await this._updateKeys({ apiKey: loginResponse.apiKey, masterKeys: [derived.derivedMasterKeys] })
 
 		this.init({
