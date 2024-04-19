@@ -96,7 +96,7 @@ export class Decrypt {
 									name: "AES-GCM",
 									iv: ivBuffer
 								},
-								await importRawKey({ key: keyBuffer as Buffer, algorithm: "AES-GCM", mode: ["decrypt"] }),
+								await importRawKey({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }),
 								encrypted
 							)
 

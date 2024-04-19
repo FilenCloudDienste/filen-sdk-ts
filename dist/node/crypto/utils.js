@@ -58,7 +58,7 @@ exports.generateRandomString = generateRandomString;
  * @param {"sha512"} param0.hash
  * @param {(256 | 512)} param0.bitLength
  * @param {boolean} param0.returnHex
- * @returns {Promise<string | Buffer | Uint8Arra>}
+ * @returns {Promise<string | Buffer>}
  */
 async function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }) {
     if (constants_1.environment === "node") {
@@ -89,7 +89,7 @@ async function deriveKeyFromPassword({ password, salt, iterations, hash, bitLeng
         return key;
     }
     else if (constants_1.environment === "reactNative") {
-        return await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex });
+        return (await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }));
     }
     throw new Error(`crypto.utils.deriveKeyFromPassword not implemented for ${constants_1.environment} environment`);
 }
@@ -112,7 +112,7 @@ async function hashFn({ input }) {
             .digest("hex");
     }
     else if (constants_1.environment === "browser") {
-        return Buffer.from(await globalThis.crypto.subtle.digest("SHA-1", await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(input)))).toString("hex");
+        return crypto_api_v1_1.default.hash("sha1", crypto_api_v1_1.default.hash("sha512", input));
     }
     else if (constants_1.environment === "reactNative") {
         return await global.nodeThread.hashFn({ string: input });

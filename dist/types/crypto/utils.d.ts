@@ -21,7 +21,7 @@ export type DeriveKeyFromPasswordBase = {
 };
 export declare function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }: DeriveKeyFromPasswordBase & {
     returnHex: false;
-}): Promise<Uint8Array | Buffer>;
+}): Promise<Buffer>;
 export declare function deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }: DeriveKeyFromPasswordBase & {
     returnHex: true;
 }): Promise<string>;

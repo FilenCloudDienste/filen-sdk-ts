@@ -60,7 +60,7 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Uint8Array | Buffer>
+}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Buffer>
 
 export async function deriveKeyFromPassword({
 	password,
@@ -86,7 +86,7 @@ export async function deriveKeyFromPassword({
  * @param {"sha512"} param0.hash
  * @param {(256 | 512)} param0.bitLength
  * @param {boolean} param0.returnHex
- * @returns {Promise<string | Buffer | Uint8Arra>}
+ * @returns {Promise<string | Buffer>}
  */
 export async function deriveKeyFromPassword({
 	password,
@@ -97,7 +97,7 @@ export async function deriveKeyFromPassword({
 	returnHex
 }: DeriveKeyFromPasswordBase & {
 	returnHex: boolean
-}): Promise<string | Buffer | Uint8Array> {
+}): Promise<string | Buffer> {
 	if (environment === "node") {
 		return await new Promise((resolve, reject) => {
 			nodeCrypto.pbkdf2(password, salt, iterations, bitLength / 8, hash, (err, result) => {
@@ -134,7 +134,7 @@ export async function deriveKeyFromPassword({
 
 		return key
 	} else if (environment === "reactNative") {
-		return await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex })
+		return (await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex })) as Buffer
 	}
 
 	throw new Error(`crypto.utils.deriveKeyFromPassword not implemented for ${environment} environment`)
@@ -157,9 +157,7 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
 			.update(nodeCrypto.createHash("sha512").update(textEncoder.encode(input)).digest("hex"))
 			.digest("hex")
 	} else if (environment === "browser") {
-		return Buffer.from(
-			await globalThis.crypto.subtle.digest("SHA-1", await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(input)))
-		).toString("hex")
+		return CryptoAPI.hash("sha1", CryptoAPI.hash("sha512", input))
 	} else if (environment === "reactNative") {
 		return await global.nodeThread.hashFn({ string: input })
 	}

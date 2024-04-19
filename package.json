@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.50",
+	"version": "0.1.54",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -9,15 +9,14 @@
 	"scripts": {
 		"test": "jest --forceExit ./__tests__",
 		"dev": "ts-node --files dev/index.ts",
-		"build": "npm run clear && npm run lint && npm run build:node && npm run build:browser",
+		"build": "npm run build:clean && npm run lint && npm run build:node && npm run build:browser",
 		"build:node": "tsc",
 		"build:browser": "tsc --p tsconfig.browser.json",
+		"build:clean": "rimraf ./dist && rimraf ./docs",
 		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
 		"emitTypes": "tsc --emitDeclarationOnly",
 		"bundle": "webpack --mode production --node-env production --config webpack.config.js",
-		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts",
-		"clear": "npm run rmdir -- dist docs",
-		"rmdir": "node -e \"var fs = require('fs'); try { process.argv.slice(1).map((f) => fs.rmdirSync(f, { recursive: true })) } catch (err) { console.log(`Dir not found`) }; process.exit(0);\""
+		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts"
 	},
 	"repository": {
 		"type": "git",
@@ -70,6 +69,7 @@
 		"os-browserify": "^0.3.0",
 		"path-browserify": "^1.0.1",
 		"process": "github:Dwynr/node-process",
+		"rimraf": "^5.0.5",
 		"rollup": "^4.12.1",
 		"rollup-plugin-dts": "^6.1.0",
 		"rollup-plugin-esbuild": "^6.1.1",
