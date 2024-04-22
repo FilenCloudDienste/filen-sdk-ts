@@ -1557,28 +1557,29 @@ export class FS {
 			})
 
 			try {
-				const item = await this.cloud.uploadLocalFile({
+				const uploadedItem = await this.cloud.uploadLocalFile({
 					source: tmpFilePath,
 					parent: parentUUID,
 					abortSignal,
 					pauseSignal,
-					onProgress
+					onProgress,
+					name: item.metadata.name
 				})
 
-				if (item.type === "file") {
+				if (uploadedItem.type === "file") {
 					this._items[to] = {
 						uuid: item.uuid,
 						type: "file",
 						metadata: {
-							name: item.name,
-							size: item.size,
-							mime: item.mime,
-							key: item.key,
-							lastModified: item.lastModified,
-							chunks: item.chunks,
-							region: item.region,
-							bucket: item.bucket,
-							version: item.version
+							name: uploadedItem.name,
+							size: uploadedItem.size,
+							mime: uploadedItem.mime,
+							key: uploadedItem.key,
+							lastModified: uploadedItem.lastModified,
+							chunks: uploadedItem.chunks,
+							region: uploadedItem.region,
+							bucket: uploadedItem.bucket,
+							version: uploadedItem.version
 						}
 					}
 
@@ -1587,15 +1588,15 @@ export class FS {
 						type: "file",
 						path: to,
 						metadata: {
-							name: item.name,
-							size: item.size,
-							mime: item.mime,
-							key: item.key,
-							lastModified: item.lastModified,
-							chunks: item.chunks,
-							region: item.region,
-							bucket: item.bucket,
-							version: item.version
+							name: uploadedItem.name,
+							size: uploadedItem.size,
+							mime: uploadedItem.mime,
+							key: uploadedItem.key,
+							lastModified: uploadedItem.lastModified,
+							chunks: uploadedItem.chunks,
+							region: uploadedItem.region,
+							bucket: uploadedItem.bucket,
+							version: uploadedItem.version
 						}
 					}
 				}
