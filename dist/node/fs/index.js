@@ -1158,6 +1158,9 @@ class FS {
         if (item.type === "directory") {
             const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
             const baseDirectoryName = path_1.default.posix.basename(from);
+            if (!baseDirectoryName || baseDirectoryName.length === 0 || baseDirectoryName === ".") {
+                throw new Error("Could not parse baseDirectoryName.");
+            }
             const tmpDirectoryPath = (0, utils_1.normalizePath)(path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)(), baseDirectoryName));
             await this.cloud.downloadDirectoryToLocal({ uuid, to: tmpDirectoryPath });
             try {
@@ -1180,6 +1183,10 @@ class FS {
             }
         }
         else {
+            const newFileName = path_1.default.posix.basename(to);
+            if (!newFileName || newFileName.length === 0 || newFileName === ".") {
+                throw new Error("Could not parse file name.");
+            }
             const tmpFilePath = await this.cloud.downloadFileToLocal({
                 uuid,
                 bucket: item.metadata.bucket,
@@ -1198,7 +1205,7 @@ class FS {
                     abortSignal,
                     pauseSignal,
                     onProgress,
-                    name: item.metadata.name
+                    name: newFileName
                 });
                 if (uploadedItem.type === "file") {
                     this._items[to] = {
