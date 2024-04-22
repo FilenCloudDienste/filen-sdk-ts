@@ -1,9 +1,9 @@
 import type APIClient from "../../../client"
-import type DirColor from "../color"
+import type { DirColors } from "../color"
 
 export type DirLinkContentResponse = {
 	folders: {
-		color: DirColor | null
+		color: DirColors | null
 		metadata: string
 		parent: string
 		timestamp: number

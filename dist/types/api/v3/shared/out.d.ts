@@ -1,6 +1,6 @@
 import type APIClient from "../../client";
 import { FileEncryptionVersion } from "../../../types";
-import type DirColor from "../dir/color";
+import type { DirColors } from "../dir/color";
 export type SharedOutUpload = {
     uuid: string;
     parent: string;
@@ -31,7 +31,7 @@ export type SharedOutFolder = {
     receiverEmail: null | string;
     receiverId: null | number;
     writeAccess: 0 | 1;
-    color: DirColor | null;
+    color: DirColors | null;
     timestamp: number;
     is_sync: 0 | 1;
     is_default: 0 | 1;

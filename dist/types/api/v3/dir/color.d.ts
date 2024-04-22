@@ -1,5 +1,5 @@
 import type APIClient from "../../client";
-export type DirColors = "default" | "blue" | "green" | "purple" | "red" | "gray";
+export type DirColors = "default" | "blue" | "green" | "purple" | "red" | "gray" | string;
 /**
  * DirColor
  * @date 2/1/2024 - 8:16:35 PM

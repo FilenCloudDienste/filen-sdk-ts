@@ -233,15 +233,7 @@ export declare class FilenSDK {
             }) => Promise<void>;
             color: (params_0: {
                 uuid: string;
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
-                color: import("./api/v3/dir/color").DirColors;
+                color: string;
             }) => Promise<void>;
         };
         auth: () => {

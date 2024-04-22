@@ -3,7 +3,7 @@ import type Crypto from "../crypto";
 import type { FilenSDKConfig } from "..";
 import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata, PublicLinkExpiration } from "../types";
 import { PauseSignal } from "./signals";
-import type { DirColors, DirColor } from "../api/v3/dir/color";
+import type { DirColors } from "../api/v3/dir/color";
 import type { FileVersionsResponse } from "../api/v3/file/versions";
 import type { DirDownloadType } from "../api/v3/dir/download";
 export type CloudConfig = {
@@ -38,7 +38,7 @@ export type CloudItemFile = {
 export type CloudItemBaseShared = Omit<CloudItemBase, "favorited">;
 export type CloudItemFileShared = Omit<CloudItemFile, "rm">;
 export type CloudItemDirectory = {
-    color: DirColor | null;
+    color: DirColors | null;
     size: number;
 };
 export type CloudItem = ({

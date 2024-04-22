@@ -127,7 +127,7 @@ export declare class API {
             }) => Promise<void>;
             color: (params_0: {
                 uuid: string;
-                color: import("./v3/dir/color").DirColors;
+                color: string;
             }) => Promise<void>;
         };
         auth: () => {

@@ -1,6 +1,6 @@
 import type APIClient from "../../client"
 
-export type DirColors = "default" | "blue" | "green" | "purple" | "red" | "gray"
+export type DirColors = "default" | "blue" | "green" | "purple" | "red" | "gray" | string
 
 /**
  * DirColor

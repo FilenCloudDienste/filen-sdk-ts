@@ -24,7 +24,7 @@ import os from "os"
 import fs from "fs-extra"
 import { Semaphore } from "../semaphore"
 import appendStream from "../streams/append"
-import type { DirColors, DirColor } from "../api/v3/dir/color"
+import type { DirColors } from "../api/v3/dir/color"
 import type { FileVersionsResponse } from "../api/v3/file/versions"
 import type { DirDownloadType } from "../api/v3/dir/download"
 import mimeTypes from "mime-types"
@@ -67,7 +67,7 @@ export type CloudItemBaseShared = Omit<CloudItemBase, "favorited">
 export type CloudItemFileShared = Omit<CloudItemFile, "rm">
 
 export type CloudItemDirectory = {
-	color: DirColor | null
+	color: DirColors | null
 	size: number
 }
 
