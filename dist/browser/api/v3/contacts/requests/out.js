@@ -31,7 +31,7 @@ export class ContactsRequestsOut {
     async fetch() {
         const response = await this.apiClient.request({
             method: "GET",
-            endpoint: "/v3/contacts/requests/in"
+            endpoint: "/v3/contacts/requests/out"
         });
         return response;
     }
