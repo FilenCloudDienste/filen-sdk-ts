@@ -401,7 +401,10 @@ export class APIClient {
                     returnImmediately = true;
                     throw new APIError({ code: response.data.code, message: response.data.message });
                 }
-                return response.data.data ? response.data.data : response.data;
+                return response.data &&
+                    (response.data.data || typeof response.data.data === "number" || typeof response.data.data === "string")
+                    ? response.data.data
+                    : response.data;
             }
             catch (e) {
                 if (returnImmediately) {
