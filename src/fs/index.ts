@@ -93,8 +93,8 @@ export class FS {
 	private readonly api: API
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly cloud: Cloud
-	private _items: FSItems
-	private _uuidToItem: Record<string, FSItemUUID>
+	public _items: FSItems
+	public _uuidToItem: Record<string, FSItemUUID>
 	private readonly socket = new Socket()
 	private readonly mutex = new Semaphore(1)
 	private readonly mkdirMutex = new Semaphore(1)
@@ -286,7 +286,7 @@ export class FS {
 		return path
 	}
 
-	private async pathToItemUUID({ path, type }: { path: string; type?: FSItemType }): Promise<string | null> {
+	public async pathToItemUUID({ path, type }: { path: string; type?: FSItemType }): Promise<string | null> {
 		path = this.normalizePath({ path })
 
 		const acceptedTypes: FSItemType[] = !type ? ["directory", "file"] : type === "directory" ? ["directory"] : ["file"]

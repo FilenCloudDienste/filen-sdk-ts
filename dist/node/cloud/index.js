@@ -1680,42 +1680,53 @@ class Cloud {
                     }, 10);
                 });
             };
-            const writeToDestination = async ({ index, file }) => {
-                try {
-                    if (pauseSignal && pauseSignal.isPaused()) {
-                        await waitForPause();
-                    }
-                    if (abortSignal && abortSignal.aborted) {
-                        throw new Error("Aborted");
-                    }
-                    if (writerStopped) {
-                        return;
-                    }
-                    if (index !== currentWriteIndex) {
-                        setTimeout(() => {
-                            writeToDestination({ index, file });
-                        }, 10);
-                        return;
-                    }
-                    if (index === firstChunk) {
-                        await fs_extra_1.default.move(file, destinationPath, {
-                            overwrite: true
-                        });
-                    }
-                    else {
-                        await (0, append_1.default)({ inputFile: file, baseFile: destinationPath });
-                        await fs_extra_1.default.rm(file, {
-                            force: true,
-                            maxRetries: 60 * 10,
-                            recursive: true,
-                            retryDelay: 100
-                        });
-                    }
-                    currentWriteIndex += 1;
-                }
-                finally {
-                    this._semaphores.downloadWriters.release();
-                }
+            const writeToDestination = ({ index, file }) => {
+                return new Promise((resolve, reject) => {
+                    // eslint-disable-next-line no-extra-semi
+                    ;
+                    (async () => {
+                        try {
+                            if (pauseSignal && pauseSignal.isPaused()) {
+                                await waitForPause();
+                            }
+                            if (abortSignal && abortSignal.aborted) {
+                                throw new Error("Aborted");
+                            }
+                            if (writerStopped) {
+                                resolve(index);
+                                return;
+                            }
+                            if (index !== currentWriteIndex) {
+                                setTimeout(() => {
+                                    writeToDestination({ index, file }).then(resolve).catch(reject);
+                                }, 10);
+                                return;
+                            }
+                            if (index === firstChunk) {
+                                await fs_extra_1.default.move(file, destinationPath, {
+                                    overwrite: true
+                                });
+                            }
+                            else {
+                                await (0, append_1.default)({ inputFile: file, baseFile: destinationPath });
+                                await fs_extra_1.default.rm(file, {
+                                    force: true,
+                                    maxRetries: 60 * 10,
+                                    recursive: true,
+                                    retryDelay: 100
+                                });
+                            }
+                            currentWriteIndex += 1;
+                            resolve(index);
+                        }
+                        catch (e) {
+                            reject(e);
+                        }
+                        finally {
+                            this._semaphores.downloadWriters.release();
+                        }
+                    })();
+                });
             };
             try {
                 await new Promise((resolve, reject) => {

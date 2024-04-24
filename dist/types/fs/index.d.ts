@@ -69,8 +69,8 @@ export declare class FS {
     private readonly api;
     private readonly sdkConfig;
     private readonly cloud;
-    private _items;
-    private _uuidToItem;
+    _items: FSItems;
+    _uuidToItem: Record<string, FSItemUUID>;
     private readonly socket;
     private readonly mutex;
     private readonly mkdirMutex;
@@ -126,7 +126,10 @@ export declare class FS {
      * @returns {string}
      */
     private normalizePath;
-    private pathToItemUUID;
+    pathToItemUUID({ path, type }: {
+        path: string;
+        type?: FSItemType;
+    }): Promise<string | null>;
     /**
      * List files and directories at path.
      * @date 2/20/2024 - 2:40:03 AM

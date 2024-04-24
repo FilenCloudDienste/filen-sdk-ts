@@ -2223,46 +2223,57 @@ export class Cloud {
 				})
 			}
 
-			const writeToDestination = async ({ index, file }: { index: number; file: string }) => {
-				try {
-					if (pauseSignal && pauseSignal.isPaused()) {
-						await waitForPause()
-					}
+			const writeToDestination = ({ index, file }: { index: number; file: string }): Promise<number> => {
+				return new Promise<number>((resolve, reject) => {
+					// eslint-disable-next-line no-extra-semi
+					;(async () => {
+						try {
+							if (pauseSignal && pauseSignal.isPaused()) {
+								await waitForPause()
+							}
 
-					if (abortSignal && abortSignal.aborted) {
-						throw new Error("Aborted")
-					}
+							if (abortSignal && abortSignal.aborted) {
+								throw new Error("Aborted")
+							}
 
-					if (writerStopped) {
-						return
-					}
+							if (writerStopped) {
+								resolve(index)
 
-					if (index !== currentWriteIndex) {
-						setTimeout(() => {
-							writeToDestination({ index, file })
-						}, 10)
+								return
+							}
 
-						return
-					}
+							if (index !== currentWriteIndex) {
+								setTimeout(() => {
+									writeToDestination({ index, file }).then(resolve).catch(reject)
+								}, 10)
 
-					if (index === firstChunk) {
-						await fs.move(file, destinationPath, {
-							overwrite: true
-						})
-					} else {
-						await appendStream({ inputFile: file, baseFile: destinationPath })
-						await fs.rm(file, {
-							force: true,
-							maxRetries: 60 * 10,
-							recursive: true,
-							retryDelay: 100
-						})
-					}
+								return
+							}
 
-					currentWriteIndex += 1
-				} finally {
-					this._semaphores.downloadWriters.release()
-				}
+							if (index === firstChunk) {
+								await fs.move(file, destinationPath, {
+									overwrite: true
+								})
+							} else {
+								await appendStream({ inputFile: file, baseFile: destinationPath })
+								await fs.rm(file, {
+									force: true,
+									maxRetries: 60 * 10,
+									recursive: true,
+									retryDelay: 100
+								})
+							}
+
+							currentWriteIndex += 1
+
+							resolve(index)
+						} catch (e) {
+							reject(e)
+						} finally {
+							this._semaphores.downloadWriters.release()
+						}
+					})()
+				})
 			}
 
 			try {
