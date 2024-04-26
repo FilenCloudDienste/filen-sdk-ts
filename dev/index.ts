@@ -27,9 +27,6 @@ const filen = new FilenSDK({
 	connectToSocket: false
 })
 
-const main = async () => {
-	console.log(await filen.fs().ls({ path: "/" }))
-	console.log(await filen.contacts().incomingRequestsCount())
-}
+const main = async () => {}
 
 main()

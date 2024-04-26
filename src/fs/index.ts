@@ -415,92 +415,22 @@ export class FS {
 		const names: string[] = []
 		const existingPaths: Record<string, boolean> = {}
 
-		try {
-			if (recursive) {
-				const tree = await this.cloud.getDirectoryTree({ uuid })
+		if (recursive) {
+			const tree = await this.cloud.getDirectoryTree({ uuid })
 
-				for (const entry in tree) {
-					const item = tree[entry]
-					const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
+			for (const entry in tree) {
+				const item = tree[entry]
+				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
 
-					if (item.parent === "base" && existingPaths[entry]) {
-						continue
-					}
-
-					existingPaths[entry] = true
-
-					const itemPath = pathModule.posix.join(path, entryPath)
-
-					names.push(entryPath)
-
-					if (item.type === "directory") {
-						this._items[itemPath] = {
-							uuid: item.uuid,
-							type: "directory",
-							metadata: {
-								name: item.name
-							}
-						}
-
-						this._uuidToItem[item.uuid] = {
-							uuid: item.uuid,
-							type: "directory",
-							path: itemPath,
-							metadata: {
-								name: item.name
-							}
-						}
-					} else {
-						this._items[itemPath] = {
-							uuid: item.uuid,
-							type: "file",
-							metadata: {
-								name: item.name,
-								size: item.size,
-								mime: item.mime,
-								key: item.key,
-								lastModified: item.lastModified,
-								chunks: item.chunks,
-								region: item.region,
-								bucket: item.bucket,
-								version: item.version
-							}
-						}
-
-						this._uuidToItem[item.uuid] = {
-							uuid: item.uuid,
-							type: "file",
-							path: itemPath,
-							metadata: {
-								name: item.name,
-								size: item.size,
-								mime: item.mime,
-								key: item.key,
-								lastModified: item.lastModified,
-								chunks: item.chunks,
-								region: item.region,
-								bucket: item.bucket,
-								version: item.version
-							}
-						}
-					}
-				}
-
-				return names
-			}
-
-			const items = (await this.cloud.listDirectory({ uuid })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
-
-			for (const item of items) {
-				const itemPath = pathModule.posix.join(path, item.name)
-
-				if (existingPaths[item.name]) {
+				if (item.parent === "base" && existingPaths[entry]) {
 					continue
 				}
 
-				existingPaths[item.name] = true
+				existingPaths[entry] = true
 
-				names.push(item.name)
+				const itemPath = pathModule.posix.join(path, entryPath)
+
+				names.push(entryPath)
 
 				if (item.type === "directory") {
 					this._items[itemPath] = {
@@ -554,8 +484,75 @@ export class FS {
 					}
 				}
 			}
-		} catch (e) {
-			console.error(e)
+
+			return names
+		}
+
+		// .sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
+		const items = await this.cloud.listDirectory({ uuid })
+
+		for (const item of items) {
+			const itemPath = pathModule.posix.join(path, item.name)
+
+			if (existingPaths[item.name]) {
+				continue
+			}
+
+			existingPaths[item.name] = true
+
+			names.push(item.name)
+
+			if (item.type === "directory") {
+				this._items[itemPath] = {
+					uuid: item.uuid,
+					type: "directory",
+					metadata: {
+						name: item.name
+					}
+				}
+
+				this._uuidToItem[item.uuid] = {
+					uuid: item.uuid,
+					type: "directory",
+					path: itemPath,
+					metadata: {
+						name: item.name
+					}
+				}
+			} else {
+				this._items[itemPath] = {
+					uuid: item.uuid,
+					type: "file",
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+
+				this._uuidToItem[item.uuid] = {
+					uuid: item.uuid,
+					type: "file",
+					path: itemPath,
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+			}
 		}
 
 		return names
