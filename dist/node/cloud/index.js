@@ -2320,10 +2320,6 @@ class Cloud {
             if (!(await fs_extra_1.default.exists(source))) {
                 throw new Error(`Could not find source file at path ${source}.`);
             }
-            const parentPresent = await this.api.v3().dir().present({ uuid: parent });
-            if (!parentPresent.present || parentPresent.trash) {
-                throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`);
-            }
             const fileName = name ? name : path_1.default.basename(source);
             if (fileName === "." || fileName === "/" || fileName.length <= 0) {
                 throw new Error(`Invalid source file at path ${source}. Could not parse file name.`);
@@ -2548,10 +2544,6 @@ class Cloud {
             if (onStarted) {
                 onStarted();
             }
-            const parentPresent = await this.api.v3().dir().present({ uuid: parent });
-            if (!parentPresent.present || parentPresent.trash) {
-                throw new Error(`Can not upload file to parent directory ${parent}. Parent is either not present or in the trash.`);
-            }
             const fileName = name ? name : file.name;
             const mimeType = mime_types_1.default.lookup(fileName) || "application/octet-stream";
             const fileSize = file.size;
@@ -2762,10 +2754,6 @@ class Cloud {
             if (!(await fs_extra_1.default.exists(source))) {
                 throw new Error(`Could not find source directory at path ${source}.`);
             }
-            const parentPresent = await this.api.v3().dir().present({ uuid: parent });
-            if (!parentPresent.present || parentPresent.trash) {
-                throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`);
-            }
             const baseDirectoryName = name ? name : path_1.default.basename(source);
             if (baseDirectoryName === "." || baseDirectoryName === "/" || baseDirectoryName.length <= 0) {
                 throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`);
@@ -2925,10 +2913,6 @@ class Cloud {
             }
             if (!baseDirectoryName) {
                 throw new Error(`Can not upload directory to parent directory ${parent}. Could not parse base directory name.`);
-            }
-            const parentPresent = await this.api.v3().dir().present({ uuid: parent });
-            if (!parentPresent.present || parentPresent.trash) {
-                throw new Error(`Can not upload directory to parent directory ${parent}. Parent is either not present or in the trash.`);
             }
             const baseParent = parent;
             parent = await this.createDirectory({ name: baseDirectoryName, parent: baseParent });
