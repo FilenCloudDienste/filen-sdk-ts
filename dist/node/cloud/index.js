@@ -2782,6 +2782,9 @@ class Cloud {
             }
             await (0, utils_1.promiseAllChunked)(statPromises);
             for (const entry of sortedBySeparatorLength) {
+                if (pathsToUUIDs[entry]) {
+                    continue;
+                }
                 const stats = entryStats[entry];
                 if (!stats ||
                     !stats.isDirectory() ||
@@ -2940,6 +2943,9 @@ class Cloud {
                 }
             }
             for (const path of directoryPaths) {
+                if (pathsToUUIDs[path]) {
+                    continue;
+                }
                 const parentPath = path_1.default.posix.dirname(path);
                 const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : (_a = pathsToUUIDs[parentPath]) !== null && _a !== void 0 ? _a : "";
                 if (directoryParent.length <= 16) {

@@ -2786,6 +2786,9 @@ export class Cloud {
             }
             await promiseAllChunked(statPromises);
             for (const entry of sortedBySeparatorLength) {
+                if (pathsToUUIDs[entry]) {
+                    continue;
+                }
                 const stats = entryStats[entry];
                 if (!stats ||
                     !stats.isDirectory() ||
@@ -2943,6 +2946,9 @@ export class Cloud {
                 }
             }
             for (const path of directoryPaths) {
+                if (pathsToUUIDs[path]) {
+                    continue;
+                }
                 const parentPath = pathModule.posix.dirname(path);
                 const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? "";
                 if (directoryParent.length <= 16) {
