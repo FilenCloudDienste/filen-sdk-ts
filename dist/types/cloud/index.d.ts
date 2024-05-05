@@ -1085,5 +1085,13 @@ export declare class Cloud {
         onUploaded?: (item: CloudItem) => Promise<void>;
         onDirectoryCreated?: (item: CloudItem) => void;
     }): Promise<void>;
+    /**
+     * Empty the trash.
+     *
+     * @public
+     * @async
+     * @returns {Promise<void>}
+     */
+    emptyTrash(): Promise<void>;
 }
 export default Cloud;

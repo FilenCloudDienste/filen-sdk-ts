@@ -3005,6 +3005,16 @@ export class Cloud {
             this._semaphores.directoryUploads.release();
         }
     }
+    /**
+     * Empty the trash.
+     *
+     * @public
+     * @async
+     * @returns {Promise<void>}
+     */
+    async emptyTrash() {
+        return await this.api.v3().trash().empty();
+    }
 }
 export default Cloud;
 //# sourceMappingURL=index.js.map
