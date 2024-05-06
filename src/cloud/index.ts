@@ -1,7 +1,13 @@
 import type API from "../api"
 import type Crypto from "../crypto"
-import type { FilenSDKConfig } from ".."
-import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata, PublicLinkExpiration } from "../types"
+import { type FilenSDKConfig } from ".."
+import {
+	type FileEncryptionVersion,
+	type FileMetadata,
+	type ProgressCallback,
+	type FolderMetadata,
+	type PublicLinkExpiration
+} from "../types"
 import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils"
 import {
 	environment,
@@ -24,11 +30,15 @@ import os from "os"
 import fs from "fs-extra"
 import { Semaphore } from "../semaphore"
 import appendStream from "../streams/append"
-import type { DirColors } from "../api/v3/dir/color"
-import type { FileVersionsResponse } from "../api/v3/file/versions"
-import type { DirDownloadType } from "../api/v3/dir/download"
+import { type DirColors } from "../api/v3/dir/color"
+import { type FileVersionsResponse } from "../api/v3/file/versions"
+import { type DirDownloadType } from "../api/v3/dir/download"
 import mimeTypes from "mime-types"
 import utils from "./utils"
+import { type DirLinkStatusResponse } from "../api/v3/dir/link/status"
+import { type FileLinkStatusResponse } from "../api/v3/file/link/status"
+import { type FileLinkPasswordResponse } from "../api/v3/file/link/password"
+import { type DirLinkInfoResponse } from "../api/v3/dir/link/info"
 
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
@@ -1550,6 +1560,74 @@ export class Cloud {
 				downloadBtn: true,
 				type: "disable"
 			})
+	}
+
+	public async publicLinkStatus({ type, uuid }: { type: "file"; uuid: string }): Promise<FileLinkStatusResponse>
+	public async publicLinkStatus({ type, uuid }: { type: "directory"; uuid: string }): Promise<DirLinkStatusResponse>
+
+	/**
+	 * Fetch the status of a public link.
+	 *
+	 * @public
+	 * @async
+	 * @param {({type: "file" | "directory", uuid: string})} param0
+	 * @param {("file" | "directory")} param0.type
+	 * @param {string} param0.uuid
+	 * @returns {Promise<DirLinkStatusResponse | FileLinkStatusResponse>}
+	 */
+	public async publicLinkStatus({
+		type,
+		uuid
+	}: {
+		type: "file" | "directory"
+		uuid: string
+	}): Promise<DirLinkStatusResponse | FileLinkStatusResponse> {
+		if (type === "directory") {
+			return await this.api.v3().dir().link().status({ uuid })
+		}
+
+		return await this.api.v3().file().link().status({ uuid })
+	}
+
+	/**
+	 * Fetch password info of a public link.
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<FileLinkPasswordResponse>}
+	 */
+	public async filePublicLinkHasPassword({ uuid }: { uuid: string }): Promise<FileLinkPasswordResponse> {
+		return await this.api.v3().file().link().password({ uuid })
+	}
+
+	/**
+	 * Fetch info about a directory public link.
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string}} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<DirLinkInfoResponse>}
+	 */
+	public async directoryPublicLinkInfo({ uuid }: { uuid: string }): Promise<DirLinkInfoResponse> {
+		return await this.api.v3().dir().link().info({ uuid })
+	}
+
+	/**
+	 * Fetch content of a directory public link.
+	 *
+	 * @public
+	 * @async
+	 * @param {{uuid: string, parent: string, password: string}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.parent
+	 * @param {string} param0.password
+	 * @returns {unknown}
+	 */
+	public async directoryPublicLinkContent({ uuid, parent, password }: { uuid: string; parent: string; password: string }) {
+		return await this.api.v3().dir().link().content({ uuid, parent, password })
 	}
 
 	/**

@@ -1,11 +1,15 @@
 import type API from "../api";
 import type Crypto from "../crypto";
-import type { FilenSDKConfig } from "..";
-import type { FileEncryptionVersion, FileMetadata, ProgressCallback, FolderMetadata, PublicLinkExpiration } from "../types";
+import { type FilenSDKConfig } from "..";
+import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration } from "../types";
 import { PauseSignal } from "./signals";
-import type { DirColors } from "../api/v3/dir/color";
-import type { FileVersionsResponse } from "../api/v3/file/versions";
-import type { DirDownloadType } from "../api/v3/dir/download";
+import { type DirColors } from "../api/v3/dir/color";
+import { type FileVersionsResponse } from "../api/v3/file/versions";
+import { type DirDownloadType } from "../api/v3/dir/download";
+import { type DirLinkStatusResponse } from "../api/v3/dir/link/status";
+import { type FileLinkStatusResponse } from "../api/v3/file/link/status";
+import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
+import { type DirLinkInfoResponse } from "../api/v3/dir/link/info";
 export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -530,6 +534,54 @@ export declare class Cloud {
         itemUUID: string;
         linkUUID: string;
     }): Promise<void>;
+    publicLinkStatus({ type, uuid }: {
+        type: "file";
+        uuid: string;
+    }): Promise<FileLinkStatusResponse>;
+    publicLinkStatus({ type, uuid }: {
+        type: "directory";
+        uuid: string;
+    }): Promise<DirLinkStatusResponse>;
+    /**
+     * Fetch password info of a public link.
+     *
+     * @public
+     * @async
+     * @param {{uuid: string}} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<FileLinkPasswordResponse>}
+     */
+    filePublicLinkHasPassword({ uuid }: {
+        uuid: string;
+    }): Promise<FileLinkPasswordResponse>;
+    /**
+     * Fetch info about a directory public link.
+     *
+     * @public
+     * @async
+     * @param {{uuid: string}} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<DirLinkInfoResponse>}
+     */
+    directoryPublicLinkInfo({ uuid }: {
+        uuid: string;
+    }): Promise<DirLinkInfoResponse>;
+    /**
+     * Fetch content of a directory public link.
+     *
+     * @public
+     * @async
+     * @param {{uuid: string, parent: string, password: string}} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.parent
+     * @param {string} param0.password
+     * @returns {unknown}
+     */
+    directoryPublicLinkContent({ uuid, parent, password }: {
+        uuid: string;
+        parent: string;
+        password: string;
+    }): Promise<import("../api/v3/dir/link/content").DirLinkContentResponse>;
     /**
      * Stop sharing an item with another user.
      * @date 2/19/2024 - 4:38:21 AM

@@ -1178,6 +1178,60 @@ class Cloud {
         });
     }
     /**
+     * Fetch the status of a public link.
+     *
+     * @public
+     * @async
+     * @param {({type: "file" | "directory", uuid: string})} param0
+     * @param {("file" | "directory")} param0.type
+     * @param {string} param0.uuid
+     * @returns {Promise<DirLinkStatusResponse | FileLinkStatusResponse>}
+     */
+    async publicLinkStatus({ type, uuid }) {
+        if (type === "directory") {
+            return await this.api.v3().dir().link().status({ uuid });
+        }
+        return await this.api.v3().file().link().status({ uuid });
+    }
+    /**
+     * Fetch password info of a public link.
+     *
+     * @public
+     * @async
+     * @param {{uuid: string}} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<FileLinkPasswordResponse>}
+     */
+    async filePublicLinkHasPassword({ uuid }) {
+        return await this.api.v3().file().link().password({ uuid });
+    }
+    /**
+     * Fetch info about a directory public link.
+     *
+     * @public
+     * @async
+     * @param {{uuid: string}} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<DirLinkInfoResponse>}
+     */
+    async directoryPublicLinkInfo({ uuid }) {
+        return await this.api.v3().dir().link().info({ uuid });
+    }
+    /**
+     * Fetch content of a directory public link.
+     *
+     * @public
+     * @async
+     * @param {{uuid: string, parent: string, password: string}} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.parent
+     * @param {string} param0.password
+     * @returns {unknown}
+     */
+    async directoryPublicLinkContent({ uuid, parent, password }) {
+        return await this.api.v3().dir().link().content({ uuid, parent, password });
+    }
+    /**
      * Stop sharing an item with another user.
      * @date 2/19/2024 - 4:38:21 AM
      *
