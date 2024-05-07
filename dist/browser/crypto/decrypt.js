@@ -402,8 +402,8 @@ export class Decrypt {
         const keysToUse = key ? [key] : this.config.masterKeys;
         for (const masterKey of keysToUse) {
             try {
-                const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
-                if (typeof decrypted === "string" && decrypted.length > 0) {
+                const decrypted = await this.metadata({ metadata, key: masterKey });
+                if (typeof decrypted === "string" && decrypted.length > 16) {
                     if (this.config.metadataCache) {
                         cache.folderLinkKey.set(cacheKey, decrypted);
                     }
@@ -484,7 +484,7 @@ export class Decrypt {
         for (const masterKey of keysToUse) {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
-                if (decrypted && typeof decrypted.key === "string" && decrypted.key.length > 0) {
+                if (decrypted && typeof decrypted.key === "string" && decrypted.key.length > 16) {
                     if (this.config.metadataCache) {
                         cache.noteKeyOwner.set(cacheKey, decrypted.key);
                     }
