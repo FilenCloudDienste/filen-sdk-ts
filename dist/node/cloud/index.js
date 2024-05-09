@@ -1756,23 +1756,26 @@ class Cloud {
                                 }, 10);
                                 return;
                             }
-                            const stats = await fs_extra_1.default.stat(file);
                             if (index === firstChunk) {
                                 await fs_extra_1.default.move(file, destinationPath, {
                                     overwrite: true
                                 });
+                                const stats = await fs_extra_1.default.stat(destinationPath);
+                                if (onProgress) {
+                                    onProgress(stats.size);
+                                }
                             }
                             else {
-                                await (0, append_1.default)({ inputFile: file, baseFile: destinationPath });
+                                const appendedSize = await (0, append_1.default)({ inputFile: file, baseFile: destinationPath });
                                 await fs_extra_1.default.rm(file, {
                                     force: true,
                                     maxRetries: 60 * 10,
                                     recursive: true,
                                     retryDelay: 100
                                 });
-                            }
-                            if (onProgress) {
-                                onProgress(stats.size);
+                                if (onProgress) {
+                                    onProgress(appendedSize);
+                                }
                             }
                             currentWriteIndex += 1;
                             resolve(index);

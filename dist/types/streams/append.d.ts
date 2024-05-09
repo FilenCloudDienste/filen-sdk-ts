@@ -7,10 +7,10 @@
  * @param {{ inputFile: string; baseFile: string }} param0
  * @param {string} param0.inputFile
  * @param {string} param0.baseFile
- * @returns {Promise<void>}
+ * @returns {Promise<number>}
  */
 export declare function append({ inputFile, baseFile }: {
     inputFile: string;
     baseFile: string;
-}): Promise<void>;
+}): Promise<number>;
 export default append;

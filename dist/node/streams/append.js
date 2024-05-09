@@ -19,12 +19,12 @@ const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
  * @param {{ inputFile: string; baseFile: string }} param0
  * @param {string} param0.inputFile
  * @param {string} param0.baseFile
- * @returns {Promise<void>}
+ * @returns {Promise<number>}
  */
 async function append({ inputFile, baseFile }) {
     const input = (0, utils_1.normalizePath)(inputFile);
     const output = (0, utils_1.normalizePath)(baseFile);
-    const [inputExists, outputExists] = await Promise.all([fs_extra_1.default.exists(input), fs_extra_1.default.exists(output)]);
+    const [inputExists, outputExists, inputStats] = await Promise.all([fs_extra_1.default.exists(input), fs_extra_1.default.exists(output), fs_extra_1.default.stat(input)]);
     if (!inputExists) {
         throw new Error("Input file does not exist.");
     }
@@ -34,6 +34,7 @@ async function append({ inputFile, baseFile }) {
     await pipelineAsync(fs_extra_1.default.createReadStream(input, {
         highWaterMark: constants_1.BUFFER_SIZE
     }), fs_extra_1.default.createWriteStream(output, { flags: "a" }));
+    return inputStats.size;
 }
 exports.append = append;
 exports.default = append;

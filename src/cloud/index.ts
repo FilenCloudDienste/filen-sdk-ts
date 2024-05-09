@@ -2328,24 +2328,29 @@ export class Cloud {
 								return
 							}
 
-							const stats = await fs.stat(file)
-
 							if (index === firstChunk) {
 								await fs.move(file, destinationPath, {
 									overwrite: true
 								})
+
+								const stats = await fs.stat(destinationPath)
+
+								if (onProgress) {
+									onProgress(stats.size)
+								}
 							} else {
-								await appendStream({ inputFile: file, baseFile: destinationPath })
+								const appendedSize = await appendStream({ inputFile: file, baseFile: destinationPath })
+
 								await fs.rm(file, {
 									force: true,
 									maxRetries: 60 * 10,
 									recursive: true,
 									retryDelay: 100
 								})
-							}
 
-							if (onProgress) {
-								onProgress(stats.size)
+								if (onProgress) {
+									onProgress(appendedSize)
+								}
 							}
 
 							currentWriteIndex += 1

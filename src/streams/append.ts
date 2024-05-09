@@ -15,13 +15,13 @@ const pipelineAsync = promisify(pipeline)
  * @param {{ inputFile: string; baseFile: string }} param0
  * @param {string} param0.inputFile
  * @param {string} param0.baseFile
- * @returns {Promise<void>}
+ * @returns {Promise<number>}
  */
-export async function append({ inputFile, baseFile }: { inputFile: string; baseFile: string }): Promise<void> {
+export async function append({ inputFile, baseFile }: { inputFile: string; baseFile: string }): Promise<number> {
 	const input = normalizePath(inputFile)
 	const output = normalizePath(baseFile)
 
-	const [inputExists, outputExists] = await Promise.all([fs.exists(input), fs.exists(output)])
+	const [inputExists, outputExists, inputStats] = await Promise.all([fs.exists(input), fs.exists(output), fs.stat(input)])
 
 	if (!inputExists) {
 		throw new Error("Input file does not exist.")
@@ -37,6 +37,8 @@ export async function append({ inputFile, baseFile }: { inputFile: string; baseF
 		}),
 		fs.createWriteStream(output, { flags: "a" })
 	)
+
+	return inputStats.size
 }
 
 export default append
