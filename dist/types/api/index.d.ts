@@ -206,7 +206,7 @@ export declare class API {
             }) => Promise<import("./v3/user/events").UserEvent[]>;
             event: (params_0: {
                 uuid: string;
-            }) => Promise<import("./v3/user/event").UserEventResponse>;
+            }) => Promise<import("./v3/user/events").UserEvent>;
             sub: () => {
                 cancel: (params_0: {
                     uuid: string;

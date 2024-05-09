@@ -358,23 +358,25 @@ export class User {
 
 	/**
 	 * Fetch events based on timestamp and filter. Timestamp can be used for pagination.
-	 * @date 2/20/2024 - 7:09:13 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{timestamp?: number, filter?: "all"}} param0
-	 * @param {number} param0.timestamp
-	 * @param {"all"} param0.filter
+	 * @param {?{ timestamp?: number; filter?: "all" }} [params]
 	 * @returns {Promise<UserEvent[]>}
 	 */
-	public async events({ timestamp, filter }: { timestamp?: number; filter?: "all" }): Promise<UserEvent[]> {
-		return await this.api
+	public async events(params?: { timestamp?: number; filter?: "all" }): Promise<UserEvent[]> {
+		const result = await this.api
 			.v3()
 			.user()
 			.events({
-				lastTimestamp: timestamp ? parseInt(Math.floor(timestamp / 1000).toString()) : Math.floor(Date.now() / 1000) + 60,
-				filter: filter ? filter : "all"
+				lastTimestamp:
+					params && params.timestamp
+						? parseInt(Math.floor(params.timestamp / 1000).toString())
+						: Math.floor(Date.now() / 1000) + 60,
+				filter: params && params.filter ? params.filter : "all"
 			})
+
+		return await Promise.all(result.map(event => this.crypto.decrypt().event({ event })))
 	}
 
 	/**
@@ -388,7 +390,7 @@ export class User {
 	 * @returns {Promise<UserEventResponse>}
 	 */
 	public async event({ uuid }: { uuid: string }): Promise<UserEventResponse> {
-		return await this.api.v3().user().event({ uuid })
+		return await this.crypto.decrypt().event({ event: await this.api.v3().user().event({ uuid }) })
 	}
 
 	/**

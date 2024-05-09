@@ -946,6 +946,55 @@ class Decrypt {
             this._semaphores.data.release();
         }
     }
+    /**
+     * Decrypt a user event.
+     *
+     * @public
+     * @async
+     * @param {{ event: UserEvent }} param0
+     * @param {UserEvent} param0.event
+     * @returns {Promise<UserEvent>}
+     */
+    async event({ event }) {
+        if (event.type === "fileUploaded" ||
+            event.type === "versionedFileRestored" ||
+            event.type === "fileMoved" ||
+            event.type === "fileTrash" ||
+            event.type === "fileRm" ||
+            event.type === "fileRestored" ||
+            event.type === "fileLinkEdited") {
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata }) }) });
+        }
+        else if (event.type === "fileRenamed") {
+            const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
+                this.fileMetadata({ metadata: event.info.metadata }),
+                this.fileMetadata({ metadata: event.info.oldMetadata })
+            ]);
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: decryptedMetadata, oldMetadataDecrypted: oldDecryptedMetadata }) });
+        }
+        else if (event.type === "fileShared") {
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata }) }) });
+        }
+        else if (event.type === "subFolderCreated" ||
+            event.type === "folderTrash" ||
+            event.type === "folderMoved" ||
+            event.type === "baseFolderCreated" ||
+            event.type === "folderRestored" ||
+            event.type === "folderColorChanged") {
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: await this.folderMetadata({ metadata: event.info.name }) }) });
+        }
+        else if (event.type === "folderShared") {
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: await this.folderMetadata({ metadata: event.info.name }) }) });
+        }
+        else if (event.type === "folderRenamed") {
+            const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
+                this.folderMetadata({ metadata: event.info.name }),
+                this.folderMetadata({ metadata: event.info.oldName })
+            ]);
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: decryptedMetadata, oldNameDecrypted: oldDecryptedMetadata }) });
+        }
+        return event;
+    }
 }
 exports.Decrypt = Decrypt;
 exports.default = Decrypt;

@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import type { CryptoConfig } from ".";
 import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types";
+import { type UserEvent } from "../api/v3/user/events";
 /**
  * Decrypt
  * @date 1/31/2024 - 6:36:57 PM
@@ -339,5 +340,17 @@ export declare class Decrypt {
         version: FileEncryptionVersion;
         outputFile?: string;
     }): Promise<string>;
+    /**
+     * Decrypt a user event.
+     *
+     * @public
+     * @async
+     * @param {{ event: UserEvent }} param0
+     * @param {UserEvent} param0.event
+     * @returns {Promise<UserEvent>}
+     */
+    event({ event }: {
+        event: UserEvent;
+    }): Promise<UserEvent>;
 }
 export default Decrypt;

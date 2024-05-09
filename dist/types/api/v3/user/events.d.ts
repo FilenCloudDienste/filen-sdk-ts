@@ -1,14 +1,178 @@
 import type APIClient from "../../client";
-export type UserEvent = {
+import { type FileMetadata, type FolderMetadata } from "../../../types";
+export type UserEventInfoBase = {
+    ip: string;
+    userAgent: string;
+};
+export type UserEventBase = {
     id: number;
-    info: {
-        ip: string;
-        userAgent: string;
-    };
     timestamp: number;
-    type: string;
     uuid: string;
 };
+export type UserEvent = UserEventBase & ({
+    type: "fileUploaded";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileVersioned";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileRestored";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "versionedFileRestored";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileMoved";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileRenamed";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+        oldMetadata: string;
+        oldMetadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileTrash";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileRm";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "fileShared";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+        receiverEmail: string;
+    };
+} | {
+    type: "fileLinkEdited";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "folderTrash";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "folderShared";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+        receiverEmail: string;
+    };
+} | {
+    type: "folderMoved";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "folderRenamed";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+        oldName: string;
+        oldNameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "subFolderCreated";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "baseFolderCreated";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "folderRestored";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "folderColorChanged";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "login";
+    info: UserEventInfoBase;
+} | {
+    type: "deleteVersioned";
+    info: UserEventInfoBase;
+} | {
+    type: "deleteAll";
+    info: UserEventInfoBase;
+} | {
+    type: "deleteUnfinished";
+    info: UserEventInfoBase;
+} | {
+    type: "trashEmptied";
+    info: UserEventInfoBase;
+} | {
+    type: "requestAccountDeletion";
+    info: UserEventInfoBase;
+} | {
+    type: "2faEnabled";
+    info: UserEventInfoBase;
+} | {
+    type: "2faDisabled";
+    info: UserEventInfoBase;
+} | {
+    type: "codeRedeemed";
+    info: UserEventInfoBase & {
+        code: string;
+    };
+} | {
+    type: "emailChanged";
+    info: UserEventInfoBase & {
+        email: string;
+    };
+} | {
+    type: "passwordChanged";
+    info: UserEventInfoBase;
+} | {
+    type: "removedSharedInItems";
+    info: UserEventInfoBase & {
+        count: number;
+        sharerEmail: string;
+    };
+} | {
+    type: "removedSharedOutItems";
+    info: UserEventInfoBase & {
+        count: number;
+        receiverEmail: string;
+    };
+});
 export type UserEventsResponse = {
     events: UserEvent[];
 };

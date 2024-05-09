@@ -235,16 +235,13 @@ export declare class User {
     }): Promise<void>;
     /**
      * Fetch events based on timestamp and filter. Timestamp can be used for pagination.
-     * @date 2/20/2024 - 7:09:13 AM
      *
      * @public
      * @async
-     * @param {{timestamp?: number, filter?: "all"}} param0
-     * @param {number} param0.timestamp
-     * @param {"all"} param0.filter
+     * @param {?{ timestamp?: number; filter?: "all" }} [params]
      * @returns {Promise<UserEvent[]>}
      */
-    events({ timestamp, filter }: {
+    events(params?: {
         timestamp?: number;
         filter?: "all";
     }): Promise<UserEvent[]>;

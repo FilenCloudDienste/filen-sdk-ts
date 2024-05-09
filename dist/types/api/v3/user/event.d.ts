@@ -1,11 +1,6 @@
 import type APIClient from "../../client";
-export type UserEventResponse = {
-    id: number;
-    uuid: string;
-    type: string;
-    info: unknown;
-    timestamp: number;
-};
+import { type UserEvent as UserEventType } from "./events";
+export type UserEventResponse = UserEventType;
 /**
  * UserEvent
  * @date 2/1/2024 - 8:16:35 PM

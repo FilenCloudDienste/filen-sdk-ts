@@ -12,6 +12,7 @@ import { pipeline } from "stream"
 import { promisify } from "util"
 import CryptoJS from "crypto-js"
 import { Semaphore } from "../semaphore"
+import { type UserEvent } from "../api/v3/user/events"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -1134,6 +1135,96 @@ export class Decrypt {
 		} finally {
 			this._semaphores.data.release()
 		}
+	}
+
+	/**
+	 * Decrypt a user event.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ event: UserEvent }} param0
+	 * @param {UserEvent} param0.event
+	 * @returns {Promise<UserEvent>}
+	 */
+	public async event({ event }: { event: UserEvent }): Promise<UserEvent> {
+		if (
+			event.type === "fileUploaded" ||
+			event.type === "versionedFileRestored" ||
+			event.type === "fileMoved" ||
+			event.type === "fileTrash" ||
+			event.type === "fileRm" ||
+			event.type === "fileRestored" ||
+			event.type === "fileLinkEdited"
+		) {
+			return {
+				...event,
+				info: {
+					...event.info,
+					metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata })
+				}
+			}
+		} else if (event.type === "fileRenamed") {
+			const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
+				this.fileMetadata({ metadata: event.info.metadata }),
+				this.fileMetadata({ metadata: event.info.oldMetadata })
+			])
+
+			return {
+				...event,
+				info: {
+					...event.info,
+					metadataDecrypted: decryptedMetadata,
+					oldMetadataDecrypted: oldDecryptedMetadata
+				}
+			}
+		} else if (event.type === "fileShared") {
+			return {
+				...event,
+				info: {
+					...event.info,
+					metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata })
+				}
+			}
+		} else if (
+			event.type === "subFolderCreated" ||
+			event.type === "folderTrash" ||
+			event.type === "folderMoved" ||
+			event.type === "baseFolderCreated" ||
+			event.type === "folderRestored" ||
+			event.type === "folderColorChanged"
+		) {
+			return {
+				...event,
+				info: {
+					...event.info,
+					nameDecrypted: await this.folderMetadata({ metadata: event.info.name })
+				}
+			}
+		} else if (event.type === "folderShared") {
+			return {
+				...event,
+				info: {
+					...event.info,
+					nameDecrypted: await this.folderMetadata({ metadata: event.info.name })
+				}
+			}
+		} else if (event.type === "folderRenamed") {
+			const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
+				this.folderMetadata({ metadata: event.info.name }),
+				this.folderMetadata({ metadata: event.info.oldName })
+			])
+
+			return {
+				...event,
+				info: {
+					...event.info,
+					nameDecrypted: decryptedMetadata,
+					oldNameDecrypted: oldDecryptedMetadata
+				}
+			}
+		}
+
+		return event
 	}
 }
 

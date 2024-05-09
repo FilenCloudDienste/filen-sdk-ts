@@ -312,7 +312,7 @@ export declare class FilenSDK {
             }) => Promise<import("./api/v3/user/events").UserEvent[]>;
             event: (params_0: {
                 uuid: string;
-            }) => Promise<import("./api/v3/user/event").UserEventResponse>;
+            }) => Promise<import("./api/v3/user/events").UserEvent>;
             sub: () => {
                 cancel: (params_0: {
                     uuid: string;
