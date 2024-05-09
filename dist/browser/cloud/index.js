@@ -1762,6 +1762,7 @@ export class Cloud {
                                 }, 10);
                                 return;
                             }
+                            const stats = await fs.stat(file);
                             if (index === firstChunk) {
                                 await fs.move(file, destinationPath, {
                                     overwrite: true
@@ -1775,6 +1776,9 @@ export class Cloud {
                                     recursive: true,
                                     retryDelay: 100
                                 });
+                            }
+                            if (onProgress) {
+                                onProgress(stats.size);
                             }
                             currentWriteIndex += 1;
                             resolve(index);
@@ -1803,12 +1807,14 @@ export class Cloud {
                                     throw new Error("Aborted");
                                 }
                                 const encryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.encrypted`);
-                                await this.api
-                                    .v3()
-                                    .file()
-                                    .download()
-                                    .chunk()
-                                    .local({ uuid, bucket, region, chunk: i, to: encryptedTmpChunkPath, abortSignal, onProgress });
+                                await this.api.v3().file().download().chunk().local({
+                                    uuid,
+                                    bucket,
+                                    region,
+                                    chunk: i,
+                                    to: encryptedTmpChunkPath,
+                                    abortSignal
+                                });
                                 if (pauseSignal && pauseSignal.isPaused()) {
                                     await waitForPause();
                                 }
@@ -1816,9 +1822,12 @@ export class Cloud {
                                     throw new Error("Aborted");
                                 }
                                 const decryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.decrypted`);
-                                await this.crypto
-                                    .decrypt()
-                                    .dataStream({ inputFile: encryptedTmpChunkPath, key, version, outputFile: decryptedTmpChunkPath });
+                                await this.crypto.decrypt().dataStream({
+                                    inputFile: encryptedTmpChunkPath,
+                                    key,
+                                    version,
+                                    outputFile: decryptedTmpChunkPath
+                                });
                                 await fs.rm(encryptedTmpChunkPath, {
                                     force: true,
                                     maxRetries: 60 * 10,
@@ -2048,6 +2057,9 @@ export class Cloud {
                                 await applyBackpressure({ controller });
                                 if (!writerStopped) {
                                     controller.enqueue(bufferToEnqueue);
+                                    if (onProgress) {
+                                        onProgress(bufferToEnqueue.byteLength);
+                                    }
                                 }
                             }
                             currentWriteIndex += 1;
@@ -2074,19 +2086,24 @@ export class Cloud {
                                         if (pauseSignal && pauseSignal.isPaused()) {
                                             await waitForPause();
                                         }
-                                        const encryptedBuffer = await api
-                                            .v3()
-                                            .file()
-                                            .download()
-                                            .chunk()
-                                            .buffer({ uuid, bucket, region, chunk: index, abortSignal, onProgress });
+                                        const encryptedBuffer = await api.v3().file().download().chunk().buffer({
+                                            uuid,
+                                            bucket,
+                                            region,
+                                            chunk: index,
+                                            abortSignal
+                                        });
                                         if (abortSignal && abortSignal.aborted) {
                                             throw new Error("Aborted");
                                         }
                                         if (pauseSignal && pauseSignal.isPaused()) {
                                             await waitForPause();
                                         }
-                                        const decryptedBuffer = await crypto.decrypt().data({ data: encryptedBuffer, key, version });
+                                        const decryptedBuffer = await crypto.decrypt().data({
+                                            data: encryptedBuffer,
+                                            key,
+                                            version
+                                        });
                                         write({ index, buffer: decryptedBuffer }).catch(err => {
                                             threadsSemaphore.release();
                                             writersSemaphore.release();
@@ -2468,7 +2485,10 @@ export class Cloud {
                                 reject(new Error("Aborted"));
                                 return;
                             }
-                            const encryptedChunkBuffer = await this.crypto.encrypt().data({ data: chunkBuffer, key });
+                            const encryptedChunkBuffer = await this.crypto.encrypt().data({
+                                data: chunkBuffer,
+                                key
+                            });
                             if (pauseSignal && pauseSignal.isPaused()) {
                                 await waitForPause();
                             }
@@ -2476,12 +2496,15 @@ export class Cloud {
                                 reject(new Error("Aborted"));
                                 return;
                             }
-                            const uploadResponse = await this.api
-                                .v3()
-                                .file()
-                                .upload()
-                                .chunk()
-                                .buffer({ uuid, index, parent, uploadKey, abortSignal, buffer: encryptedChunkBuffer, onProgress });
+                            const uploadResponse = await this.api.v3().file().upload().chunk().buffer({
+                                uuid,
+                                index,
+                                parent,
+                                uploadKey,
+                                abortSignal,
+                                buffer: encryptedChunkBuffer,
+                                onProgress
+                            });
                             bucket = uploadResponse.bucket;
                             region = uploadResponse.region;
                             done += 1;
@@ -2675,7 +2698,10 @@ export class Cloud {
                                 reject(new Error("Aborted"));
                                 return;
                             }
-                            const encryptedChunkBuffer = await this.crypto.encrypt().data({ data: chunkBuffer, key });
+                            const encryptedChunkBuffer = await this.crypto.encrypt().data({
+                                data: chunkBuffer,
+                                key
+                            });
                             if (pauseSignal && pauseSignal.isPaused()) {
                                 await waitForPause();
                             }
@@ -2683,12 +2709,15 @@ export class Cloud {
                                 reject(new Error("Aborted"));
                                 return;
                             }
-                            const uploadResponse = await this.api
-                                .v3()
-                                .file()
-                                .upload()
-                                .chunk()
-                                .buffer({ uuid, index, parent, uploadKey, abortSignal, buffer: encryptedChunkBuffer, onProgress });
+                            const uploadResponse = await this.api.v3().file().upload().chunk().buffer({
+                                uuid,
+                                index,
+                                parent,
+                                uploadKey,
+                                abortSignal,
+                                buffer: encryptedChunkBuffer,
+                                onProgress
+                            });
                             bucket = uploadResponse.bucket;
                             region = uploadResponse.region;
                             done += 1;
