@@ -954,7 +954,8 @@ export class Decrypt {
             event.type === "fileTrash" ||
             event.type === "fileRm" ||
             event.type === "fileRestored" ||
-            event.type === "fileLinkEdited") {
+            event.type === "fileLinkEdited" ||
+            event.type === "fileVersioned") {
             return {
                 ...event,
                 info: {

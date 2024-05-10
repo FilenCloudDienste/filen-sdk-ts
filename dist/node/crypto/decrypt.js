@@ -962,7 +962,8 @@ class Decrypt {
             event.type === "fileTrash" ||
             event.type === "fileRm" ||
             event.type === "fileRestored" ||
-            event.type === "fileLinkEdited") {
+            event.type === "fileLinkEdited" ||
+            event.type === "fileVersioned") {
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata }) }) });
         }
         else if (event.type === "fileRenamed") {
