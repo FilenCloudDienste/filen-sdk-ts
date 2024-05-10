@@ -172,6 +172,11 @@ export type UserEvent = UserEventBase & ({
         count: number;
         receiverEmail: string;
     };
+} | {
+    type: "folderLinkEdited";
+    info: UserEventInfoBase & {
+        linkUUID: string;
+    };
 });
 export type UserEventsResponse = {
     events: UserEvent[];

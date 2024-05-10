@@ -208,6 +208,12 @@ export type UserEvent = UserEventBase &
 					receiverEmail: string
 				}
 		  }
+		| {
+				type: "folderLinkEdited"
+				info: UserEventInfoBase & {
+					linkUUID: string
+				}
+		  }
 	)
 
 export type UserEventsResponse = {
