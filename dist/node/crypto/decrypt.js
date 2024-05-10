@@ -963,7 +963,8 @@ class Decrypt {
             event.type === "fileRm" ||
             event.type === "fileRestored" ||
             event.type === "fileLinkEdited" ||
-            event.type === "fileVersioned") {
+            event.type === "fileVersioned" ||
+            event.type === "deleteFilePermanently") {
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata }) }) });
         }
         else if (event.type === "fileRenamed") {
@@ -981,11 +982,19 @@ class Decrypt {
             event.type === "folderMoved" ||
             event.type === "baseFolderCreated" ||
             event.type === "folderRestored" ||
-            event.type === "folderColorChanged") {
+            event.type === "folderColorChanged" ||
+            event.type === "deleteFolderPermanently") {
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: await this.folderMetadata({ metadata: event.info.name }) }) });
         }
         else if (event.type === "folderShared") {
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: await this.folderMetadata({ metadata: event.info.name }) }) });
+        }
+        else if (event.type === "itemFavorite") {
+            const [folderDecrypted, fileDecrypted] = await Promise.all([
+                this.folderMetadata({ metadata: event.info.metadata }),
+                this.fileMetadata({ metadata: event.info.metadata })
+            ]);
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: fileDecrypted.name.length > 0 ? fileDecrypted : null, nameDecrypted: folderDecrypted.name.length > 0 ? folderDecrypted : null }) });
         }
         else if (event.type === "folderRenamed") {
             const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([

@@ -955,7 +955,8 @@ export class Decrypt {
             event.type === "fileRm" ||
             event.type === "fileRestored" ||
             event.type === "fileLinkEdited" ||
-            event.type === "fileVersioned") {
+            event.type === "fileVersioned" ||
+            event.type === "deleteFilePermanently") {
             return {
                 ...event,
                 info: {
@@ -992,7 +993,8 @@ export class Decrypt {
             event.type === "folderMoved" ||
             event.type === "baseFolderCreated" ||
             event.type === "folderRestored" ||
-            event.type === "folderColorChanged") {
+            event.type === "folderColorChanged" ||
+            event.type === "deleteFolderPermanently") {
             return {
                 ...event,
                 info: {
@@ -1007,6 +1009,20 @@ export class Decrypt {
                 info: {
                     ...event.info,
                     nameDecrypted: await this.folderMetadata({ metadata: event.info.name })
+                }
+            };
+        }
+        else if (event.type === "itemFavorite") {
+            const [folderDecrypted, fileDecrypted] = await Promise.all([
+                this.folderMetadata({ metadata: event.info.metadata }),
+                this.fileMetadata({ metadata: event.info.metadata })
+            ]);
+            return {
+                ...event,
+                info: {
+                    ...event.info,
+                    metadataDecrypted: fileDecrypted.name.length > 0 ? fileDecrypted : null,
+                    nameDecrypted: folderDecrypted.name.length > 0 ? folderDecrypted : null
                 }
             };
         }

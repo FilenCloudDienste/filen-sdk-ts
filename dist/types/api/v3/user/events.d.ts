@@ -177,6 +177,39 @@ export type UserEvent = UserEventBase & ({
     info: UserEventInfoBase & {
         linkUUID: string;
     };
+} | {
+    type: "itemFavorite";
+    info: UserEventInfoBase & {
+        value: 0 | 1;
+        metadata: string;
+        metadataDecrypted: FileMetadata | null;
+        nameDecrypted: FolderMetadata | null;
+    };
+} | {
+    type: "failedLogin";
+    info: UserEventInfoBase;
+} | {
+    type: "failedLogin";
+    info: UserEventInfoBase;
+} | {
+    type: "deleteFolderPermanently";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata | null;
+    };
+} | {
+    type: "deleteFilePermanently";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+    };
+} | {
+    type: "emailChangeAttempt";
+    info: UserEventBase & {
+        email: string;
+        newEmail: string;
+        oldEmail: string;
+    };
 });
 export type UserEventsResponse = {
     events: UserEvent[];
