@@ -189,13 +189,10 @@ export type UserEvent = UserEventBase & ({
     type: "failedLogin";
     info: UserEventInfoBase;
 } | {
-    type: "failedLogin";
-    info: UserEventInfoBase;
-} | {
     type: "deleteFolderPermanently";
     info: UserEventInfoBase & {
         name: string;
-        nameDecrypted: FolderMetadata | null;
+        nameDecrypted: FolderMetadata;
     };
 } | {
     type: "deleteFilePermanently";

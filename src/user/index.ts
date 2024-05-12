@@ -369,10 +369,7 @@ export class User {
 			.v3()
 			.user()
 			.events({
-				lastTimestamp:
-					params && params.timestamp
-						? parseInt(Math.floor(params.timestamp / 1000).toString())
-						: Math.floor(Date.now() / 1000) + 60,
+				lastTimestamp: params && params.timestamp ? params.timestamp : Math.floor(Date.now() / 1000) + 60,
 				filter: params && params.filter ? params.filter : "all"
 			})
 
