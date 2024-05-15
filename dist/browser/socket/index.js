@@ -38,8 +38,9 @@ export class Socket extends EventEmitter {
     connect({ apiKey }) {
         this.apiKey = apiKey;
         if (this.socket) {
-            return;
+            this.socket.disconnect();
         }
+        this.socket = null;
         this.socket = io(SOCKET_DEFAULTS.url, {
             path: "",
             reconnect: true,

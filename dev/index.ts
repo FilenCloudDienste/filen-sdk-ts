@@ -28,7 +28,9 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	console.log(await filen.user().events())
+	filen.socket.connect({ apiKey: config.apiKey })
+
+	filen.socket.on("socketEvent", e => console.log(e.type))
 }
 
 main()

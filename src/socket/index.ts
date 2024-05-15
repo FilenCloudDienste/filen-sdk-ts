@@ -390,9 +390,10 @@ export class Socket extends EventEmitter {
 		this.apiKey = apiKey
 
 		if (this.socket) {
-			return
+			this.socket.disconnect()
 		}
 
+		this.socket = null
 		this.socket = io(SOCKET_DEFAULTS.url, {
 			path: "",
 			reconnect: true,

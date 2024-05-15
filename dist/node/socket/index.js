@@ -44,8 +44,9 @@ class Socket extends events_1.EventEmitter {
     connect({ apiKey }) {
         this.apiKey = apiKey;
         if (this.socket) {
-            return;
+            this.socket.disconnect();
         }
+        this.socket = null;
         this.socket = (0, socket_io_client_1.default)(exports.SOCKET_DEFAULTS.url, {
             path: "",
             reconnect: true,
