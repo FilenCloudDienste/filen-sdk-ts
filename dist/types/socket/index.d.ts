@@ -185,6 +185,20 @@ export interface SocketChatConversationNameEdited {
     uuid: string;
     name: string;
 }
+export interface SocketContactRequestReceived {
+    uuid: string;
+    senderId: number;
+    senderEmail: string;
+    senderAvatar: string | null;
+    senderNickName: string | null;
+    sentTimestamp: number;
+}
+export interface SocketItemFavorite {
+    uuid: string;
+    type: "file" | "folder";
+    value: 0 | 1;
+    metadata: string;
+}
 export type SocketEvent = {
     type: "newEvent";
     data: SocketNewEvent;
@@ -283,6 +297,12 @@ export type SocketEvent = {
 } | {
     type: "chatConversationNameEdited";
     data: SocketChatConversationNameEdited;
+} | {
+    type: "contactRequestReceived";
+    data: SocketContactRequestReceived;
+} | {
+    type: "itemFavorite";
+    data: SocketItemFavorite;
 };
 /**
  * Socket

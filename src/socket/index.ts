@@ -219,6 +219,22 @@ export interface SocketChatConversationNameEdited {
 	name: string
 }
 
+export interface SocketContactRequestReceived {
+	uuid: string
+	senderId: number
+	senderEmail: string
+	senderAvatar: string | null
+	senderNickName: string | null
+	sentTimestamp: number
+}
+
+export interface SocketItemFavorite {
+	uuid: string
+	type: "file" | "folder"
+	value: 0 | 1
+	metadata: string
+}
+
 export type SocketEvent =
 	| {
 			type: "newEvent"
@@ -351,6 +367,14 @@ export type SocketEvent =
 			type: "chatConversationNameEdited"
 			data: SocketChatConversationNameEdited
 	  }
+	| {
+			type: "contactRequestReceived"
+			data: SocketContactRequestReceived
+	  }
+	| {
+			type: "itemFavorite"
+			data: SocketItemFavorite
+	  }
 
 /**
  * Socket
@@ -451,7 +475,21 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("newEvent", (data: SocketNewEvent) => {
+			this.emit("socketEvent", {
+				type: "newEvent",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("file-rename", (data: SocketFileRename) => {
+			this.emit("socketEvent", {
+				type: "fileRename",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("fileRename", (data: SocketFileRename) => {
 			this.emit("socketEvent", {
 				type: "fileRename",
 				data
@@ -465,7 +503,21 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("fileArchiveRestored", (data: SocketFileArchiveRestored) => {
+			this.emit("socketEvent", {
+				type: "fileArchiveRestored",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("file-new", (data: SocketFileNew) => {
+			this.emit("socketEvent", {
+				type: "fileNew",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("fileNew", (data: SocketFileNew) => {
 			this.emit("socketEvent", {
 				type: "fileNew",
 				data
@@ -479,7 +531,21 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("fileMove", (data: SocketFileMove) => {
+			this.emit("socketEvent", {
+				type: "fileMove",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("file-trash", (data: SocketFileTrash) => {
+			this.emit("socketEvent", {
+				type: "fileTrash",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("fileTrash", (data: SocketFileTrash) => {
 			this.emit("socketEvent", {
 				type: "fileTrash",
 				data
@@ -493,7 +559,21 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("fileArchived", (data: SocketFileArchived) => {
+			this.emit("socketEvent", {
+				type: "fileArchived",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("folder-rename", (data: SocketFolderRename) => {
+			this.emit("socketEvent", {
+				type: "folderRename",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("folderRename", (data: SocketFolderRename) => {
 			this.emit("socketEvent", {
 				type: "folderRename",
 				data
@@ -507,7 +587,21 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
+			this.emit("socketEvent", {
+				type: "folderTrash",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("folder-move", (data: SocketFolderMove) => {
+			this.emit("socketEvent", {
+				type: "folderMove",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("folderMove", (data: SocketFolderMove) => {
 			this.emit("socketEvent", {
 				type: "folderMove",
 				data
@@ -521,7 +615,21 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("folderSubCreated", (data: SocketFolderSubCreated) => {
+			this.emit("socketEvent", {
+				type: "folderSubCreated",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("folder-restore", (data: SocketFolderRestore) => {
+			this.emit("socketEvent", {
+				type: "folderRestore",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("folderRestore", (data: SocketFolderRestore) => {
 			this.emit("socketEvent", {
 				type: "folderRestore",
 				data
@@ -535,7 +643,20 @@ export class Socket extends EventEmitter {
 			} as SocketEvent)
 		})
 
+		this.socket.on("folderColorChanged", (data: SocketFolderColorChanged) => {
+			this.emit("socketEvent", {
+				type: "folderColorChanged",
+				data
+			} as SocketEvent)
+		})
+
 		this.socket.on("trash-empty", () => {
+			this.emit("socketEvent", {
+				type: "trashEmpty"
+			} as SocketEvent)
+		})
+
+		this.socket.on("trashEmpty", () => {
 			this.emit("socketEvent", {
 				type: "trashEmpty"
 			} as SocketEvent)
@@ -649,6 +770,48 @@ export class Socket extends EventEmitter {
 		this.socket.on("chatConversationDeleted", (data: SocketChatConversationDeleted) => {
 			this.emit("socketEvent", {
 				type: "chatConversationDeleted",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("chatConversationParticipantLeft", (data: SocketChatConversationParticipantLeft) => {
+			this.emit("socketEvent", {
+				type: "chatConversationParticipantLeft",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("chatConversationsNew", (data: SocketChatConversationsNew) => {
+			this.emit("socketEvent", {
+				type: "chatConversationsNew",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("file-restore", (data: SocketFileRestore) => {
+			this.emit("socketEvent", {
+				type: "fileRestore",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("fileRestore", (data: SocketFileRestore) => {
+			this.emit("socketEvent", {
+				type: "fileRestore",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("contactRequestReceived", (data: SocketContactRequestReceived) => {
+			this.emit("socketEvent", {
+				type: "contactRequestReceived",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("item-favorite", (data: SocketItemFavorite) => {
+			this.emit("socketEvent", {
+				type: "itemFavorite",
 				data
 			} as SocketEvent)
 		})

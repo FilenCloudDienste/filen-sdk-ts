@@ -86,7 +86,19 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("newEvent", (data) => {
+            this.emit("socketEvent", {
+                type: "newEvent",
+                data
+            });
+        });
         this.socket.on("file-rename", (data) => {
+            this.emit("socketEvent", {
+                type: "fileRename",
+                data
+            });
+        });
+        this.socket.on("fileRename", (data) => {
             this.emit("socketEvent", {
                 type: "fileRename",
                 data
@@ -98,7 +110,19 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("fileArchiveRestored", (data) => {
+            this.emit("socketEvent", {
+                type: "fileArchiveRestored",
+                data
+            });
+        });
         this.socket.on("file-new", (data) => {
+            this.emit("socketEvent", {
+                type: "fileNew",
+                data
+            });
+        });
+        this.socket.on("fileNew", (data) => {
             this.emit("socketEvent", {
                 type: "fileNew",
                 data
@@ -110,7 +134,19 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("fileMove", (data) => {
+            this.emit("socketEvent", {
+                type: "fileMove",
+                data
+            });
+        });
         this.socket.on("file-trash", (data) => {
+            this.emit("socketEvent", {
+                type: "fileTrash",
+                data
+            });
+        });
+        this.socket.on("fileTrash", (data) => {
             this.emit("socketEvent", {
                 type: "fileTrash",
                 data
@@ -122,7 +158,19 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("fileArchived", (data) => {
+            this.emit("socketEvent", {
+                type: "fileArchived",
+                data
+            });
+        });
         this.socket.on("folder-rename", (data) => {
+            this.emit("socketEvent", {
+                type: "folderRename",
+                data
+            });
+        });
+        this.socket.on("folderRename", (data) => {
             this.emit("socketEvent", {
                 type: "folderRename",
                 data
@@ -134,7 +182,19 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("folderTrash", (data) => {
+            this.emit("socketEvent", {
+                type: "folderTrash",
+                data
+            });
+        });
         this.socket.on("folder-move", (data) => {
+            this.emit("socketEvent", {
+                type: "folderMove",
+                data
+            });
+        });
+        this.socket.on("folderMove", (data) => {
             this.emit("socketEvent", {
                 type: "folderMove",
                 data
@@ -146,7 +206,19 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("folderSubCreated", (data) => {
+            this.emit("socketEvent", {
+                type: "folderSubCreated",
+                data
+            });
+        });
         this.socket.on("folder-restore", (data) => {
+            this.emit("socketEvent", {
+                type: "folderRestore",
+                data
+            });
+        });
+        this.socket.on("folderRestore", (data) => {
             this.emit("socketEvent", {
                 type: "folderRestore",
                 data
@@ -158,7 +230,18 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("folderColorChanged", (data) => {
+            this.emit("socketEvent", {
+                type: "folderColorChanged",
+                data
+            });
+        });
         this.socket.on("trash-empty", () => {
+            this.emit("socketEvent", {
+                type: "trashEmpty"
+            });
+        });
+        this.socket.on("trashEmpty", () => {
             this.emit("socketEvent", {
                 type: "trashEmpty"
             });
@@ -256,6 +339,42 @@ export class Socket extends EventEmitter {
         this.socket.on("chatConversationDeleted", (data) => {
             this.emit("socketEvent", {
                 type: "chatConversationDeleted",
+                data
+            });
+        });
+        this.socket.on("chatConversationParticipantLeft", (data) => {
+            this.emit("socketEvent", {
+                type: "chatConversationParticipantLeft",
+                data
+            });
+        });
+        this.socket.on("chatConversationsNew", (data) => {
+            this.emit("socketEvent", {
+                type: "chatConversationsNew",
+                data
+            });
+        });
+        this.socket.on("file-restore", (data) => {
+            this.emit("socketEvent", {
+                type: "fileRestore",
+                data
+            });
+        });
+        this.socket.on("fileRestore", (data) => {
+            this.emit("socketEvent", {
+                type: "fileRestore",
+                data
+            });
+        });
+        this.socket.on("contactRequestReceived", (data) => {
+            this.emit("socketEvent", {
+                type: "contactRequestReceived",
+                data
+            });
+        });
+        this.socket.on("item-favorite", (data) => {
+            this.emit("socketEvent", {
+                type: "itemFavorite",
                 data
             });
         });
