@@ -645,6 +645,13 @@ export class Socket extends EventEmitter {
 				data
 			} as SocketEvent)
 		})
+
+		this.socket.on("chatConversationDeleted", (data: SocketChatConversationDeleted) => {
+			this.emit("socketEvent", {
+				type: "chatConversationDeleted",
+				data
+			} as SocketEvent)
+		})
 	}
 
 	/**
