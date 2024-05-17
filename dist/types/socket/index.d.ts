@@ -199,6 +199,16 @@ export interface SocketItemFavorite {
     value: 0 | 1;
     metadata: string;
 }
+export interface SocketChatConversationParticipantNew {
+    conversation: string;
+    userId: number;
+    email: string;
+    avatar: string | null;
+    nickName: string | null;
+    metadata: string;
+    permissionsAdd: boolean;
+    addedTimestamp: number;
+}
 export type SocketEvent = {
     type: "newEvent";
     data: SocketNewEvent;
@@ -303,6 +313,9 @@ export type SocketEvent = {
 } | {
     type: "itemFavorite";
     data: SocketItemFavorite;
+} | {
+    type: "chatConversationParticipantNew";
+    data: SocketChatConversationParticipantNew;
 };
 /**
  * Socket

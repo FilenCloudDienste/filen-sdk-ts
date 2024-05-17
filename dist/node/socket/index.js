@@ -387,6 +387,12 @@ class Socket extends events_1.EventEmitter {
                 data
             });
         });
+        this.socket.on("chatConversationParticipantNew", (data) => {
+            this.emit("socketEvent", {
+                type: "chatConversationParticipantNew",
+                data
+            });
+        });
     }
     /**
      * Disconnect from the realtime socket gateway.

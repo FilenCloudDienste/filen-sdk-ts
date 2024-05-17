@@ -235,6 +235,17 @@ export interface SocketItemFavorite {
 	metadata: string
 }
 
+export interface SocketChatConversationParticipantNew {
+	conversation: string
+	userId: number
+	email: string
+	avatar: string | null
+	nickName: string | null
+	metadata: string
+	permissionsAdd: boolean
+	addedTimestamp: number
+}
+
 export type SocketEvent =
 	| {
 			type: "newEvent"
@@ -374,6 +385,10 @@ export type SocketEvent =
 	| {
 			type: "itemFavorite"
 			data: SocketItemFavorite
+	  }
+	| {
+			type: "chatConversationParticipantNew"
+			data: SocketChatConversationParticipantNew
 	  }
 
 /**
@@ -812,6 +827,13 @@ export class Socket extends EventEmitter {
 		this.socket.on("item-favorite", (data: SocketItemFavorite) => {
 			this.emit("socketEvent", {
 				type: "itemFavorite",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("chatConversationParticipantNew", (data: SocketChatConversationParticipantNew) => {
+			this.emit("socketEvent", {
+				type: "chatConversationParticipantNew",
 				data
 			} as SocketEvent)
 		})
