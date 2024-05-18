@@ -9,7 +9,9 @@ export type FileVersion = {
     uuid: string;
     version: number;
 };
-export type FileVersionsResponse = FileVersion[];
+export type FileVersionsResponse = {
+    versions: FileVersion[];
+};
 /**
  * FileVersions
  * @date 2/1/2024 - 8:16:35 PM

@@ -11,7 +11,9 @@ export type FileVersion = {
 	version: number
 }
 
-export type FileVersionsResponse = FileVersion[]
+export type FileVersionsResponse = {
+	versions: FileVersion[]
+}
 
 /**
  * FileVersions
