@@ -18,7 +18,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FilenSDK = void 0;
-require("./reactNative");
 const api_1 = __importDefault(require("./api"));
 const crypto_1 = __importDefault(require("./crypto"));
 const utils_1 = __importDefault(require("./utils"));

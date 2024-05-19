@@ -1,6 +1,5 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import "./reactNative";
 import type { AuthVersion } from "./types";
 import Crypto from "./crypto";
 import FS from "./fs";
@@ -165,14 +164,6 @@ export declare class FilenSDK {
                 }) => Promise<void>;
                 edit: (params_0: {
                     uuid: string;
-                    /**
-                     * Creates an instance of FilenSDK.
-                     * @date 2/21/2024 - 8:58:43 AM
-                     *
-                     * @constructor
-                     * @public
-                     * @param {?FilenSDKConfig} [params]
-                     */
                     expiration: import("./types").PublicLinkExpiration;
                     password: string;
                     downloadBtn: boolean;
@@ -363,14 +354,6 @@ export declare class FilenSDK {
                     apiKey?: string | undefined;
                 }) => Promise<void>;
                 info: (params_0: {
-                    /**
-                     * FilenSDK
-                     * @date 2/1/2024 - 2:45:02 AM
-                     *
-                     * @export
-                     * @class FilenSDK
-                     * @typedef {FilenSDK}
-                     */
                     apiKey?: string | undefined;
                 }) => Promise<import("./api/v3/user/keyPair/info").UserKeyPairInfoResponse>;
             };
@@ -417,40 +400,16 @@ export declare class FilenSDK {
                 uuid: string;
             }) => Promise<import("./api/v3/item/linked").ItemLinkedResponse>;
             linkedRename: (params_0: {
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 uuid: string;
                 linkUUID: string;
                 metadata: string;
             }) => Promise<void>;
             sharedRename: (params_0: {
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 uuid: string;
                 receiverId: number;
                 metadata: string;
             }) => Promise<void>;
             favorite: (params_0: {
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 uuid: string;
                 type: "file" | "folder";
                 favorite: boolean;
@@ -704,14 +663,7 @@ export declare class FilenSDK {
             }) => Promise<void>;
             participantsRemove: (params_0: {
                 uuid: string;
-                userId: number; /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
+                userId: number;
             }) => Promise<void>;
             participantsAdd: (params_0: {
                 uuid: string;

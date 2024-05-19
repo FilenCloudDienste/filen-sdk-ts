@@ -37,9 +37,6 @@ async function generateRandomString({ length }) {
         const randomNumbers = Array.from(array).map(x => x % chars.length);
         return randomNumbers.map(x => chars[x]).join("");
     }
-    else if (constants_1.environment === "reactNative") {
-        return await global.nodeThread.generateRandomString({ charLength: length });
-    }
     throw new Error(`crypto.utils.generateRandomString not implemented for ${constants_1.environment} environment`);
 }
 exports.generateRandomString = generateRandomString;
@@ -88,9 +85,6 @@ async function deriveKeyFromPassword({ password, salt, iterations, hash, bitLeng
         const key = returnHex ? Buffer.from(bits).toString("hex") : Buffer.from(bits);
         return key;
     }
-    else if (constants_1.environment === "reactNative") {
-        return (await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex }));
-    }
     throw new Error(`crypto.utils.deriveKeyFromPassword not implemented for ${constants_1.environment} environment`);
 }
 exports.deriveKeyFromPassword = deriveKeyFromPassword;
@@ -113,9 +107,6 @@ async function hashFn({ input }) {
     }
     else if (constants_1.environment === "browser") {
         return crypto_api_v1_1.default.hash("sha1", crypto_api_v1_1.default.hash("sha512", input));
-    }
-    else if (constants_1.environment === "reactNative") {
-        return await global.nodeThread.hashFn({ string: input });
     }
     throw new Error(`crypto.utils.hashFn not implemented for ${constants_1.environment} environment`);
 }
@@ -170,9 +161,6 @@ async function hashPassword({ password }) {
         return (crypto_api_v1_1.default.hash("sha512", crypto_api_v1_1.default.hash("sha384", crypto_api_v1_1.default.hash("sha256", crypto_api_v1_1.default.hash("sha1", password)))) +
             crypto_api_v1_1.default.hash("sha512", crypto_api_v1_1.default.hash("md5", crypto_api_v1_1.default.hash("md4", crypto_api_v1_1.default.hash("md2", password)))));
     }
-    else if (constants_1.environment === "reactNative") {
-        return await global.nodeThread.hashPassword({ password });
-    }
     throw new Error(`crypto.utils.hashPassword not implemented for ${constants_1.environment} environment`);
 }
 exports.hashPassword = hashPassword;
@@ -211,9 +199,6 @@ async function generatePasswordAndMasterKeyBasedOnAuthVersion({ rawPassword, aut
         }
         else if (constants_1.environment === "browser") {
             derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(derivedPassword))).toString("hex");
-        }
-        else if (constants_1.environment === "reactNative") {
-            derivedPassword = crypto_api_v1_1.default.hash("sha512", derivedPassword);
         }
         else {
             throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${constants_1.environment} environment`);
@@ -432,9 +417,6 @@ async function generateKeyPair() {
             publicKey: Buffer.from(publicKey).toString("base64"),
             privateKey: Buffer.from(privateKey).toString("base64")
         };
-    }
-    else if (constants_1.environment === "reactNative") {
-        return await global.nodeThread.generateKeypair();
     }
     throw new Error(`crypto.utils.generateKeyPair not implemented for ${constants_1.environment} environment`);
 }

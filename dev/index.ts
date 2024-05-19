@@ -28,9 +28,7 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	filen.socket.connect({ apiKey: config.apiKey })
-
-	filen.socket.on("socketEvent", e => console.log(e.type))
+	console.log(await filen.notes().history({ uuid: "2d103b43-5f55-4c35-84cf-c5b2c1a0ecc0" }))
 }
 
 main()

@@ -7,8 +7,7 @@ const env = {
 		(typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
 		// @ts-expect-error WorkerEnv's are not typed
 		(typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope),
-	isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null,
-	isReactNative: typeof global.nodeThread !== "undefined" && global.nodeThread !== null
+	isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null
 } as const
 
 export const environment: Environment = env.isBrowser ? "browser" : "node"

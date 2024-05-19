@@ -56,49 +56,41 @@ class Decrypt {
     async metadata({ metadata, key }) {
         await this._semaphores.metadata.acquire();
         try {
-            if (constants_1.environment === "reactNative") {
-                return await globalThis.nodeThread.decryptMetadata({ data: metadata, key });
+            const sliced = metadata.slice(0, 8);
+            if (sliced === "U2FsdGVk") {
+                // Old and deprecated, not in use anymore, just here for backwards compatibility
+                return crypto_js_1.default.AES.decrypt(metadata, key).toString(crypto_js_1.default.enc.Utf8);
             }
             else {
-                const sliced = metadata.slice(0, 8);
-                if (sliced === "U2FsdGVk") {
-                    // Old and deprecated, not in use anymore, just here for backwards compatibility
-                    return crypto_js_1.default.AES.decrypt(metadata, key).toString(crypto_js_1.default.enc.Utf8);
-                }
-                else {
-                    const version = metadata.slice(0, 3);
-                    if (version === "002") {
-                        const keyBuffer = await (0, utils_1.deriveKeyFromPassword)({
-                            password: key,
-                            salt: key,
-                            iterations: 1,
-                            hash: "sha512",
-                            bitLength: 256,
-                            returnHex: false
-                        });
-                        const ivBuffer = Buffer.from(metadata.slice(3, 15), "utf-8");
-                        const encrypted = Buffer.from(metadata.slice(15), "base64");
-                        if (constants_1.environment === "node") {
-                            const authTag = encrypted.subarray(-16);
-                            const cipherText = encrypted.subarray(0, encrypted.byteLength - 16);
-                            const decipher = crypto_1.default.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer);
-                            decipher.setAuthTag(authTag);
-                            return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8");
-                        }
-                        else if (constants_1.environment === "browser") {
-                            const decrypted = await globalThis.crypto.subtle.decrypt({
-                                name: "AES-GCM",
-                                iv: ivBuffer
-                            }, await (0, utils_1.importRawKey)({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }), encrypted);
-                            return Buffer.from(decrypted).toString("utf-8");
-                        }
-                        else if (constants_1.environment === "reactNative") {
-                            return await global.nodeThread.decryptMetadata({ data: metadata, key });
-                        }
-                        throw new Error(`crypto.decrypt.metadata is not implemented for ${constants_1.environment} environment`);
+                const version = metadata.slice(0, 3);
+                if (version === "002") {
+                    const keyBuffer = await (0, utils_1.deriveKeyFromPassword)({
+                        password: key,
+                        salt: key,
+                        iterations: 1,
+                        hash: "sha512",
+                        bitLength: 256,
+                        returnHex: false
+                    });
+                    const ivBuffer = Buffer.from(metadata.slice(3, 15), "utf-8");
+                    const encrypted = Buffer.from(metadata.slice(15), "base64");
+                    if (constants_1.environment === "node") {
+                        const authTag = encrypted.subarray(-16);
+                        const cipherText = encrypted.subarray(0, encrypted.byteLength - 16);
+                        const decipher = crypto_1.default.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer);
+                        decipher.setAuthTag(authTag);
+                        return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8");
                     }
-                    throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`);
+                    else if (constants_1.environment === "browser") {
+                        const decrypted = await globalThis.crypto.subtle.decrypt({
+                            name: "AES-GCM",
+                            iv: ivBuffer
+                        }, await (0, utils_1.importRawKey)({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }), encrypted);
+                        return Buffer.from(decrypted).toString("utf-8");
+                    }
+                    throw new Error(`crypto.decrypt.metadata is not implemented for ${constants_1.environment} environment`);
                 }
+                throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`);
             }
         }
         finally {
@@ -134,9 +126,6 @@ class Decrypt {
                     name: "RSA-OAEP"
                 }, importedPrivateKey, Buffer.from(metadata, "base64"));
                 return this.textDecoder.decode(decrypted);
-            }
-            else if (constants_1.environment === "reactNative") {
-                return await global.nodeThread.decryptMetadataPrivateKey({ data: metadata, privateKey });
             }
             throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${constants_1.environment} environment`);
         }
@@ -792,9 +781,6 @@ class Decrypt {
                     }, await (0, utils_1.importRawKey)({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), encData);
                     return Buffer.from(decrypted);
                 }
-            }
-            else if (constants_1.environment === "reactNative") {
-                return Buffer.from(await global.nodeThread.decryptData({ base64: Buffer.from(data).toString("base64"), key, version }));
             }
             throw new Error(`crypto.decrypt.data not implemented for ${constants_1.environment} environment`);
         }

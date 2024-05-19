@@ -38,8 +38,6 @@ export async function generateRandomString({ length }: { length: number }): Prom
 		const randomNumbers = Array.from(array).map(x => x % chars.length)
 
 		return randomNumbers.map(x => chars[x]).join("")
-	} else if (environment === "reactNative") {
-		return await global.nodeThread.generateRandomString({ charLength: length })
 	}
 
 	throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`)
@@ -133,8 +131,6 @@ export async function deriveKeyFromPassword({
 		const key = returnHex ? Buffer.from(bits).toString("hex") : Buffer.from(bits)
 
 		return key
-	} else if (environment === "reactNative") {
-		return (await global.nodeThread.deriveKeyFromPassword({ password, salt, iterations, hash, bitLength, returnHex })) as Buffer
 	}
 
 	throw new Error(`crypto.utils.deriveKeyFromPassword not implemented for ${environment} environment`)
@@ -158,8 +154,6 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
 			.digest("hex")
 	} else if (environment === "browser") {
 		return CryptoAPI.hash("sha1", CryptoAPI.hash("sha512", input))
-	} else if (environment === "reactNative") {
-		return await global.nodeThread.hashFn({ string: input })
 	}
 
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
@@ -224,8 +218,6 @@ export async function hashPassword({ password }: { password: string }): Promise<
 			CryptoAPI.hash("sha512", CryptoAPI.hash("sha384", CryptoAPI.hash("sha256", CryptoAPI.hash("sha1", password)))) +
 			CryptoAPI.hash("sha512", CryptoAPI.hash("md5", CryptoAPI.hash("md4", CryptoAPI.hash("md2", password))))
 		)
-	} else if (environment === "reactNative") {
-		return await global.nodeThread.hashPassword({ password })
 	}
 
 	throw new Error(`crypto.utils.hashPassword not implemented for ${environment} environment`)
@@ -276,8 +268,6 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(derivedPassword))).toString(
 				"hex"
 			)
-		} else if (environment === "reactNative") {
-			derivedPassword = CryptoAPI.hash("sha512", derivedPassword)
 		} else {
 			throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${environment} environment`)
 		}
@@ -580,8 +570,6 @@ export async function generateKeyPair(): Promise<{ publicKey: string; privateKey
 			publicKey: Buffer.from(publicKey).toString("base64"),
 			privateKey: Buffer.from(privateKey).toString("base64")
 		}
-	} else if (environment === "reactNative") {
-		return await global.nodeThread.generateKeypair()
 	}
 
 	throw new Error(`crypto.utils.generateKeyPair not implemented for ${environment} environment`)

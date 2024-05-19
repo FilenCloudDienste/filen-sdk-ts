@@ -53,9 +53,6 @@ class Encrypt {
         await this._semaphores.metadata.acquire();
         try {
             const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
-            if (constants_1.environment === "reactNative") {
-                return await global.nodeThread.encryptMetadata({ data: metadata, key: keyToUse });
-            }
             const iv = await (0, utils_1.generateRandomString)({ length: 12 });
             const ivBuffer = this.textEncoder.encode(iv);
             if (constants_1.environment === "node") {
@@ -93,9 +90,6 @@ class Encrypt {
                 }, await (0, utils_1.importRawKey)({ key: derivedKey, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), dataBuffer);
                 return `002${iv}${Buffer.from(encrypted).toString("base64")}`;
             }
-            else if (constants_1.environment === "reactNative") {
-                return await global.nodeThread.encryptMetadata({ data: metadata, key: keyToUse });
-            }
             throw new Error(`crypto.encrypt.metadata not implemented for ${constants_1.environment} environment`);
         }
         finally {
@@ -131,9 +125,6 @@ class Encrypt {
                     name: "RSA-OAEP"
                 }, importedPublicKey, this.textEncoder.encode(metadata));
                 return Buffer.from(encrypted).toString("base64");
-            }
-            else if (constants_1.environment === "reactNative") {
-                return await global.nodeThread.encryptMetadataPublicKey({ data: metadata, publicKey });
             }
             throw new Error(`crypto.encrypt.metadataPublic not implemented for ${constants_1.environment} environment`);
         }
@@ -255,9 +246,6 @@ class Encrypt {
                     iv: this.textEncoder.encode(iv)
                 }, await (0, utils_1.importRawKey)({ key: Buffer.from(key, "utf-8"), algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), data);
                 return Buffer.concat([this.textEncoder.encode(iv), new Uint8Array(encrypted)]);
-            }
-            else if (constants_1.environment === "reactNative") {
-                return Buffer.from(await global.nodeThread.encryptData({ base64: Buffer.from(data).toString("base64"), key }));
             }
             throw new Error(`crypto.decrypt.data not implemented for ${constants_1.environment} environment`);
         }

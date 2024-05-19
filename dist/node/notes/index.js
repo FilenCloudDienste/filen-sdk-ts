@@ -529,6 +529,9 @@ class Notes {
         const notesHistory = [];
         const promises = [];
         for (const noteHistory of _history) {
+            if (noteHistory.content.length === 0 || noteHistory.preview.length === 0) {
+                continue;
+            }
             promises.push(new Promise((resolve, reject) => {
                 this._semaphores.list
                     .acquire()

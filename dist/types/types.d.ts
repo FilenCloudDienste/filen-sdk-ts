@@ -1,6 +1,6 @@
 export type AuthVersion = 1 | 2;
 export type FileEncryptionVersion = 1 | 2;
-export type Environment = "node" | "reactNative" | "browser";
+export type Environment = "node" | "browser";
 export type FileMetadata = {
     name: string;
     size: number;

@@ -54,9 +54,6 @@ export async function uuidv4() {
     if (environment === "node") {
         return nodeCrypto.randomUUID();
     }
-    if (environment === "reactNative") {
-        return await global.nodeThread.uuidv4();
-    }
     return _uuidv4();
 }
 /**

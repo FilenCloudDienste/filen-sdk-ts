@@ -61,10 +61,6 @@ export async function uuidv4(): Promise<string> {
 		return nodeCrypto.randomUUID()
 	}
 
-	if (environment === "reactNative") {
-		return await global.nodeThread.uuidv4()
-	}
-
 	return _uuidv4()
 }
 

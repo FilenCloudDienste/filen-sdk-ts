@@ -1,4 +1,3 @@
-import "./reactNative";
 import API from "./api";
 import Crypto from "./crypto";
 import utils from "./utils";

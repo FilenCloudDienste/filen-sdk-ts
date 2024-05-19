@@ -55,11 +55,6 @@ export class Encrypt {
 
 		try {
 			const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1]
-
-			if (environment === "reactNative") {
-				return await global.nodeThread.encryptMetadata({ data: metadata, key: keyToUse })
-			}
-
 			const iv = await generateRandomString({ length: 12 })
 			const ivBuffer = this.textEncoder.encode(iv)
 
@@ -102,8 +97,6 @@ export class Encrypt {
 				)
 
 				return `002${iv}${Buffer.from(encrypted).toString("base64")}`
-			} else if (environment === "reactNative") {
-				return await global.nodeThread.encryptMetadata({ data: metadata, key: keyToUse })
 			}
 
 			throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`)
@@ -150,8 +143,6 @@ export class Encrypt {
 				)
 
 				return Buffer.from(encrypted).toString("base64")
-			} else if (environment === "reactNative") {
-				return await global.nodeThread.encryptMetadataPublicKey({ data: metadata, publicKey })
 			}
 
 			throw new Error(`crypto.encrypt.metadataPublic not implemented for ${environment} environment`)
@@ -288,8 +279,6 @@ export class Encrypt {
 				)
 
 				return Buffer.concat([this.textEncoder.encode(iv), new Uint8Array(encrypted)])
-			} else if (environment === "reactNative") {
-				return Buffer.from(await global.nodeThread.encryptData({ base64: Buffer.from(data).toString("base64"), key }))
 			}
 
 			throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`)

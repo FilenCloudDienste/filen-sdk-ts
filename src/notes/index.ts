@@ -652,6 +652,10 @@ export class Notes {
 		const promises: Promise<void>[] = []
 
 		for (const noteHistory of _history) {
+			if (noteHistory.content.length === 0 || noteHistory.preview.length === 0) {
+				continue
+			}
+
 			promises.push(
 				new Promise<void>((resolve, reject) => {
 					this._semaphores.list
