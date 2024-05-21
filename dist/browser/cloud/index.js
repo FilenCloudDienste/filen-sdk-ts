@@ -1202,6 +1202,19 @@ export class Cloud {
         return await this.api.v3().file().link().password({ uuid });
     }
     /**
+     * Fetch info of a file public link.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string; password: string; }} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.password
+     * @returns {Promise<FileLinkInfoResponse>}
+     */
+    async filePublicLinkInfo({ uuid, password }) {
+        return await this.api.v3().file().link().info({ uuid, password });
+    }
+    /**
      * Fetch info about a directory public link.
      *
      * @public

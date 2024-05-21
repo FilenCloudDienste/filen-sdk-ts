@@ -10,6 +10,7 @@ import { type DirLinkStatusResponse } from "../api/v3/dir/link/status";
 import { type FileLinkStatusResponse } from "../api/v3/file/link/status";
 import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
 import { type DirLinkInfoResponse } from "../api/v3/dir/link/info";
+import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -554,6 +555,20 @@ export declare class Cloud {
     filePublicLinkHasPassword({ uuid }: {
         uuid: string;
     }): Promise<FileLinkPasswordResponse>;
+    /**
+     * Fetch info of a file public link.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string; password: string; }} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.password
+     * @returns {Promise<FileLinkInfoResponse>}
+     */
+    filePublicLinkInfo({ uuid, password }: {
+        uuid: string;
+        password: string;
+    }): Promise<FileLinkInfoResponse>;
     /**
      * Fetch info about a directory public link.
      *
