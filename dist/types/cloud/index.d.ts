@@ -9,7 +9,7 @@ import { type DirDownloadType } from "../api/v3/dir/download";
 import { type DirLinkStatusResponse } from "../api/v3/dir/link/status";
 import { type FileLinkStatusResponse } from "../api/v3/file/link/status";
 import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
-import { type DirLinkInfoResponse } from "../api/v3/dir/link/info";
+import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info";
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
 export type CloudConfig = {
@@ -586,13 +586,15 @@ export declare class Cloud {
      *
      * @public
      * @async
-     * @param {{uuid: string}} param0
+     * @param {{ uuid: string, key: string }} param0
      * @param {string} param0.uuid
-     * @returns {Promise<DirLinkInfoResponse>}
+     * @param {string} param0.key
+     * @returns {Promise<DirLinkInfoDecryptedResponse>}
      */
-    directoryPublicLinkInfo({ uuid }: {
+    directoryPublicLinkInfo({ uuid, key }: {
         uuid: string;
-    }): Promise<DirLinkInfoResponse>;
+        key: string;
+    }): Promise<DirLinkInfoDecryptedResponse>;
     /**
      * Fetch contents of a directory public link or it's children.
      *

@@ -38,7 +38,7 @@ import utils from "./utils"
 import { type DirLinkStatusResponse } from "../api/v3/dir/link/status"
 import { type FileLinkStatusResponse } from "../api/v3/file/link/status"
 import { type FileLinkPasswordResponse } from "../api/v3/file/link/password"
-import { type DirLinkInfoResponse } from "../api/v3/dir/link/info"
+import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info"
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info"
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content"
 
@@ -1666,12 +1666,22 @@ export class Cloud {
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string}} param0
+	 * @param {{ uuid: string, key: string }} param0
 	 * @param {string} param0.uuid
-	 * @returns {Promise<DirLinkInfoResponse>}
+	 * @param {string} param0.key
+	 * @returns {Promise<DirLinkInfoDecryptedResponse>}
 	 */
-	public async directoryPublicLinkInfo({ uuid }: { uuid: string }): Promise<DirLinkInfoResponse> {
-		return await this.api.v3().dir().link().info({ uuid })
+	public async directoryPublicLinkInfo({ uuid, key }: { uuid: string; key: string }): Promise<DirLinkInfoDecryptedResponse> {
+		const info = await this.api.v3().dir().link().info({ uuid })
+		const metadataDecrypted = await this.crypto.decrypt().folderMetadata({
+			metadata: info.metadata,
+			key
+		})
+
+		return {
+			...info,
+			metadata: metadataDecrypted
+		}
 	}
 
 	/**

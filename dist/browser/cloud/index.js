@@ -1249,12 +1249,21 @@ export class Cloud {
      *
      * @public
      * @async
-     * @param {{uuid: string}} param0
+     * @param {{ uuid: string, key: string }} param0
      * @param {string} param0.uuid
-     * @returns {Promise<DirLinkInfoResponse>}
+     * @param {string} param0.key
+     * @returns {Promise<DirLinkInfoDecryptedResponse>}
      */
-    async directoryPublicLinkInfo({ uuid }) {
-        return await this.api.v3().dir().link().info({ uuid });
+    async directoryPublicLinkInfo({ uuid, key }) {
+        const info = await this.api.v3().dir().link().info({ uuid });
+        const metadataDecrypted = await this.crypto.decrypt().folderMetadata({
+            metadata: info.metadata,
+            key
+        });
+        return {
+            ...info,
+            metadata: metadataDecrypted
+        };
     }
     /**
      * Fetch contents of a directory public link or it's children.

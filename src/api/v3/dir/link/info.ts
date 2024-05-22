@@ -1,8 +1,17 @@
 import type APIClient from "../../../client"
+import { type FolderMetadata } from "../../../../types"
 
 export type DirLinkInfoResponse = {
 	parent: string
 	metadata: string
+	hasPassword: boolean
+	salt: string
+	timestamp: number
+}
+
+export type DirLinkInfoDecryptedResponse = {
+	parent: string
+	metadata: FolderMetadata
 	hasPassword: boolean
 	salt: string
 	timestamp: number

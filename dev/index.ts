@@ -27,17 +27,6 @@ const filen = new FilenSDK({
 	connectToSocket: false
 })
 
-const main = async () => {
-	console.log(
-		await filen
-			.cloud()
-			.filePublicLinkInfo({
-				uuid: "fce3c11f-1b0c-499b-91b2-e7d25f0241d6",
-				password: "xd",
-				salt: "rmP769wLwcQ0v8fTIVgQ56r3yiNegWF5",
-				key: "LVGUkFfIwYoSgakTr5yYI9ZRH8nvweQr"
-			})
-	)
-}
+const main = async () => {}
 
 main()
