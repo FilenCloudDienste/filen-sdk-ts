@@ -1,5 +1,6 @@
 import type APIClient from "../../../client";
 import type { DirColors } from "../color";
+import { type FileMetadata, type FolderMetadata } from "../../../../types";
 export type DirLinkContentResponse = {
     folders: {
         color: DirColors | null;
@@ -12,6 +13,26 @@ export type DirLinkContentResponse = {
         bucket: string;
         chunks: number;
         metadata: string;
+        parent: string;
+        region: string;
+        size: number;
+        timestamp: number;
+        uuid: string;
+        version: number;
+    }[];
+};
+export type DirLinkContentDecryptedResponse = {
+    folders: {
+        color: DirColors | null;
+        metadata: FolderMetadata;
+        parent: string;
+        timestamp: number;
+        uuid: string;
+    }[];
+    files: {
+        bucket: string;
+        chunks: number;
+        metadata: FileMetadata;
         parent: string;
         region: string;
         size: number;

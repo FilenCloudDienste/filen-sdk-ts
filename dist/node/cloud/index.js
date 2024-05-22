@@ -1210,13 +1210,38 @@ class Cloud {
      *
      * @public
      * @async
-     * @param {{ uuid: string; password: string; }} param0
+     * @param {{
+     * 		uuid: string
+     * 		password?: string
+     * 		salt?: string
+     * 		key: string
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.password
-     * @returns {Promise<FileLinkInfoResponse>}
+     * @param {string} param0.salt
+     * @param {string} param0.key
+     * @returns {(Promise<Omit<FileLinkInfoResponse, "size"> & { size: number }>)}
      */
-    async filePublicLinkInfo({ uuid, password }) {
-        return await this.api.v3().file().link().info({ uuid, password });
+    async filePublicLinkInfo({ uuid, password, salt, key }) {
+        const derivedPassword = password
+            ? salt && salt.length === 32
+                ? await this.crypto.utils.deriveKeyFromPassword({
+                    password,
+                    salt,
+                    iterations: 200000,
+                    hash: "sha512",
+                    bitLength: 512,
+                    returnHex: true
+                })
+                : await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+            : await this.crypto.utils.hashFn({ input: "empty" });
+        const info = await this.api.v3().file().link().info({ uuid, password: derivedPassword });
+        const [nameDecrypted, mimeDecrypted, sizeDecrypted] = await Promise.all([
+            this.crypto.decrypt().metadata({ metadata: info.name, key }),
+            this.crypto.decrypt().metadata({ metadata: info.mime, key }),
+            this.crypto.decrypt().metadata({ metadata: info.size, key })
+        ]);
+        return Object.assign(Object.assign({}, info), { name: nameDecrypted, mime: mimeDecrypted, size: parseInt(sizeDecrypted) });
     }
     /**
      * Fetch info about a directory public link.
@@ -1231,18 +1256,58 @@ class Cloud {
         return await this.api.v3().dir().link().info({ uuid });
     }
     /**
-     * Fetch content of a directory public link.
+     * Fetch contents of a directory public link or it's children.
      *
      * @public
      * @async
-     * @param {{uuid: string, parent: string, password: string}} param0
+     * @param {{
+     * 		uuid: string
+     * 		parent: string
+     * 		password?: string
+     * 		salt?: string
+     * 		key: string
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.parent
      * @param {string} param0.password
-     * @returns {unknown}
+     * @param {string} param0.salt
+     * @param {string} param0.key
+     * @returns {Promise<DirLinkContentDecryptedResponse>}
      */
-    async directoryPublicLinkContent({ uuid, parent, password }) {
-        return await this.api.v3().dir().link().content({ uuid, parent, password });
+    async directoryPublicLinkContent({ uuid, parent, password, salt, key }) {
+        const derivedPassword = password
+            ? salt && salt.length === 32
+                ? await this.crypto.utils.deriveKeyFromPassword({
+                    password,
+                    salt,
+                    iterations: 200000,
+                    hash: "sha512",
+                    bitLength: 512,
+                    returnHex: true
+                })
+                : await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+            : await this.crypto.utils.hashFn({ input: "empty" });
+        const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword });
+        return {
+            files: await (0, utils_1.promiseAllChunked)(content.files.map(file => new Promise((resolve, reject) => {
+                this.crypto
+                    .decrypt()
+                    .fileMetadata({ metadata: file.metadata, key })
+                    .then(decryptedFileMetadata => {
+                    resolve(Object.assign(Object.assign({}, file), { metadata: decryptedFileMetadata }));
+                })
+                    .catch(reject);
+            }))),
+            folders: await (0, utils_1.promiseAllChunked)(content.folders.map(folder => new Promise((resolve, reject) => {
+                this.crypto
+                    .decrypt()
+                    .folderMetadata({ metadata: folder.metadata, key })
+                    .then(decryptedFolderMetadata => {
+                    resolve(Object.assign(Object.assign({}, folder), { metadata: decryptedFolderMetadata }));
+                })
+                    .catch(reject);
+            })))
+        };
     }
     /**
      * Stop sharing an item with another user.

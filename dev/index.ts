@@ -28,7 +28,16 @@ const filen = new FilenSDK({
 })
 
 const main = async () => {
-	console.log(await filen.notes().history({ uuid: "2d103b43-5f55-4c35-84cf-c5b2c1a0ecc0" }))
+	console.log(
+		await filen
+			.cloud()
+			.filePublicLinkInfo({
+				uuid: "fce3c11f-1b0c-499b-91b2-e7d25f0241d6",
+				password: "xd",
+				salt: "rmP769wLwcQ0v8fTIVgQ56r3yiNegWF5",
+				key: "LVGUkFfIwYoSgakTr5yYI9ZRH8nvweQr"
+			})
+	)
 }
 
 main()

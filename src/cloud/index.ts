@@ -40,6 +40,7 @@ import { type FileLinkStatusResponse } from "../api/v3/file/link/status"
 import { type FileLinkPasswordResponse } from "../api/v3/file/link/password"
 import { type DirLinkInfoResponse } from "../api/v3/dir/link/info"
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info"
+import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content"
 
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
@@ -1608,13 +1609,56 @@ export class Cloud {
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string; password: string; }} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		password?: string
+	 * 		salt?: string
+	 * 		key: string
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.password
-	 * @returns {Promise<FileLinkInfoResponse>}
+	 * @param {string} param0.salt
+	 * @param {string} param0.key
+	 * @returns {(Promise<Omit<FileLinkInfoResponse, "size"> & { size: number }>)}
 	 */
-	public async filePublicLinkInfo({ uuid, password }: { uuid: string; password: string }): Promise<FileLinkInfoResponse> {
-		return await this.api.v3().file().link().info({ uuid, password })
+	public async filePublicLinkInfo({
+		uuid,
+		password,
+		salt,
+		key
+	}: {
+		uuid: string
+		password?: string
+		salt?: string
+		key: string
+	}): Promise<Omit<FileLinkInfoResponse, "size"> & { size: number }> {
+		const derivedPassword = password
+			? salt && salt.length === 32
+				? await this.crypto.utils.deriveKeyFromPassword({
+						password,
+						salt,
+						iterations: 200000,
+						hash: "sha512",
+						bitLength: 512,
+						returnHex: true
+				  })
+				: await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+			: await this.crypto.utils.hashFn({ input: "empty" })
+
+		const info = await this.api.v3().file().link().info({ uuid, password: derivedPassword })
+
+		const [nameDecrypted, mimeDecrypted, sizeDecrypted] = await Promise.all([
+			this.crypto.decrypt().metadata({ metadata: info.name, key }),
+			this.crypto.decrypt().metadata({ metadata: info.mime, key }),
+			this.crypto.decrypt().metadata({ metadata: info.size, key })
+		])
+
+		return {
+			...info,
+			name: nameDecrypted,
+			mime: mimeDecrypted,
+			size: parseInt(sizeDecrypted)
+		}
 	}
 
 	/**
@@ -1631,18 +1675,88 @@ export class Cloud {
 	}
 
 	/**
-	 * Fetch content of a directory public link.
+	 * Fetch contents of a directory public link or it's children.
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string, parent: string, password: string}} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		parent: string
+	 * 		password?: string
+	 * 		salt?: string
+	 * 		key: string
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.parent
 	 * @param {string} param0.password
-	 * @returns {unknown}
+	 * @param {string} param0.salt
+	 * @param {string} param0.key
+	 * @returns {Promise<DirLinkContentDecryptedResponse>}
 	 */
-	public async directoryPublicLinkContent({ uuid, parent, password }: { uuid: string; parent: string; password: string }) {
-		return await this.api.v3().dir().link().content({ uuid, parent, password })
+	public async directoryPublicLinkContent({
+		uuid,
+		parent,
+		password,
+		salt,
+		key
+	}: {
+		uuid: string
+		parent: string
+		password?: string
+		salt?: string
+		key: string
+	}): Promise<DirLinkContentDecryptedResponse> {
+		const derivedPassword = password
+			? salt && salt.length === 32
+				? await this.crypto.utils.deriveKeyFromPassword({
+						password,
+						salt,
+						iterations: 200000,
+						hash: "sha512",
+						bitLength: 512,
+						returnHex: true
+				  })
+				: await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+			: await this.crypto.utils.hashFn({ input: "empty" })
+
+		const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword })
+
+		return {
+			files: await promiseAllChunked(
+				content.files.map(
+					file =>
+						new Promise((resolve, reject) => {
+							this.crypto
+								.decrypt()
+								.fileMetadata({ metadata: file.metadata, key })
+								.then(decryptedFileMetadata => {
+									resolve({
+										...file,
+										metadata: decryptedFileMetadata
+									})
+								})
+								.catch(reject)
+						})
+				)
+			),
+			folders: await promiseAllChunked(
+				content.folders.map(
+					folder =>
+						new Promise((resolve, reject) => {
+							this.crypto
+								.decrypt()
+								.folderMetadata({ metadata: folder.metadata, key })
+								.then(decryptedFolderMetadata => {
+									resolve({
+										...folder,
+										metadata: decryptedFolderMetadata
+									})
+								})
+								.catch(reject)
+						})
+				)
+			)
+		}
 	}
 
 	/**

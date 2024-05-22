@@ -11,6 +11,7 @@ import { type FileLinkStatusResponse } from "../api/v3/file/link/status";
 import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
 import { type DirLinkInfoResponse } from "../api/v3/dir/link/info";
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
+import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
 export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -560,15 +561,26 @@ export declare class Cloud {
      *
      * @public
      * @async
-     * @param {{ uuid: string; password: string; }} param0
+     * @param {{
+     * 		uuid: string
+     * 		password?: string
+     * 		salt?: string
+     * 		key: string
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.password
-     * @returns {Promise<FileLinkInfoResponse>}
+     * @param {string} param0.salt
+     * @param {string} param0.key
+     * @returns {(Promise<Omit<FileLinkInfoResponse, "size"> & { size: number }>)}
      */
-    filePublicLinkInfo({ uuid, password }: {
+    filePublicLinkInfo({ uuid, password, salt, key }: {
         uuid: string;
-        password: string;
-    }): Promise<FileLinkInfoResponse>;
+        password?: string;
+        salt?: string;
+        key: string;
+    }): Promise<Omit<FileLinkInfoResponse, "size"> & {
+        size: number;
+    }>;
     /**
      * Fetch info about a directory public link.
      *
@@ -582,21 +594,31 @@ export declare class Cloud {
         uuid: string;
     }): Promise<DirLinkInfoResponse>;
     /**
-     * Fetch content of a directory public link.
+     * Fetch contents of a directory public link or it's children.
      *
      * @public
      * @async
-     * @param {{uuid: string, parent: string, password: string}} param0
+     * @param {{
+     * 		uuid: string
+     * 		parent: string
+     * 		password?: string
+     * 		salt?: string
+     * 		key: string
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.parent
      * @param {string} param0.password
-     * @returns {unknown}
+     * @param {string} param0.salt
+     * @param {string} param0.key
+     * @returns {Promise<DirLinkContentDecryptedResponse>}
      */
-    directoryPublicLinkContent({ uuid, parent, password }: {
+    directoryPublicLinkContent({ uuid, parent, password, salt, key }: {
         uuid: string;
         parent: string;
-        password: string;
-    }): Promise<import("../api/v3/dir/link/content").DirLinkContentResponse>;
+        password?: string;
+        salt?: string;
+        key: string;
+    }): Promise<DirLinkContentDecryptedResponse>;
     /**
      * Stop sharing an item with another user.
      * @date 2/19/2024 - 4:38:21 AM
