@@ -3032,10 +3032,9 @@ export class Cloud {
 		const folderNames: Record<string, string> = { base: "/" }
 
 		for (const folder of contents.folders) {
-			const decrypted =
-				folder.parent !== "base" ? await this.crypto.decrypt().folderMetadata({ metadata: folder.name }) : { name: "" }
+			const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
 			const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`
-			const folderPath = `${parentPath}${decrypted.name}`
+			const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`
 
 			folderNames[folder.uuid] = folderPath
 			tree[folderPath] = {
