@@ -66,13 +66,13 @@ export class Chats {
 		const all = await this.conversations()
 		const chat = all.filter(chat => chat.uuid === conversation)
 
-		if (chat.length === 0) {
+		if (chat.length === 0 || !chat[0]) {
 			throw new Error(`Could not find chat ${conversation}.`)
 		}
 
 		const participant = chat[0].participants.filter(participant => participant.userId === this.sdkConfig.userId!)
 
-		if (participant.length === 0) {
+		if (participant.length === 0 || !participant[0]) {
 			throw new Error(`Could not find participant metadata for chat ${conversation}.`)
 		}
 
@@ -106,7 +106,7 @@ export class Chats {
 						.then(() => {
 							const metadata = convo.participants.filter(p => p.userId === this.sdkConfig.userId!)
 
-							if (metadata.length === 0) {
+							if (metadata.length === 0 || !metadata[0]) {
 								reject(new Error("Conversation metadata not found."))
 
 								return
@@ -185,6 +185,10 @@ export class Chats {
 
 		if (chat.length === 0) {
 			throw new Error(`Chat conversation ${conversation} not found.`)
+		}
+
+		if (!chat[0]) {
+			throw new Error("Chat not found")
 		}
 
 		return chat[0]

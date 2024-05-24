@@ -48,6 +48,9 @@ export class Encrypt {
         await this._semaphores.metadata.acquire();
         try {
             const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
+            if (!keyToUse) {
+                throw new Error("No key to use.");
+            }
             const iv = await generateRandomString({ length: 12 });
             const ivBuffer = this.textEncoder.encode(iv);
             if (environment === "node") {

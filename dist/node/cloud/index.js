@@ -339,7 +339,7 @@ class Cloud {
         const sharedTo = {};
         const added = {};
         for (const item of items) {
-            if (Array.isArray(sharedTo[item.uuid])) {
+            if (sharedTo[item.uuid] && Array.isArray(sharedTo[item.uuid])) {
                 sharedTo[item.uuid].push({
                     id: item.receiverId,
                     email: item.receiverEmail
@@ -355,10 +355,10 @@ class Cloud {
             }
         }
         for (let i = 0; i < items.length; i++) {
-            if (Array.isArray(sharedTo[items[i].uuid])) {
+            if (items[i] && Array.isArray(sharedTo[items[i].uuid])) {
                 items[i].receivers = sharedTo[items[i].uuid];
             }
-            if (!added[items[i].uuid]) {
+            if (items[i] && !added[items[i].uuid]) {
                 added[items[i].uuid] = true;
                 groups.push(items[i]);
             }
@@ -1032,6 +1032,9 @@ class Cloud {
             const promises = [];
             for (const entry in tree) {
                 const item = tree[entry];
+                if (!item) {
+                    continue;
+                }
                 promises.push(new Promise((resolve, reject) => {
                     this.addItemToDirectoryPublicLink({
                         uuid: item.uuid,
@@ -1374,6 +1377,9 @@ class Cloud {
                     .then(tree => {
                     for (const entry in tree) {
                         const item = tree[entry];
+                        if (!item) {
+                            continue;
+                        }
                         if (item.parent === "base" || item.uuid === directory.uuid) {
                             continue;
                         }
@@ -1484,6 +1490,9 @@ class Cloud {
                 }
                 for (const entry in tree) {
                     const item = tree[entry];
+                    if (!item) {
+                        continue;
+                    }
                     if (item.uuid === uuid || item.parent === "base") {
                         continue;
                     }
@@ -1559,6 +1568,9 @@ class Cloud {
                 }
                 for (const entry in tree) {
                     const item = tree[entry];
+                    if (!item) {
+                        continue;
+                    }
                     if (item.uuid === uuid || item.parent === "base") {
                         continue;
                     }
@@ -2385,7 +2397,7 @@ class Cloud {
             const promises = [];
             for (const path in tree) {
                 const item = tree[path];
-                if (item.type !== "file") {
+                if (!item || item.type !== "file") {
                     continue;
                 }
                 const filePath = path_1.default.join(destinationPath, path);
@@ -3069,7 +3081,8 @@ class Cloud {
             const pathsToUUIDs = {};
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                if (typeof file.webkitRelativePath !== "string" ||
+                if (!file ||
+                    typeof file.webkitRelativePath !== "string" ||
                     file.webkitRelativePath.length <= 0 ||
                     file.size <= 0 ||
                     !file.webkitRelativePath.includes("/")) {

@@ -148,80 +148,97 @@ export class FS {
 	 */
 	private _initSocketEvents(): void {
 		this.socket.on("fileArchiveRestored", (data: SocketFileArchiveRestored) => {
-			if (this._uuidToItem[data.currentUUID]) {
-				delete this._items[this._uuidToItem[data.currentUUID].path]
+			const currentItem = this._uuidToItem[data.currentUUID]
+			const item = this._uuidToItem[data.uuid]
+
+			if (currentItem) {
+				delete this._items[currentItem.path]
 				delete this._uuidToItem[data.currentUUID]
 			}
 
-			if (this._uuidToItem[data.uuid]) {
-				delete this._items[this._uuidToItem[data.uuid].path]
+			if (item) {
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("fileRename", (data: SocketFileRename) => {
-			if (this._uuidToItem[data.uuid]) {
-				delete this._items[this._uuidToItem[data.uuid].path]
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("fileMove", (data: SocketFileMove) => {
-			if (this._uuidToItem[data.uuid]) {
-				delete this._items[this._uuidToItem[data.uuid].path]
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("fileTrash", (data: SocketFileTrash) => {
-			if (this._uuidToItem[data.uuid]) {
-				delete this._items[this._uuidToItem[data.uuid].path]
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("fileArchived", (data: SocketFileArchived) => {
-			if (this._uuidToItem[data.uuid]) {
-				delete this._items[this._uuidToItem[data.uuid].path]
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
-			if (this._uuidToItem[data.uuid]) {
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
 				for (const path in this._items) {
-					if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
+					if (path.startsWith(item.path + "/") || item.path === path) {
 						delete this._items[path]
 					}
 				}
 
-				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("folderMove", (data: SocketFolderMove) => {
-			if (this._uuidToItem[data.uuid]) {
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
 				for (const path in this._items) {
-					if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
+					if (path.startsWith(item.path + "/") || item.path === path) {
 						delete this._items[path]
 					}
 				}
 
-				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
 
 		this.socket.on("folderRename", (data: SocketFolderRename) => {
-			if (this._uuidToItem[data.uuid]) {
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
 				for (const path in this._items) {
-					if (path.startsWith(this._uuidToItem[data.uuid].path + "/") || this._uuidToItem[data.uuid].path === path) {
+					if (path.startsWith(item.path + "/") || item.path === path) {
 						delete this._items[path]
 					}
 				}
 
-				delete this._items[this._uuidToItem[data.uuid].path]
+				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}
 		})
@@ -257,7 +274,12 @@ export class FS {
 	public _removeItem({ path }: { path: string }): void {
 		for (const entry in this._items) {
 			if (entry.startsWith(path + "/") || entry === path) {
-				delete this._uuidToItem[this._items[entry].uuid]
+				const item = this._items[entry]
+
+				if (item) {
+					delete this._uuidToItem[item.uuid]
+				}
+
 				delete this._items[entry]
 			}
 		}
@@ -295,8 +317,10 @@ export class FS {
 			return this.sdkConfig.baseFolderUUID!
 		}
 
-		if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
-			return this._items[path].uuid
+		const item = this._items[path]
+
+		if (item && acceptedTypes.includes(item.type)) {
+			return item.uuid
 		}
 
 		const pathEx = path.split("/")
@@ -310,12 +334,13 @@ export class FS {
 			builtPath = pathModule.posix.join(builtPath, part)
 
 			const parentDirname = pathModule.posix.dirname(builtPath)
+			const parentItem = this._items[parentDirname]
 
-			if (!this._items[parentDirname]) {
+			if (!parentItem) {
 				return null
 			}
 
-			const content = await this.cloud.listDirectory({ uuid: this._items[parentDirname].uuid })
+			const content = await this.cloud.listDirectory({ uuid: parentItem.uuid })
 			let foundUUID = ""
 			let foundType: FSItemType | null = null
 
@@ -385,8 +410,10 @@ export class FS {
 			}
 		}
 
-		if (this._items[path] && acceptedTypes.includes(this._items[path].type)) {
-			return this._items[path].uuid
+		const foundItem = this._items[path]
+
+		if (foundItem && acceptedTypes.includes(foundItem.type)) {
+			return foundItem.uuid
 		}
 
 		return null
@@ -422,7 +449,7 @@ export class FS {
 				const item = tree[entry]
 				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
 
-				if (item.parent === "base" && existingPaths[entry]) {
+				if (!item || (item.parent === "base" && existingPaths[entry])) {
 					continue
 				}
 
@@ -729,11 +756,13 @@ export class FS {
 				}
 			}
 
-			if (!this._items[path]) {
+			const item = this._items[path]
+
+			if (!item || !this._items[path]) {
 				throw new ENOENT({ path })
 			}
 
-			return this._items[path].uuid
+			return item.uuid
 		} finally {
 			this.mkdirMutex.release()
 		}
@@ -870,23 +899,30 @@ export class FS {
 				for (const oldPath in this._items) {
 					if (oldPath.startsWith(from + "/") || oldPath === from) {
 						const newPath = oldPath.split(from).join(to)
+						const oldItem = this._items[oldPath]
 
-						this._items[newPath] = {
-							...this._items[oldPath],
-							metadata: {
-								...this._items[oldPath].metadata,
-								name: newBasename
-							}
-						} as FSItem
+						if (oldItem) {
+							const oldItemUUID = this._uuidToItem[oldItem.uuid]
 
-						this._uuidToItem[this._items[oldPath].uuid] = {
-							...this._uuidToItem[this._items[oldPath].uuid],
-							path: newPath,
-							metadata: {
-								...this._uuidToItem[this._items[oldPath].uuid].metadata,
-								name: newBasename
+							if (oldItemUUID) {
+								this._items[newPath] = {
+									...oldItem,
+									metadata: {
+										...oldItem.metadata,
+										name: newBasename
+									}
+								} as FSItem
+
+								this._uuidToItem[oldItem.uuid] = {
+									...this._uuidToItem[oldItem.uuid],
+									path: newPath,
+									metadata: {
+										...oldItemUUID.metadata,
+										name: newBasename
+									}
+								} as FSItemUUID
 							}
-						} as FSItemUUID
+						}
 
 						delete this._items[oldPath]
 					}
@@ -940,18 +976,19 @@ export class FS {
 			path = this.normalizePath({ path })
 
 			const uuid = await this.pathToItemUUID({ path })
+			const item = this._items[path]
 
-			if (!uuid || !this._items[path]) {
+			if (!uuid || !item) {
 				return
 			}
 
 			const acceptedTypes: FSItemType[] = !type ? ["directory", "file"] : type === "directory" ? ["directory"] : ["file"]
 
-			if (!acceptedTypes.includes(this._items[path].type)) {
+			if (!acceptedTypes.includes(item.type)) {
 				return
 			}
 
-			if (this._items[path].type === "directory") {
+			if (item.type === "directory") {
 				if (permanent) {
 					await this.cloud.deleteDirectory({ uuid })
 				} else {
@@ -965,12 +1002,17 @@ export class FS {
 				}
 			}
 
-			delete this._uuidToItem[this._items[path].uuid]
+			delete this._uuidToItem[item.uuid]
 			delete this._items[path]
 
 			for (const entry in this._items) {
 				if (entry.startsWith(path + "/") || entry === path) {
-					delete this._uuidToItem[this._items[entry].uuid]
+					const entryItem = this._items[entry]
+
+					if (entryItem) {
+						delete this._uuidToItem[entryItem.uuid]
+					}
+
 					delete this._items[entry]
 				}
 			}

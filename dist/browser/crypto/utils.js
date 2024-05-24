@@ -20,7 +20,11 @@ export async function generateRandomString({ length }) {
         const result = new Array(length);
         let cursor = 0;
         for (let i = 0; i < length; i++) {
-            cursor += randomBytes[i];
+            const bytes = randomBytes[i];
+            if (!bytes) {
+                continue;
+            }
+            cursor += bytes;
             result[i] = chars[cursor % chars.length];
         }
         return result.join("");

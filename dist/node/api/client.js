@@ -108,6 +108,9 @@ class APIClient {
             headers["Authorization"] = `Bearer ${params.apiKey}`;
         }
         const url = params.url ? params.url : exports.APIClientDefaults.gatewayURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.gatewayURLs.length - 1)];
+        if (!url) {
+            throw new Error("No URL.");
+        }
         const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer;
         if (!params.headers && !postDataIsBuffer) {
             headers = Object.assign(Object.assign({}, headers), { Checksum: await (0, utils_2.bufferToHash)({ buffer: Buffer.from(JSON.stringify(params.data), "utf-8"), algorithm: "sha512" }) });
@@ -245,6 +248,9 @@ class APIClient {
             headers["Authorization"] = `Bearer ${params.apiKey}`;
         }
         const url = params.url ? params.url : exports.APIClientDefaults.gatewayURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.gatewayURLs.length - 1)];
+        if (!url) {
+            throw new Error("No URL.");
+        }
         if (url.includes("egest.") || url.includes("down.")) {
             // No auth headers when requesting encrypted chunks.
             delete headers["Authorization"];

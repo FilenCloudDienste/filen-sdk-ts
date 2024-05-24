@@ -50,7 +50,10 @@ exports.Semaphore = function (max) {
     this.purge = function () {
         const unresolved = waiting.length;
         for (let i = 0; i < unresolved; i++) {
-            waiting[i].err("Task has been purged");
+            const w = waiting[i];
+            if (w) {
+                w.err("Task has been purged");
+            }
         }
         counter = 0;
         waiting = [];

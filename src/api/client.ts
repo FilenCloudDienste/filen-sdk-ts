@@ -150,6 +150,11 @@ export class APIClient {
 		}
 
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
+
+		if (!url) {
+			throw new Error("No URL.")
+		}
+
 		const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer
 
 		if (!params.headers && !postDataIsBuffer) {
@@ -314,6 +319,10 @@ export class APIClient {
 		}
 
 		const url = params.url ? params.url : APIClientDefaults.gatewayURLs[getRandomArbitrary(0, APIClientDefaults.gatewayURLs.length - 1)]
+
+		if (!url) {
+			throw new Error("No URL.")
+		}
 
 		if (url.includes("egest.") || url.includes("down.")) {
 			// No auth headers when requesting encrypted chunks.

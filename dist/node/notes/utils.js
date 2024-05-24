@@ -9,11 +9,19 @@ function createNotePreviewFromContentText({ content, type }) {
     if (content.length === 0) {
         return "";
     }
+    const contentEx = content.split("\n");
+    if (!contentEx[0]) {
+        return "";
+    }
     if (type === "rich") {
         if (content.indexOf("<p><br></p>") === -1) {
-            return (0, striptags_1.default)(content.split("\n")[0].slice(0, 128));
+            return (0, striptags_1.default)(contentEx[0].slice(0, 128));
         }
-        return (0, striptags_1.default)(content.split("<p><br></p>")[0].slice(0, 128));
+        const contentExEx = content.split("<p><br></p>");
+        if (!contentExEx[0]) {
+            return "";
+        }
+        return (0, striptags_1.default)(contentExEx[0].slice(0, 128));
     }
     if (type === "checklist") {
         const ex = content
@@ -28,13 +36,16 @@ function createNotePreviewFromContentText({ content, type }) {
             .split("<li>");
         for (const listPoint of ex) {
             const listPointEx = listPoint.split("</li>");
+            if (!listPointEx[0]) {
+                return "";
+            }
             if (listPointEx[0].trim().length > 0) {
                 return (0, striptags_1.default)(listPointEx[0].trim());
             }
         }
         return "";
     }
-    return (0, striptags_1.default)(content.split("\n")[0].slice(0, 128));
+    return (0, striptags_1.default)(contentEx[0].slice(0, 128));
 }
 exports.createNotePreviewFromContentText = createNotePreviewFromContentText;
 exports.utils = {

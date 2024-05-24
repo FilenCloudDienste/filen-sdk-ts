@@ -80,7 +80,7 @@ export class Notes {
                     .acquire()
                     .then(() => {
                     const participantMetadata = note.participants.filter(participant => participant.userId === this.sdkConfig.userId);
-                    if (participantMetadata.length === 0) {
+                    if (participantMetadata.length === 0 || !participantMetadata[0]) {
                         reject(new Error("Could not find user as a participant."));
                         return;
                     }
@@ -139,7 +139,7 @@ export class Notes {
     async get({ uuid }) {
         const all = await this.all();
         const note = all.filter(note => note.uuid === uuid);
-        if (note.length === 0) {
+        if (note.length === 0 || !note[0]) {
             throw new Error(`Note ${uuid} not found.`);
         }
         return note[0];
@@ -220,11 +220,11 @@ export class Notes {
         }
         const all = await this.all();
         const note = all.filter(note => note.uuid === uuid);
-        if (note.length === 0) {
+        if (note.length === 0 || !note[0]) {
             throw new Error(`Could not find note ${uuid}.`);
         }
         const participant = note[0].participants.filter(participant => participant.userId === this.sdkConfig.userId);
-        if (participant.length === 0) {
+        if (participant.length === 0 || !participant[0]) {
             throw new Error(`Could not find participant metadata for note ${uuid}.`);
         }
         const decryptedNoteKey = await this.crypto
@@ -512,7 +512,7 @@ export class Notes {
     async duplicate({ uuid }) {
         const [contentDecrypted, allNotes] = await Promise.all([this.content({ uuid }), this.all()]);
         const note = allNotes.filter(note => note.uuid === uuid);
-        if (note.length === 0) {
+        if (note.length === 0 || !note[0]) {
             throw new Error(`Could not find note ${uuid}.`);
         }
         const newUUID = await uuidv4();
@@ -682,7 +682,7 @@ export class Notes {
     async createTag({ name }) {
         const allTags = await this.tags();
         const filtered = allTags.filter(tag => tag.name === name);
-        if (filtered.length !== 0) {
+        if (filtered.length !== 0 && filtered[0]) {
             return filtered[0].uuid;
         }
         const nameEncrypted = await this.crypto.encrypt().noteTagName({ name });
