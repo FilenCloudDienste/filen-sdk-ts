@@ -63,7 +63,7 @@ export class APIClient {
         apiKey: ""
     };
     _semaphores = {
-        request: new Semaphore(512)
+        request: new Semaphore(1024)
     };
     /**
      * Creates an instance of APIClient.

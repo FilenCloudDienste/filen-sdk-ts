@@ -14,7 +14,7 @@ export class Chats {
     sdkConfig;
     _chatKeyCache = new Map();
     _semaphores = {
-        list: new Semaphore(128)
+        list: new Semaphore(1024)
     };
     /**
      * Creates an instance of Chats.

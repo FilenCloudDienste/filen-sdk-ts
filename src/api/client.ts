@@ -102,7 +102,7 @@ export class APIClient {
 	} as const
 
 	private readonly _semaphores = {
-		request: new Semaphore(512)
+		request: new Semaphore(1024)
 	}
 
 	/**

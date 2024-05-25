@@ -805,7 +805,10 @@ export class FS {
             delete this._items[path];
             for (const entry in this._items) {
                 if (entry.startsWith(path + "/") || entry === path) {
-                    delete this._uuidToItem[item.uuid];
+                    const entryItem = this._items[entry];
+                    if (entryItem) {
+                        delete this._uuidToItem[entryItem.uuid];
+                    }
                     delete this._items[entry];
                 }
             }

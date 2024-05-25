@@ -20,8 +20,8 @@ export class Encrypt {
     config;
     textEncoder = new TextEncoder();
     _semaphores = {
-        metadata: new Semaphore(512),
-        data: new Semaphore(256)
+        metadata: new Semaphore(1024),
+        data: new Semaphore(1024)
     };
     /**
      * Creates an instance of Encrypt.

@@ -78,7 +78,7 @@ class APIClient {
             apiKey: ""
         };
         this._semaphores = {
-            request: new semaphore_1.Semaphore(512)
+            request: new semaphore_1.Semaphore(1024)
         };
         this.config = params;
     }

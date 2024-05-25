@@ -16,7 +16,7 @@ export class Notes {
     sdkConfig;
     _noteKeyCache = new Map();
     _semaphores = {
-        list: new Semaphore(128)
+        list: new Semaphore(1024)
     };
     /**
      * Creates an instance of Notes.
