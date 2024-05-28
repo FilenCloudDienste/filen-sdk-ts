@@ -22,15 +22,11 @@ const textEncoder = new TextEncoder();
 async function generateRandomString({ length }) {
     const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     if (constants_1.environment === "node") {
-        const randomBytes = crypto_1.default.randomBytes(length);
+        const randomBytes = crypto_1.default.randomBytes(length + 2);
         const result = new Array(length);
         let cursor = 0;
         for (let i = 0; i < length; i++) {
-            const bytes = randomBytes[i];
-            if (!bytes) {
-                continue;
-            }
-            cursor += bytes;
+            cursor += randomBytes[i];
             result[i] = chars[cursor % chars.length];
         }
         return result.join("");
