@@ -17,7 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.FilenSDK = void 0;
+exports.ChunkedUploadWriter = exports.FilenSDK = void 0;
 const api_1 = __importDefault(require("./api"));
 const crypto_1 = __importDefault(require("./crypto"));
 const utils_1 = __importDefault(require("./utils"));
@@ -427,4 +427,6 @@ __exportStar(require("./types"), exports);
 __exportStar(require("./constants"), exports);
 __exportStar(require("./api/errors"), exports);
 __exportStar(require("./cloud/signals"), exports);
+var streams_1 = require("./cloud/streams");
+Object.defineProperty(exports, "ChunkedUploadWriter", { enumerable: true, get: function () { return streams_1.ChunkedUploadWriter; } });
 //# sourceMappingURL=index.js.map

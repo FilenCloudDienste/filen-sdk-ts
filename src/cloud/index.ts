@@ -1,6 +1,6 @@
 import type API from "../api"
 import type Crypto from "../crypto"
-import { type FilenSDKConfig } from ".."
+import { type FilenSDKConfig, type FSItem } from ".."
 import {
 	type FileEncryptionVersion,
 	type FileMetadata,
@@ -22,7 +22,8 @@ import {
 	MAX_CONCURRENT_DOWNLOADS,
 	MAX_CONCURRENT_UPLOADS,
 	MAX_CONCURRENT_DIRECTORY_DOWNLOADS,
-	MAX_CONCURRENT_DIRECTORY_UPLOADS
+	MAX_CONCURRENT_DIRECTORY_UPLOADS,
+	BUFFER_SIZE
 } from "../constants"
 import { PauseSignal } from "./signals"
 import pathModule from "path"
@@ -41,8 +42,9 @@ import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info"
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info"
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content"
 import { promisify } from "util"
-import { pipeline, Readable } from "stream"
+import { pipeline, Readable, Transform } from "stream"
 import { type ReadableStream as ReadableStreamWebType } from "stream/web"
+import { ChunkedUploadWriter } from "./streams"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -3343,6 +3345,178 @@ export class Cloud {
 					creation,
 					key
 				}
+			})
+
+			if (onUploaded) {
+				await onUploaded.call(undefined, item)
+			}
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return item
+		} catch (e) {
+			if (onError) {
+				onError(e as unknown as Error)
+			}
+
+			throw e
+		} finally {
+			this._semaphores.uploads.release()
+		}
+	}
+
+	/**
+	 * Upload a file using Node.JS streams. It's not as fast as the normal uploadFile function since it's not completely multithreaded.
+	 * Only available in a Node.JS environemnt.
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		source: NodeJS.ReadableStream
+	 * 		parent: string
+	 * 		name: string
+	 * 		abortSignal?: AbortSignal
+	 * 		pauseSignal?: PauseSignal
+	 * 		onProgress?: ProgressCallback
+	 * 		onQueued?: () => void
+	 * 		onStarted?: () => void
+	 * 		onError?: (err: Error) => void
+	 * 		onFinished?: () => void
+	 * 		onUploaded?: (item: CloudItem) => Promise<void>
+	 * 	}} param0
+	 * @param {NodeJS.ReadableStream} param0.source
+	 * @param {string} param0.parent
+	 * @param {string} param0.name
+	 * @param {PauseSignal} param0.pauseSignal
+	 * @param {AbortSignal} param0.abortSignal
+	 * @param {ProgressCallback} param0.onProgress
+	 * @param {() => void} param0.onQueued
+	 * @param {() => void} param0.onStarted
+	 * @param {(err: Error) => void} param0.onError
+	 * @param {() => void} param0.onFinished
+	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+	 * @returns {Promise<CloudItem>}
+	 */
+	public async uploadLocalFileStream({
+		source,
+		parent,
+		name,
+		pauseSignal,
+		abortSignal,
+		onProgress,
+		onQueued,
+		onStarted,
+		onError,
+		onFinished,
+		onUploaded
+	}: {
+		source: NodeJS.ReadableStream
+		parent: string
+		name: string
+		abortSignal?: AbortSignal
+		pauseSignal?: PauseSignal
+		onProgress?: ProgressCallback
+		onQueued?: () => void
+		onStarted?: () => void
+		onError?: (err: Error) => void
+		onFinished?: () => void
+		onUploaded?: (item: CloudItem) => Promise<void>
+	}): Promise<CloudItem> {
+		if (environment !== "node") {
+			throw new Error(`cloud.uploadLocalFileStream is not implemented for ${environment}`)
+		}
+
+		if (onQueued) {
+			onQueued()
+		}
+
+		await this._semaphores.uploads.acquire()
+
+		try {
+			if (onStarted) {
+				onStarted()
+			}
+
+			if (name === "." || name === "/" || name.length <= 0) {
+				throw new Error("Invalid source file name. ")
+			}
+
+			const [uuid, key, uploadKey] = await Promise.all([
+				uuidv4(),
+				this.crypto.utils.generateRandomString({ length: 32 }),
+				this.crypto.utils.generateRandomString({ length: 32 })
+			])
+
+			const waitForPause = async (): Promise<void> => {
+				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+					return
+				}
+
+				return await new Promise(resolve => {
+					const wait = setInterval(() => {
+						if (!pauseSignal.isPaused() || abortSignal?.aborted) {
+							clearInterval(wait)
+
+							resolve()
+						}
+					}, 10)
+				})
+			}
+
+			const item = await new Promise<CloudItem>((resolve, reject) => {
+				const transformer = new Transform({
+					transform(chunk, encoding, callback) {
+						waitForPause()
+							.then(() => {
+								callback(null, chunk)
+							})
+							.catch(err => {
+								callback(err)
+							})
+					}
+				})
+
+				const writeStream = new ChunkedUploadWriter({
+					options: {
+						highWaterMark: BUFFER_SIZE
+					},
+					api: this.api,
+					cloud: this,
+					crypto: this.crypto,
+					uuid,
+					key,
+					uploadKey,
+					name,
+					parent,
+					onProgress
+				})
+
+				writeStream.once("uploaded", (item: FSItem) => {
+					resolve({
+						type: "file",
+						uuid,
+						name: item.metadata.name,
+						size: item.type === "directory" ? 0 : item.metadata.size,
+						mime: item.type === "directory" ? "application/octet-stream" : item.metadata.mime,
+						lastModified: item.type === "directory" ? Date.now() : item.metadata.lastModified,
+						timestamp: Date.now(),
+						parent,
+						rm: "",
+						version: CURRENT_FILE_ENCRYPTION_VERSION,
+						chunks: item.type === "directory" ? 0 : item.metadata.chunks,
+						favorited: false,
+						key,
+						bucket: item.type === "directory" ? "" : item.metadata.bucket,
+						region: item.type === "directory" ? "" : item.metadata.region,
+						creation: item.type === "directory" ? undefined : item.metadata.creation
+					})
+				})
+
+				writeStream.once("error", reject)
+
+				pipelineAsync(source, transformer, writeStream, { signal: abortSignal }).catch(reject)
 			})
 
 			if (onUploaded) {

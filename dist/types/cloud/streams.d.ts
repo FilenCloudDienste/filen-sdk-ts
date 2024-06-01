@@ -1,7 +1,10 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import { Writable } from "stream";
-import SDK from "..";
+import { type ProgressCallback } from "..";
+import type Crypto from "../crypto";
+import type API from "../api";
+import type Cloud from ".";
 /**
  * ChunkedUploadWriter
  * @date 2/29/2024 - 9:58:16 PM
@@ -13,7 +16,6 @@ import SDK from "..";
  */
 export declare class ChunkedUploadWriter extends Writable {
     private chunkBuffer;
-    private readonly sdk;
     private readonly uploadSemaphore;
     private readonly uuid;
     private readonly version;
@@ -30,37 +32,49 @@ export declare class ChunkedUploadWriter extends Writable {
     private readonly hasher;
     private readonly processingMutex;
     private chunksUploaded;
+    private readonly cloud;
+    private readonly api;
+    private readonly crypto;
+    private readonly onProgress?;
     /**
      * Creates an instance of ChunkedUploadWriter.
-     * @date 2/29/2024 - 9:58:21 PM
      *
      * @constructor
      * @public
      * @param {{
      * 		options?: ConstructorParameters<typeof Writable>[0]
-     * 		sdk: SDK
+     * 		crypto: Crypto
+     * 		api: API
+     * 		cloud: Cloud
      * 		uuid: string
      * 		key: string
      * 		name: string
      * 		uploadKey: string
      * 		parent: string
+     * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {ConstructorParameters<any>} [param0.options=undefined]
-     * @param {SDK} param0.sdk
      * @param {string} param0.uuid
      * @param {string} param0.key
      * @param {string} param0.name
      * @param {string} param0.uploadKey
      * @param {string} param0.parent
+     * @param {Crypto} param0.crypto
+     * @param {Cloud} param0.cloud
+     * @param {API} param0.api
+     * @param {ProgressCallback} param0.onProgress
      */
-    constructor({ options, sdk, uuid, key, name, uploadKey, parent }: {
+    constructor({ options, uuid, key, name, uploadKey, parent, crypto, cloud, api, onProgress }: {
         options?: ConstructorParameters<typeof Writable>[0];
-        sdk: SDK;
+        crypto: Crypto;
+        api: API;
+        cloud: Cloud;
         uuid: string;
         key: string;
         name: string;
         uploadKey: string;
         parent: string;
+        onProgress?: ProgressCallback;
     });
     /**
      * Write data to the stream.

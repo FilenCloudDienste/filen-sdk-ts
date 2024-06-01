@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type API from "../api";
 import type Crypto from "../crypto";
 import { type FilenSDKConfig } from "..";
@@ -1030,6 +1031,51 @@ export declare class Cloud {
         source: string;
         parent: string;
         name?: string;
+        abortSignal?: AbortSignal;
+        pauseSignal?: PauseSignal;
+        onProgress?: ProgressCallback;
+        onQueued?: () => void;
+        onStarted?: () => void;
+        onError?: (err: Error) => void;
+        onFinished?: () => void;
+        onUploaded?: (item: CloudItem) => Promise<void>;
+    }): Promise<CloudItem>;
+    /**
+     * Upload a file using Node.JS streams. It's not as fast as the normal uploadFile function since it's not completely multithreaded.
+     * Only available in a Node.JS environemnt.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		source: NodeJS.ReadableStream
+     * 		parent: string
+     * 		name: string
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress?: ProgressCallback
+     * 		onQueued?: () => void
+     * 		onStarted?: () => void
+     * 		onError?: (err: Error) => void
+     * 		onFinished?: () => void
+     * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 	}} param0
+     * @param {NodeJS.ReadableStream} param0.source
+     * @param {string} param0.parent
+     * @param {string} param0.name
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {AbortSignal} param0.abortSignal
+     * @param {ProgressCallback} param0.onProgress
+     * @param {() => void} param0.onQueued
+     * @param {() => void} param0.onStarted
+     * @param {(err: Error) => void} param0.onError
+     * @param {() => void} param0.onFinished
+     * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @returns {Promise<CloudItem>}
+     */
+    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+        source: NodeJS.ReadableStream;
+        parent: string;
+        name: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;

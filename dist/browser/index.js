@@ -443,4 +443,5 @@ export * from "./types";
 export * from "./constants";
 export * from "./api/errors";
 export * from "./cloud/signals";
+export { ChunkedUploadWriter } from "./cloud/streams";
 //# sourceMappingURL=index.js.map

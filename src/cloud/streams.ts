@@ -1,9 +1,12 @@
 import { Writable } from "stream"
 import { Semaphore } from "../semaphore"
 import mimeTypes from "mime-types"
-import crypto from "crypto"
+import nodeCrypto from "crypto"
 import { CHUNK_SIZE, MAX_UPLOAD_THREADS } from "../constants"
-import SDK, { FileEncryptionVersion, FSItem } from ".."
+import { type FileEncryptionVersion, type FSItem, type ProgressCallback } from ".."
+import type Crypto from "../crypto"
+import type API from "../api"
+import type Cloud from "."
 
 /**
  * ChunkedUploadWriter
@@ -16,7 +19,6 @@ import SDK, { FileEncryptionVersion, FSItem } from ".."
  */
 export class ChunkedUploadWriter extends Writable {
 	private chunkBuffer: Buffer
-	private readonly sdk: SDK
 	private readonly uploadSemaphore = new Semaphore(MAX_UPLOAD_THREADS)
 	private readonly uuid: string
 	private readonly version: FileEncryptionVersion
@@ -30,54 +32,72 @@ export class ChunkedUploadWriter extends Writable {
 	private index: number
 	private readonly uploadKey: string
 	private readonly parent: string
-	private readonly hasher: crypto.Hash
+	private readonly hasher: nodeCrypto.Hash
 	private readonly processingMutex = new Semaphore(1)
 	private chunksUploaded = 0
+	private readonly cloud: Cloud
+	private readonly api: API
+	private readonly crypto: Crypto
+	private readonly onProgress?: ProgressCallback
 
 	/**
 	 * Creates an instance of ChunkedUploadWriter.
-	 * @date 2/29/2024 - 9:58:21 PM
 	 *
 	 * @constructor
 	 * @public
 	 * @param {{
 	 * 		options?: ConstructorParameters<typeof Writable>[0]
-	 * 		sdk: SDK
+	 * 		crypto: Crypto
+	 * 		api: API
+	 * 		cloud: Cloud
 	 * 		uuid: string
 	 * 		key: string
 	 * 		name: string
 	 * 		uploadKey: string
 	 * 		parent: string
+	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {ConstructorParameters<any>} [param0.options=undefined]
-	 * @param {SDK} param0.sdk
 	 * @param {string} param0.uuid
 	 * @param {string} param0.key
 	 * @param {string} param0.name
 	 * @param {string} param0.uploadKey
 	 * @param {string} param0.parent
+	 * @param {Crypto} param0.crypto
+	 * @param {Cloud} param0.cloud
+	 * @param {API} param0.api
+	 * @param {ProgressCallback} param0.onProgress
 	 */
 	public constructor({
 		options = undefined,
-		sdk,
 		uuid,
 		key,
 		name,
 		uploadKey,
-		parent
+		parent,
+		crypto,
+		cloud,
+		api,
+		onProgress
 	}: {
 		options?: ConstructorParameters<typeof Writable>[0]
-		sdk: SDK
+		crypto: Crypto
+		api: API
+		cloud: Cloud
 		uuid: string
 		key: string
 		name: string
 		uploadKey: string
 		parent: string
+		onProgress?: ProgressCallback
 	}) {
 		super(options)
 
+		this.onProgress = onProgress
+		this.crypto = crypto
+		this.api = api
+		this.cloud = cloud
 		this.chunkBuffer = Buffer.from([])
-		this.sdk = sdk
 		this.uuid = uuid
 		this.key = key
 		this.version = 2
@@ -90,7 +110,7 @@ export class ChunkedUploadWriter extends Writable {
 		this.index = -1
 		this.uploadKey = uploadKey
 		this.parent = parent
-		this.hasher = crypto.createHash("sha512")
+		this.hasher = nodeCrypto.createHash("sha512")
 	}
 
 	/**
@@ -209,9 +229,9 @@ export class ChunkedUploadWriter extends Writable {
 
 		this.hasher.update(chunk)
 
-		const encryptedChunk = await this.sdk.crypto().encrypt().data({ data: chunk, key: this.key })
-		const response = await this.sdk
-			.api(3)
+		const encryptedChunk = await this.crypto.encrypt().data({ data: chunk, key: this.key })
+		const response = await this.api
+			.v3()
 			.file()
 			.upload()
 			.chunk()
@@ -220,6 +240,10 @@ export class ChunkedUploadWriter extends Writable {
 		this.bucket = response.bucket
 		this.region = response.region
 		this.chunksUploaded += 1
+
+		if (this.onProgress) {
+			this.onProgress(chunk.byteLength)
+		}
 	}
 
 	/**
@@ -282,36 +306,33 @@ export class ChunkedUploadWriter extends Writable {
 
 		const hash = this.hasher.digest("hex")
 
-		await this.sdk
-			.api(3)
+		await this.api
+			.v3()
 			.upload()
 			.done({
 				uuid: this.uuid,
-				name: await this.sdk.crypto().encrypt().metadata({ metadata: this.name, key: this.key }),
-				nameHashed: await this.sdk.crypto().utils.hashFn({ input: this.name.toLowerCase() }),
-				size: await this.sdk.crypto().encrypt().metadata({ metadata: this.size.toString(), key: this.key }),
+				name: await this.crypto.encrypt().metadata({ metadata: this.name, key: this.key }),
+				nameHashed: await this.crypto.utils.hashFn({ input: this.name.toLowerCase() }),
+				size: await this.crypto.encrypt().metadata({ metadata: this.size.toString(), key: this.key }),
 				chunks: fileChunks,
-				mime: await this.sdk.crypto().encrypt().metadata({ metadata: this.mime, key: this.key }),
+				mime: await this.crypto.encrypt().metadata({ metadata: this.mime, key: this.key }),
 				version: this.version,
 				uploadKey: this.uploadKey,
-				rm: await this.sdk.crypto().utils.generateRandomString({ length: 32 }),
-				metadata: await this.sdk
-					.crypto()
-					.encrypt()
-					.metadata({
-						metadata: JSON.stringify({
-							name: this.name,
-							size: this.size,
-							mime: this.mime,
-							key: this.key,
-							lastModified: this.lastModified,
-							creation: this.lastModified,
-							hash
-						})
+				rm: await this.crypto.utils.generateRandomString({ length: 32 }),
+				metadata: await this.crypto.encrypt().metadata({
+					metadata: JSON.stringify({
+						name: this.name,
+						size: this.size,
+						mime: this.mime,
+						key: this.key,
+						lastModified: this.lastModified,
+						creation: this.lastModified,
+						hash
 					})
+				})
 			})
 
-		await this.sdk.cloud().checkIfItemParentIsShared({
+		await this.cloud.checkIfItemParentIsShared({
 			type: "file",
 			parent: this.parent,
 			uuid: this.uuid,

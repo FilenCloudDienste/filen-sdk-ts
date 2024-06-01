@@ -836,3 +836,4 @@ export * from "./constants";
 export * from "./api/errors";
 export * from "./cloud/signals";
 export { SocketEvent } from "./socket";
+export { ChunkedUploadWriter } from "./cloud/streams";
