@@ -273,6 +273,19 @@ export declare class API {
                 encryptedMasterKeys: string;
                 apiKey?: string | undefined;
             }) => Promise<import("./v3/user/masterKeys").UserMasterKeysResponse>;
+            password: () => {
+                forgot: (params_0: {
+                    email: string;
+                }) => Promise<void>;
+                forgotReset: (params_0: {
+                    token: string;
+                    password: string;
+                    authVersion: number;
+                    salt: string;
+                    hasRecoveryKeys: boolean;
+                    newMasterKeys: string;
+                }) => Promise<void>;
+            };
         };
         shared: () => {
             in: (params?: {

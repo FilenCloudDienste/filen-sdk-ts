@@ -139,6 +139,8 @@ import V3UserKeyPairInfo from "./v3/user/keyPair/info";
 import V3UserMasterKeys from "./v3/user/masterKeys";
 import V3Register from "./v3/register";
 import V3ConfirmationSend from "./v3/confirmationSend";
+import V3UserPasswordForgot from "./v3/user/password/forgot";
+import V3UserPasswordForgotReset from "./v3/user/password/forgotReset";
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -249,7 +251,11 @@ export class API {
                     set: new V3UserKeyPairSet({ apiClient: this.apiClient }),
                     info: new V3UserKeyPairInfo({ apiClient: this.apiClient })
                 },
-                masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient })
+                masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient }),
+                password: {
+                    forgot: new V3UserPasswordForgot({ apiClient: this.apiClient }),
+                    forgotReset: new V3UserPasswordForgotReset({ apiClient: this.apiClient })
+                }
             },
             shared: {
                 in: new V3SharedIn({ apiClient: this.apiClient }),
@@ -486,7 +492,13 @@ export class API {
                             info: (...params) => this._v3.user.keyPair.info.fetch(...params)
                         };
                     },
-                    masterKeys: (...params) => this._v3.user.masterKeys.fetch(...params)
+                    masterKeys: (...params) => this._v3.user.masterKeys.fetch(...params),
+                    password: () => {
+                        return {
+                            forgot: (...params) => this._v3.user.password.forgot.fetch(...params),
+                            forgotReset: (...params) => this._v3.user.password.forgotReset.fetch(...params)
+                        };
+                    }
                 };
             },
             shared: () => {

@@ -140,6 +140,8 @@ import V3UserKeyPairInfo from "./v3/user/keyPair/info"
 import V3UserMasterKeys from "./v3/user/masterKeys"
 import V3Register from "./v3/register"
 import V3ConfirmationSend from "./v3/confirmationSend"
+import V3UserPasswordForgot from "./v3/user/password/forgot"
+import V3UserPasswordForgotReset from "./v3/user/password/forgotReset"
 
 export type APIConfig = {
 	apiKey: string
@@ -242,6 +244,10 @@ export class API {
 				info: V3UserKeyPairInfo
 			}
 			masterKeys: V3UserMasterKeys
+			password: {
+				forgot: V3UserPasswordForgot
+				forgotReset: V3UserPasswordForgotReset
+			}
 		}
 		shared: {
 			in: V3SharedIn
@@ -470,7 +476,11 @@ export class API {
 					set: new V3UserKeyPairSet({ apiClient: this.apiClient }),
 					info: new V3UserKeyPairInfo({ apiClient: this.apiClient })
 				},
-				masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient })
+				masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient }),
+				password: {
+					forgot: new V3UserPasswordForgot({ apiClient: this.apiClient }),
+					forgotReset: new V3UserPasswordForgotReset({ apiClient: this.apiClient })
+				}
 			},
 			shared: {
 				in: new V3SharedIn({ apiClient: this.apiClient }),
@@ -727,7 +737,15 @@ export class API {
 								this._v3.user.keyPair.info.fetch(...params)
 						}
 					},
-					masterKeys: (...params: Parameters<typeof this._v3.user.masterKeys.fetch>) => this._v3.user.masterKeys.fetch(...params)
+					masterKeys: (...params: Parameters<typeof this._v3.user.masterKeys.fetch>) => this._v3.user.masterKeys.fetch(...params),
+					password: () => {
+						return {
+							forgot: (...params: Parameters<typeof this._v3.user.password.forgot.fetch>) =>
+								this._v3.user.password.forgot.fetch(...params),
+							forgotReset: (...params: Parameters<typeof this._v3.user.password.forgotReset.fetch>) =>
+								this._v3.user.password.forgotReset.fetch(...params)
+						}
+					}
 				}
 			},
 			shared: () => {
