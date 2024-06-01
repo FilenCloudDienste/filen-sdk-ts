@@ -95,7 +95,7 @@ export class FilenSDK {
 		this._api = params.apiKey
 			? new API({ apiKey: params.apiKey, crypto: this._crypto })
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
-		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this })
 		this._fs = new FS({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket })
 		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto })
@@ -141,7 +141,7 @@ export class FilenSDK {
 		this._api = params.apiKey
 			? new API({ apiKey: params.apiKey, crypto: this._crypto })
 			: new API({ apiKey: "anonymous", crypto: this._crypto })
-		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto })
+		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this })
 		this._fs = new FS({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket })
 		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto })
 		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto })

@@ -30,9 +30,7 @@ export class ChunkedUploadWriter extends Writable {
     hasher;
     processingMutex = new Semaphore(1);
     chunksUploaded = 0;
-    cloud;
-    api;
-    crypto;
+    sdk;
     onProgress;
     /**
      * Creates an instance of ChunkedUploadWriter.
@@ -41,9 +39,7 @@ export class ChunkedUploadWriter extends Writable {
      * @public
      * @param {{
      * 		options?: ConstructorParameters<typeof Writable>[0]
-     * 		crypto: Crypto
-     * 		api: API
-     * 		cloud: Cloud
+     * 		sdk: FilenSDK
      * 		uuid: string
      * 		key: string
      * 		name: string
@@ -57,17 +53,13 @@ export class ChunkedUploadWriter extends Writable {
      * @param {string} param0.name
      * @param {string} param0.uploadKey
      * @param {string} param0.parent
-     * @param {Crypto} param0.crypto
-     * @param {Cloud} param0.cloud
-     * @param {API} param0.api
+     * @param {FilenSDK} param0.sdk
      * @param {ProgressCallback} param0.onProgress
      */
-    constructor({ options = undefined, uuid, key, name, uploadKey, parent, crypto, cloud, api, onProgress }) {
+    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress }) {
         super(options);
         this.onProgress = onProgress;
-        this.crypto = crypto;
-        this.api = api;
-        this.cloud = cloud;
+        this.sdk = sdk;
         this.chunkBuffer = Buffer.from([]);
         this.uuid = uuid;
         this.key = key;
@@ -182,9 +174,9 @@ export class ChunkedUploadWriter extends Writable {
         this.index += 1;
         this.size += chunk.byteLength;
         this.hasher.update(chunk);
-        const encryptedChunk = await this.crypto.encrypt().data({ data: chunk, key: this.key });
-        const response = await this.api
-            .v3()
+        const encryptedChunk = await this.sdk.crypto().encrypt().data({ data: chunk, key: this.key });
+        const response = await this.sdk
+            .api(3)
             .file()
             .upload()
             .chunk()
@@ -245,20 +237,23 @@ export class ChunkedUploadWriter extends Writable {
         }
         await this.waitForAllChunksToBeUploaded(fileChunks);
         const hash = this.hasher.digest("hex");
-        await this.api
-            .v3()
+        await this.sdk
+            .api(3)
             .upload()
             .done({
             uuid: this.uuid,
-            name: await this.crypto.encrypt().metadata({ metadata: this.name, key: this.key }),
-            nameHashed: await this.crypto.utils.hashFn({ input: this.name.toLowerCase() }),
-            size: await this.crypto.encrypt().metadata({ metadata: this.size.toString(), key: this.key }),
+            name: await this.sdk.crypto().encrypt().metadata({ metadata: this.name, key: this.key }),
+            nameHashed: await this.sdk.crypto().utils.hashFn({ input: this.name.toLowerCase() }),
+            size: await this.sdk.crypto().encrypt().metadata({ metadata: this.size.toString(), key: this.key }),
             chunks: fileChunks,
-            mime: await this.crypto.encrypt().metadata({ metadata: this.mime, key: this.key }),
+            mime: await this.sdk.crypto().encrypt().metadata({ metadata: this.mime, key: this.key }),
             version: this.version,
             uploadKey: this.uploadKey,
-            rm: await this.crypto.utils.generateRandomString({ length: 32 }),
-            metadata: await this.crypto.encrypt().metadata({
+            rm: await this.sdk.crypto().utils.generateRandomString({ length: 32 }),
+            metadata: await this.sdk
+                .crypto()
+                .encrypt()
+                .metadata({
                 metadata: JSON.stringify({
                     name: this.name,
                     size: this.size,
@@ -270,7 +265,7 @@ export class ChunkedUploadWriter extends Writable {
                 })
             })
         });
-        await this.cloud.checkIfItemParentIsShared({
+        await this.sdk.cloud().checkIfItemParentIsShared({
             type: "file",
             parent: this.parent,
             uuid: this.uuid,

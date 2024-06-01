@@ -1,6 +1,6 @@
 import type API from "../api"
 import type Crypto from "../crypto"
-import { type FilenSDKConfig, type FSItem } from ".."
+import { type FilenSDKConfig, type FSItem, type FilenSDK } from ".."
 import {
 	type FileEncryptionVersion,
 	type FileMetadata,
@@ -52,6 +52,7 @@ export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
 	crypto: Crypto
+	sdk: FilenSDK
 }
 
 export type CloudItemReceiver = {
@@ -164,6 +165,7 @@ export class Cloud {
 	private readonly api: API
 	private readonly crypto: Crypto
 	private readonly sdkConfig: FilenSDKConfig
+	private readonly sdk: FilenSDK
 
 	private readonly _semaphores = {
 		downloadThreads: new Semaphore(MAX_DOWNLOAD_THREADS),
@@ -189,6 +191,7 @@ export class Cloud {
 		this.api = params.api
 		this.crypto = params.crypto
 		this.sdkConfig = params.sdkConfig
+		this.sdk = params.sdk
 	}
 
 	public readonly utils = {
@@ -3482,9 +3485,7 @@ export class Cloud {
 					options: {
 						highWaterMark: BUFFER_SIZE
 					},
-					api: this.api,
-					cloud: this,
-					crypto: this.crypto,
+					sdk: this.sdk,
 					uuid,
 					key,
 					uploadKey,

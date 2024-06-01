@@ -23,6 +23,7 @@ export class Cloud {
     api;
     crypto;
     sdkConfig;
+    sdk;
     _semaphores = {
         downloadThreads: new Semaphore(MAX_DOWNLOAD_THREADS),
         downloadWriters: new Semaphore(MAX_DOWNLOAD_WRITERS),
@@ -46,6 +47,7 @@ export class Cloud {
         this.api = params.api;
         this.crypto = params.crypto;
         this.sdkConfig = params.sdkConfig;
+        this.sdk = params.sdk;
     }
     utils = {
         signals: {
@@ -2606,9 +2608,7 @@ export class Cloud {
                     options: {
                         highWaterMark: BUFFER_SIZE
                     },
-                    api: this.api,
-                    cloud: this,
-                    crypto: this.crypto,
+                    sdk: this.sdk,
                     uuid,
                     key,
                     uploadKey,

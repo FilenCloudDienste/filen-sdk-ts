@@ -823,7 +823,13 @@ export declare class FilenSDK {
         getRandomArbitrary: typeof import("./utils").getRandomArbitrary;
         clearTempDirectory: typeof import("./utils").clearTempDirectory;
         parseURLParams: typeof import("./utils").parseURLParams;
-        getEveryPossibleDirectoryPath: typeof import("./utils").getEveryPossibleDirectoryPath;
+        getEveryPossibleDirectoryPath: typeof import("./utils").getEveryPossibleDirectoryPath; /**
+         * Check if the SDK user is authenticated.
+         * @date 1/31/2024 - 4:08:17 PM
+         *
+         * @private
+         * @returns {boolean}
+         */
         simpleDate: typeof import("./utils").simpleDate;
     };
 }

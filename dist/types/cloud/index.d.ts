@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import type API from "../api";
 import type Crypto from "../crypto";
-import { type FilenSDKConfig } from "..";
+import { type FilenSDKConfig, type FilenSDK } from "..";
 import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration } from "../types";
 import { PauseSignal } from "./signals";
 import { type DirColors } from "../api/v3/dir/color";
@@ -17,6 +17,7 @@ export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
     crypto: Crypto;
+    sdk: FilenSDK;
 };
 export type CloudItemReceiver = {
     id: number;
@@ -96,6 +97,7 @@ export declare class Cloud {
     private readonly api;
     private readonly crypto;
     private readonly sdkConfig;
+    private readonly sdk;
     private readonly _semaphores;
     /**
      * Creates an instance of Cloud.

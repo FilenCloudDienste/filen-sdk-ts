@@ -55,6 +55,7 @@ class Cloud {
         this.api = params.api;
         this.crypto = params.crypto;
         this.sdkConfig = params.sdkConfig;
+        this.sdk = params.sdk;
     }
     /**
      * Lists all files and directories in a directory.
@@ -2587,9 +2588,7 @@ class Cloud {
                     options: {
                         highWaterMark: constants_1.BUFFER_SIZE
                     },
-                    api: this.api,
-                    cloud: this,
-                    crypto: this.crypto,
+                    sdk: this.sdk,
                     uuid,
                     key,
                     uploadKey,

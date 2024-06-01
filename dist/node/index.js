@@ -89,7 +89,7 @@ class FilenSDK {
         this._api = params.apiKey
             ? new api_1.default({ apiKey: params.apiKey, crypto: this._crypto })
             : new api_1.default({ apiKey: "anonymous", crypto: this._crypto });
-        this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
+        this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this });
         this._fs = new fs_1.default({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket });
         this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
         this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
@@ -132,7 +132,7 @@ class FilenSDK {
         this._api = params.apiKey
             ? new api_1.default({ apiKey: params.apiKey, crypto: this._crypto })
             : new api_1.default({ apiKey: "anonymous", crypto: this._crypto });
-        this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
+        this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this });
         this._fs = new fs_1.default({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket });
         this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
         this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });

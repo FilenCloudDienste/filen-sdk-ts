@@ -1,10 +1,7 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import { Writable } from "stream";
-import { type ProgressCallback } from "..";
-import type Crypto from "../crypto";
-import type API from "../api";
-import type Cloud from ".";
+import { type ProgressCallback, type FilenSDK } from "..";
 /**
  * ChunkedUploadWriter
  * @date 2/29/2024 - 9:58:16 PM
@@ -32,9 +29,7 @@ export declare class ChunkedUploadWriter extends Writable {
     private readonly hasher;
     private readonly processingMutex;
     private chunksUploaded;
-    private readonly cloud;
-    private readonly api;
-    private readonly crypto;
+    private readonly sdk;
     private readonly onProgress?;
     /**
      * Creates an instance of ChunkedUploadWriter.
@@ -43,9 +38,7 @@ export declare class ChunkedUploadWriter extends Writable {
      * @public
      * @param {{
      * 		options?: ConstructorParameters<typeof Writable>[0]
-     * 		crypto: Crypto
-     * 		api: API
-     * 		cloud: Cloud
+     * 		sdk: FilenSDK
      * 		uuid: string
      * 		key: string
      * 		name: string
@@ -59,16 +52,12 @@ export declare class ChunkedUploadWriter extends Writable {
      * @param {string} param0.name
      * @param {string} param0.uploadKey
      * @param {string} param0.parent
-     * @param {Crypto} param0.crypto
-     * @param {Cloud} param0.cloud
-     * @param {API} param0.api
+     * @param {FilenSDK} param0.sdk
      * @param {ProgressCallback} param0.onProgress
      */
-    constructor({ options, uuid, key, name, uploadKey, parent, crypto, cloud, api, onProgress }: {
+    constructor({ options, uuid, key, name, uploadKey, parent, sdk, onProgress }: {
         options?: ConstructorParameters<typeof Writable>[0];
-        crypto: Crypto;
-        api: API;
-        cloud: Cloud;
+        sdk: FilenSDK;
         uuid: string;
         key: string;
         name: string;
