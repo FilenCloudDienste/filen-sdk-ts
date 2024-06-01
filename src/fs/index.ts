@@ -1387,7 +1387,8 @@ export class FS {
 			to: destination,
 			abortSignal,
 			pauseSignal,
-			onProgress
+			onProgress,
+			size: item.metadata.size
 		})
 	}
 
@@ -1610,7 +1611,8 @@ export class FS {
 				key: item.metadata.key,
 				abortSignal,
 				pauseSignal,
-				onProgress
+				onProgress,
+				size: item.metadata.size
 			})
 
 			try {

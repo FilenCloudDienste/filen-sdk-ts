@@ -1052,7 +1052,8 @@ class FS {
             to: destination,
             abortSignal,
             pauseSignal,
-            onProgress
+            onProgress,
+            size: item.metadata.size
         });
     }
     /**
@@ -1223,7 +1224,8 @@ class FS {
                 key: item.metadata.key,
                 abortSignal,
                 pauseSignal,
-                onProgress
+                onProgress,
+                size: item.metadata.size
             });
             try {
                 const uploadedItem = await this.cloud.uploadLocalFile({

@@ -5,9 +5,11 @@ import pathModule from "path";
 import os from "os";
 import fs from "fs-extra";
 import { Semaphore } from "../semaphore";
-import appendStream from "../streams/append";
 import mimeTypes from "mime-types";
 import utils from "./utils";
+import { promisify } from "util";
+import { pipeline, Readable } from "stream";
+const pipelineAsync = promisify(pipeline);
 /**
  * Cloud
  * @date 2/14/2024 - 11:29:58 PM
@@ -1796,7 +1798,7 @@ export class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<string>}
      */
-    async downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, chunksStart, chunksEnd, to, onProgress, onQueued, onStarted, onError, onFinished }) {
+    async downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onQueued, onStarted, onError, onFinished, size }) {
         if (environment !== "node") {
             throw new Error(`cloud.downloadFileToLocal is not implemented for ${environment}`);
         }
@@ -1805,208 +1807,34 @@ export class Cloud {
         }
         const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir();
         const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()));
-        const tmpChunksPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4()));
-        const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks;
-        const firstChunk = chunksStart ? chunksStart : 0;
-        let currentWriteIndex = firstChunk;
-        let writerStopped = false;
-        await this._semaphores.downloads.acquire();
-        try {
-            if (onStarted) {
-                onStarted();
-            }
-            await Promise.all([
-                fs.rm(destinationPath, {
-                    force: true,
-                    maxRetries: 60 * 10,
-                    recursive: true,
-                    retryDelay: 100
-                }),
-                fs.rm(tmpChunksPath, {
-                    force: true,
-                    maxRetries: 60 * 10,
-                    recursive: true,
-                    retryDelay: 100
-                })
-            ]);
-            await Promise.all([
-                fs.mkdir(pathModule.dirname(destinationPath), {
-                    recursive: true
-                }),
-                fs.mkdir(tmpChunksPath, {
-                    recursive: true
-                })
-            ]);
-            const waitForPause = async () => {
-                if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
-                    return;
-                }
-                return await new Promise(resolve => {
-                    const wait = setInterval(() => {
-                        if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
-                            clearInterval(wait);
-                            resolve();
-                        }
-                    }, 10);
-                });
-            };
-            const writeToDestination = ({ index, file }) => {
-                return new Promise((resolve, reject) => {
-                    // eslint-disable-next-line no-extra-semi
-                    ;
-                    (async () => {
-                        try {
-                            if (pauseSignal && pauseSignal.isPaused()) {
-                                await waitForPause();
-                            }
-                            if (abortSignal && abortSignal.aborted) {
-                                throw new Error("Aborted");
-                            }
-                            if (writerStopped) {
-                                resolve(index);
-                                return;
-                            }
-                            if (index !== currentWriteIndex) {
-                                setTimeout(() => {
-                                    writeToDestination({ index, file }).then(resolve).catch(reject);
-                                }, 10);
-                                return;
-                            }
-                            if (index === firstChunk) {
-                                await fs.move(file, destinationPath, {
-                                    overwrite: true
-                                });
-                                const stats = await fs.stat(destinationPath);
-                                if (onProgress) {
-                                    onProgress(stats.size);
-                                }
-                            }
-                            else {
-                                const appendedSize = await appendStream({ inputFile: file, baseFile: destinationPath });
-                                await fs.rm(file, {
-                                    force: true,
-                                    maxRetries: 60 * 10,
-                                    recursive: true,
-                                    retryDelay: 100
-                                });
-                                if (onProgress) {
-                                    onProgress(appendedSize);
-                                }
-                            }
-                            currentWriteIndex += 1;
-                            resolve(index);
-                        }
-                        catch (e) {
-                            reject(e);
-                        }
-                        finally {
-                            this._semaphores.downloadWriters.release();
-                        }
-                    })();
-                });
-            };
-            try {
-                await new Promise((resolve, reject) => {
-                    let done = 0;
-                    for (let i = firstChunk; i < lastChunk; i++) {
-                        const index = i;
-                        (async () => {
-                            try {
-                                await Promise.all([this._semaphores.downloadThreads.acquire(), this._semaphores.downloadWriters.acquire()]);
-                                if (pauseSignal && pauseSignal.isPaused()) {
-                                    await waitForPause();
-                                }
-                                if (abortSignal && abortSignal.aborted) {
-                                    throw new Error("Aborted");
-                                }
-                                const encryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.encrypted`);
-                                await this.api.v3().file().download().chunk().local({
-                                    uuid,
-                                    bucket,
-                                    region,
-                                    chunk: i,
-                                    to: encryptedTmpChunkPath,
-                                    abortSignal
-                                });
-                                if (pauseSignal && pauseSignal.isPaused()) {
-                                    await waitForPause();
-                                }
-                                if (abortSignal && abortSignal.aborted) {
-                                    throw new Error("Aborted");
-                                }
-                                const decryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.decrypted`);
-                                await this.crypto.decrypt().dataStream({
-                                    inputFile: encryptedTmpChunkPath,
-                                    key,
-                                    version,
-                                    outputFile: decryptedTmpChunkPath
-                                });
-                                await fs.rm(encryptedTmpChunkPath, {
-                                    force: true,
-                                    maxRetries: 60 * 10,
-                                    recursive: true,
-                                    retryDelay: 100
-                                });
-                                writeToDestination({ index, file: decryptedTmpChunkPath }).catch(err => {
-                                    this._semaphores.downloadThreads.release();
-                                    this._semaphores.downloadWriters.release();
-                                    writerStopped = true;
-                                    reject(err);
-                                });
-                                done += 1;
-                                this._semaphores.downloadThreads.release();
-                                if (done >= lastChunk) {
-                                    resolve();
-                                }
-                            }
-                            catch (e) {
-                                this._semaphores.downloadThreads.release();
-                                this._semaphores.downloadWriters.release();
-                                writerStopped = true;
-                                throw e;
-                            }
-                        })().catch(reject);
-                    }
-                });
-                await new Promise(resolve => {
-                    if (currentWriteIndex >= lastChunk) {
-                        resolve();
-                        return;
-                    }
-                    const wait = setInterval(() => {
-                        if (currentWriteIndex >= lastChunk) {
-                            clearInterval(wait);
-                            resolve();
-                        }
-                    }, 10);
-                });
-            }
-            catch (e) {
-                await fs.rm(destinationPath, {
-                    force: true,
-                    maxRetries: 60 * 10,
-                    recursive: true,
-                    retryDelay: 100
-                });
-                if (onError) {
-                    onError(e);
-                }
-                throw e;
-            }
-            if (onFinished) {
-                onFinished();
-            }
-            return destinationPath;
+        await fs.rm(destinationPath, {
+            force: true,
+            maxRetries: 60 * 10,
+            recursive: true,
+            retryDelay: 100
+        });
+        const writeStream = fs.createWriteStream(destinationPath);
+        const readStream = (await this.downloadFileToReadableStream({
+            uuid,
+            region,
+            bucket,
+            version,
+            key,
+            chunks,
+            size,
+            abortSignal,
+            pauseSignal,
+            onProgress,
+            onError,
+            onStarted,
+            start,
+            end
+        }));
+        await pipelineAsync(Readable.fromWeb(readStream), writeStream);
+        if (onFinished) {
+            onFinished();
         }
-        finally {
-            await fs.rm(tmpChunksPath, {
-                force: true,
-                maxRetries: 60 * 10,
-                recursive: true,
-                retryDelay: 100
-            });
-            this._semaphores.downloads.release();
-        }
+        return destinationPath;
     }
     /**
      * Download a file to a ReadableStream.
@@ -2431,7 +2259,8 @@ export class Cloud {
                         abortSignal,
                         pauseSignal,
                         to: filePath,
-                        onProgress
+                        onProgress,
+                        size: item.size
                     })
                         .then(() => resolve())
                         .catch(reject);

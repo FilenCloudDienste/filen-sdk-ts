@@ -29,7 +29,6 @@ import pathModule from "path"
 import os from "os"
 import fs from "fs-extra"
 import { Semaphore } from "../semaphore"
-import appendStream from "../streams/append"
 import { type DirColors } from "../api/v3/dir/color"
 import { type FileVersionsResponse } from "../api/v3/file/versions"
 import { type DirDownloadType } from "../api/v3/dir/download"
@@ -41,6 +40,11 @@ import { type FileLinkPasswordResponse } from "../api/v3/file/link/password"
 import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info"
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info"
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content"
+import { promisify } from "util"
+import { pipeline, Readable } from "stream"
+import { type ReadableStream as ReadableStreamWebType } from "stream/web"
+
+const pipelineAsync = promisify(pipeline)
 
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
@@ -2366,14 +2370,15 @@ export class Cloud {
 		key,
 		abortSignal,
 		pauseSignal,
-		chunksStart,
-		chunksEnd,
+		start,
+		end,
 		to,
 		onProgress,
 		onQueued,
 		onStarted,
 		onError,
-		onFinished
+		onFinished,
+		size
 	}: {
 		uuid: string
 		bucket: string
@@ -2383,14 +2388,15 @@ export class Cloud {
 		key: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
-		chunksStart?: number
-		chunksEnd?: number
+		end?: number
+		start?: number
 		to?: string
 		onProgress?: ProgressCallback
 		onQueued?: () => void
 		onStarted?: () => void
 		onError?: (err: Error) => void
 		onFinished?: () => void
+		size: number
 	}): Promise<string> {
 		if (environment !== "node") {
 			throw new Error(`cloud.downloadFileToLocal is not implemented for ${environment}`)
@@ -2402,251 +2408,39 @@ export class Cloud {
 
 		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
 		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
-		const tmpChunksPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
-		const lastChunk = chunksEnd ? (chunksEnd === Infinity ? chunks : chunksEnd) : chunks
-		const firstChunk = chunksStart ? chunksStart : 0
 
-		let currentWriteIndex = firstChunk
-		let writerStopped = false
+		await fs.rm(destinationPath, {
+			force: true,
+			maxRetries: 60 * 10,
+			recursive: true,
+			retryDelay: 100
+		})
 
-		await this._semaphores.downloads.acquire()
+		const writeStream = fs.createWriteStream(destinationPath)
+		const readStream = (await this.downloadFileToReadableStream({
+			uuid,
+			region,
+			bucket,
+			version,
+			key,
+			chunks,
+			size,
+			abortSignal,
+			pauseSignal,
+			onProgress,
+			onError,
+			onStarted,
+			start,
+			end
+		})) as unknown as ReadableStreamWebType<Buffer>
 
-		try {
-			if (onStarted) {
-				onStarted()
-			}
+		await pipelineAsync(Readable.fromWeb(readStream), writeStream)
 
-			await Promise.all([
-				fs.rm(destinationPath, {
-					force: true,
-					maxRetries: 60 * 10,
-					recursive: true,
-					retryDelay: 100
-				}),
-				fs.rm(tmpChunksPath, {
-					force: true,
-					maxRetries: 60 * 10,
-					recursive: true,
-					retryDelay: 100
-				})
-			])
-
-			await Promise.all([
-				fs.mkdir(pathModule.dirname(destinationPath), {
-					recursive: true
-				}),
-				fs.mkdir(tmpChunksPath, {
-					recursive: true
-				})
-			])
-
-			const waitForPause = async (): Promise<void> => {
-				if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
-					return
-				}
-
-				return await new Promise(resolve => {
-					const wait = setInterval(() => {
-						if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
-							clearInterval(wait)
-
-							resolve()
-						}
-					}, 10)
-				})
-			}
-
-			const writeToDestination = ({ index, file }: { index: number; file: string }): Promise<number> => {
-				return new Promise<number>((resolve, reject) => {
-					// eslint-disable-next-line no-extra-semi
-					;(async () => {
-						try {
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								throw new Error("Aborted")
-							}
-
-							if (writerStopped) {
-								resolve(index)
-
-								return
-							}
-
-							if (index !== currentWriteIndex) {
-								setTimeout(() => {
-									writeToDestination({ index, file }).then(resolve).catch(reject)
-								}, 10)
-
-								return
-							}
-
-							if (index === firstChunk) {
-								await fs.move(file, destinationPath, {
-									overwrite: true
-								})
-
-								const stats = await fs.stat(destinationPath)
-
-								if (onProgress) {
-									onProgress(stats.size)
-								}
-							} else {
-								const appendedSize = await appendStream({ inputFile: file, baseFile: destinationPath })
-
-								await fs.rm(file, {
-									force: true,
-									maxRetries: 60 * 10,
-									recursive: true,
-									retryDelay: 100
-								})
-
-								if (onProgress) {
-									onProgress(appendedSize)
-								}
-							}
-
-							currentWriteIndex += 1
-
-							resolve(index)
-						} catch (e) {
-							reject(e)
-						} finally {
-							this._semaphores.downloadWriters.release()
-						}
-					})()
-				})
-			}
-
-			try {
-				await new Promise<void>((resolve, reject) => {
-					let done = 0
-
-					for (let i = firstChunk; i < lastChunk; i++) {
-						const index = i
-
-						;(async () => {
-							try {
-								await Promise.all([this._semaphores.downloadThreads.acquire(), this._semaphores.downloadWriters.acquire()])
-
-								if (pauseSignal && pauseSignal.isPaused()) {
-									await waitForPause()
-								}
-
-								if (abortSignal && abortSignal.aborted) {
-									throw new Error("Aborted")
-								}
-
-								const encryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.encrypted`)
-
-								await this.api.v3().file().download().chunk().local({
-									uuid,
-									bucket,
-									region,
-									chunk: i,
-									to: encryptedTmpChunkPath,
-									abortSignal
-								})
-
-								if (pauseSignal && pauseSignal.isPaused()) {
-									await waitForPause()
-								}
-
-								if (abortSignal && abortSignal.aborted) {
-									throw new Error("Aborted")
-								}
-
-								const decryptedTmpChunkPath = pathModule.join(tmpChunksPath, `${i}.decrypted`)
-
-								await this.crypto.decrypt().dataStream({
-									inputFile: encryptedTmpChunkPath,
-									key,
-									version,
-									outputFile: decryptedTmpChunkPath
-								})
-
-								await fs.rm(encryptedTmpChunkPath, {
-									force: true,
-									maxRetries: 60 * 10,
-									recursive: true,
-									retryDelay: 100
-								})
-
-								writeToDestination({ index, file: decryptedTmpChunkPath }).catch(err => {
-									this._semaphores.downloadThreads.release()
-									this._semaphores.downloadWriters.release()
-
-									writerStopped = true
-
-									reject(err)
-								})
-
-								done += 1
-
-								this._semaphores.downloadThreads.release()
-
-								if (done >= lastChunk) {
-									resolve()
-								}
-							} catch (e) {
-								this._semaphores.downloadThreads.release()
-								this._semaphores.downloadWriters.release()
-
-								writerStopped = true
-
-								throw e
-							}
-						})().catch(reject)
-					}
-				})
-
-				await new Promise<void>(resolve => {
-					if (currentWriteIndex >= lastChunk) {
-						resolve()
-
-						return
-					}
-
-					const wait = setInterval(() => {
-						if (currentWriteIndex >= lastChunk) {
-							clearInterval(wait)
-
-							resolve()
-						}
-					}, 10)
-				})
-			} catch (e) {
-				await fs.rm(destinationPath, {
-					force: true,
-					maxRetries: 60 * 10,
-					recursive: true,
-					retryDelay: 100
-				})
-
-				if (onError) {
-					onError(e as unknown as Error)
-				}
-
-				throw e
-			}
-
-			if (onFinished) {
-				onFinished()
-			}
-
-			return destinationPath
-		} finally {
-			await fs.rm(tmpChunksPath, {
-				force: true,
-				maxRetries: 60 * 10,
-				recursive: true,
-				retryDelay: 100
-			})
-
-			this._semaphores.downloads.release()
+		if (onFinished) {
+			onFinished()
 		}
+
+		return destinationPath
 	}
 
 	/**
@@ -3232,7 +3026,8 @@ export class Cloud {
 							abortSignal,
 							pauseSignal,
 							to: filePath,
-							onProgress
+							onProgress,
+							size: item.size
 						})
 							.then(() => resolve())
 							.catch(reject)

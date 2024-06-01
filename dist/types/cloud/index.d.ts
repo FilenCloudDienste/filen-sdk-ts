@@ -829,7 +829,7 @@ export declare class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<string>}
      */
-    downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, chunksStart, chunksEnd, to, onProgress, onQueued, onStarted, onError, onFinished }: {
+    downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onQueued, onStarted, onError, onFinished, size }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -838,14 +838,15 @@ export declare class Cloud {
         key: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
-        chunksStart?: number;
-        chunksEnd?: number;
+        end?: number;
+        start?: number;
         to?: string;
         onProgress?: ProgressCallback;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
         onFinished?: () => void;
+        size: number;
     }): Promise<string>;
     /**
      * Download a file to a ReadableStream.
