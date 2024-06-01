@@ -143,6 +143,8 @@ const update_2 = __importDefault(require("./v3/user/keyPair/update"));
 const set_1 = __importDefault(require("./v3/user/keyPair/set"));
 const info_5 = __importDefault(require("./v3/user/keyPair/info"));
 const masterKeys_1 = __importDefault(require("./v3/user/masterKeys"));
+const register_1 = __importDefault(require("./v3/register"));
+const confirmationSend_1 = __importDefault(require("./v3/confirmationSend"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -200,6 +202,8 @@ class API {
                 info: new info_1.default({ apiClient: this.apiClient })
             },
             login: new login_1.default({ apiClient: this.apiClient }),
+            register: new register_1.default({ apiClient: this.apiClient }),
+            confirmationSend: new confirmationSend_1.default({ apiClient: this.apiClient }),
             user: {
                 info: new info_2.default({ apiClient: this.apiClient }),
                 baseFolder: new baseFolder_1.default({ apiClient: this.apiClient }),
@@ -418,6 +422,8 @@ class API {
                 };
             },
             login: (...params) => this._v3.login.fetch(...params),
+            register: (...params) => this._v3.register.fetch(...params),
+            confirmationSend: (...params) => this._v3.confirmationSend.fetch(...params),
             user: () => {
                 return {
                     info: (...params) => this._v3.user.info.fetch(...params),

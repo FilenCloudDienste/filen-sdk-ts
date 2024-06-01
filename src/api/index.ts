@@ -138,6 +138,8 @@ import V3UserKeyPairUpdate from "./v3/user/keyPair/update"
 import V3UserKeyPairSet from "./v3/user/keyPair/set"
 import V3UserKeyPairInfo from "./v3/user/keyPair/info"
 import V3UserMasterKeys from "./v3/user/masterKeys"
+import V3Register from "./v3/register"
+import V3ConfirmationSend from "./v3/confirmationSend"
 
 export type APIConfig = {
 	apiKey: string
@@ -190,6 +192,8 @@ export class API {
 			info: V3AuthInfo
 		}
 		login: V3Login
+		register: V3Register
+		confirmationSend: V3ConfirmationSend
 		user: {
 			info: V3UserInfo
 			baseFolder: V3UserBaseFolder
@@ -417,6 +421,8 @@ export class API {
 				info: new V3AuthInfo({ apiClient: this.apiClient })
 			},
 			login: new V3Login({ apiClient: this.apiClient }),
+			register: new V3Register({ apiClient: this.apiClient }),
+			confirmationSend: new V3ConfirmationSend({ apiClient: this.apiClient }),
 			user: {
 				info: new V3UserInfo({ apiClient: this.apiClient }),
 				baseFolder: new V3UserBaseFolder({ apiClient: this.apiClient }),
@@ -640,6 +646,8 @@ export class API {
 				}
 			},
 			login: (...params: Parameters<typeof this._v3.login.fetch>) => this._v3.login.fetch(...params),
+			register: (...params: Parameters<typeof this._v3.register.fetch>) => this._v3.register.fetch(...params),
+			confirmationSend: (...params: Parameters<typeof this._v3.confirmationSend.fetch>) => this._v3.confirmationSend.fetch(...params),
 			user: () => {
 				return {
 					info: (...params: Parameters<typeof this._v3.user.info.fetch>) => this._v3.user.info.fetch(...params),

@@ -238,6 +238,15 @@ export declare class FilenSDK {
             twoFactorCode?: string | undefined;
             authVersion: AuthVersion;
         }) => Promise<import("./api/v3/login").LoginResponse>;
+        register: (params_0: {
+            email: string;
+            password: string;
+            salt: string;
+            authVersion: AuthVersion;
+        }) => Promise<void>;
+        confirmationSend: (params_0: {
+            email: string;
+        }) => Promise<void>;
         user: () => {
             info: (params_0: {
                 apiKey?: string | undefined;

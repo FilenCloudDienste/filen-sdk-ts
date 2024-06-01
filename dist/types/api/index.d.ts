@@ -141,6 +141,15 @@ export declare class API {
             twoFactorCode?: string | undefined;
             authVersion: import("..").AuthVersion;
         }) => Promise<import("./v3/login").LoginResponse>;
+        register: (params_0: {
+            email: string;
+            password: string;
+            salt: string;
+            authVersion: import("..").AuthVersion;
+        }) => Promise<void>;
+        confirmationSend: (params_0: {
+            email: string;
+        }) => Promise<void>;
         user: () => {
             info: (params_0: {
                 apiKey?: string | undefined;

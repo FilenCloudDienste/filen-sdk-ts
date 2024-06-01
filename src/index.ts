@@ -199,9 +199,16 @@ export class FilenSDK {
 		privateKey: string
 		masterKeys: string[]
 	}): Promise<void> {
-		const encryptedPrivateKey = await this._crypto.encrypt().metadata({ metadata: privateKey, key: masterKeys[masterKeys.length - 1] })
+		const encryptedPrivateKey = await this._crypto.encrypt().metadata({
+			metadata: privateKey,
+			key: masterKeys[masterKeys.length - 1]
+		})
 
-		await this._api.v3().user().keyPair().update({ publicKey, encryptedPrivateKey, apiKey })
+		await this._api.v3().user().keyPair().update({
+			publicKey,
+			encryptedPrivateKey,
+			apiKey
+		})
 	}
 
 	/**
@@ -228,9 +235,16 @@ export class FilenSDK {
 		privateKey: string
 		masterKeys: string[]
 	}): Promise<void> {
-		const encryptedPrivateKey = await this._crypto.encrypt().metadata({ metadata: privateKey, key: masterKeys[masterKeys.length - 1] })
+		const encryptedPrivateKey = await this._crypto.encrypt().metadata({
+			metadata: privateKey,
+			key: masterKeys[masterKeys.length - 1]
+		})
 
-		await this._api.v3().user().keyPair().set({ publicKey, encryptedPrivateKey, apiKey })
+		await this._api.v3().user().keyPair().set({
+			publicKey,
+			encryptedPrivateKey,
+			apiKey
+		})
 	}
 
 	private async __updateKeyPair({
@@ -252,7 +266,10 @@ export class FilenSDK {
 
 			for (const masterKey of masterKeys) {
 				try {
-					const decryptedPrivateKey = await this._crypto.decrypt().metadata({ metadata: keyPairInfo.privateKey, key: masterKey })
+					const decryptedPrivateKey = await this._crypto.decrypt().metadata({
+						metadata: keyPairInfo.privateKey,
+						key: masterKey
+					})
 
 					if (typeof decryptedPrivateKey === "string" && decryptedPrivateKey.length > 16) {
 						privateKey = decryptedPrivateKey
@@ -266,7 +283,12 @@ export class FilenSDK {
 				throw new Error("Could not decrypt private key.")
 			}
 
-			await this._updateKeyPair({ apiKey, publicKey: keyPairInfo.publicKey, privateKey, masterKeys })
+			await this._updateKeyPair({
+				apiKey,
+				publicKey: keyPairInfo.publicKey,
+				privateKey,
+				masterKeys
+			})
 
 			return {
 				publicKey: keyPairInfo.publicKey,
@@ -276,7 +298,12 @@ export class FilenSDK {
 
 		const generatedKeyPair = await this._crypto.utils.generateKeyPair()
 
-		await this._setKeyPair({ apiKey, publicKey: generatedKeyPair.publicKey, privateKey: generatedKeyPair.privateKey, masterKeys })
+		await this._setKeyPair({
+			apiKey,
+			publicKey: generatedKeyPair.publicKey,
+			privateKey: generatedKeyPair.privateKey,
+			masterKeys
+		})
 
 		return {
 			publicKey: generatedKeyPair.publicKey,
@@ -294,15 +321,25 @@ export class FilenSDK {
 		const encryptedMasterKeys = await this._crypto
 			.encrypt()
 			.metadata({ metadata: masterKeys.join("|"), key: masterKeys[masterKeys.length - 1] })
-		const masterKeysResponse = await this._api.v3().user().masterKeys({ encryptedMasterKeys, apiKey })
-		let newMasterKeys: string[] = [...masterKeys]
+
+		const masterKeysResponse = await this._api.v3().user().masterKeys({
+			encryptedMasterKeys,
+			apiKey
+		})
+
+		const newMasterKeys: string[] = [...masterKeys]
 
 		for (const masterKey of masterKeys) {
 			try {
-				const decryptedMasterKeys = await this._crypto.decrypt().metadata({ metadata: masterKeysResponse.keys, key: masterKey })
+				const decryptedMasterKeys = await this._crypto.decrypt().metadata({
+					metadata: masterKeysResponse.keys,
+					key: masterKey
+				})
 
 				if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
-					newMasterKeys = [...masterKeys, ...decryptedMasterKeys.split("|")]
+					for (const key of decryptedMasterKeys.split("|")) {
+						newMasterKeys.push(key)
+					}
 				}
 			} catch {
 				continue
@@ -313,7 +350,10 @@ export class FilenSDK {
 			throw new Error("Could not decrypt master keys.")
 		}
 
-		const { publicKey, privateKey } = await this.__updateKeyPair({ apiKey, masterKeys: newMasterKeys })
+		const { publicKey, privateKey } = await this.__updateKeyPair({
+			apiKey,
+			masterKeys: newMasterKeys
+		})
 
 		return {
 			masterKeys: newMasterKeys,
@@ -338,17 +378,13 @@ export class FilenSDK {
 		const emailToUse = email ? email : this.config.email ? this.config.email : ""
 		const passwordToUse = password ? password : this.config.password ? this.config.password : ""
 		const twoFactorCodeToUse = twoFactorCode ? twoFactorCode : this.config.twoFactorCode ? this.config.twoFactorCode : "XXXXXX"
-		let authVersion: AuthVersion | null = this.config.authVersion ? this.config.authVersion : null
 
 		if (emailToUse.length === 0 || passwordToUse.length === 0 || twoFactorCodeToUse.length === 0) {
 			throw new Error("Empty email, password or twoFactorCode")
 		}
 
 		const authInfo = await this._api.v3().auth().info({ email: emailToUse })
-
-		if (!authVersion) {
-			authVersion = authInfo.authVersion
-		}
+		const authVersion = authInfo.authVersion
 
 		const derived = await this._crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: passwordToUse,
@@ -356,16 +392,22 @@ export class FilenSDK {
 			salt: authInfo.salt
 		})
 
-		const loginResponse = await this._api
-			.v3()
-			.login({ email: emailToUse, password: derived.derivedPassword, twoFactorCode: twoFactorCodeToUse, authVersion })
+		const loginResponse = await this._api.v3().login({
+			email: emailToUse,
+			password: derived.derivedPassword,
+			twoFactorCode: twoFactorCodeToUse,
+			authVersion
+		})
 
 		const [infoResponse, baseFolderResponse] = await Promise.all([
 			this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
 			this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
 		])
 
-		const updateKeys = await this._updateKeys({ apiKey: loginResponse.apiKey, masterKeys: [derived.derivedMasterKeys] })
+		const updateKeys = await this._updateKeys({
+			apiKey: loginResponse.apiKey,
+			masterKeys: [derived.derivedMasterKeys]
+		})
 
 		this.init({
 			...this.config,

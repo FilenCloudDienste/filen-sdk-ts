@@ -256,20 +256,25 @@ class Decrypt {
             hash: undefined
         };
         const privateKey = key ? key : this.config.privateKey;
-        const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
-        if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            fileMetadata = {
-                size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
-                lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
-                creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
-                name: decrypted.name,
-                key: decrypted.key,
-                mime: decrypted.mime,
-                hash: decrypted.hash
-            };
-            if (this.config.metadataCache) {
-                cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
+        try {
+            const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
+            if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+                fileMetadata = {
+                    size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
+                    lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                    creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
+                    name: decrypted.name,
+                    key: decrypted.key,
+                    mime: decrypted.mime,
+                    hash: decrypted.hash
+                };
+                if (this.config.metadataCache) {
+                    cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
+                }
             }
+        }
+        catch (_c) {
+            // Noop
         }
         return fileMetadata;
     }
@@ -293,14 +298,19 @@ class Decrypt {
             name: ""
         };
         const privateKey = key ? key : this.config.privateKey;
-        const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
-        if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            folderMetadata = {
-                name: decrypted.name
-            };
-            if (this.config.metadataCache) {
-                cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
+        try {
+            const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
+            if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+                folderMetadata = {
+                    name: decrypted.name
+                };
+                if (this.config.metadataCache) {
+                    cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
+                }
             }
+        }
+        catch (_a) {
+            // Noop
         }
         return folderMetadata;
     }
@@ -330,20 +340,25 @@ class Decrypt {
             creation: undefined,
             hash: undefined
         };
-        const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
-        if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            fileMetadata = {
-                size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
-                lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
-                creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
-                name: decrypted.name,
-                key: decrypted.key,
-                mime: decrypted.mime,
-                hash: decrypted.hash
-            };
-            if (this.config.metadataCache) {
-                cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
+        try {
+            const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
+            if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+                fileMetadata = {
+                    size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
+                    lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                    creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
+                    name: decrypted.name,
+                    key: decrypted.key,
+                    mime: decrypted.mime,
+                    hash: decrypted.hash
+                };
+                if (this.config.metadataCache) {
+                    cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
+                }
             }
+        }
+        catch (_c) {
+            // Noop
         }
         return fileMetadata;
     }
@@ -366,17 +381,19 @@ class Decrypt {
         let folderMetadata = {
             name: ""
         };
-        const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
-        if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-            folderMetadata = {
-                name: decrypted.name
-            };
-            if (this.config.metadataCache) {
-                cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
+        try {
+            const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
+            if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+                folderMetadata = {
+                    name: decrypted.name
+                };
+                if (this.config.metadataCache) {
+                    cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
+                }
             }
         }
-        if (folderMetadata.name.length === 0) {
-            throw new Error("Could not decrypt folder metadata (link) using given key.");
+        catch (_a) {
+            // Noop
         }
         return folderMetadata;
     }
@@ -532,12 +549,17 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteContent({ content, key }) {
-        const decrypted = await this.metadata({ metadata: content, key });
-        const parsed = JSON.parse(decrypted);
-        if (typeof parsed.content !== "string") {
-            throw new Error("Could not decrypt note content, malformed decrypted metadata");
+        try {
+            const decrypted = await this.metadata({ metadata: content, key });
+            const parsed = JSON.parse(decrypted);
+            if (typeof parsed.content !== "string") {
+                throw new Error("Could not decrypt note content, malformed decrypted metadata");
+            }
+            return parsed.content;
         }
-        return parsed.content;
+        catch (_a) {
+            return "";
+        }
     }
     /**
      * Decrypt a note's title using the note's symmetric encryption key.
