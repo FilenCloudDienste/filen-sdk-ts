@@ -5,6 +5,7 @@ export type AuthInfoResponse = {
 	email: string
 	authVersion: AuthVersion
 	salt: string
+	id: number
 }
 
 /**
