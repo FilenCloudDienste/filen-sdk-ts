@@ -257,6 +257,8 @@ export type SocketEvent = {
 } | {
     type: "trashEmpty";
 } | {
+    type: "passwordChanged";
+} | {
     type: "chatMessageNew";
     data: SocketChatMessageNew;
 } | {

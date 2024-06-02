@@ -255,6 +255,11 @@ class Socket extends events_1.EventEmitter {
                 type: "trashEmpty"
             });
         });
+        this.socket.on("passwordChanged", () => {
+            this.emit("socketEvent", {
+                type: "passwordChanged"
+            });
+        });
         this.socket.on("chatMessageNew", (data) => {
             this.emit("socketEvent", {
                 type: "chatMessageNew",

@@ -311,6 +311,9 @@ export type SocketEvent =
 			type: "trashEmpty"
 	  }
 	| {
+			type: "passwordChanged"
+	  }
+	| {
 			type: "chatMessageNew"
 			data: SocketChatMessageNew
 	  }
@@ -682,6 +685,12 @@ export class Socket extends EventEmitter {
 		this.socket.on("trashEmpty", () => {
 			this.emit("socketEvent", {
 				type: "trashEmpty"
+			} as SocketEvent)
+		})
+
+		this.socket.on("passwordChanged", () => {
+			this.emit("socketEvent", {
+				type: "passwordChanged"
 			} as SocketEvent)
 		})
 
