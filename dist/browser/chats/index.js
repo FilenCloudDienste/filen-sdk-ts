@@ -1,4 +1,4 @@
-import { promiseAllChunked, uuidv4 } from "../utils";
+import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils";
 import { Semaphore } from "../semaphore";
 /**
  * Chats
@@ -110,7 +110,7 @@ export class Chats {
                 this._semaphores.list.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return chatConversations;
     }
     /**
@@ -316,7 +316,7 @@ export class Chats {
                 this._semaphores.list.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return chatMessages;
     }
     /**

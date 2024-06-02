@@ -91,6 +91,34 @@ export async function promiseAllChunked(promises, chunkSize = 100000) {
     return results;
 }
 /**
+ * Chunk large Promise.allSettled executions.
+ * @date 3/5/2024 - 12:41:08 PM
+ *
+ * @export
+ * @async
+ * @template T
+ * @param {Promise<T>[]} promises
+ * @param {number} [chunkSize=100000]
+ * @returns {Promise<T[]>}
+ */
+export async function promiseAllSettledChunked(promises, chunkSize = 100000) {
+    const results = [];
+    for (let i = 0; i < promises.length; i += chunkSize) {
+        const chunkPromisesSettled = await Promise.allSettled(promises.slice(i, i + chunkSize));
+        const chunkResults = chunkPromisesSettled.reduce((acc, current) => {
+            if (current.status === "fulfilled") {
+                acc.push(current.value);
+            }
+            else {
+                // Handle rejected promises or do something with the error (current.reason)
+            }
+            return acc;
+        }, []);
+        results.push(...chunkResults);
+    }
+    return results;
+}
+/**
  * Generate a random number. NOT CRYPTOGRAPHICALLY SAFE.
  * @date 2/17/2024 - 1:08:06 AM
  *

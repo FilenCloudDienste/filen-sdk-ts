@@ -2,7 +2,7 @@ import type API from "../api"
 import type Crypto from "../crypto"
 import type { FilenSDKConfig } from ".."
 import type { ChatConversation } from "../api/v3/chat/conversations"
-import { promiseAllChunked, uuidv4 } from "../utils"
+import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils"
 import type { Contact } from "../api/v3/contacts"
 import { ChatTypingType } from "../api/v3/chat/typing"
 import type { ChatMessage } from "../api/v3/chat/messages"
@@ -150,7 +150,7 @@ export class Chats {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return chatConversations
 	}
@@ -399,7 +399,7 @@ export class Chats {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return chatMessages
 	}

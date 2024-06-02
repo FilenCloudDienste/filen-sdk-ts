@@ -115,7 +115,7 @@ class Notes {
                 this._semaphores.list.release();
             }));
         }
-        await (0, utils_1.promiseAllChunked)(promises);
+        await (0, utils_1.promiseAllSettledChunked)(promises);
         return notes;
     }
     /**

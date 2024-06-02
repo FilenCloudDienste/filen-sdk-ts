@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
+exports.utils = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
 const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 const constants_1 = require("./constants");
@@ -102,6 +102,35 @@ async function promiseAllChunked(promises, chunkSize = 100000) {
     return results;
 }
 exports.promiseAllChunked = promiseAllChunked;
+/**
+ * Chunk large Promise.allSettled executions.
+ * @date 3/5/2024 - 12:41:08 PM
+ *
+ * @export
+ * @async
+ * @template T
+ * @param {Promise<T>[]} promises
+ * @param {number} [chunkSize=100000]
+ * @returns {Promise<T[]>}
+ */
+async function promiseAllSettledChunked(promises, chunkSize = 100000) {
+    const results = [];
+    for (let i = 0; i < promises.length; i += chunkSize) {
+        const chunkPromisesSettled = await Promise.allSettled(promises.slice(i, i + chunkSize));
+        const chunkResults = chunkPromisesSettled.reduce((acc, current) => {
+            if (current.status === "fulfilled") {
+                acc.push(current.value);
+            }
+            else {
+                // Handle rejected promises or do something with the error (current.reason)
+            }
+            return acc;
+        }, []);
+        results.push(...chunkResults);
+    }
+    return results;
+}
+exports.promiseAllSettledChunked = promiseAllSettledChunked;
 /**
  * Generate a random number. NOT CRYPTOGRAPHICALLY SAFE.
  * @date 2/17/2024 - 1:08:06 AM

@@ -58,6 +58,18 @@ export declare function Uint8ArrayConcat(a1: Uint8Array, a2: Uint8Array): Uint8A
  */
 export declare function promiseAllChunked<T>(promises: Promise<T>[], chunkSize?: number): Promise<T[]>;
 /**
+ * Chunk large Promise.allSettled executions.
+ * @date 3/5/2024 - 12:41:08 PM
+ *
+ * @export
+ * @async
+ * @template T
+ * @param {Promise<T>[]} promises
+ * @param {number} [chunkSize=100000]
+ * @returns {Promise<T[]>}
+ */
+export declare function promiseAllSettledChunked<T>(promises: Promise<T>[], chunkSize?: number): Promise<T[]>;
+/**
  * Generate a random number. NOT CRYPTOGRAPHICALLY SAFE.
  * @date 2/17/2024 - 1:08:06 AM
  *

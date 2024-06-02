@@ -2110,11 +2110,22 @@ class Cloud {
      * @returns {Promise<Record<string, CloudItemTree>>}
      */
     async getDirectoryTree({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }) {
-        const contents = await this.api.v3().dir().download({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache });
+        const contents = await this.api.v3().dir().download({
+            uuid,
+            type,
+            linkUUID,
+            linkHasPassword,
+            linkPassword,
+            linkSalt,
+            skipCache
+        });
         const tree = {};
         const folderNames = { base: "/" };
         for (const folder of contents.folders) {
             const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
+            if (decrypted.name.length === 0) {
+                continue;
+            }
             const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`;
             const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`;
             folderNames[folder.uuid] = folderPath;
@@ -2125,6 +2136,9 @@ class Cloud {
                 parent: folder.parent,
                 size: 0
             };
+        }
+        if (Object.keys(folderNames).length === 0 || Object.keys(tree).length === 0) {
+            throw new Error("Could not build directory tree.");
         }
         const promises = [];
         for (const file of contents.files) {

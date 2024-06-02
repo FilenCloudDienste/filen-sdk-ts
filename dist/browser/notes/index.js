@@ -1,4 +1,4 @@
-import { uuidv4, simpleDate, promiseAllChunked } from "../utils";
+import { uuidv4, simpleDate, promiseAllChunked, promiseAllSettledChunked } from "../utils";
 import { createNotePreviewFromContentText } from "./utils";
 import { MAX_NOTE_SIZE } from "../constants";
 import { Semaphore } from "../semaphore";
@@ -123,7 +123,7 @@ export class Notes {
                 this._semaphores.list.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return notes;
     }
     /**
