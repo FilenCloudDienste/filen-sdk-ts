@@ -8,7 +8,14 @@ import {
 	type FolderMetadata,
 	type PublicLinkExpiration
 } from "../types"
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils"
+import {
+	convertTimestampToMs,
+	promiseAllChunked,
+	uuidv4,
+	normalizePath,
+	getEveryPossibleDirectoryPath,
+	promiseAllSettledChunked
+} from "../utils"
 import {
 	environment,
 	MAX_DOWNLOAD_THREADS,
@@ -227,12 +234,6 @@ export class Cloud {
 								.decrypt()
 								.folderMetadata({ metadata: folder.name })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									const timestamp = convertTimestampToMs(folder.timestamp)
 
 									items.push({
@@ -268,12 +269,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadata({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -305,7 +300,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -335,12 +330,6 @@ export class Cloud {
 								.decrypt()
 								.folderMetadataPrivate({ metadata: folder.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									const timestamp = convertTimestampToMs(folder.timestamp)
 
 									items.push({
@@ -380,12 +369,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadataPrivate({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -420,7 +403,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -451,12 +434,6 @@ export class Cloud {
 								.decrypt()
 								.folderMetadata({ metadata: folder.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									const timestamp = convertTimestampToMs(folder.timestamp)
 
 									items.push({
@@ -496,12 +473,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadata({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -536,7 +507,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		const groups: CloudItemShared[] = []
 		const sharedTo: Record<string, CloudItemReceiver[]> = {}
@@ -596,12 +567,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadata({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -633,7 +598,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -661,12 +626,6 @@ export class Cloud {
 								.decrypt()
 								.folderMetadata({ metadata: folder.name })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									const timestamp = convertTimestampToMs(folder.timestamp)
 
 									items.push({
@@ -702,12 +661,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadata({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -739,7 +692,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -767,12 +720,6 @@ export class Cloud {
 								.decrypt()
 								.folderMetadata({ metadata: folder.name })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									const timestamp = convertTimestampToMs(folder.timestamp)
 
 									items.push({
@@ -808,12 +755,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadata({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -845,7 +786,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -873,12 +814,6 @@ export class Cloud {
 								.decrypt()
 								.folderMetadata({ metadata: folder.name })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									const timestamp = convertTimestampToMs(folder.timestamp)
 
 									items.push({
@@ -914,12 +849,6 @@ export class Cloud {
 								.decrypt()
 								.fileMetadata({ metadata: file.metadata })
 								.then(decrypted => {
-									if (decrypted.name.length === 0) {
-										resolve()
-
-										return
-									}
-
 									items.push({
 										type: "file",
 										uuid: file.uuid,
@@ -951,7 +880,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -1745,7 +1674,7 @@ export class Cloud {
 		const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword })
 
 		return {
-			files: await promiseAllChunked(
+			files: await promiseAllSettledChunked(
 				content.files.map(
 					file =>
 						new Promise((resolve, reject) => {
@@ -1762,7 +1691,7 @@ export class Cloud {
 						})
 				)
 			),
-			folders: await promiseAllChunked(
+			folders: await promiseAllSettledChunked(
 				content.folders.map(
 					folder =>
 						new Promise((resolve, reject) => {
@@ -2855,22 +2784,21 @@ export class Cloud {
 		const folderNames: Record<string, string> = { base: "/" }
 
 		for (const folder of contents.folders) {
-			const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
+			try {
+				const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
+				const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`
+				const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`
 
-			if (decrypted.name.length === 0) {
+				folderNames[folder.uuid] = folderPath
+				tree[folderPath] = {
+					type: "directory",
+					uuid: folder.uuid,
+					name: decrypted.name,
+					parent: folder.parent,
+					size: 0
+				}
+			} catch {
 				continue
-			}
-
-			const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`
-			const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`
-
-			folderNames[folder.uuid] = folderPath
-			tree[folderPath] = {
-				type: "directory",
-				uuid: folder.uuid,
-				name: decrypted.name,
-				parent: folder.parent,
-				size: 0
 			}
 		}
 
@@ -2887,12 +2815,6 @@ export class Cloud {
 						.decrypt()
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
-							if (decrypted.name.length === 0) {
-								resolve()
-
-								return
-							}
-
 							const parentPath = folderNames[file.parent]
 
 							tree[`${parentPath}/${decrypted.name}`] = {
@@ -2919,7 +2841,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return tree
 	}

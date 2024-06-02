@@ -1,4 +1,4 @@
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils";
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, promiseAllSettledChunked } from "../utils";
 import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_LISTING_OPS, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
 import pathModule from "path";
@@ -78,10 +78,6 @@ export class Cloud {
                     .decrypt()
                     .folderMetadata({ metadata: folder.name })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const timestamp = convertTimestampToMs(folder.timestamp);
                     items.push({
                         type: "directory",
@@ -110,10 +106,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -141,7 +133,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return items;
     }
     /**
@@ -166,10 +158,6 @@ export class Cloud {
                     .decrypt()
                     .folderMetadataPrivate({ metadata: folder.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const timestamp = convertTimestampToMs(folder.timestamp);
                     items.push({
                         type: "directory",
@@ -202,10 +190,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadataPrivate({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -236,7 +220,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return items;
     }
     /**
@@ -262,10 +246,6 @@ export class Cloud {
                     .decrypt()
                     .folderMetadata({ metadata: folder.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const timestamp = convertTimestampToMs(folder.timestamp);
                     items.push({
                         type: "directory",
@@ -298,10 +278,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -332,7 +308,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         const groups = [];
         const sharedTo = {};
         const added = {};
@@ -383,10 +359,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -414,7 +386,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return items;
     }
     /**
@@ -437,10 +409,6 @@ export class Cloud {
                     .decrypt()
                     .folderMetadata({ metadata: folder.name })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const timestamp = convertTimestampToMs(folder.timestamp);
                     items.push({
                         type: "directory",
@@ -469,10 +437,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -500,7 +464,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return items;
     }
     /**
@@ -523,10 +487,6 @@ export class Cloud {
                     .decrypt()
                     .folderMetadata({ metadata: folder.name })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const timestamp = convertTimestampToMs(folder.timestamp);
                     items.push({
                         type: "directory",
@@ -555,10 +515,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -586,7 +542,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return items;
     }
     /**
@@ -609,10 +565,6 @@ export class Cloud {
                     .decrypt()
                     .folderMetadata({ metadata: folder.name })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const timestamp = convertTimestampToMs(folder.timestamp);
                     items.push({
                         type: "directory",
@@ -641,10 +593,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     items.push({
                         type: "file",
                         uuid: file.uuid,
@@ -672,7 +620,7 @@ export class Cloud {
                 this._semaphores.listSemaphore.release();
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return items;
     }
     /**
@@ -1307,7 +1255,7 @@ export class Cloud {
             : await this.crypto.utils.hashFn({ input: "empty" });
         const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword });
         return {
-            files: await promiseAllChunked(content.files.map(file => new Promise((resolve, reject) => {
+            files: await promiseAllSettledChunked(content.files.map(file => new Promise((resolve, reject) => {
                 this.crypto
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata, key })
@@ -1319,7 +1267,7 @@ export class Cloud {
                 })
                     .catch(reject);
             }))),
-            folders: await promiseAllChunked(content.folders.map(folder => new Promise((resolve, reject) => {
+            folders: await promiseAllSettledChunked(content.folders.map(folder => new Promise((resolve, reject) => {
                 this.crypto
                     .decrypt()
                     .folderMetadata({ metadata: folder.metadata, key })
@@ -2142,20 +2090,22 @@ export class Cloud {
         const tree = {};
         const folderNames = { base: "/" };
         for (const folder of contents.folders) {
-            const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
-            if (decrypted.name.length === 0) {
+            try {
+                const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
+                const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`;
+                const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`;
+                folderNames[folder.uuid] = folderPath;
+                tree[folderPath] = {
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    parent: folder.parent,
+                    size: 0
+                };
+            }
+            catch {
                 continue;
             }
-            const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`;
-            const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`;
-            folderNames[folder.uuid] = folderPath;
-            tree[folderPath] = {
-                type: "directory",
-                uuid: folder.uuid,
-                name: decrypted.name,
-                parent: folder.parent,
-                size: 0
-            };
         }
         if (Object.keys(folderNames).length === 0 || Object.keys(tree).length === 0) {
             throw new Error("Could not build directory tree.");
@@ -2167,10 +2117,6 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const parentPath = folderNames[file.parent];
                     tree[`${parentPath}/${decrypted.name}`] = {
                         type: "file",
@@ -2193,7 +2139,7 @@ export class Cloud {
                     .catch(reject);
             }));
         }
-        await promiseAllChunked(promises);
+        await promiseAllSettledChunked(promises);
         return tree;
     }
     /**

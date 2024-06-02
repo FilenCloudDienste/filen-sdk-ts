@@ -213,6 +213,10 @@ export class Decrypt {
 			}
 		}
 
+		if (fileMetadata.name.length === 0) {
+			throw new Error("Could not decrypt file metadata.")
+		}
+
 		return fileMetadata
 	}
 
@@ -266,6 +270,10 @@ export class Decrypt {
 			}
 		}
 
+		if (folderMetadata.name.length === 0) {
+			throw new Error("Could not decrypt folder metadata.")
+		}
+
 		return folderMetadata
 	}
 
@@ -298,27 +306,26 @@ export class Decrypt {
 		}
 
 		const privateKey = key ? key : this.config.privateKey
+		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
 
-		try {
-			const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
-
-			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-				fileMetadata = {
-					size: parseInt(decrypted.size ?? 0),
-					lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
-					creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
-					name: decrypted.name,
-					key: decrypted.key,
-					mime: decrypted.mime,
-					hash: decrypted.hash
-				}
-
-				if (this.config.metadataCache) {
-					cache.fileMetadata.set(cacheKey, fileMetadata)
-				}
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			fileMetadata = {
+				size: parseInt(decrypted.size ?? 0),
+				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+				name: decrypted.name,
+				key: decrypted.key,
+				mime: decrypted.mime,
+				hash: decrypted.hash
 			}
-		} catch {
-			// Noop
+
+			if (this.config.metadataCache) {
+				cache.fileMetadata.set(cacheKey, fileMetadata)
+			}
+		}
+
+		if (fileMetadata.name.length === 0) {
+			throw new Error("Could not decrypt file metadata.")
 		}
 
 		return fileMetadata
@@ -347,21 +354,20 @@ export class Decrypt {
 		}
 
 		const privateKey = key ? key : this.config.privateKey
+		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
 
-		try {
-			const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
-
-			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-				folderMetadata = {
-					name: decrypted.name
-				}
-
-				if (this.config.metadataCache) {
-					cache.folderMetadata.set(cacheKey, folderMetadata)
-				}
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			folderMetadata = {
+				name: decrypted.name
 			}
-		} catch {
-			// Noop
+
+			if (this.config.metadataCache) {
+				cache.folderMetadata.set(cacheKey, folderMetadata)
+			}
+		}
+
+		if (folderMetadata.name.length === 0) {
+			throw new Error("Could not decrypt folder metadata.")
 		}
 
 		return folderMetadata
@@ -395,26 +401,26 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		try {
-			const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
+		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
 
-			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-				fileMetadata = {
-					size: parseInt(decrypted.size ?? 0),
-					lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
-					creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
-					name: decrypted.name,
-					key: decrypted.key,
-					mime: decrypted.mime,
-					hash: decrypted.hash
-				}
-
-				if (this.config.metadataCache) {
-					cache.fileMetadata.set(cacheKey, fileMetadata)
-				}
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			fileMetadata = {
+				size: parseInt(decrypted.size ?? 0),
+				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+				name: decrypted.name,
+				key: decrypted.key,
+				mime: decrypted.mime,
+				hash: decrypted.hash
 			}
-		} catch {
-			// Noop
+
+			if (this.config.metadataCache) {
+				cache.fileMetadata.set(cacheKey, fileMetadata)
+			}
+		}
+
+		if (fileMetadata.name.length === 0) {
+			throw new Error("Could not decrypt file metadata.")
 		}
 
 		return fileMetadata
@@ -442,20 +448,20 @@ export class Decrypt {
 			name: ""
 		}
 
-		try {
-			const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
+		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
 
-			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-				folderMetadata = {
-					name: decrypted.name
-				}
-
-				if (this.config.metadataCache) {
-					cache.folderMetadata.set(cacheKey, folderMetadata)
-				}
+		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			folderMetadata = {
+				name: decrypted.name
 			}
-		} catch {
-			// Noop
+
+			if (this.config.metadataCache) {
+				cache.folderMetadata.set(cacheKey, folderMetadata)
+			}
+		}
+
+		if (folderMetadata.name.length === 0) {
+			throw new Error("Could not decrypt folder metadata.")
 		}
 
 		return folderMetadata
@@ -640,18 +646,14 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteContent({ content, key }: { content: string; key: string }): Promise<string> {
-		try {
-			const decrypted = await this.metadata({ metadata: content, key })
-			const parsed = JSON.parse(decrypted)
+		const decrypted = await this.metadata({ metadata: content, key })
+		const parsed = JSON.parse(decrypted)
 
-			if (typeof parsed.content !== "string") {
-				throw new Error("Could not decrypt note content, malformed decrypted metadata")
-			}
-
-			return parsed.content
-		} catch {
-			return ""
+		if (typeof parsed.content !== "string") {
+			throw new Error("Could not decrypt note content, malformed decrypted metadata")
 		}
+
+		return parsed.content
 	}
 
 	/**

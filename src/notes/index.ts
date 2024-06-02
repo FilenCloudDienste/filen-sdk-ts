@@ -1,7 +1,7 @@
 import type API from "../api"
 import type Crypto from "../crypto"
 import type { FilenSDKConfig } from ".."
-import { uuidv4, simpleDate, promiseAllChunked, promiseAllSettledChunked } from "../utils"
+import { uuidv4, simpleDate, promiseAllSettledChunked } from "../utils"
 import type { NoteType, Note, NoteTag } from "../api/v3/notes"
 import { createNotePreviewFromContentText } from "./utils"
 import { MAX_NOTE_SIZE } from "../constants"
@@ -79,7 +79,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return decryptedTags
 	}
@@ -683,7 +683,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return notesHistory
 	}
@@ -772,7 +772,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return notesTags
 	}
