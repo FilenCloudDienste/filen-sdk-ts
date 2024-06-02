@@ -273,6 +273,8 @@ export class FilenSDK {
 
 					if (typeof decryptedPrivateKey === "string" && decryptedPrivateKey.length > 16) {
 						privateKey = decryptedPrivateKey
+
+						break
 					}
 				} catch {
 					continue
@@ -280,7 +282,19 @@ export class FilenSDK {
 			}
 
 			if (!privateKey) {
-				throw new Error("Could not decrypt private key.")
+				const generatedKeyPair = await this._crypto.utils.generateKeyPair()
+
+				await this._updateKeyPair({
+					apiKey,
+					publicKey: generatedKeyPair.publicKey,
+					privateKey: generatedKeyPair.privateKey,
+					masterKeys
+				})
+
+				return {
+					publicKey: generatedKeyPair.publicKey,
+					privateKey: generatedKeyPair.privateKey
+				}
 			}
 
 			await this._updateKeyPair({
@@ -340,6 +354,8 @@ export class FilenSDK {
 					for (const key of decryptedMasterKeys.split("|")) {
 						newMasterKeys.push(key)
 					}
+
+					break
 				}
 			} catch {
 				continue
