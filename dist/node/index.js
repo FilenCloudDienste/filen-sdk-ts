@@ -233,17 +233,7 @@ class FilenSDK {
                 }
             }
             if (!privateKey) {
-                const generatedKeyPair = await this._crypto.utils.generateKeyPair();
-                await this._updateKeyPair({
-                    apiKey,
-                    publicKey: generatedKeyPair.publicKey,
-                    privateKey: generatedKeyPair.privateKey,
-                    masterKeys
-                });
-                return {
-                    publicKey: generatedKeyPair.publicKey,
-                    privateKey: generatedKeyPair.privateKey
-                };
+                throw new Error("Could not decrypt private key.");
             }
             await this._updateKeyPair({
                 apiKey,
