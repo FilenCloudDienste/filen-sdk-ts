@@ -18,7 +18,8 @@ import {
 	SocketFileArchived,
 	SocketFolderMove,
 	SocketFolderRename,
-	SocketFolderTrash
+	SocketFolderTrash,
+	SocketFileDeletedPermanent
 } from "../socket"
 import { Semaphore } from "../semaphore"
 
@@ -208,6 +209,15 @@ export class FS {
 					}
 				}
 
+				delete this._items[item.path]
+				delete this._uuidToItem[data.uuid]
+			}
+		})
+
+		this.socket.on("fileDeletedPermanent", (data: SocketFileDeletedPermanent) => {
+			const item = this._uuidToItem[data.uuid]
+
+			if (item) {
 				delete this._items[item.path]
 				delete this._uuidToItem[data.uuid]
 			}

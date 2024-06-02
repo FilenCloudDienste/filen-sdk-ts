@@ -4,7 +4,7 @@ declare const cache: {
     folderMetadata: Map<string, FolderMetadata>;
     importPublicKey: Map<string, CryptoKey>;
     importPrivateKey: Map<string, CryptoKey>;
-    chatKey: Map<string, string>;
+    chatKeyParticipant: Map<string, string>;
     noteKeyOwner: Map<string, string>;
     noteKeyParticipant: Map<string, string>;
     noteTitle: Map<string, string>;

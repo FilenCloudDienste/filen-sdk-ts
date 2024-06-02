@@ -115,10 +115,7 @@ export class Notes {
 
 							const decryptKeyPromise = this._noteKeyCache.has(note.uuid)
 								? Promise.resolve(this._noteKeyCache.get(note.uuid)!)
-								: this.crypto.decrypt().noteKeyParticipant({
-										metadata: participantMetadata[0].metadata,
-										privateKey: this.sdkConfig.privateKey!
-								  })
+								: this.noteKey({ uuid: note.uuid })
 
 							decryptKeyPromise
 								.then(decryptedNoteKey => {
@@ -268,11 +265,19 @@ export class Notes {
 			return this._noteKeyCache.get(uuid)!
 		}
 
-		const all = await this.all()
+		const all = await this.api.v3().notes().all()
 		const note = all.filter(note => note.uuid === uuid)
 
 		if (note.length === 0 || !note[0]) {
 			throw new Error(`Could not find note ${uuid}.`)
+		}
+
+		if (note[0].ownerId === this.sdkConfig.userId) {
+			const decryptedNoteKey = await this.crypto.decrypt().noteKeyOwner({ metadata: note[0].metadata })
+
+			this._noteKeyCache.set(uuid, decryptedNoteKey)
+
+			return decryptedNoteKey
 		}
 
 		const participant = note[0].participants.filter(participant => participant.userId === this.sdkConfig.userId!)

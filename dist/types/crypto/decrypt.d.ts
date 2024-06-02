@@ -169,7 +169,7 @@ export declare class Decrypt {
      * @param {string} param0.privateKey
      * @returns {Promise<string>}
      */
-    chatKey({ metadata, privateKey }: {
+    chatKeyParticipant({ metadata, privateKey }: {
         metadata: string;
         privateKey: string;
     }): Promise<string>;

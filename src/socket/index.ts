@@ -246,6 +246,10 @@ export interface SocketChatConversationParticipantNew {
 	addedTimestamp: number
 }
 
+export interface SocketFileDeletedPermanent {
+	uuid: string
+}
+
 export type SocketEvent =
 	| {
 			type: "newEvent"
@@ -389,6 +393,10 @@ export type SocketEvent =
 	| {
 			type: "chatConversationParticipantNew"
 			data: SocketChatConversationParticipantNew
+	  }
+	| {
+			type: "fileDeletedPermanent"
+			data: SocketFileDeletedPermanent
 	  }
 
 /**
@@ -834,6 +842,13 @@ export class Socket extends EventEmitter {
 		this.socket.on("chatConversationParticipantNew", (data: SocketChatConversationParticipantNew) => {
 			this.emit("socketEvent", {
 				type: "chatConversationParticipantNew",
+				data
+			} as SocketEvent)
+		})
+
+		this.socket.on("file-deleted-permanent", (data: SocketFileDeletedPermanent) => {
+			this.emit("socketEvent", {
+				type: "fileDeletedPermanent",
 				data
 			} as SocketEvent)
 		})

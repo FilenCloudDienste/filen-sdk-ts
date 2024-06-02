@@ -384,6 +384,12 @@ export class Socket extends EventEmitter {
                 data
             });
         });
+        this.socket.on("file-deleted-permanent", (data) => {
+            this.emit("socketEvent", {
+                type: "fileDeletedPermanent",
+                data
+            });
+        });
     }
     /**
      * Disconnect from the realtime socket gateway.

@@ -43,7 +43,7 @@ class Chats {
         if (this._chatKeyCache.has(conversation)) {
             return this._chatKeyCache.get(conversation);
         }
-        const all = await this.conversations();
+        const all = await this.api.v3().chat().conversations();
         const chat = all.filter(chat => chat.uuid === conversation);
         if (chat.length === 0 || !chat[0]) {
             throw new Error(`Could not find chat ${conversation}.`);
@@ -54,7 +54,7 @@ class Chats {
         }
         const decryptedChatKey = await this.crypto
             .decrypt()
-            .chatKey({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey });
+            .chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey });
         this._chatKeyCache.set(conversation, decryptedChatKey);
         return decryptedChatKey;
     }
@@ -82,7 +82,7 @@ class Chats {
                     }
                     const keyPromise = this._chatKeyCache.has(convo.uuid)
                         ? Promise.resolve(this._chatKeyCache.get(convo.uuid))
-                        : this.crypto.decrypt().chatKey({ metadata: metadata[0].metadata, privateKey: this.sdkConfig.privateKey });
+                        : this.chatKey({ conversation: convo.uuid });
                     keyPromise
                         .then(decryptedChatKey => {
                         this._chatKeyCache.set(convo.uuid, decryptedChatKey);

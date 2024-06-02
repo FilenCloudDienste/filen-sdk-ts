@@ -3,7 +3,7 @@ const cache = {
     folderMetadata: new Map(),
     importPublicKey: new Map(),
     importPrivateKey: new Map(),
-    chatKey: new Map(),
+    chatKeyParticipant: new Map(),
     noteKeyOwner: new Map(),
     noteKeyParticipant: new Map(),
     noteTitle: new Map(),

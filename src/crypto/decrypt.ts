@@ -517,11 +517,11 @@ export class Decrypt {
 	 * @param {string} param0.privateKey
 	 * @returns {Promise<string>}
 	 */
-	public async chatKey({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
+	public async chatKeyParticipant({ metadata, privateKey }: { metadata: string; privateKey: string }): Promise<string> {
 		const cacheKey = metadata
 
-		if (this.config.metadataCache && cache.chatKey.has(cacheKey)) {
-			return cache.chatKey.get(cacheKey)!
+		if (this.config.metadataCache && cache.chatKeyParticipant.has(cacheKey)) {
+			return cache.chatKeyParticipant.get(cacheKey)!
 		}
 
 		const decrypted = await this.metadataPrivate({ metadata, privateKey })
@@ -532,7 +532,7 @@ export class Decrypt {
 		}
 
 		if (this.config.metadataCache) {
-			cache.chatKey.set(cacheKey, parsed.key)
+			cache.chatKeyParticipant.set(cacheKey, parsed.key)
 		}
 
 		return parsed.key

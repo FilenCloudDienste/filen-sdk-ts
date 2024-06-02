@@ -15,18 +15,14 @@ import { calculateChunkIndices } from "../src/cloud/utils"
 import { Readable } from "stream"
 
 const filen = new FilenSDK({
-	email: config.email,
-	password: config.password,
-	masterKeys: config.masterKeys,
-	apiKey: config.apiKey,
-	publicKey: config.publicKey,
-	privateKey: config.privateKey,
-	authVersion: config.authVersion as AuthVersion,
-	baseFolderUUID: config.baseFolderUUID,
-	userId: config.userId,
-	connectToSocket: false
+	...config,
+	authVersion: config.authVersion as AuthVersion
 })
 
-const main = async () => {}
+const main = async () => {
+	console.log("starting")
+
+	console.log("done")
+}
 
 main()

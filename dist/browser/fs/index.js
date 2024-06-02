@@ -118,6 +118,13 @@ export class FS {
                 delete this._uuidToItem[data.uuid];
             }
         });
+        this.socket.on("fileDeletedPermanent", (data) => {
+            const item = this._uuidToItem[data.uuid];
+            if (item) {
+                delete this._items[item.path];
+                delete this._uuidToItem[data.uuid];
+            }
+        });
         this.socket.on("folderMove", (data) => {
             const item = this._uuidToItem[data.uuid];
             if (item) {

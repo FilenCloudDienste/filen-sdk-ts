@@ -431,10 +431,10 @@ export class Decrypt {
      * @param {string} param0.privateKey
      * @returns {Promise<string>}
      */
-    async chatKey({ metadata, privateKey }) {
+    async chatKeyParticipant({ metadata, privateKey }) {
         const cacheKey = metadata;
-        if (this.config.metadataCache && cache.chatKey.has(cacheKey)) {
-            return cache.chatKey.get(cacheKey);
+        if (this.config.metadataCache && cache.chatKeyParticipant.has(cacheKey)) {
+            return cache.chatKeyParticipant.get(cacheKey);
         }
         const decrypted = await this.metadataPrivate({ metadata, privateKey });
         const parsed = JSON.parse(decrypted);
@@ -442,7 +442,7 @@ export class Decrypt {
             throw new Error("Could not decrypt chat key, malformed decrypted metadata");
         }
         if (this.config.metadataCache) {
-            cache.chatKey.set(cacheKey, parsed.key);
+            cache.chatKeyParticipant.set(cacheKey, parsed.key);
         }
         return parsed.key;
     }

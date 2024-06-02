@@ -209,6 +209,9 @@ export interface SocketChatConversationParticipantNew {
     permissionsAdd: boolean;
     addedTimestamp: number;
 }
+export interface SocketFileDeletedPermanent {
+    uuid: string;
+}
 export type SocketEvent = {
     type: "newEvent";
     data: SocketNewEvent;
@@ -316,6 +319,9 @@ export type SocketEvent = {
 } | {
     type: "chatConversationParticipantNew";
     data: SocketChatConversationParticipantNew;
+} | {
+    type: "fileDeletedPermanent";
+    data: SocketFileDeletedPermanent;
 };
 /**
  * Socket
