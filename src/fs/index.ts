@@ -851,19 +851,6 @@ export class FS {
 						name: newBasename
 					})
 				}
-
-				this._items[to] = {
-					...this._items[from],
-					metadata: itemMetadata
-				} as FSItem
-
-				this._uuidToItem[item.uuid] = {
-					...this._uuidToItem[item.uuid],
-					path: to,
-					metadata: itemMetadata
-				} as FSItemUUID
-
-				delete this._items[from]
 			} else {
 				if (to.startsWith(from)) {
 					return
@@ -906,49 +893,41 @@ export class FS {
 						await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: itemMetadata as FileMetadata })
 					}
 				}
+			}
 
-				this._items[to] = {
-					...this._items[from],
-					metadata: itemMetadata
-				} as FSItem
+			this._items[to] = {
+				...this._items[from],
+				metadata: itemMetadata
+			} as FSItem
 
-				this._uuidToItem[item.uuid] = {
-					...this._uuidToItem[item.uuid],
-					path: to,
-					metadata: itemMetadata
-				} as FSItemUUID
+			this._uuidToItem[item.uuid] = {
+				...this._uuidToItem[item.uuid],
+				path: to,
+				metadata: itemMetadata
+			} as FSItemUUID
 
-				delete this._items[from]
+			delete this._items[from]
 
+			if (item.type === "directory") {
 				for (const oldPath in this._items) {
-					if (oldPath.startsWith(from + "/") || oldPath === from) {
+					if (oldPath.startsWith(from + "/") && oldPath !== from) {
 						const newPath = oldPath.split(from).join(to)
 						const oldItem = this._items[oldPath]
 
 						if (oldItem) {
+							this._items[newPath] = oldItem
+
+							delete this._items[oldPath]
+
 							const oldItemUUID = this._uuidToItem[oldItem.uuid]
 
 							if (oldItemUUID) {
-								this._items[newPath] = {
-									...oldItem,
-									metadata: {
-										...oldItem.metadata,
-										name: newBasename
-									}
-								} as FSItem
-
 								this._uuidToItem[oldItem.uuid] = {
-									...this._uuidToItem[oldItem.uuid],
-									path: newPath,
-									metadata: {
-										...oldItemUUID.metadata,
-										name: newBasename
-									}
+									...oldItemUUID,
+									path: newPath
 								} as FSItemUUID
 							}
 						}
-
-						delete this._items[oldPath]
 					}
 				}
 			}

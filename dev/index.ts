@@ -21,6 +21,7 @@ const filen = new FilenSDK({
 
 const main = async () => {
 	console.log("starting")
+
 	console.log("done")
 }
 
