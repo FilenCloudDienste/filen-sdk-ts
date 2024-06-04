@@ -863,8 +863,6 @@ export class FS {
 					metadata: itemMetadata
 				} as FSItemUUID
 
-				console.log({ item: this._items[to], uuiditem: this._uuidToItem[item.uuid] })
-
 				delete this._items[from]
 			} else {
 				if (to.startsWith(from)) {

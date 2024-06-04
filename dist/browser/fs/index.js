@@ -668,7 +668,6 @@ export class FS {
                     path: to,
                     metadata: itemMetadata
                 };
-                console.log({ item: this._items[to], uuiditem: this._uuidToItem[item.uuid] });
                 delete this._items[from];
             }
             else {

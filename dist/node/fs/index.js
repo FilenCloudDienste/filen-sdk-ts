@@ -644,7 +644,6 @@ class FS {
                 }
                 this._items[to] = Object.assign(Object.assign({}, this._items[from]), { metadata: itemMetadata });
                 this._uuidToItem[item.uuid] = Object.assign(Object.assign({}, this._uuidToItem[item.uuid]), { path: to, metadata: itemMetadata });
-                console.log({ item: this._items[to], uuiditem: this._uuidToItem[item.uuid] });
                 delete this._items[from];
             }
             else {
