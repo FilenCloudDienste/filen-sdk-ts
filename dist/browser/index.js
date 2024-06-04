@@ -259,7 +259,9 @@ export class FilenSDK {
                 });
                 if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
                     for (const key of decryptedMasterKeys.split("|")) {
-                        newMasterKeys.push(key);
+                        if (key.length > 0 && !newMasterKeys.includes(key)) {
+                            newMasterKeys.push(key);
+                        }
                     }
                     break;
                 }

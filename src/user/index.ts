@@ -314,7 +314,10 @@ export class User {
 			authVersion: this.sdkConfig.authVersion!,
 			salt: newSalt
 		})
-		const newMasterKeys: string[] = [...this.sdkConfig.masterKeys!, derivedNew.derivedMasterKeys]
+		const newMasterKeys: string[] = [
+			...this.sdkConfig.masterKeys!.filter(key => key !== derivedNew.derivedMasterKeys),
+			derivedNew.derivedMasterKeys
+		]
 		const newMasterKeysEncrypted = await this.crypto
 			.encrypt()
 			.metadata({ metadata: newMasterKeys.join("|"), key: derivedNew.derivedMasterKeys })

@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import type API from "../api";
 import type { FilenSDKConfig } from "..";
-import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types";
+import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback, Prettify } from "../types";
 import type { PauseSignal } from "../cloud/signals";
 import type { CloudItem, Cloud } from "../cloud";
 export type FSConfig = {
@@ -20,13 +20,14 @@ export type FSItemFileBase = {
     version: FileEncryptionVersion;
     chunks: number;
 };
-export type FSItem = (FSItemBase & {
+export type FSItemFileMetadata = Prettify<FSItemFileBase & FileMetadata>;
+export type FSItem = Prettify<(FSItemBase & {
     type: "directory";
     metadata: FolderMetadata;
 }) | (FSItemBase & {
     type: "file";
-    metadata: FSItemFileBase & FileMetadata;
-});
+    metadata: FSItemFileMetadata;
+})>;
 export type FSItems = Record<string, FSItem>;
 export type FSStatsBase = {
     size: number;
@@ -36,13 +37,13 @@ export type FSStatsBase = {
     isFile: () => boolean;
     isSymbolicLink: () => boolean;
 };
-export type FSStats = (FolderMetadata & FSStatsBase & {
+export type FSStats = Prettify<(FolderMetadata & FSStatsBase & {
     type: "directory";
     uuid: string;
 }) | (FSItemFileBase & FileMetadata & FSStatsBase & {
     type: "file";
     uuid: string;
-});
+})>;
 export type StatFS = {
     type: number;
     bsize: number;
@@ -258,6 +259,15 @@ export declare class FS {
      * @returns {Promise<void>}
      */
     rmdir(...params: Parameters<typeof this.unlink>): Promise<void>;
+    /**
+     * Deletes a file at path.
+     *
+     * @public
+     * @async
+     * @param {...Parameters<typeof this.unlink>} params
+     * @returns {Promise<void>}
+     */
+    rmfile(...params: Parameters<typeof this.unlink>): Promise<void>;
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
      * @date 3/18/2024 - 12:07:38 AM

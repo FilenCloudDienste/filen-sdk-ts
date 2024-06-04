@@ -311,7 +311,7 @@ export class FS {
      */
     async readdir({ path, recursive = false }) {
         path = this.normalizePath({ path });
-        const uuid = await this.pathToItemUUID({ path });
+        const uuid = await this.pathToItemUUID({ path, type: "directory" });
         if (!uuid) {
             throw new ENOENT({ path });
         }
@@ -322,10 +322,11 @@ export class FS {
             for (const entry in tree) {
                 const item = tree[entry];
                 const entryPath = entry.startsWith("/") ? entry.substring(1) : entry;
-                if (!item || (item.parent === "base" && existingPaths[entry])) {
+                const lowercasePath = entryPath.toLowerCase();
+                if (!item || item.parent === "base" || existingPaths[lowercasePath]) {
                     continue;
                 }
-                existingPaths[entry] = true;
+                existingPaths[lowercasePath] = true;
                 const itemPath = pathModule.posix.join(path, entryPath);
                 names.push(entryPath);
                 if (item.type === "directory") {
@@ -385,10 +386,11 @@ export class FS {
         const items = await this.cloud.listDirectory({ uuid });
         for (const item of items) {
             const itemPath = pathModule.posix.join(path, item.name);
-            if (existingPaths[item.name]) {
+            const lowercasePath = itemPath.toLowerCase();
+            if (existingPaths[lowercasePath]) {
                 continue;
             }
-            existingPaths[item.name] = true;
+            existingPaths[lowercasePath] = true;
             names.push(item.name);
             if (item.type === "directory") {
                 this._items[itemPath] = {
@@ -634,7 +636,11 @@ export class FS {
                     lastModified: item.metadata.lastModified,
                     creation: item.metadata.creation,
                     hash: item.metadata.hash,
-                    key: item.metadata.key
+                    key: item.metadata.key,
+                    chunks: item.metadata.chunks,
+                    region: item.metadata.region,
+                    bucket: item.metadata.bucket,
+                    version: item.metadata.version
                 })
                 : ({
                     name: newBasename
@@ -662,9 +668,13 @@ export class FS {
                     path: to,
                     metadata: itemMetadata
                 };
+                console.log({ item: this._items[to], uuiditem: this._uuidToItem[item.uuid] });
                 delete this._items[from];
             }
             else {
+                if (to.startsWith(from)) {
+                    return;
+                }
                 if (oldBasename !== newBasename) {
                     if (item.type === "directory") {
                         await this.cloud.renameDirectory({ uuid, name: newBasename });
@@ -863,6 +873,17 @@ export class FS {
      */
     async rmdir(...params) {
         return await this._unlink({ path: params[0].path, type: "directory", permanent: params[0].permanent });
+    }
+    /**
+     * Deletes a file at path.
+     *
+     * @public
+     * @async
+     * @param {...Parameters<typeof this.unlink>} params
+     * @returns {Promise<void>}
+     */
+    async rmfile(...params) {
+        return await this._unlink({ path: params[0].path, type: "file", permanent: params[0].permanent });
     }
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.

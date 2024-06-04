@@ -2816,8 +2816,9 @@ export class Cloud {
 						.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							const parentPath = folderNames[file.parent]
+							const filePath = `${parentPath}/${decrypted.name}`
 
-							tree[`${parentPath}/${decrypted.name}`] = {
+							tree[filePath] = {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name,

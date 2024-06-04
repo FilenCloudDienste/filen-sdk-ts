@@ -1,6 +1,6 @@
 import type API from "../api"
 import type { FilenSDKConfig } from ".."
-import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback } from "../types"
+import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback, Prettify } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
 import { BUFFER_SIZE, environment } from "../constants"
@@ -43,15 +43,18 @@ export type FSItemFileBase = {
 	chunks: number
 }
 
-export type FSItem =
+export type FSItemFileMetadata = Prettify<FSItemFileBase & FileMetadata>
+
+export type FSItem = Prettify<
 	| (FSItemBase & {
 			type: "directory"
 			metadata: FolderMetadata
 	  })
 	| (FSItemBase & {
 			type: "file"
-			metadata: FSItemFileBase & FileMetadata
+			metadata: FSItemFileMetadata
 	  })
+>
 
 export type FSItems = Record<string, FSItem>
 
@@ -64,9 +67,10 @@ export type FSStatsBase = {
 	isSymbolicLink: () => boolean
 }
 
-export type FSStats =
+export type FSStats = Prettify<
 	| (FolderMetadata & FSStatsBase & { type: "directory"; uuid: string })
 	| (FSItemFileBase & FileMetadata & FSStatsBase & { type: "file"; uuid: string })
+>
 
 export type StatFS = {
 	type: number
@@ -443,7 +447,7 @@ export class FS {
 	public async readdir({ path, recursive = false }: { path: string; recursive?: boolean }): Promise<string[]> {
 		path = this.normalizePath({ path })
 
-		const uuid = await this.pathToItemUUID({ path })
+		const uuid = await this.pathToItemUUID({ path, type: "directory" })
 
 		if (!uuid) {
 			throw new ENOENT({ path })
@@ -458,12 +462,13 @@ export class FS {
 			for (const entry in tree) {
 				const item = tree[entry]
 				const entryPath = entry.startsWith("/") ? entry.substring(1) : entry
+				const lowercasePath = entryPath.toLowerCase()
 
-				if (!item || (item.parent === "base" && existingPaths[entry])) {
+				if (!item || item.parent === "base" || existingPaths[lowercasePath]) {
 					continue
 				}
 
-				existingPaths[entry] = true
+				existingPaths[lowercasePath] = true
 
 				const itemPath = pathModule.posix.join(path, entryPath)
 
@@ -530,12 +535,13 @@ export class FS {
 
 		for (const item of items) {
 			const itemPath = pathModule.posix.join(path, item.name)
+			const lowercasePath = itemPath.toLowerCase()
 
-			if (existingPaths[item.name]) {
+			if (existingPaths[lowercasePath]) {
 				continue
 			}
 
-			existingPaths[item.name] = true
+			existingPaths[lowercasePath] = true
 
 			names.push(item.name)
 
@@ -821,8 +827,12 @@ export class FS {
 							lastModified: item.metadata.lastModified,
 							creation: item.metadata.creation,
 							hash: item.metadata.hash,
-							key: item.metadata.key
-					  } satisfies FileMetadata)
+							key: item.metadata.key,
+							chunks: item.metadata.chunks,
+							region: item.metadata.region,
+							bucket: item.metadata.bucket,
+							version: item.metadata.version
+					  } satisfies FSItemFileMetadata)
 					: ({
 							name: newBasename
 					  } satisfies FolderMetadata)
@@ -853,8 +863,14 @@ export class FS {
 					metadata: itemMetadata
 				} as FSItemUUID
 
+				console.log({ item: this._items[to], uuiditem: this._uuidToItem[item.uuid] })
+
 				delete this._items[from]
 			} else {
+				if (to.startsWith(from)) {
+					return
+				}
+
 				if (oldBasename !== newBasename) {
 					if (item.type === "directory") {
 						await this.cloud.renameDirectory({ uuid, name: newBasename })
@@ -1072,6 +1088,18 @@ export class FS {
 	 */
 	public async rmdir(...params: Parameters<typeof this.unlink>): Promise<void> {
 		return await this._unlink({ path: params[0].path, type: "directory", permanent: params[0].permanent })
+	}
+
+	/**
+	 * Deletes a file at path.
+	 *
+	 * @public
+	 * @async
+	 * @param {...Parameters<typeof this.unlink>} params
+	 * @returns {Promise<void>}
+	 */
+	public async rmfile(...params: Parameters<typeof this.unlink>): Promise<void> {
+		return await this._unlink({ path: params[0].path, type: "file", permanent: params[0].permanent })
 	}
 
 	/**
