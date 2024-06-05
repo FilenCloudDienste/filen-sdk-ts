@@ -1,9 +1,9 @@
 /// <reference types="node" />
 import type API from "../api";
-import type { FilenSDKConfig } from "..";
-import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback, Prettify } from "../types";
-import type { PauseSignal } from "../cloud/signals";
-import type { CloudItem, Cloud } from "../cloud";
+import { type FilenSDKConfig } from "..";
+import { type FolderMetadata, type FileMetadata, type FileEncryptionVersion, type ProgressCallback, type Prettify } from "../types";
+import { type PauseSignal } from "../cloud/signals";
+import { type CloudItem, type Cloud } from "../cloud";
 export type FSConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -75,6 +75,7 @@ export declare class FS {
     private readonly socket;
     private readonly mutex;
     private readonly mkdirMutex;
+    private readonly itemsMutex;
     /**
      * Creates an instance of FS.
      * @date 2/9/2024 - 5:54:11 AM
@@ -86,37 +87,39 @@ export declare class FS {
     constructor(params: FSConfig);
     /**
      * Attach listeners for relevant realtime events.
-     * @date 3/1/2024 - 7:23:35 PM
      *
      * @private
+     * @async
+     * @param {?boolean} [connect]
+     * @returns {Promise<void>}
      */
     private _initSocketEvents;
     /**
      * Add an item to the internal item tree.
-     * @date 2/14/2024 - 12:50:52 AM
      *
      * @public
-     * @param {{ path: string, item: FSItem }} param0
+     * @async
+     * @param {{ path: string; item: FSItem }} param0
      * @param {string} param0.path
-     * @param {FSItem} param0.item
-     * @returns {void}
+     * @param {(Prettify<(FSItemBase & { type: "directory"; metadata: FolderMetadata; }) | (FSItemBase & { type: "file"; metadata: Prettify<any>; })>)} param0.item
+     * @returns {Promise<void>}
      */
     _addItem({ path, item }: {
         path: string;
         item: FSItem;
-    }): void;
+    }): Promise<void>;
     /**
      * Remove an item from the internal item tree.
-     * @date 2/14/2024 - 12:50:52 AM
      *
      * @public
+     * @async
      * @param {{ path: string }} param0
      * @param {string} param0.path
-     * @returns {void}
+     * @returns {Promise<void>}
      */
     _removeItem({ path }: {
         path: string;
-    }): void;
+    }): Promise<void>;
     /**
      * Normalizes a path to be used with FS.
      * @date 2/14/2024 - 12:50:52 AM

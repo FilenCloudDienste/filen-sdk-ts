@@ -2645,6 +2645,9 @@ class Cloud {
             const fileName = name ? name : file.name;
             const mimeType = mime_types_1.default.lookup(fileName) || "application/octet-stream";
             const fileSize = file.size;
+            if (fileSize <= 0) {
+                throw new Error("Empty files are not supported.");
+            }
             let dummyOffset = 0;
             let fileChunks = 0;
             const lastModified = file.lastModified;
