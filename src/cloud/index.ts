@@ -3555,6 +3555,11 @@ export class Cloud {
 			const fileName = name ? name : file.name
 			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
 			const fileSize = file.size
+
+			if (fileSize <= 0) {
+				throw new Error("Empty files are not supported.")
+			}
+
 			let dummyOffset = 0
 			let fileChunks = 0
 			const lastModified = file.lastModified

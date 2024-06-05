@@ -1,26 +1,15 @@
 import type API from "../api"
-import type { FilenSDKConfig } from ".."
-import type { FolderMetadata, FileMetadata, FileEncryptionVersion, ProgressCallback, Prettify } from "../types"
+import { type FilenSDKConfig } from ".."
+import { type FolderMetadata, type FileMetadata, type FileEncryptionVersion, type ProgressCallback, type Prettify } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
 import { BUFFER_SIZE, environment } from "../constants"
-import type { PauseSignal } from "../cloud/signals"
+import { type PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
 import { uuidv4, normalizePath } from "../utils"
 import os from "os"
-import type { CloudItem, Cloud } from "../cloud"
-import {
-	Socket,
-	SocketFileArchiveRestored,
-	SocketFileRename,
-	SocketFileMove,
-	SocketFileTrash,
-	SocketFileArchived,
-	SocketFolderMove,
-	SocketFolderRename,
-	SocketFolderTrash,
-	SocketFileDeletedPermanent
-} from "../socket"
+import { type CloudItem, type Cloud } from "../cloud"
+import { Socket, type SocketEvent } from "../socket"
 import { Semaphore } from "../semaphore"
 
 export type FSConfig = {
@@ -103,6 +92,7 @@ export class FS {
 	private readonly socket = new Socket()
 	private readonly mutex = new Semaphore(1)
 	private readonly mkdirMutex = new Semaphore(1)
+	private readonly itemsMutex = new Semaphore(1)
 
 	/**
 	 * Creates an instance of FS.
@@ -138,154 +128,173 @@ export class FS {
 			}
 		}
 
-		if (params.sdkConfig.apiKey && params.connectToSocket) {
-			this.socket.connect({ apiKey: params.sdkConfig.apiKey })
-		}
-
-		this._initSocketEvents()
+		this._initSocketEvents(params.connectToSocket).catch(() => {})
 	}
 
 	/**
 	 * Attach listeners for relevant realtime events.
-	 * @date 3/1/2024 - 7:23:35 PM
 	 *
 	 * @private
+	 * @async
+	 * @param {?boolean} [connect]
+	 * @returns {Promise<void>}
 	 */
-	private _initSocketEvents(): void {
-		this.socket.on("fileArchiveRestored", (data: SocketFileArchiveRestored) => {
-			const currentItem = this._uuidToItem[data.currentUUID]
-			const item = this._uuidToItem[data.uuid]
+	private async _initSocketEvents(connect?: boolean): Promise<void> {
+		if (!connect) {
+			return
+		}
 
-			if (currentItem) {
-				delete this._items[currentItem.path]
-				delete this._uuidToItem[data.currentUUID]
+		const apiKey = await new Promise<string>(resolve => {
+			if (typeof this.sdkConfig.apiKey === "string" && this.sdkConfig.apiKey.length > 0) {
+				resolve(this.sdkConfig.apiKey)
+
+				return
 			}
 
-			if (item) {
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
+			const wait = setInterval(() => {
+				if (typeof this.sdkConfig.apiKey === "string" && this.sdkConfig.apiKey.length > 0) {
+					clearInterval(wait)
+
+					resolve(this.sdkConfig.apiKey)
+				}
+			}, 100)
 		})
 
-		this.socket.on("fileRename", (data: SocketFileRename) => {
-			const item = this._uuidToItem[data.uuid]
+		this.socket.connect({ apiKey })
 
-			if (item) {
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
+		this.socket.addListener("socketEvent", async (event: SocketEvent) => {
+			await this.itemsMutex.acquire()
 
-		this.socket.on("fileMove", (data: SocketFileMove) => {
-			const item = this._uuidToItem[data.uuid]
+			if (event.type === "fileArchiveRestored") {
+				const currentItem = this._uuidToItem[event.data.currentUUID]
+				const item = this._uuidToItem[event.data.uuid]
 
-			if (item) {
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
-
-		this.socket.on("fileTrash", (data: SocketFileTrash) => {
-			const item = this._uuidToItem[data.uuid]
-
-			if (item) {
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
-
-		this.socket.on("fileArchived", (data: SocketFileArchived) => {
-			const item = this._uuidToItem[data.uuid]
-
-			if (item) {
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
-
-		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
-			const item = this._uuidToItem[data.uuid]
-
-			if (item) {
-				for (const path in this._items) {
-					if (path.startsWith(item.path + "/") || item.path === path) {
-						delete this._items[path]
-					}
+				if (currentItem) {
+					delete this._items[currentItem.path]
+					delete this._uuidToItem[event.data.currentUUID]
 				}
 
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
-
-		this.socket.on("fileDeletedPermanent", (data: SocketFileDeletedPermanent) => {
-			const item = this._uuidToItem[data.uuid]
-
-			if (item) {
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
-
-		this.socket.on("folderMove", (data: SocketFolderMove) => {
-			const item = this._uuidToItem[data.uuid]
-
-			if (item) {
-				for (const path in this._items) {
-					if (path.startsWith(item.path + "/") || item.path === path) {
-						delete this._items[path]
-					}
+				if (item) {
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
 				}
+			} else if (event.type === "fileRename") {
+				const item = this._uuidToItem[event.data.uuid]
 
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
-			}
-		})
-
-		this.socket.on("folderRename", (data: SocketFolderRename) => {
-			const item = this._uuidToItem[data.uuid]
-
-			if (item) {
-				for (const path in this._items) {
-					if (path.startsWith(item.path + "/") || item.path === path) {
-						delete this._items[path]
-					}
+				if (item) {
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
 				}
+			} else if (event.type === "fileMove") {
+				const item = this._uuidToItem[event.data.uuid]
 
-				delete this._items[item.path]
-				delete this._uuidToItem[data.uuid]
+				if (item) {
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "fileTrash") {
+				const item = this._uuidToItem[event.data.uuid]
+
+				if (item) {
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "fileArchived") {
+				const item = this._uuidToItem[event.data.uuid]
+
+				if (item) {
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "folderTrash") {
+				const item = this._uuidToItem[event.data.uuid]
+
+				if (item) {
+					for (const path in this._items) {
+						if (path.startsWith(item.path + "/") || item.path === path) {
+							delete this._items[path]
+						}
+					}
+
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "fileDeletedPermanent") {
+				const item = this._uuidToItem[event.data.uuid]
+
+				if (item) {
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "folderMove") {
+				const item = this._uuidToItem[event.data.uuid]
+
+				if (item) {
+					for (const path in this._items) {
+						if (path.startsWith(item.path + "/") || item.path === path) {
+							delete this._items[path]
+						}
+					}
+
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "folderRename") {
+				const item = this._uuidToItem[event.data.uuid]
+
+				if (item) {
+					for (const path in this._items) {
+						if (path.startsWith(item.path + "/") || item.path === path) {
+							delete this._items[path]
+						}
+					}
+
+					delete this._items[item.path]
+					delete this._uuidToItem[event.data.uuid]
+				}
+			} else if (event.type === "passwordChanged") {
+				this._items = {}
+				this._uuidToItem = {}
 			}
+
+			this.itemsMutex.release()
 		})
 	}
 
 	/**
 	 * Add an item to the internal item tree.
-	 * @date 2/14/2024 - 12:50:52 AM
 	 *
 	 * @public
-	 * @param {{ path: string, item: FSItem }} param0
+	 * @async
+	 * @param {{ path: string; item: FSItem }} param0
 	 * @param {string} param0.path
-	 * @param {FSItem} param0.item
-	 * @returns {void}
+	 * @param {(Prettify<(FSItemBase & { type: "directory"; metadata: FolderMetadata; }) | (FSItemBase & { type: "file"; metadata: Prettify<any>; })>)} param0.item
+	 * @returns {Promise<void>}
 	 */
-	public _addItem({ path, item }: { path: string; item: FSItem }): void {
+	public async _addItem({ path, item }: { path: string; item: FSItem }): Promise<void> {
+		await this.itemsMutex.acquire()
+
 		this._items[path] = item
 		this._uuidToItem[item.uuid] = {
 			...item,
 			path
 		}
+
+		this.itemsMutex.release()
 	}
 
 	/**
 	 * Remove an item from the internal item tree.
-	 * @date 2/14/2024 - 12:50:52 AM
 	 *
 	 * @public
+	 * @async
 	 * @param {{ path: string }} param0
 	 * @param {string} param0.path
-	 * @returns {void}
+	 * @returns {Promise<void>}
 	 */
-	public _removeItem({ path }: { path: string }): void {
+	public async _removeItem({ path }: { path: string }): Promise<void> {
+		await this.itemsMutex.acquire()
+
 		for (const entry in this._items) {
 			if (entry.startsWith(path + "/") || entry === path) {
 				const item = this._items[entry]
@@ -297,6 +306,8 @@ export class FS {
 				delete this._items[entry]
 			}
 		}
+
+		this.itemsMutex.release()
 	}
 
 	/**
@@ -366,6 +377,8 @@ export class FS {
 					foundType = item.type
 				}
 
+				await this.itemsMutex.acquire()
+
 				if (item.type === "directory") {
 					this._items[itemPath] = {
 						uuid: item.uuid,
@@ -417,6 +430,8 @@ export class FS {
 						}
 					}
 				}
+
+				this.itemsMutex.release()
 			}
 
 			if (foundType && foundUUID.length > 0 && acceptedTypes.includes(foundType)) {
@@ -474,6 +489,8 @@ export class FS {
 
 				names.push(entryPath)
 
+				await this.itemsMutex.acquire()
+
 				if (item.type === "directory") {
 					this._items[itemPath] = {
 						uuid: item.uuid,
@@ -525,12 +542,13 @@ export class FS {
 						}
 					}
 				}
+
+				this.itemsMutex.release()
 			}
 
-			return names
+			return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }))
 		}
 
-		// .sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
 		const items = await this.cloud.listDirectory({ uuid })
 
 		for (const item of items) {
@@ -544,6 +562,8 @@ export class FS {
 			existingPaths[lowercasePath] = true
 
 			names.push(item.name)
+
+			await this.itemsMutex.acquire()
 
 			if (item.type === "directory") {
 				this._items[itemPath] = {
@@ -596,9 +616,11 @@ export class FS {
 					}
 				}
 			}
+
+			this.itemsMutex.release()
 		}
 
-		return names
+		return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }))
 	}
 
 	/**
@@ -710,6 +732,8 @@ export class FS {
 			if (parentPath === "/" || parentPath === "." || parentPath === "") {
 				const uuid = await this.cloud.createDirectory({ name: basename, parent: this.sdkConfig.baseFolderUUID! })
 
+				await this.itemsMutex.acquire()
+
 				this._items[path] = {
 					uuid,
 					type: "directory",
@@ -726,6 +750,8 @@ export class FS {
 						name: basename
 					}
 				}
+
+				this.itemsMutex.release()
 
 				return uuid
 			}
@@ -753,6 +779,8 @@ export class FS {
 					const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID! : parentItem.uuid
 					const uuid = await this.cloud.createDirectory({ name: partBasename, parent: parentUUID })
 
+					await this.itemsMutex.acquire()
+
 					this._items[builtPath] = {
 						uuid,
 						type: "directory",
@@ -769,6 +797,8 @@ export class FS {
 							name: partBasename
 						}
 					}
+
+					this.itemsMutex.release()
 				}
 			}
 
@@ -895,6 +925,8 @@ export class FS {
 				}
 			}
 
+			await this.itemsMutex.acquire()
+
 			this._items[to] = {
 				...this._items[from],
 				metadata: itemMetadata
@@ -931,6 +963,8 @@ export class FS {
 					}
 				}
 			}
+
+			this.itemsMutex.release()
 		} finally {
 			this.mutex.release()
 		}
@@ -1005,6 +1039,8 @@ export class FS {
 				}
 			}
 
+			await this.itemsMutex.acquire()
+
 			delete this._uuidToItem[item.uuid]
 			delete this._items[path]
 
@@ -1019,6 +1055,8 @@ export class FS {
 					delete this._items[entry]
 				}
 			}
+
+			this.itemsMutex.release()
 		} finally {
 			this.mutex.release()
 		}
@@ -1036,7 +1074,10 @@ export class FS {
 	 * @returns {Promise<void>}
 	 */
 	public async unlink({ path, permanent = false }: { path: string; permanent?: boolean }): Promise<void> {
-		return await this._unlink({ path, permanent })
+		return await this._unlink({
+			path,
+			permanent
+		})
 	}
 
 	/**
@@ -1051,7 +1092,10 @@ export class FS {
 	 * @returns {Promise<void>}
 	 */
 	public async rm({ path, permanent = false }: { path: string; permanent?: boolean }): Promise<void> {
-		return await this._unlink({ path, permanent })
+		return await this._unlink({
+			path,
+			permanent
+		})
 	}
 
 	/**
@@ -1064,7 +1108,11 @@ export class FS {
 	 * @returns {Promise<void>}
 	 */
 	public async rmdir(...params: Parameters<typeof this.unlink>): Promise<void> {
-		return await this._unlink({ path: params[0].path, type: "directory", permanent: params[0].permanent })
+		return await this._unlink({
+			path: params[0].path,
+			type: "directory",
+			permanent: params[0].permanent
+		})
 	}
 
 	/**
@@ -1076,7 +1124,11 @@ export class FS {
 	 * @returns {Promise<void>}
 	 */
 	public async rmfile(...params: Parameters<typeof this.unlink>): Promise<void> {
-		return await this._unlink({ path: params[0].path, type: "file", permanent: params[0].permanent })
+		return await this._unlink({
+			path: params[0].path,
+			type: "file",
+			permanent: params[0].permanent
+		})
 	}
 
 	/**
@@ -1219,7 +1271,12 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 	}): Promise<Buffer> {
-		return await this.read({ path, abortSignal, pauseSignal, onProgress })
+		return await this.read({
+			path,
+			abortSignal,
+			pauseSignal,
+			onProgress
+		})
 	}
 
 	/**
@@ -1311,6 +1368,8 @@ export class FS {
 			})
 
 			if (item.type === "file") {
+				await this.itemsMutex.acquire()
+
 				this._items[path] = {
 					uuid: item.uuid,
 					type: "file",
@@ -1326,6 +1385,8 @@ export class FS {
 						version: item.version
 					}
 				}
+
+				this.itemsMutex.release()
 			}
 
 			return item
@@ -1470,9 +1531,18 @@ export class FS {
 			parentUUID = parentItem.uuid
 		}
 
-		const item = await this.cloud.uploadLocalFile({ source, parent: parentUUID, name: fileName, abortSignal, pauseSignal, onProgress })
+		const item = await this.cloud.uploadLocalFile({
+			source,
+			parent: parentUUID,
+			name: fileName,
+			abortSignal,
+			pauseSignal,
+			onProgress
+		})
 
 		if (item.type === "file") {
+			await this.itemsMutex.acquire()
+
 			this._items[path] = {
 				uuid: item.uuid,
 				type: "file",
@@ -1505,6 +1575,8 @@ export class FS {
 					version: item.version
 				}
 			}
+
+			this.itemsMutex.release()
 		}
 
 		return item
@@ -1589,7 +1661,10 @@ export class FS {
 
 			const tmpDirectoryPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4(), newDirectoryName))
 
-			await this.cloud.downloadDirectoryToLocal({ uuid, to: tmpDirectoryPath })
+			await this.cloud.downloadDirectoryToLocal({
+				uuid,
+				to: tmpDirectoryPath
+			})
 
 			try {
 				await this.cloud.uploadLocalDirectory({
@@ -1641,6 +1716,8 @@ export class FS {
 				})
 
 				if (uploadedItem.type === "file") {
+					await this.itemsMutex.acquire()
+
 					this._items[to] = {
 						uuid: item.uuid,
 						type: "file",
@@ -1673,6 +1750,8 @@ export class FS {
 							version: uploadedItem.version
 						}
 					}
+
+					this.itemsMutex.release()
 				}
 			} finally {
 				await fs.rm(tmpFilePath, {
