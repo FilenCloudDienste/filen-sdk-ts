@@ -220,13 +220,14 @@ export class Chats {
 		this._chatKeyCache.set(uuidToUse, key)
 
 		if (contacts) {
-			const promises: Promise<void>[] = []
-
-			for (const contact of contacts) {
-				promises.push(this.addParticipant({ conversation: uuidToUse, contact }))
-			}
-
-			await promiseAllChunked(promises)
+			await promiseAllChunked(
+				contacts.map(contact =>
+					this.addParticipant({
+						conversation: uuidToUse,
+						contact
+					})
+				)
+			)
 		}
 
 		return uuidToUse

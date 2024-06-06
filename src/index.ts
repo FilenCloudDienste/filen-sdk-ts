@@ -51,6 +51,7 @@ export class FilenSDK {
 	private _contacts: Contacts
 	private _user: User
 	public socket: Socket = new Socket()
+	private _updateKeyPairTries = 0
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -282,7 +283,32 @@ export class FilenSDK {
 			}
 
 			if (!privateKey) {
-				throw new Error("Could not decrypt private key.")
+				// If the user for example changed his password and did not properly import the old master keys, it could be that we cannot decrypt the private key anymore.
+				// We try to decrypt it 3 times (might be network/API related) and if it still does not work, we generate a new keypair.
+				if (this._updateKeyPairTries < 3) {
+					this._updateKeyPairTries += 1
+
+					await new Promise<void>(resolve => setTimeout(resolve, 250))
+
+					return await this.__updateKeyPair({
+						apiKey,
+						masterKeys
+					})
+				}
+
+				const generatedKeyPair = await this._crypto.utils.generateKeyPair()
+
+				await this._updateKeyPair({
+					apiKey,
+					publicKey: generatedKeyPair.publicKey,
+					privateKey: generatedKeyPair.privateKey,
+					masterKeys
+				})
+
+				return {
+					publicKey: generatedKeyPair.publicKey,
+					privateKey: generatedKeyPair.privateKey
+				}
 			}
 
 			await this._updateKeyPair({
@@ -320,9 +346,16 @@ export class FilenSDK {
 		apiKey: string
 		masterKeys: string[]
 	}): Promise<{ masterKeys: string[]; publicKey: string; privateKey: string }> {
-		const encryptedMasterKeys = await this._crypto
-			.encrypt()
-			.metadata({ metadata: masterKeys.join("|"), key: masterKeys[masterKeys.length - 1] })
+		const currentLastMasterKey = masterKeys[masterKeys.length - 1]
+
+		if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
+			throw new Error("Invalid current master key.")
+		}
+
+		const encryptedMasterKeys = await this._crypto.encrypt().metadata({
+			metadata: masterKeys.join("|"),
+			key: currentLastMasterKey
+		})
 
 		const masterKeysResponse = await this._api.v3().user().masterKeys({
 			encryptedMasterKeys,

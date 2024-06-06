@@ -45,6 +45,7 @@ export declare class FilenSDK {
     private _contacts;
     private _user;
     socket: Socket;
+    private _updateKeyPairTries;
     /**
      * Creates an instance of FilenSDK.
      * @date 2/21/2024 - 8:58:43 AM
@@ -380,7 +381,14 @@ export declare class FilenSDK {
                     authVersion: number;
                     salt: string;
                     hasRecoveryKeys: boolean;
-                    newMasterKeys: string;
+                    newMasterKeys: string; /**
+                     * Creates an instance of FilenSDK.
+                     * @date 2/21/2024 - 8:58:43 AM
+                     *
+                     * @constructor
+                     * @public
+                     * @param {?FilenSDKConfig} [params]
+                     */
                 }) => Promise<void>;
             };
         };
