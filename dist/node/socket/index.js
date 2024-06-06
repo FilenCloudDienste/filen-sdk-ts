@@ -42,10 +42,10 @@ class Socket extends events_1.EventEmitter {
      * @param {string} param0.apiKey
      */
     connect({ apiKey }) {
-        this.apiKey = apiKey;
-        if (this.socket) {
-            this.socket.disconnect();
+        if (this.socket || this.isConnected() || apiKey.length < 32 || apiKey === "anonymous") {
+            return;
         }
+        this.apiKey = apiKey;
         this.socket = null;
         this.socket = (0, socket_io_client_1.default)(exports.SOCKET_DEFAULTS.url, {
             path: "",
@@ -425,7 +425,7 @@ class Socket extends events_1.EventEmitter {
      * @returns {boolean}
      */
     isConnected() {
-        if (!this.socket || !this.socket.disconnected) {
+        if (!this.socket) {
             return false;
         }
         return this.socket.connected;

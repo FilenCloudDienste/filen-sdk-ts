@@ -89,9 +89,7 @@ export declare class FS {
      * Attach listeners for relevant realtime events.
      *
      * @private
-     * @async
      * @param {?boolean} [connect]
-     * @returns {Promise<void>}
      */
     private _initSocketEvents;
     /**

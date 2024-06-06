@@ -128,39 +128,21 @@ export class FS {
 			}
 		}
 
-		this._initSocketEvents(params.connectToSocket).catch(() => {})
+		this._initSocketEvents(params.connectToSocket)
 	}
 
 	/**
 	 * Attach listeners for relevant realtime events.
 	 *
 	 * @private
-	 * @async
 	 * @param {?boolean} [connect]
-	 * @returns {Promise<void>}
 	 */
-	private async _initSocketEvents(connect?: boolean): Promise<void> {
-		if (!connect) {
+	private _initSocketEvents(connect?: boolean): void {
+		if (!connect || !this.sdkConfig.apiKey) {
 			return
 		}
 
-		const apiKey = await new Promise<string>(resolve => {
-			if (typeof this.sdkConfig.apiKey === "string" && this.sdkConfig.apiKey.length > 0) {
-				resolve(this.sdkConfig.apiKey)
-
-				return
-			}
-
-			const wait = setInterval(() => {
-				if (typeof this.sdkConfig.apiKey === "string" && this.sdkConfig.apiKey.length > 0) {
-					clearInterval(wait)
-
-					resolve(this.sdkConfig.apiKey)
-				}
-			}, 100)
-		})
-
-		this.socket.connect({ apiKey })
+		this.socket.connect({ apiKey: this.sdkConfig.apiKey })
 
 		this.socket.addListener("socketEvent", async (event: SocketEvent) => {
 			await this.itemsMutex.acquire()
@@ -549,7 +531,7 @@ export class FS {
 			return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }))
 		}
 
-		const items = await this.cloud.listDirectory({ uuid })
+		const items = (await this.cloud.listDirectory({ uuid })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
 
 		for (const item of items) {
 			const itemPath = pathModule.posix.join(path, item.name)
@@ -620,7 +602,7 @@ export class FS {
 			this.itemsMutex.release()
 		}
 
-		return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }))
+		return names
 	}
 
 	/**
@@ -1616,7 +1598,7 @@ export class FS {
 		from = this.normalizePath({ path: from })
 		to = this.normalizePath({ path: to })
 
-		if (from === "/" || from === to) {
+		if (from === "/" || from === to || to.startsWith(from)) {
 			return
 		}
 

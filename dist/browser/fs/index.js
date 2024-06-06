@@ -55,33 +55,19 @@ export class FS {
                 }
             }
         };
-        this._initSocketEvents(params.connectToSocket).catch(() => { });
+        this._initSocketEvents(params.connectToSocket);
     }
     /**
      * Attach listeners for relevant realtime events.
      *
      * @private
-     * @async
      * @param {?boolean} [connect]
-     * @returns {Promise<void>}
      */
-    async _initSocketEvents(connect) {
-        if (!connect) {
+    _initSocketEvents(connect) {
+        if (!connect || !this.sdkConfig.apiKey) {
             return;
         }
-        const apiKey = await new Promise(resolve => {
-            if (typeof this.sdkConfig.apiKey === "string" && this.sdkConfig.apiKey.length > 0) {
-                resolve(this.sdkConfig.apiKey);
-                return;
-            }
-            const wait = setInterval(() => {
-                if (typeof this.sdkConfig.apiKey === "string" && this.sdkConfig.apiKey.length > 0) {
-                    clearInterval(wait);
-                    resolve(this.sdkConfig.apiKey);
-                }
-            }, 100);
-        });
-        this.socket.connect({ apiKey });
+        this.socket.connect({ apiKey: this.sdkConfig.apiKey });
         this.socket.addListener("socketEvent", async (event) => {
             await this.itemsMutex.acquire();
             if (event.type === "fileArchiveRestored") {
@@ -414,7 +400,7 @@ export class FS {
             }
             return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
         }
-        const items = await this.cloud.listDirectory({ uuid });
+        const items = (await this.cloud.listDirectory({ uuid })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
         for (const item of items) {
             const itemPath = pathModule.posix.join(path, item.name);
             const lowercasePath = itemPath.toLowerCase();
@@ -476,7 +462,7 @@ export class FS {
             }
             this.itemsMutex.release();
         }
-        return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+        return names;
     }
     /**
      * Alias of readdir.
@@ -1280,7 +1266,7 @@ export class FS {
         }
         from = this.normalizePath({ path: from });
         to = this.normalizePath({ path: to });
-        if (from === "/" || from === to) {
+        if (from === "/" || from === to || to.startsWith(from)) {
             return;
         }
         const uuid = await this.pathToItemUUID({ path: from });
