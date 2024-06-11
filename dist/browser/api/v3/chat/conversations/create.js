@@ -22,22 +22,23 @@ export class ChatConversationsCreate {
     }
     /**
      * Create a chat conversation.
-     * @date 2/13/2024 - 4:55:01 AM
      *
      * @public
      * @async
-     * @param {{ uuid: string, metadata: string }} param0
+     * @param {{ uuid: string; metadata: string, ownerMetadata: string }} param0
      * @param {string} param0.uuid
      * @param {string} param0.metadata
+     * @param {string} param0.ownerMetadata
      * @returns {Promise<void>}
      */
-    async fetch({ uuid, metadata }) {
+    async fetch({ uuid, metadata, ownerMetadata }) {
         await this.apiClient.request({
             method: "POST",
             endpoint: "/v3/chat/conversations/create",
             data: {
                 uuid,
-                metadata
+                metadata,
+                ownerMetadata
             }
         });
     }

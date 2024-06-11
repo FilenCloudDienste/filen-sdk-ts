@@ -17,6 +17,7 @@ export type ChatConversation = {
 	lastMessageTimestamp: number
 	lastMessageUUID: string | null
 	ownerId: number
+	ownerMetadata: string | null
 	name: string | null
 	participants: ChatConversationParticipant[]
 	createdTimestamp: number

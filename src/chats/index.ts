@@ -76,9 +76,15 @@ export class Chats {
 			throw new Error(`Could not find participant metadata for chat ${conversation}.`)
 		}
 
-		const decryptedChatKey = await this.crypto
-			.decrypt()
-			.chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey! })
+		let decryptedChatKey: string | null = null
+
+		if (chat[0].ownerMetadata) {
+			decryptedChatKey = await this.crypto.decrypt().chatKeyOwner({ metadata: chat[0].ownerMetadata })
+		} else {
+			decryptedChatKey = await this.crypto
+				.decrypt()
+				.chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey! })
+		}
 
 		this._chatKeyCache.set(conversation, decryptedChatKey)
 
@@ -211,11 +217,19 @@ export class Chats {
 			this.crypto.utils.generateRandomString({ length: 32 })
 		])
 
-		const metadata = await this.crypto
-			.encrypt()
-			.metadataPublic({ metadata: JSON.stringify({ key }), publicKey: this.sdkConfig.publicKey! })
+		const [metadata, ownerMetadata] = await Promise.all([
+			this.crypto.encrypt().metadataPublic({
+				metadata: JSON.stringify({ key }),
+				publicKey: this.sdkConfig.publicKey!
+			}),
+			this.crypto.encrypt().metadata({ metadata: JSON.stringify({ key }) })
+		])
 
-		await this.api.v3().chat().conversationsCreate({ uuid: uuidToUse, metadata })
+		await this.api.v3().chat().conversationsCreate({
+			uuid: uuidToUse,
+			metadata,
+			ownerMetadata
+		})
 
 		this._chatKeyCache.set(uuidToUse, key)
 

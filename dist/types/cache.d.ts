@@ -5,6 +5,7 @@ declare const cache: {
     importPublicKey: Map<string, CryptoKey>;
     importPrivateKey: Map<string, CryptoKey>;
     chatKeyParticipant: Map<string, string>;
+    chatKeyOwner: Map<string, string>;
     noteKeyOwner: Map<string, string>;
     noteKeyParticipant: Map<string, string>;
     noteTitle: Map<string, string>;

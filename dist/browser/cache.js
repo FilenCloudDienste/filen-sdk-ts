@@ -4,6 +4,7 @@ const cache = {
     importPublicKey: new Map(),
     importPrivateKey: new Map(),
     chatKeyParticipant: new Map(),
+    chatKeyOwner: new Map(),
     noteKeyOwner: new Map(),
     noteKeyParticipant: new Map(),
     noteTitle: new Map(),

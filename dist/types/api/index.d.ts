@@ -487,6 +487,7 @@ export declare class API {
             conversationsCreate: (params_0: {
                 uuid: string;
                 metadata: string;
+                ownerMetadata: string;
             }) => Promise<void>;
             conversationsParticipants: () => {
                 add: (params_0: {

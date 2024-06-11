@@ -174,6 +174,20 @@ export declare class Decrypt {
         privateKey: string;
     }): Promise<string>;
     /**
+     * Decrypts a chat encryption (symmetric) key.
+     *
+     * @public
+     * @async
+     * @param {{ metadata: string; key?: string }} param0
+     * @param {string} param0.metadata
+     * @param {string} param0.key
+     * @returns {Promise<string>}
+     */
+    chatKeyOwner({ metadata, key }: {
+        metadata: string;
+        key?: string;
+    }): Promise<string>;
+    /**
      * Decrypt a chat message
      * @date 2/20/2024 - 5:34:42 AM
      *

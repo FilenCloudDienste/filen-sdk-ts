@@ -455,6 +455,46 @@ class Decrypt {
         return parsed.key;
     }
     /**
+     * Decrypts a chat encryption (symmetric) key.
+     *
+     * @public
+     * @async
+     * @param {{ metadata: string; key?: string }} param0
+     * @param {string} param0.metadata
+     * @param {string} param0.key
+     * @returns {Promise<string>}
+     */
+    async chatKeyOwner({ metadata, key }) {
+        const cacheKey = metadata;
+        if (this.config.metadataCache && cache_1.default.chatKeyOwner.has(cacheKey)) {
+            return cache_1.default.chatKeyOwner.get(cacheKey);
+        }
+        const keysToUse = key ? [key] : this.config.masterKeys;
+        for (const masterKey of keysToUse) {
+            try {
+                const decrypted = await this.metadata({
+                    metadata,
+                    key: masterKey
+                });
+                if (typeof decrypted !== "string") {
+                    continue;
+                }
+                const parsed = JSON.parse(decrypted);
+                if (typeof parsed.key !== "string") {
+                    continue;
+                }
+                if (this.config.metadataCache) {
+                    cache_1.default.chatKeyOwner.set(cacheKey, parsed.key);
+                }
+                return parsed.key;
+            }
+            catch (_a) {
+                continue;
+            }
+        }
+        throw new Error("Could not decrypt chat key using master keys.");
+    }
+    /**
      * Decrypt a chat message
      * @date 2/20/2024 - 5:34:42 AM
      *
