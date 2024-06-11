@@ -48,19 +48,18 @@ export class Chats {
         if (chat.length === 0 || !chat[0]) {
             throw new Error(`Could not find chat ${conversation}.`);
         }
+        if (chat[0].ownerId === this.sdkConfig.userId && chat[0].ownerMetadata) {
+            const decryptedChatKey = await this.crypto.decrypt().chatKeyOwner({ metadata: chat[0].ownerMetadata });
+            this._chatKeyCache.set(conversation, decryptedChatKey);
+            return decryptedChatKey;
+        }
         const participant = chat[0].participants.filter(participant => participant.userId === this.sdkConfig.userId);
         if (participant.length === 0 || !participant[0]) {
             throw new Error(`Could not find participant metadata for chat ${conversation}.`);
         }
-        let decryptedChatKey = null;
-        if (chat[0].ownerMetadata) {
-            decryptedChatKey = await this.crypto.decrypt().chatKeyOwner({ metadata: chat[0].ownerMetadata });
-        }
-        else {
-            decryptedChatKey = await this.crypto
-                .decrypt()
-                .chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey });
-        }
+        const decryptedChatKey = await this.crypto
+            .decrypt()
+            .chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey });
         this._chatKeyCache.set(conversation, decryptedChatKey);
         return decryptedChatKey;
     }
