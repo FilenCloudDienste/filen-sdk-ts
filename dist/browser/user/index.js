@@ -1,3 +1,4 @@
+import { APIError } from "..";
 /**
  * User
  * @date 2/1/2024 - 2:44:47 AM
@@ -265,6 +266,35 @@ export class User {
             salt: newSalt,
             masterKeys: newMasterKeysEncrypted
         });
+    }
+    /**
+     * Mark the current master keys as exported.
+     *
+     * @public
+     * @async
+     * @returns {Promise<void>}
+     */
+    async didExportMasterKeys() {
+        return await this.api.v3().user().didExportMasterKeys();
+    }
+    /**
+     * Check if the current API key is valid.
+     *
+     * @public
+     * @async
+     * @returns {Promise<boolean>}
+     */
+    async checkAPIKeyValidity() {
+        try {
+            await this.api.v3().user().account();
+            return true;
+        }
+        catch (e) {
+            if (e instanceof APIError && e.code === "api_key_not_found") {
+                return false;
+            }
+            throw e;
+        }
     }
     /**
      * Enable two factor authentication. Returns the recovery keys.

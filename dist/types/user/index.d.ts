@@ -1,15 +1,15 @@
 /// <reference types="node" />
 import type API from "../api";
-import type { FilenSDKConfig } from "..";
-import type { UserInfoResponse } from "../api/v3/user/info";
-import type { UserSettingsResponse } from "../api/v3/user/settings";
-import type { UserAccountResponse } from "../api/v3/user/account";
-import type { UserGDPRResponse } from "../api/v3/user/gdpr";
+import { type FilenSDKConfig } from "..";
+import { type UserInfoResponse } from "../api/v3/user/info";
+import { type UserSettingsResponse } from "../api/v3/user/settings";
+import { type UserAccountResponse } from "../api/v3/user/account";
+import { type UserGDPRResponse } from "../api/v3/user/gdpr";
 import type Crypto from "../crypto";
-import type { UserEvent } from "../api/v3/user/events";
-import type { UserEventResponse } from "../api/v3/user/event";
-import type { PaymentMethods } from "../api/v3/user/sub/create";
-import type { UserProfileResponse } from "../api/v3/user/profile";
+import { type UserEvent } from "../api/v3/user/events";
+import { type UserEventResponse } from "../api/v3/user/event";
+import { type PaymentMethods } from "../api/v3/user/sub/create";
+import { type UserProfileResponse } from "../api/v3/user/profile";
 export type UserConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -207,6 +207,22 @@ export declare class User {
         currentPassword: string;
         newPassword: string;
     }): Promise<void>;
+    /**
+     * Mark the current master keys as exported.
+     *
+     * @public
+     * @async
+     * @returns {Promise<void>}
+     */
+    didExportMasterKeys(): Promise<void>;
+    /**
+     * Check if the current API key is valid.
+     *
+     * @public
+     * @async
+     * @returns {Promise<boolean>}
+     */
+    checkAPIKeyValidity(): Promise<boolean>;
     /**
      * Enable two factor authentication. Returns the recovery keys.
      * @date 2/20/2024 - 7:04:35 AM

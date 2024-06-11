@@ -61,6 +61,7 @@ export type UserAccountResponse = {
     appearOffline: boolean;
     subs: UserAccountSubs[];
     subsInvoices: UserAccountSubsInvoices[];
+    didExportMasterKeys: boolean;
 };
 /**
  * UserAccount

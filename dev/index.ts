@@ -21,7 +21,7 @@ const filen = new FilenSDK({
 
 const main = async () => {
 	console.log("starting")
-
+	console.log(await filen.fs().stat({ path: "fuse/dsdsd/xttdsds.txt" }))
 	console.log("done")
 }
 

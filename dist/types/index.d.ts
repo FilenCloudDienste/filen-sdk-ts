@@ -391,6 +391,7 @@ export declare class FilenSDK {
                      */
                 }) => Promise<void>;
             };
+            didExportMasterKeys: () => Promise<void>;
         };
         shared: () => {
             in: (params?: {

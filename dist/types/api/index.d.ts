@@ -286,6 +286,7 @@ export declare class API {
                     newMasterKeys: string;
                 }) => Promise<void>;
             };
+            didExportMasterKeys: () => Promise<void>;
         };
         shared: () => {
             in: (params?: {

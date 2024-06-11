@@ -147,6 +147,7 @@ const register_1 = __importDefault(require("./v3/register"));
 const confirmationSend_1 = __importDefault(require("./v3/confirmationSend"));
 const forgot_1 = __importDefault(require("./v3/user/password/forgot"));
 const forgotReset_1 = __importDefault(require("./v3/user/password/forgotReset"));
+const didExportMasterKeys_1 = __importDefault(require("./v3/user/didExportMasterKeys"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -257,7 +258,8 @@ class API {
                 password: {
                     forgot: new forgot_1.default({ apiClient: this.apiClient }),
                     forgotReset: new forgotReset_1.default({ apiClient: this.apiClient })
-                }
+                },
+                didExportMasterKeys: new didExportMasterKeys_1.default({ apiClient: this.apiClient })
             },
             shared: {
                 in: new in_1.default({ apiClient: this.apiClient }),
@@ -500,7 +502,8 @@ class API {
                             forgot: (...params) => this._v3.user.password.forgot.fetch(...params),
                             forgotReset: (...params) => this._v3.user.password.forgotReset.fetch(...params)
                         };
-                    }
+                    },
+                    didExportMasterKeys: (...params) => this._v3.user.didExportMasterKeys.fetch(...params)
                 };
             },
             shared: () => {

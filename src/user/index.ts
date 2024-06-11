@@ -1,14 +1,14 @@
 import type API from "../api"
-import type { FilenSDKConfig } from ".."
-import type { UserInfoResponse } from "../api/v3/user/info"
-import type { UserSettingsResponse } from "../api/v3/user/settings"
-import type { UserAccountResponse } from "../api/v3/user/account"
-import type { UserGDPRResponse } from "../api/v3/user/gdpr"
+import { type FilenSDKConfig, APIError } from ".."
+import { type UserInfoResponse } from "../api/v3/user/info"
+import { type UserSettingsResponse } from "../api/v3/user/settings"
+import { type UserAccountResponse } from "../api/v3/user/account"
+import { type UserGDPRResponse } from "../api/v3/user/gdpr"
 import type Crypto from "../crypto"
-import type { UserEvent } from "../api/v3/user/events"
-import type { UserEventResponse } from "../api/v3/user/event"
-import type { PaymentMethods } from "../api/v3/user/sub/create"
-import type { UserProfileResponse } from "../api/v3/user/profile"
+import { type UserEvent } from "../api/v3/user/events"
+import { type UserEventResponse } from "../api/v3/user/event"
+import { type PaymentMethods } from "../api/v3/user/sub/create"
+import { type UserProfileResponse } from "../api/v3/user/profile"
 
 export type UserConfig = {
 	sdkConfig: FilenSDKConfig
@@ -329,6 +329,38 @@ export class User {
 			salt: newSalt,
 			masterKeys: newMasterKeysEncrypted
 		})
+	}
+
+	/**
+	 * Mark the current master keys as exported.
+	 *
+	 * @public
+	 * @async
+	 * @returns {Promise<void>}
+	 */
+	public async didExportMasterKeys(): Promise<void> {
+		return await this.api.v3().user().didExportMasterKeys()
+	}
+
+	/**
+	 * Check if the current API key is valid.
+	 *
+	 * @public
+	 * @async
+	 * @returns {Promise<boolean>}
+	 */
+	public async checkAPIKeyValidity(): Promise<boolean> {
+		try {
+			await this.api.v3().user().account()
+
+			return true
+		} catch (e) {
+			if (e instanceof APIError && e.code === "api_key_not_found") {
+				return false
+			}
+
+			throw e
+		}
 	}
 
 	/**
