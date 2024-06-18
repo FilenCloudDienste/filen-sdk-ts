@@ -1,13 +1,13 @@
 import type API from "../api"
 import type Crypto from "../crypto"
-import type { FilenSDKConfig } from ".."
-import type { ChatConversation } from "../api/v3/chat/conversations"
+import { type FilenSDKConfig, MAX_CHAT_SIZE } from ".."
+import { type ChatConversation } from "../api/v3/chat/conversations"
 import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils"
-import type { Contact } from "../api/v3/contacts"
+import { type Contact } from "../api/v3/contacts"
 import { ChatTypingType } from "../api/v3/chat/typing"
-import type { ChatMessage } from "../api/v3/chat/messages"
-import type { ChatConversationsOnlineUser } from "../api/v3/chat/conversations/online"
-import type { ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate"
+import { type ChatMessage } from "../api/v3/chat/messages"
+import { type ChatConversationsOnlineUser } from "../api/v3/chat/conversations/online"
+import { type ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate"
 import { Semaphore } from "../semaphore"
 
 export type ChatsConfig = {
@@ -311,6 +311,10 @@ export class Chats {
 		const key = await this.chatKey({ conversation })
 		const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key })
 
+		if (messageEncrypted.length >= MAX_CHAT_SIZE) {
+			throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`)
+		}
+
 		await this.api.v3().chat().edit({ uuid, conversation, message: messageEncrypted })
 	}
 
@@ -340,6 +344,10 @@ export class Chats {
 	}): Promise<string> {
 		const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : uuidv4()])
 		const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key })
+
+		if (messageEncrypted.length >= MAX_CHAT_SIZE) {
+			throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`)
+		}
 
 		await this.api.v3().chat().send({ uuid: uuidToUse, conversation, message: messageEncrypted, replyTo })
 

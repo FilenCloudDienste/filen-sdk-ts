@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MAX_CONCURRENT_DIRECTORY_DOWNLOADS = exports.MAX_CONCURRENT_DIRECTORY_UPLOADS = exports.MAX_CONCURRENT_UPLOADS = exports.MAX_CONCURRENT_LISTING_OPS = exports.MAX_NOTE_SIZE = exports.UPLOAD_CHUNK_SIZE = exports.DEFAULT_UPLOAD_BUCKET = exports.DEFAULT_UPLOAD_REGION = exports.CURRENT_FILE_ENCRYPTION_VERSION = exports.MAX_UPLOAD_THREADS = exports.MAX_DOWNLOAD_WRITERS = exports.MAX_DOWNLOAD_THREADS = exports.MAX_CONCURRENT_DOWNLOADS = exports.BASE64_BUFFER_SIZE = exports.BUFFER_SIZE = exports.CHUNK_SIZE = exports.environment = void 0;
+exports.MAX_CHAT_SIZE = exports.MAX_CONCURRENT_DIRECTORY_DOWNLOADS = exports.MAX_CONCURRENT_DIRECTORY_UPLOADS = exports.MAX_CONCURRENT_UPLOADS = exports.MAX_CONCURRENT_LISTING_OPS = exports.MAX_NOTE_SIZE = exports.UPLOAD_CHUNK_SIZE = exports.DEFAULT_UPLOAD_BUCKET = exports.DEFAULT_UPLOAD_REGION = exports.CURRENT_FILE_ENCRYPTION_VERSION = exports.MAX_UPLOAD_THREADS = exports.MAX_DOWNLOAD_WRITERS = exports.MAX_DOWNLOAD_THREADS = exports.MAX_CONCURRENT_DOWNLOADS = exports.BASE64_BUFFER_SIZE = exports.BUFFER_SIZE = exports.CHUNK_SIZE = exports.environment = void 0;
 const env = {
     isBrowser: (typeof window !== "undefined" && typeof window.document !== "undefined") ||
         // @ts-expect-error WorkerEnv's are not typed
@@ -26,4 +26,5 @@ exports.MAX_CONCURRENT_LISTING_OPS = 64;
 exports.MAX_CONCURRENT_UPLOADS = 8;
 exports.MAX_CONCURRENT_DIRECTORY_UPLOADS = 4;
 exports.MAX_CONCURRENT_DIRECTORY_DOWNLOADS = 8;
+exports.MAX_CHAT_SIZE = 1024 * 64;
 //# sourceMappingURL=constants.js.map

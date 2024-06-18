@@ -23,4 +23,5 @@ export const MAX_CONCURRENT_LISTING_OPS = 64;
 export const MAX_CONCURRENT_UPLOADS = 8;
 export const MAX_CONCURRENT_DIRECTORY_UPLOADS = 4;
 export const MAX_CONCURRENT_DIRECTORY_DOWNLOADS = 8;
+export const MAX_CHAT_SIZE = 1024 * 64;
 //# sourceMappingURL=constants.js.map

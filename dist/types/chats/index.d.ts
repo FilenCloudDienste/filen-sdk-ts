@@ -1,12 +1,12 @@
 import type API from "../api";
 import type Crypto from "../crypto";
-import type { FilenSDKConfig } from "..";
-import type { ChatConversation } from "../api/v3/chat/conversations";
-import type { Contact } from "../api/v3/contacts";
+import { type FilenSDKConfig } from "..";
+import { type ChatConversation } from "../api/v3/chat/conversations";
+import { type Contact } from "../api/v3/contacts";
 import { ChatTypingType } from "../api/v3/chat/typing";
-import type { ChatMessage } from "../api/v3/chat/messages";
-import type { ChatConversationsOnlineUser } from "../api/v3/chat/conversations/online";
-import type { ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate";
+import { type ChatMessage } from "../api/v3/chat/messages";
+import { type ChatConversationsOnlineUser } from "../api/v3/chat/conversations/online";
+import { type ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate";
 export type ChatsConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;

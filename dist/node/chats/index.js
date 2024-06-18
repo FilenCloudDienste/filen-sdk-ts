@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Chats = void 0;
+const __1 = require("..");
 const utils_1 = require("../utils");
 const semaphore_1 = require("../semaphore");
 /**
@@ -241,6 +242,9 @@ class Chats {
     async editMessage({ uuid, conversation, message }) {
         const key = await this.chatKey({ conversation });
         const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
+        if (messageEncrypted.length >= __1.MAX_CHAT_SIZE) {
+            throw new Error(`Maximum encrypted message size is ${__1.MAX_CHAT_SIZE} characters.`);
+        }
         await this.api.v3().chat().edit({ uuid, conversation, message: messageEncrypted });
     }
     /**
@@ -259,6 +263,9 @@ class Chats {
     async sendMessage({ uuid, conversation, message, replyTo }) {
         const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : (0, utils_1.uuidv4)()]);
         const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
+        if (messageEncrypted.length >= __1.MAX_CHAT_SIZE) {
+            throw new Error(`Maximum encrypted message size is ${__1.MAX_CHAT_SIZE} characters.`);
+        }
         await this.api.v3().chat().send({ uuid: uuidToUse, conversation, message: messageEncrypted, replyTo });
         return uuidToUse;
     }

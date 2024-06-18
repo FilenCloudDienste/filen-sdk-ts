@@ -1,3 +1,4 @@
+import { MAX_CHAT_SIZE } from "..";
 import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils";
 import { Semaphore } from "../semaphore";
 /**
@@ -245,6 +246,9 @@ export class Chats {
     async editMessage({ uuid, conversation, message }) {
         const key = await this.chatKey({ conversation });
         const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
+        if (messageEncrypted.length >= MAX_CHAT_SIZE) {
+            throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`);
+        }
         await this.api.v3().chat().edit({ uuid, conversation, message: messageEncrypted });
     }
     /**
@@ -263,6 +267,9 @@ export class Chats {
     async sendMessage({ uuid, conversation, message, replyTo }) {
         const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : uuidv4()]);
         const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
+        if (messageEncrypted.length >= MAX_CHAT_SIZE) {
+            throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`);
+        }
         await this.api.v3().chat().send({ uuid: uuidToUse, conversation, message: messageEncrypted, replyTo });
         return uuidToUse;
     }
