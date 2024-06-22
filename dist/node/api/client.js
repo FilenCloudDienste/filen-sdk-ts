@@ -12,7 +12,6 @@ const stream_1 = require("stream");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const errors_1 = require("./errors");
 const utils_2 = require("../crypto/utils");
-const semaphore_1 = require("../semaphore");
 const https_1 = __importDefault(require("https"));
 const url_1 = __importDefault(require("url"));
 const progress_stream_1 = __importDefault(require("progress-stream"));
@@ -76,9 +75,6 @@ class APIClient {
     constructor(params) {
         this.config = {
             apiKey: ""
-        };
-        this._semaphores = {
-            request: new semaphore_1.Semaphore(1024)
         };
         this.config = params;
     }
@@ -419,13 +415,7 @@ class APIClient {
                 return await send();
             }
         };
-        await this._semaphores.request.acquire();
-        try {
-            return await send();
-        }
-        finally {
-            this._semaphores.request.release();
-        }
+        return await send();
     }
     /**
      * Downloads a file chunk to a local path.

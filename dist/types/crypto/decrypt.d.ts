@@ -13,7 +13,6 @@ import { type UserEvent } from "../api/v3/user/events";
 export declare class Decrypt {
     private readonly config;
     private readonly textDecoder;
-    private readonly _semaphores;
     /**
      * Creates an instance of Decrypt.
      * @date 1/31/2024 - 3:59:10 PM

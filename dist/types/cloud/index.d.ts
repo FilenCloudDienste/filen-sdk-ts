@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import type API from "../api";
 import type Crypto from "../crypto";
 import { type FilenSDKConfig, type FilenSDK } from "..";
@@ -910,7 +911,7 @@ export declare class Cloud {
         onStarted?: () => void;
         onError?: (err: Error) => void;
         onFinished?: () => void;
-    }): Promise<ReadableStream<Uint8Array>>;
+    }): ReadableStream<Buffer>;
     /**
      * Build a recursive directory tree which includes sub-directories and sub-files.
      * @date 2/22/2024 - 1:45:28 AM

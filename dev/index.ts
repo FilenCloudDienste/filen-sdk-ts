@@ -21,7 +21,34 @@ const filen = new FilenSDK({
 
 const main = async () => {
 	console.log("starting")
-	console.log(await filen.fs().stat({ path: "fuse/dsdsd/xttdsds.txt" }))
+	const file = await filen.fs().stat({ path: "/SeaweedFS_Architecture (1).pdf" })
+
+	if (file.type !== "file") {
+		return
+	}
+
+	const stream = filen.cloud().downloadFileToReadableStream({
+		uuid: file.uuid,
+		bucket: file.bucket,
+		region: file.region,
+		chunks: file.chunks,
+		size: file.size,
+		version: file.version,
+		key: file.key
+	})
+
+	const reader = stream.getReader()
+
+	while (true) {
+		const { done, value } = await reader.read()
+
+		if (done) {
+			break
+		}
+
+		console.log("read", value.byteLength, "bytes")
+	}
+
 	console.log("done")
 }
 

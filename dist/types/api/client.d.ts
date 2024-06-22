@@ -51,7 +51,6 @@ export declare const APIClientDefaults: {
  */
 export declare class APIClient {
     private readonly config;
-    private readonly _semaphores;
     /**
      * Creates an instance of APIClient.
      * @date 1/31/2024 - 4:09:17 PM

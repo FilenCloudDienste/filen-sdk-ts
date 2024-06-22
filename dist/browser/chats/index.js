@@ -1,6 +1,5 @@
 import { MAX_CHAT_SIZE } from "..";
 import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils";
-import { Semaphore } from "../semaphore";
 /**
  * Chats
  * @date 2/1/2024 - 2:44:47 AM
@@ -14,9 +13,6 @@ export class Chats {
     crypto;
     sdkConfig;
     _chatKeyCache = new Map();
-    _semaphores = {
-        list: new Semaphore(1024)
-    };
     /**
      * Creates an instance of Chats.
      * @date 2/9/2024 - 5:54:11 AM
@@ -78,42 +74,35 @@ export class Chats {
         const promises = [];
         for (const convo of convos) {
             promises.push(new Promise((resolve, reject) => {
-                this._semaphores.list
-                    .acquire()
-                    .then(() => {
-                    const metadata = convo.participants.filter(p => p.userId === this.sdkConfig.userId);
-                    if (metadata.length === 0 || !metadata[0]) {
-                        reject(new Error("Conversation metadata not found."));
-                        return;
-                    }
-                    const keyPromise = this._chatKeyCache.has(convo.uuid)
-                        ? Promise.resolve(this._chatKeyCache.get(convo.uuid))
-                        : this.chatKey({ conversation: convo.uuid });
-                    keyPromise
-                        .then(decryptedChatKey => {
-                        this._chatKeyCache.set(convo.uuid, decryptedChatKey);
-                        const namePromise = typeof convo.name === "string" && convo.name.length > 0
-                            ? this.crypto.decrypt().chatConversationName({ name: convo.name, key: decryptedChatKey })
-                            : Promise.resolve("");
-                        const messagePromise = typeof convo.lastMessage === "string" && convo.lastMessage.length > 0
-                            ? this.crypto.decrypt().chatMessage({ message: convo.lastMessage, key: decryptedChatKey })
-                            : Promise.resolve("");
-                        Promise.all([namePromise, messagePromise])
-                            .then(([nameDecrypted, lastMessageDecrypted]) => {
-                            chatConversations.push({
-                                ...convo,
-                                lastMessage: lastMessageDecrypted,
-                                name: nameDecrypted
-                            });
-                            resolve();
-                        })
-                            .catch(reject);
+                const metadata = convo.participants.filter(p => p.userId === this.sdkConfig.userId);
+                if (metadata.length === 0 || !metadata[0]) {
+                    reject(new Error("Conversation metadata not found."));
+                    return;
+                }
+                const keyPromise = this._chatKeyCache.has(convo.uuid)
+                    ? Promise.resolve(this._chatKeyCache.get(convo.uuid))
+                    : this.chatKey({ conversation: convo.uuid });
+                keyPromise
+                    .then(decryptedChatKey => {
+                    this._chatKeyCache.set(convo.uuid, decryptedChatKey);
+                    const namePromise = typeof convo.name === "string" && convo.name.length > 0
+                        ? this.crypto.decrypt().chatConversationName({ name: convo.name, key: decryptedChatKey })
+                        : Promise.resolve("");
+                    const messagePromise = typeof convo.lastMessage === "string" && convo.lastMessage.length > 0
+                        ? this.crypto.decrypt().chatMessage({ message: convo.lastMessage, key: decryptedChatKey })
+                        : Promise.resolve("");
+                    Promise.all([namePromise, messagePromise])
+                        .then(([nameDecrypted, lastMessageDecrypted]) => {
+                        chatConversations.push({
+                            ...convo,
+                            lastMessage: lastMessageDecrypted,
+                            name: nameDecrypted
+                        });
+                        resolve();
                     })
                         .catch(reject);
                 })
                     .catch(reject);
-            }).finally(() => {
-                this._semaphores.list.release();
             }));
         }
         await promiseAllSettledChunked(promises);
@@ -310,29 +299,22 @@ export class Chats {
         const promises = [];
         for (const message of _messages) {
             promises.push(new Promise((resolve, reject) => {
-                this._semaphores.list
-                    .acquire()
-                    .then(() => {
-                    const replyToPromise = message.replyTo.uuid.length > 0 && message.replyTo.message.length > 0
-                        ? this.crypto.decrypt().chatMessage({ message: message.replyTo.message, key })
-                        : Promise.resolve("");
-                    Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
-                        .then(([messageDecrypted, replyToDecrypted]) => {
-                        chatMessages.push({
-                            ...message,
-                            message: messageDecrypted,
-                            replyTo: {
-                                ...message.replyTo,
-                                message: replyToDecrypted
-                            }
-                        });
-                        resolve();
-                    })
-                        .catch(reject);
+                const replyToPromise = message.replyTo.uuid.length > 0 && message.replyTo.message.length > 0
+                    ? this.crypto.decrypt().chatMessage({ message: message.replyTo.message, key })
+                    : Promise.resolve("");
+                Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
+                    .then(([messageDecrypted, replyToDecrypted]) => {
+                    chatMessages.push({
+                        ...message,
+                        message: messageDecrypted,
+                        replyTo: {
+                            ...message.replyTo,
+                            message: replyToDecrypted
+                        }
+                    });
+                    resolve();
                 })
                     .catch(reject);
-            }).finally(() => {
-                this._semaphores.list.release();
             }));
         }
         await promiseAllSettledChunked(promises);

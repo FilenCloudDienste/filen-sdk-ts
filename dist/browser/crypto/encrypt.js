@@ -6,7 +6,6 @@ import pathModule from "path";
 import fs from "fs-extra";
 import { pipeline } from "stream";
 import { promisify } from "util";
-import { Semaphore } from "../semaphore";
 const pipelineAsync = promisify(pipeline);
 /**
  * Encrypt
@@ -19,10 +18,6 @@ const pipelineAsync = promisify(pipeline);
 export class Encrypt {
     config;
     textEncoder = new TextEncoder();
-    _semaphores = {
-        metadata: new Semaphore(1024),
-        data: new Semaphore(1024)
-    };
     /**
      * Creates an instance of Encrypt.
      * @date 1/31/2024 - 3:59:21 PM
@@ -45,54 +40,48 @@ export class Encrypt {
      * @returns {Promise<string>}
      */
     async metadata({ metadata, key, derive = true }) {
-        await this._semaphores.metadata.acquire();
-        try {
-            const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
-            if (!keyToUse) {
-                throw new Error("No key to use.");
-            }
-            const iv = await generateRandomString({ length: 12 });
-            const ivBuffer = this.textEncoder.encode(iv);
-            if (environment === "node") {
-                const derivedKey = derive
-                    ? await deriveKeyFromPassword({
-                        password: keyToUse,
-                        salt: keyToUse,
-                        iterations: 1,
-                        hash: "sha512",
-                        bitLength: 256,
-                        returnHex: false
-                    })
-                    : this.textEncoder.encode(keyToUse);
-                const dataBuffer = this.textEncoder.encode(metadata);
-                const cipher = nodeCrypto.createCipheriv("aes-256-gcm", derivedKey, ivBuffer);
-                const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
-                const authTag = cipher.getAuthTag();
-                return `002${iv}${Buffer.concat([encrypted, authTag]).toString("base64")}`;
-            }
-            else if (environment === "browser") {
-                const derivedKey = derive
-                    ? await deriveKeyFromPassword({
-                        password: keyToUse,
-                        salt: keyToUse,
-                        iterations: 1,
-                        hash: "sha512",
-                        bitLength: 256,
-                        returnHex: false
-                    })
-                    : Buffer.from(keyToUse, "utf-8");
-                const dataBuffer = this.textEncoder.encode(metadata);
-                const encrypted = await globalThis.crypto.subtle.encrypt({
-                    name: "AES-GCM",
-                    iv: ivBuffer
-                }, await importRawKey({ key: derivedKey, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), dataBuffer);
-                return `002${iv}${Buffer.from(encrypted).toString("base64")}`;
-            }
-            throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`);
+        const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
+        if (!keyToUse) {
+            throw new Error("No key to use.");
         }
-        finally {
-            this._semaphores.metadata.release();
+        const iv = await generateRandomString({ length: 12 });
+        const ivBuffer = this.textEncoder.encode(iv);
+        if (environment === "node") {
+            const derivedKey = derive
+                ? await deriveKeyFromPassword({
+                    password: keyToUse,
+                    salt: keyToUse,
+                    iterations: 1,
+                    hash: "sha512",
+                    bitLength: 256,
+                    returnHex: false
+                })
+                : this.textEncoder.encode(keyToUse);
+            const dataBuffer = this.textEncoder.encode(metadata);
+            const cipher = nodeCrypto.createCipheriv("aes-256-gcm", derivedKey, ivBuffer);
+            const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
+            const authTag = cipher.getAuthTag();
+            return `002${iv}${Buffer.concat([encrypted, authTag]).toString("base64")}`;
         }
+        else if (environment === "browser") {
+            const derivedKey = derive
+                ? await deriveKeyFromPassword({
+                    password: keyToUse,
+                    salt: keyToUse,
+                    iterations: 1,
+                    hash: "sha512",
+                    bitLength: 256,
+                    returnHex: false
+                })
+                : Buffer.from(keyToUse, "utf-8");
+            const dataBuffer = this.textEncoder.encode(metadata);
+            const encrypted = await globalThis.crypto.subtle.encrypt({
+                name: "AES-GCM",
+                iv: ivBuffer
+            }, await importRawKey({ key: derivedKey, algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), dataBuffer);
+            return `002${iv}${Buffer.from(encrypted).toString("base64")}`;
+        }
+        throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`);
     }
     /**
      * Encrypts metadata using a public key.
@@ -106,29 +95,23 @@ export class Encrypt {
      * @returns {Promise<string>}
      */
     async metadataPublic({ metadata, publicKey }) {
-        await this._semaphores.metadata.acquire();
-        try {
-            if (environment === "node") {
-                const pemKey = await derKeyToPem({ key: publicKey });
-                const encrypted = nodeCrypto.publicEncrypt({
-                    key: pemKey,
-                    padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
-                    oaepHash: "sha512"
-                }, this.textEncoder.encode(metadata));
-                return Buffer.from(encrypted).toString("base64");
-            }
-            else if (environment === "browser") {
-                const importedPublicKey = await importPublicKey({ publicKey, mode: ["encrypt"] });
-                const encrypted = await globalThis.crypto.subtle.encrypt({
-                    name: "RSA-OAEP"
-                }, importedPublicKey, this.textEncoder.encode(metadata));
-                return Buffer.from(encrypted).toString("base64");
-            }
-            throw new Error(`crypto.encrypt.metadataPublic not implemented for ${environment} environment`);
+        if (environment === "node") {
+            const pemKey = await derKeyToPem({ key: publicKey });
+            const encrypted = nodeCrypto.publicEncrypt({
+                key: pemKey,
+                padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: "sha512"
+            }, this.textEncoder.encode(metadata));
+            return Buffer.from(encrypted).toString("base64");
         }
-        finally {
-            this._semaphores.metadata.release();
+        else if (environment === "browser") {
+            const importedPublicKey = await importPublicKey({ publicKey, mode: ["encrypt"] });
+            const encrypted = await globalThis.crypto.subtle.encrypt({
+                name: "RSA-OAEP"
+            }, importedPublicKey, this.textEncoder.encode(metadata));
+            return Buffer.from(encrypted).toString("base64");
         }
+        throw new Error(`crypto.encrypt.metadataPublic not implemented for ${environment} environment`);
     }
     /**
      * Encrypt a chat message using the conversation encryption key.
@@ -227,29 +210,23 @@ export class Encrypt {
      * @returns {Promise<Buffer>}
      */
     async data({ data, key }) {
-        await this._semaphores.data.acquire();
-        try {
-            const iv = await generateRandomString({ length: 12 });
-            if (environment === "node") {
-                const ivBuffer = Buffer.from(iv, "utf-8");
-                const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer);
-                const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
-                const authTag = cipher.getAuthTag();
-                const ciphertext = Buffer.concat([encrypted, authTag]);
-                return Buffer.concat([ivBuffer, ciphertext]);
-            }
-            else if (environment === "browser") {
-                const encrypted = await globalThis.crypto.subtle.encrypt({
-                    name: "AES-GCM",
-                    iv: this.textEncoder.encode(iv)
-                }, await importRawKey({ key: Buffer.from(key, "utf-8"), algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), data);
-                return Buffer.concat([this.textEncoder.encode(iv), new Uint8Array(encrypted)]);
-            }
-            throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`);
+        const iv = await generateRandomString({ length: 12 });
+        if (environment === "node") {
+            const ivBuffer = Buffer.from(iv, "utf-8");
+            const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer);
+            const encrypted = Buffer.concat([cipher.update(data), cipher.final()]);
+            const authTag = cipher.getAuthTag();
+            const ciphertext = Buffer.concat([encrypted, authTag]);
+            return Buffer.concat([ivBuffer, ciphertext]);
         }
-        finally {
-            this._semaphores.data.release();
+        else if (environment === "browser") {
+            const encrypted = await globalThis.crypto.subtle.encrypt({
+                name: "AES-GCM",
+                iv: this.textEncoder.encode(iv)
+            }, await importRawKey({ key: Buffer.from(key, "utf-8"), algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), data);
+            return Buffer.concat([this.textEncoder.encode(iv), new Uint8Array(encrypted)]);
         }
+        throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`);
     }
     /**
      * Encrypt a file/chunk using streams. Only available in a Node.JS environment.
@@ -264,46 +241,40 @@ export class Encrypt {
      * @returns {Promise<string>}
      */
     async dataStream({ inputFile, key, outputFile }) {
-        await this._semaphores.data.acquire();
-        try {
-            if (environment !== "node") {
-                throw new Error(`crypto.encrypt.dataStream not implemented for ${environment} environment`);
-            }
-            const input = normalizePath(inputFile);
-            const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()));
-            if (!(await fs.exists(input))) {
-                throw new Error("Input file does not exist.");
-            }
-            await fs.rm(output, {
-                force: true,
-                maxRetries: 60 * 10,
-                recursive: true,
-                retryDelay: 100
-            });
-            const iv = await generateRandomString({ length: 12 });
-            const ivBuffer = Buffer.from(iv, "utf-8");
-            const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer);
-            const readStream = fs.createReadStream(normalizePath(input), {
-                highWaterMark: BUFFER_SIZE
-            });
-            const writeStream = fs.createWriteStream(normalizePath(output));
-            await new Promise((resolve, reject) => {
-                writeStream.write(ivBuffer, err => {
-                    if (err) {
-                        reject(err);
-                        return;
-                    }
-                    resolve();
-                });
-            });
-            await pipelineAsync(readStream, cipher, writeStream);
-            const authTag = cipher.getAuthTag();
-            await fs.appendFile(output, authTag);
-            return output;
+        if (environment !== "node") {
+            throw new Error(`crypto.encrypt.dataStream not implemented for ${environment} environment`);
         }
-        finally {
-            this._semaphores.data.release();
+        const input = normalizePath(inputFile);
+        const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()));
+        if (!(await fs.exists(input))) {
+            throw new Error("Input file does not exist.");
         }
+        await fs.rm(output, {
+            force: true,
+            maxRetries: 60 * 10,
+            recursive: true,
+            retryDelay: 100
+        });
+        const iv = await generateRandomString({ length: 12 });
+        const ivBuffer = Buffer.from(iv, "utf-8");
+        const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer);
+        const readStream = fs.createReadStream(normalizePath(input), {
+            highWaterMark: BUFFER_SIZE
+        });
+        const writeStream = fs.createWriteStream(normalizePath(output));
+        await new Promise((resolve, reject) => {
+            writeStream.write(ivBuffer, err => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve();
+            });
+        });
+        await pipelineAsync(readStream, cipher, writeStream);
+        const authTag = cipher.getAuthTag();
+        await fs.appendFile(output, authTag);
+        return output;
     }
 }
 export default Encrypt;

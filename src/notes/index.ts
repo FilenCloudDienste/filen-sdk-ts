@@ -6,7 +6,6 @@ import type { NoteType, Note, NoteTag } from "../api/v3/notes"
 import { createNotePreviewFromContentText } from "./utils"
 import { MAX_NOTE_SIZE } from "../constants"
 import type { NoteHistory } from "../api/v3/notes/history"
-import { Semaphore } from "../semaphore"
 
 export type NotesConfig = {
 	sdkConfig: FilenSDKConfig
@@ -27,10 +26,6 @@ export class Notes {
 	private readonly crypto: Crypto
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly _noteKeyCache = new Map<string, string>()
-
-	private readonly _semaphores = {
-		list: new Semaphore(1024)
-	}
 
 	/**
 	 * Creates an instance of Notes.
@@ -100,56 +95,47 @@ export class Notes {
 		for (const note of allNotes) {
 			promises.push(
 				new Promise<void>((resolve, reject) => {
-					this._semaphores.list
-						.acquire()
-						.then(() => {
-							const participantMetadata = note.participants.filter(
-								participant => participant.userId === this.sdkConfig.userId!
-							)
+					const participantMetadata = note.participants.filter(participant => participant.userId === this.sdkConfig.userId!)
 
-							if (participantMetadata.length === 0 || !participantMetadata[0]) {
-								reject(new Error("Could not find user as a participant."))
+					if (participantMetadata.length === 0 || !participantMetadata[0]) {
+						reject(new Error("Could not find user as a participant."))
 
-								return
-							}
+						return
+					}
 
-							const decryptKeyPromise = this._noteKeyCache.has(note.uuid)
-								? Promise.resolve(this._noteKeyCache.get(note.uuid)!)
-								: this.noteKey({ uuid: note.uuid })
+					const decryptKeyPromise = this._noteKeyCache.has(note.uuid)
+						? Promise.resolve(this._noteKeyCache.get(note.uuid)!)
+						: this.noteKey({ uuid: note.uuid })
 
-							decryptKeyPromise
-								.then(decryptedNoteKey => {
-									this._noteKeyCache.set(note.uuid, decryptedNoteKey)
+					decryptKeyPromise
+						.then(decryptedNoteKey => {
+							this._noteKeyCache.set(note.uuid, decryptedNoteKey)
 
-									this.crypto
-										.decrypt()
-										.noteTitle({ title: note.title, key: decryptedNoteKey })
-										.then(decryptedNoteTitle => {
-											Promise.all([
-												note.preview.length === 0
-													? Promise.resolve(decryptedNoteTitle)
-													: this.crypto.decrypt().notePreview({ preview: note.preview, key: decryptedNoteKey }),
-												this.allTags({ tags: note.tags })
-											])
-												.then(([decryptedNotePreview, decryptedNoteTags]) => {
-													notes.push({
-														...note,
-														title: decryptedNoteTitle,
-														preview: decryptedNotePreview,
-														tags: decryptedNoteTags
-													})
+							this.crypto
+								.decrypt()
+								.noteTitle({ title: note.title, key: decryptedNoteKey })
+								.then(decryptedNoteTitle => {
+									Promise.all([
+										note.preview.length === 0
+											? Promise.resolve(decryptedNoteTitle)
+											: this.crypto.decrypt().notePreview({ preview: note.preview, key: decryptedNoteKey }),
+										this.allTags({ tags: note.tags })
+									])
+										.then(([decryptedNotePreview, decryptedNoteTags]) => {
+											notes.push({
+												...note,
+												title: decryptedNoteTitle,
+												preview: decryptedNotePreview,
+												tags: decryptedNoteTags
+											})
 
-													resolve()
-												})
-												.catch(reject)
+											resolve()
 										})
 										.catch(reject)
 								})
 								.catch(reject)
 						})
 						.catch(reject)
-				}).finally(() => {
-					this._semaphores.list.release()
 				})
 			)
 		}
@@ -663,27 +649,20 @@ export class Notes {
 
 			promises.push(
 				new Promise<void>((resolve, reject) => {
-					this._semaphores.list
-						.acquire()
-						.then(() => {
-							Promise.all([
-								this.crypto.decrypt().noteContent({ content: noteHistory.content, key: decryptedNoteKey }),
-								this.crypto.decrypt().notePreview({ preview: noteHistory.preview, key: decryptedNoteKey })
-							])
-								.then(([noteHistoryContentDecrypted, noteHistoryPreviewDecrypted]) => {
-									notesHistory.push({
-										...noteHistory,
-										content: noteHistoryContentDecrypted,
-										preview: noteHistoryPreviewDecrypted
-									})
+					Promise.all([
+						this.crypto.decrypt().noteContent({ content: noteHistory.content, key: decryptedNoteKey }),
+						this.crypto.decrypt().notePreview({ preview: noteHistory.preview, key: decryptedNoteKey })
+					])
+						.then(([noteHistoryContentDecrypted, noteHistoryPreviewDecrypted]) => {
+							notesHistory.push({
+								...noteHistory,
+								content: noteHistoryContentDecrypted,
+								preview: noteHistoryPreviewDecrypted
+							})
 
-									resolve()
-								})
-								.catch(reject)
+							resolve()
 						})
 						.catch(reject)
-				}).finally(() => {
-					this._semaphores.list.release()
 				})
 			)
 		}
@@ -754,25 +733,18 @@ export class Notes {
 		for (const tag of _tags) {
 			promises.push(
 				new Promise<void>((resolve, reject) => {
-					this._semaphores.list
-						.acquire()
-						.then(() => {
-							this.crypto
-								.decrypt()
-								.noteTagName({ name: tag.name })
-								.then(decryptedTagName => {
-									notesTags.push({
-										...tag,
-										name: decryptedTagName
-									})
+					this.crypto
+						.decrypt()
+						.noteTagName({ name: tag.name })
+						.then(decryptedTagName => {
+							notesTags.push({
+								...tag,
+								name: decryptedTagName
+							})
 
-									resolve()
-								})
-								.catch(reject)
+							resolve()
 						})
 						.catch(reject)
-				}).finally(() => {
-					this._semaphores.list.release()
 				})
 			)
 		}

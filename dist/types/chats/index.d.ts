@@ -25,7 +25,6 @@ export declare class Chats {
     private readonly crypto;
     private readonly sdkConfig;
     private readonly _chatKeyCache;
-    private readonly _semaphores;
     /**
      * Creates an instance of Chats.
      * @date 2/9/2024 - 5:54:11 AM

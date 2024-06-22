@@ -21,7 +21,6 @@ export declare class Notes {
     private readonly crypto;
     private readonly sdkConfig;
     private readonly _noteKeyCache;
-    private readonly _semaphores;
     /**
      * Creates an instance of Notes.
      * @date 2/9/2024 - 5:54:11 AM

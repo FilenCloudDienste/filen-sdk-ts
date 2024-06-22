@@ -9,7 +9,6 @@ import { streamDecodeBase64 } from "../streams/base64";
 import { pipeline } from "stream";
 import { promisify } from "util";
 import CryptoJS from "crypto-js";
-import { Semaphore } from "../semaphore";
 const pipelineAsync = promisify(pipeline);
 /**
  * Decrypt
@@ -22,10 +21,6 @@ const pipelineAsync = promisify(pipeline);
 export class Decrypt {
     config;
     textDecoder = new TextDecoder();
-    _semaphores = {
-        metadata: new Semaphore(1024),
-        data: new Semaphore(1024)
-    };
     /**
      * Creates an instance of Decrypt.
      * @date 1/31/2024 - 3:59:10 PM
@@ -49,47 +44,41 @@ export class Decrypt {
      * @returns {Promise<string>}
      */
     async metadata({ metadata, key }) {
-        await this._semaphores.metadata.acquire();
-        try {
-            const sliced = metadata.slice(0, 8);
-            if (sliced === "U2FsdGVk") {
-                // Old and deprecated, not in use anymore, just here for backwards compatibility
-                return CryptoJS.AES.decrypt(metadata, key).toString(CryptoJS.enc.Utf8);
-            }
-            else {
-                const version = metadata.slice(0, 3);
-                if (version === "002") {
-                    const keyBuffer = await deriveKeyFromPassword({
-                        password: key,
-                        salt: key,
-                        iterations: 1,
-                        hash: "sha512",
-                        bitLength: 256,
-                        returnHex: false
-                    });
-                    const ivBuffer = Buffer.from(metadata.slice(3, 15), "utf-8");
-                    const encrypted = Buffer.from(metadata.slice(15), "base64");
-                    if (environment === "node") {
-                        const authTag = encrypted.subarray(-16);
-                        const cipherText = encrypted.subarray(0, encrypted.byteLength - 16);
-                        const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer);
-                        decipher.setAuthTag(authTag);
-                        return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8");
-                    }
-                    else if (environment === "browser") {
-                        const decrypted = await globalThis.crypto.subtle.decrypt({
-                            name: "AES-GCM",
-                            iv: ivBuffer
-                        }, await importRawKey({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }), encrypted);
-                        return Buffer.from(decrypted).toString("utf-8");
-                    }
-                    throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`);
-                }
-                throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`);
-            }
+        const sliced = metadata.slice(0, 8);
+        if (sliced === "U2FsdGVk") {
+            // Old and deprecated, not in use anymore, just here for backwards compatibility
+            return CryptoJS.AES.decrypt(metadata, key).toString(CryptoJS.enc.Utf8);
         }
-        finally {
-            this._semaphores.metadata.release();
+        else {
+            const version = metadata.slice(0, 3);
+            if (version === "002") {
+                const keyBuffer = await deriveKeyFromPassword({
+                    password: key,
+                    salt: key,
+                    iterations: 1,
+                    hash: "sha512",
+                    bitLength: 256,
+                    returnHex: false
+                });
+                const ivBuffer = Buffer.from(metadata.slice(3, 15), "utf-8");
+                const encrypted = Buffer.from(metadata.slice(15), "base64");
+                if (environment === "node") {
+                    const authTag = encrypted.subarray(-16);
+                    const cipherText = encrypted.subarray(0, encrypted.byteLength - 16);
+                    const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer);
+                    decipher.setAuthTag(authTag);
+                    return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8");
+                }
+                else if (environment === "browser") {
+                    const decrypted = await globalThis.crypto.subtle.decrypt({
+                        name: "AES-GCM",
+                        iv: ivBuffer
+                    }, await importRawKey({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }), encrypted);
+                    return Buffer.from(decrypted).toString("utf-8");
+                }
+                throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`);
+            }
+            throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`);
         }
     }
     /**
@@ -104,29 +93,23 @@ export class Decrypt {
      * @returns {Promise<string>}
      */
     async metadataPrivate({ metadata, privateKey }) {
-        await this._semaphores.metadata.acquire();
-        try {
-            if (environment === "node") {
-                const pemKey = await derKeyToPem({ key: privateKey });
-                const decrypted = nodeCrypto.privateDecrypt({
-                    key: pemKey,
-                    padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
-                    oaepHash: "sha512"
-                }, Buffer.from(metadata, "base64"));
-                return decrypted.toString("utf-8");
-            }
-            else if (environment === "browser") {
-                const importedPrivateKey = await importPrivateKey({ privateKey, mode: ["decrypt"] });
-                const decrypted = await globalThis.crypto.subtle.decrypt({
-                    name: "RSA-OAEP"
-                }, importedPrivateKey, Buffer.from(metadata, "base64"));
-                return this.textDecoder.decode(decrypted);
-            }
-            throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${environment} environment`);
+        if (environment === "node") {
+            const pemKey = await derKeyToPem({ key: privateKey });
+            const decrypted = nodeCrypto.privateDecrypt({
+                key: pemKey,
+                padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: "sha512"
+            }, Buffer.from(metadata, "base64"));
+            return decrypted.toString("utf-8");
         }
-        finally {
-            this._semaphores.metadata.release();
+        else if (environment === "browser") {
+            const importedPrivateKey = await importPrivateKey({ privateKey, mode: ["decrypt"] });
+            const decrypted = await globalThis.crypto.subtle.decrypt({
+                name: "RSA-OAEP"
+            }, importedPrivateKey, Buffer.from(metadata, "base64"));
+            return this.textDecoder.decode(decrypted);
         }
+        throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${environment} environment`);
     }
     /**
      * Decrypt file metadata.
@@ -713,127 +696,121 @@ export class Decrypt {
      * @returns {Promise<Buffer>}
      */
     async data({ data, key, version }) {
-        await this._semaphores.data.acquire();
-        try {
-            if (environment === "node") {
-                if (version === 1) {
-                    // Old and deprecated, not in use anymore, just here for backwards compatibility
-                    const firstBytes = Buffer.from(data.subarray(0, 16));
-                    const asciiString = firstBytes.toString("ascii");
-                    const base64String = firstBytes.toString("base64");
-                    const utf8String = firstBytes.toString("utf-8");
-                    let needsConvert = true;
-                    let isCBC = true;
-                    if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
-                        needsConvert = false;
-                    }
-                    if (asciiString.startsWith("Salted_") ||
-                        base64String.startsWith("Salted_") ||
-                        utf8String.startsWith("U2FsdGVk") ||
-                        asciiString.startsWith("U2FsdGVk") ||
-                        utf8String.startsWith("Salted_") ||
-                        base64String.startsWith("U2FsdGVk")) {
-                        isCBC = false;
-                    }
-                    if (needsConvert && !isCBC) {
-                        data = Buffer.from(this.textDecoder.decode(data), "base64");
-                    }
-                    if (!isCBC) {
-                        // Old and deprecated, not in use anymore, just here for backwards compatibility
-                        const saltBytes = Buffer.from(data.subarray(8, 16));
-                        const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
-                            password: Buffer.from(key, "utf-8"),
-                            salt: saltBytes,
-                            keyBits: 256,
-                            ivLength: 16
-                        });
-                        const decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
-                        const ciphertext = data.subarray(16);
-                        return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-                    }
-                    else {
-                        // Old and deprecated, not in use anymore, just here for backwards compatibility
-                        const keyBytes = Buffer.from(key, "utf-8");
-                        const ivBytes = keyBytes.subarray(0, 16);
-                        const decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
-                        return Buffer.concat([decipher.update(data), decipher.final()]);
-                    }
+        if (environment === "node") {
+            if (version === 1) {
+                // Old and deprecated, not in use anymore, just here for backwards compatibility
+                const firstBytes = Buffer.from(data.subarray(0, 16));
+                const asciiString = firstBytes.toString("ascii");
+                const base64String = firstBytes.toString("base64");
+                const utf8String = firstBytes.toString("utf-8");
+                let needsConvert = true;
+                let isCBC = true;
+                if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
+                    needsConvert = false;
                 }
-                else if (version === 2) {
-                    const iv = data.subarray(0, 12);
-                    const encData = data.subarray(12);
-                    const authTag = encData.subarray(-16);
-                    const ciphertext = encData.subarray(0, encData.byteLength - 16);
-                    const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), iv);
-                    decipher.setAuthTag(authTag);
+                if (asciiString.startsWith("Salted_") ||
+                    base64String.startsWith("Salted_") ||
+                    utf8String.startsWith("U2FsdGVk") ||
+                    asciiString.startsWith("U2FsdGVk") ||
+                    utf8String.startsWith("Salted_") ||
+                    base64String.startsWith("U2FsdGVk")) {
+                    isCBC = false;
+                }
+                if (needsConvert && !isCBC) {
+                    data = Buffer.from(this.textDecoder.decode(data), "base64");
+                }
+                if (!isCBC) {
+                    // Old and deprecated, not in use anymore, just here for backwards compatibility
+                    const saltBytes = Buffer.from(data.subarray(8, 16));
+                    const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
+                        password: Buffer.from(key, "utf-8"),
+                        salt: saltBytes,
+                        keyBits: 256,
+                        ivLength: 16
+                    });
+                    const decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
+                    const ciphertext = data.subarray(16);
                     return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
                 }
-            }
-            else if (environment === "browser") {
-                if (version === 1) {
+                else {
                     // Old and deprecated, not in use anymore, just here for backwards compatibility
-                    const firstBytes = Buffer.from(data.subarray(0, 16));
-                    const asciiString = firstBytes.toString("ascii");
-                    const base64String = firstBytes.toString("base64");
-                    const utf8String = firstBytes.toString("utf-8");
-                    let needsConvert = true;
-                    let isCBC = true;
-                    if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
-                        needsConvert = false;
-                    }
-                    if (asciiString.startsWith("Salted_") ||
-                        base64String.startsWith("Salted_") ||
-                        utf8String.startsWith("U2FsdGVk") ||
-                        asciiString.startsWith("U2FsdGVk") ||
-                        utf8String.startsWith("Salted_") ||
-                        base64String.startsWith("U2FsdGVk")) {
-                        isCBC = false;
-                    }
-                    if (needsConvert && !isCBC) {
-                        data = Buffer.from(this.textDecoder.decode(data), "base64");
-                    }
-                    if (!isCBC) {
-                        // Old and deprecated, not in use anymore, just here for backwards compatibility
-                        const saltBytes = Buffer.from(data.subarray(8, 16));
-                        const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
-                            password: Buffer.from(key, "utf-8"),
-                            salt: saltBytes,
-                            keyBits: 256,
-                            ivLength: 16
-                        });
-                        const decrypted = await globalThis.crypto.subtle.decrypt({
-                            name: "AES-CBC",
-                            iv: ivBytes
-                        }, await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), data.subarray(16));
-                        return Buffer.from(decrypted);
-                    }
-                    else {
-                        // Old and deprecated, not in use anymore, just here for backwards compatibility
-                        const keyBytes = Buffer.from(key, "utf-8");
-                        const ivBytes = keyBytes.subarray(0, 16);
-                        const decrypted = await globalThis.crypto.subtle.decrypt({
-                            name: "AES-CBC",
-                            iv: ivBytes
-                        }, await importRawKey({ key: keyBytes, algorithm: "AES-CBC", mode: ["decrypt"] }), data);
-                        return Buffer.from(decrypted);
-                    }
-                }
-                else if (version === 2) {
-                    const iv = data.subarray(0, 12);
-                    const encData = data.subarray(12);
                     const keyBytes = Buffer.from(key, "utf-8");
+                    const ivBytes = keyBytes.subarray(0, 16);
+                    const decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
+                    return Buffer.concat([decipher.update(data), decipher.final()]);
+                }
+            }
+            else if (version === 2) {
+                const iv = data.subarray(0, 12);
+                const encData = data.subarray(12);
+                const authTag = encData.subarray(-16);
+                const ciphertext = encData.subarray(0, encData.byteLength - 16);
+                const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), iv);
+                decipher.setAuthTag(authTag);
+                return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+            }
+        }
+        else if (environment === "browser") {
+            if (version === 1) {
+                // Old and deprecated, not in use anymore, just here for backwards compatibility
+                const firstBytes = Buffer.from(data.subarray(0, 16));
+                const asciiString = firstBytes.toString("ascii");
+                const base64String = firstBytes.toString("base64");
+                const utf8String = firstBytes.toString("utf-8");
+                let needsConvert = true;
+                let isCBC = true;
+                if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
+                    needsConvert = false;
+                }
+                if (asciiString.startsWith("Salted_") ||
+                    base64String.startsWith("Salted_") ||
+                    utf8String.startsWith("U2FsdGVk") ||
+                    asciiString.startsWith("U2FsdGVk") ||
+                    utf8String.startsWith("Salted_") ||
+                    base64String.startsWith("U2FsdGVk")) {
+                    isCBC = false;
+                }
+                if (needsConvert && !isCBC) {
+                    data = Buffer.from(this.textDecoder.decode(data), "base64");
+                }
+                if (!isCBC) {
+                    // Old and deprecated, not in use anymore, just here for backwards compatibility
+                    const saltBytes = Buffer.from(data.subarray(8, 16));
+                    const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
+                        password: Buffer.from(key, "utf-8"),
+                        salt: saltBytes,
+                        keyBits: 256,
+                        ivLength: 16
+                    });
                     const decrypted = await globalThis.crypto.subtle.decrypt({
-                        name: "AES-GCM",
-                        iv
-                    }, await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), encData);
+                        name: "AES-CBC",
+                        iv: ivBytes
+                    }, await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), data.subarray(16));
+                    return Buffer.from(decrypted);
+                }
+                else {
+                    // Old and deprecated, not in use anymore, just here for backwards compatibility
+                    const keyBytes = Buffer.from(key, "utf-8");
+                    const ivBytes = keyBytes.subarray(0, 16);
+                    const decrypted = await globalThis.crypto.subtle.decrypt({
+                        name: "AES-CBC",
+                        iv: ivBytes
+                    }, await importRawKey({ key: keyBytes, algorithm: "AES-CBC", mode: ["decrypt"] }), data);
                     return Buffer.from(decrypted);
                 }
             }
-            throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`);
+            else if (version === 2) {
+                const iv = data.subarray(0, 12);
+                const encData = data.subarray(12);
+                const keyBytes = Buffer.from(key, "utf-8");
+                const decrypted = await globalThis.crypto.subtle.decrypt({
+                    name: "AES-GCM",
+                    iv
+                }, await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), encData);
+                return Buffer.from(decrypted);
+            }
         }
-        finally {
-            this._semaphores.data.release();
-        }
+        throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`);
     }
     /**
      * Decrypt a file/chunk using streams. Only available in a Node.JS environment.
@@ -854,130 +831,124 @@ export class Decrypt {
      * @returns {Promise<string>}
      */
     async dataStream({ inputFile, key, version, outputFile }) {
-        await this._semaphores.data.acquire();
+        if (environment !== "node") {
+            throw new Error(`crypto.decrypt.dataStream not implemented for ${environment} environment`);
+        }
+        let input = normalizePath(inputFile);
+        const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()));
+        if (!(await fs.exists(input))) {
+            throw new Error("Input file does not exist.");
+        }
+        await fs.rm(output, {
+            force: true,
+            maxRetries: 60 * 10,
+            recursive: true,
+            retryDelay: 100
+        });
+        const inputStat = await fs.stat(input);
+        if (inputStat.size < (version === 1 ? 17 : 13)) {
+            throw new Error(`Input file size too small: ${inputStat.size}.`);
+        }
+        let inputHandle = await fs.open(input, fs.constants.R_OK);
+        let decipher;
+        let bytesToSkipAtStartOfInputStream = 0;
+        let bytesToSkipAtEndOfInputStream = 0;
+        let inputFileSize = 0;
         try {
-            if (environment !== "node") {
-                throw new Error(`crypto.decrypt.dataStream not implemented for ${environment} environment`);
-            }
-            let input = normalizePath(inputFile);
-            const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()));
-            if (!(await fs.exists(input))) {
-                throw new Error("Input file does not exist.");
-            }
-            await fs.rm(output, {
-                force: true,
-                maxRetries: 60 * 10,
-                recursive: true,
-                retryDelay: 100
-            });
-            const inputStat = await fs.stat(input);
-            if (inputStat.size < (version === 1 ? 17 : 13)) {
-                throw new Error(`Input file size too small: ${inputStat.size}.`);
-            }
-            let inputHandle = await fs.open(input, fs.constants.R_OK);
-            let decipher;
-            let bytesToSkipAtStartOfInputStream = 0;
-            let bytesToSkipAtEndOfInputStream = 0;
-            let inputFileSize = 0;
-            try {
-                if (version === 1) {
-                    // Old and deprecated, not in use anymore, just here for backwards compatibility
-                    const firstBytes = Buffer.alloc(16);
-                    await fs.read(inputHandle, firstBytes, 0, 16, 0);
-                    if (firstBytes.byteLength === 0) {
-                        throw new Error("Could not read input file.");
-                    }
-                    const asciiString = firstBytes.toString("ascii");
-                    const base64String = firstBytes.toString("base64");
-                    const utf8String = firstBytes.toString("utf-8");
-                    let needsConvert = true;
-                    let isCBC = true;
-                    if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
-                        needsConvert = false;
-                    }
-                    if (asciiString.startsWith("Salted_") ||
-                        base64String.startsWith("Salted_") ||
-                        utf8String.startsWith("U2FsdGVk") ||
-                        asciiString.startsWith("U2FsdGVk") ||
-                        utf8String.startsWith("Salted_") ||
-                        base64String.startsWith("U2FsdGVk")) {
-                        isCBC = false;
-                    }
-                    if (needsConvert && !isCBC) {
-                        const inputConverted = pathModule.join(pathModule.dirname(output), await uuidv4());
-                        await fs.rm(inputConverted, {
-                            force: true,
-                            maxRetries: 60 * 10,
-                            recursive: true,
-                            retryDelay: 100
-                        });
-                        await fs.close(inputHandle);
-                        const oldInput = `${input}`;
-                        input = await streamDecodeBase64({ inputFile: input, outputFile: inputConverted });
-                        inputHandle = await fs.open(input, fs.constants.R_OK);
-                        await fs.rm(oldInput, {
-                            force: true,
-                            maxRetries: 60 * 10,
-                            recursive: true,
-                            retryDelay: 100
-                        });
-                    }
-                    if (!isCBC) {
-                        // Old and deprecated, not in use anymore, just here for backwards compatibility
-                        const saltBytes = Buffer.alloc(8);
-                        await fs.read(inputHandle, saltBytes, 0, 8, 8);
-                        const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
-                            password: Buffer.from(key, "utf-8"),
-                            salt: saltBytes,
-                            keyBits: 256,
-                            ivLength: 16
-                        });
-                        decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
-                        bytesToSkipAtStartOfInputStream = 16;
-                        bytesToSkipAtEndOfInputStream = 0;
-                    }
-                    else {
-                        // Old and deprecated, not in use anymore, just here for backwards compatibility
-                        const keyBytes = Buffer.from(key, "utf-8");
-                        const ivBytes = keyBytes.subarray(0, 16);
-                        decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
-                        bytesToSkipAtStartOfInputStream = 0;
-                        bytesToSkipAtEndOfInputStream = 0;
-                    }
+            if (version === 1) {
+                // Old and deprecated, not in use anymore, just here for backwards compatibility
+                const firstBytes = Buffer.alloc(16);
+                await fs.read(inputHandle, firstBytes, 0, 16, 0);
+                if (firstBytes.byteLength === 0) {
+                    throw new Error("Could not read input file.");
                 }
-                else if (version === 2) {
-                    const keyBytes = Buffer.from(key, "utf-8");
-                    const ivBytes = Buffer.alloc(12);
-                    const authTagBytes = Buffer.alloc(16);
-                    const stat = await fs.stat(input);
-                    await Promise.all([fs.read(inputHandle, ivBytes, 0, 12, 0), fs.read(inputHandle, authTagBytes, 0, 16, stat.size - 16)]);
-                    if (ivBytes.byteLength === 0 || authTagBytes.byteLength === 0) {
-                        throw new Error("Could not read input file.");
-                    }
-                    decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBytes, ivBytes).setAuthTag(authTagBytes);
-                    bytesToSkipAtStartOfInputStream = 12;
-                    bytesToSkipAtEndOfInputStream = 16;
-                    inputFileSize = stat.size;
+                const asciiString = firstBytes.toString("ascii");
+                const base64String = firstBytes.toString("base64");
+                const utf8String = firstBytes.toString("utf-8");
+                let needsConvert = true;
+                let isCBC = true;
+                if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
+                    needsConvert = false;
+                }
+                if (asciiString.startsWith("Salted_") ||
+                    base64String.startsWith("Salted_") ||
+                    utf8String.startsWith("U2FsdGVk") ||
+                    asciiString.startsWith("U2FsdGVk") ||
+                    utf8String.startsWith("Salted_") ||
+                    base64String.startsWith("U2FsdGVk")) {
+                    isCBC = false;
+                }
+                if (needsConvert && !isCBC) {
+                    const inputConverted = pathModule.join(pathModule.dirname(output), await uuidv4());
+                    await fs.rm(inputConverted, {
+                        force: true,
+                        maxRetries: 60 * 10,
+                        recursive: true,
+                        retryDelay: 100
+                    });
+                    await fs.close(inputHandle);
+                    const oldInput = `${input}`;
+                    input = await streamDecodeBase64({ inputFile: input, outputFile: inputConverted });
+                    inputHandle = await fs.open(input, fs.constants.R_OK);
+                    await fs.rm(oldInput, {
+                        force: true,
+                        maxRetries: 60 * 10,
+                        recursive: true,
+                        retryDelay: 100
+                    });
+                }
+                if (!isCBC) {
+                    // Old and deprecated, not in use anymore, just here for backwards compatibility
+                    const saltBytes = Buffer.alloc(8);
+                    await fs.read(inputHandle, saltBytes, 0, 8, 8);
+                    const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
+                        password: Buffer.from(key, "utf-8"),
+                        salt: saltBytes,
+                        keyBits: 256,
+                        ivLength: 16
+                    });
+                    decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
+                    bytesToSkipAtStartOfInputStream = 16;
+                    bytesToSkipAtEndOfInputStream = 0;
                 }
                 else {
-                    throw new Error(`Invalid FileEncryptionVersion: ${version}`);
+                    // Old and deprecated, not in use anymore, just here for backwards compatibility
+                    const keyBytes = Buffer.from(key, "utf-8");
+                    const ivBytes = keyBytes.subarray(0, 16);
+                    decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes);
+                    bytesToSkipAtStartOfInputStream = 0;
+                    bytesToSkipAtEndOfInputStream = 0;
                 }
             }
-            finally {
-                await fs.close(inputHandle);
+            else if (version === 2) {
+                const keyBytes = Buffer.from(key, "utf-8");
+                const ivBytes = Buffer.alloc(12);
+                const authTagBytes = Buffer.alloc(16);
+                const stat = await fs.stat(input);
+                await Promise.all([fs.read(inputHandle, ivBytes, 0, 12, 0), fs.read(inputHandle, authTagBytes, 0, 16, stat.size - 16)]);
+                if (ivBytes.byteLength === 0 || authTagBytes.byteLength === 0) {
+                    throw new Error("Could not read input file.");
+                }
+                decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBytes, ivBytes).setAuthTag(authTagBytes);
+                bytesToSkipAtStartOfInputStream = 12;
+                bytesToSkipAtEndOfInputStream = 16;
+                inputFileSize = stat.size;
             }
-            const readStream = fs.createReadStream(normalizePath(input), {
-                highWaterMark: BUFFER_SIZE,
-                end: inputFileSize > 0 && bytesToSkipAtEndOfInputStream > 0 ? inputFileSize - bytesToSkipAtEndOfInputStream - 1 : Infinity,
-                start: bytesToSkipAtStartOfInputStream
-            });
-            const writeStream = fs.createWriteStream(normalizePath(output));
-            await pipelineAsync(readStream, decipher, writeStream);
-            return output;
+            else {
+                throw new Error(`Invalid FileEncryptionVersion: ${version}`);
+            }
         }
         finally {
-            this._semaphores.data.release();
+            await fs.close(inputHandle);
         }
+        const readStream = fs.createReadStream(normalizePath(input), {
+            highWaterMark: BUFFER_SIZE,
+            end: inputFileSize > 0 && bytesToSkipAtEndOfInputStream > 0 ? inputFileSize - bytesToSkipAtEndOfInputStream - 1 : Infinity,
+            start: bytesToSkipAtStartOfInputStream
+        });
+        const writeStream = fs.createWriteStream(normalizePath(output));
+        await pipelineAsync(readStream, decipher, writeStream);
+        return output;
     }
     /**
      * Decrypt a user event.

@@ -6,7 +6,6 @@ import { pipeline, Readable, Transform } from "stream";
 import fs from "fs-extra";
 import { APIError } from "./errors";
 import { bufferToHash } from "../crypto/utils";
-import { Semaphore } from "../semaphore";
 import https from "https";
 import urlModule from "url";
 import progressStream from "progress-stream";
@@ -61,9 +60,6 @@ export const APIClientDefaults = {
 export class APIClient {
     config = {
         apiKey: ""
-    };
-    _semaphores = {
-        request: new Semaphore(1024)
     };
     /**
      * Creates an instance of APIClient.
@@ -421,13 +417,7 @@ export class APIClient {
                 return await send();
             }
         };
-        await this._semaphores.request.acquire();
-        try {
-            return await send();
-        }
-        finally {
-            this._semaphores.request.release();
-        }
+        return await send();
     }
     /**
      * Downloads a file chunk to a local path.

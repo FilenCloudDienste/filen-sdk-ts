@@ -1171,7 +1171,7 @@ export class FS {
 			length = item.metadata.size
 		}
 
-		const stream = await this.cloud.downloadFileToReadableStream({
+		const stream = this.cloud.downloadFileToReadableStream({
 			uuid,
 			bucket: item.metadata.bucket,
 			region: item.metadata.region,

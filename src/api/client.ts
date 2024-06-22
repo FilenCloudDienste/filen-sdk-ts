@@ -6,7 +6,6 @@ import { pipeline, Readable, Transform } from "stream"
 import fs from "fs-extra"
 import { APIError } from "./errors"
 import { bufferToHash } from "../crypto/utils"
-import { Semaphore } from "../semaphore"
 import type { ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
@@ -100,10 +99,6 @@ export class APIClient {
 	private readonly config: APIClientConfig = {
 		apiKey: ""
 	} as const
-
-	private readonly _semaphores = {
-		request: new Semaphore(1024)
-	}
 
 	/**
 	 * Creates an instance of APIClient.
@@ -525,13 +520,7 @@ export class APIClient {
 			}
 		}
 
-		await this._semaphores.request.acquire()
-
-		try {
-			return await send()
-		} finally {
-			this._semaphores.request.release()
-		}
+		return await send()
 	}
 
 	/**

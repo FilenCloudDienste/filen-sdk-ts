@@ -36,10 +36,6 @@ class Cloud {
      */
     constructor(params) {
         this._semaphores = {
-            downloadThreads: new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_THREADS),
-            downloadWriters: new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_WRITERS),
-            uploadThreads: new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS),
-            listSemaphore: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_LISTING_OPS),
             downloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
             uploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_UPLOADS),
             directoryDownloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
@@ -73,67 +69,53 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .folderMetadata({ metadata: folder.name })
-                    .then(decrypted => {
-                    const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
-                    items.push({
-                        type: "directory",
-                        uuid: folder.uuid,
-                        name: decrypted.name,
-                        lastModified: timestamp,
-                        timestamp,
-                        color: folder.color,
-                        parent: folder.parent,
-                        favorited: folder.favorited === 1,
-                        size: 0
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .folderMetadata({ metadata: folder.name })
+                .then(decrypted => {
+                const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
+                items.push({
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    lastModified: timestamp,
+                    timestamp,
+                    color: folder.color,
+                    parent: folder.parent,
+                    favorited: folder.favorited === 1,
+                    size: 0
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
-                    .then(decrypted => {
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        rm: file.rm,
-                        version: file.version,
-                        chunks: file.chunks,
-                        favorited: file.favorited === 1,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadata({ metadata: file.metadata })
+                .then(decrypted => {
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    rm: file.rm,
+                    version: file.version,
+                    chunks: file.chunks,
+                    favorited: file.favorited === 1,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         return items;
@@ -153,76 +135,62 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .folderMetadataPrivate({ metadata: folder.metadata })
-                    .then(decrypted => {
-                    var _a, _b, _c, _d, _e;
-                    const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
-                    items.push({
-                        type: "directory",
-                        uuid: folder.uuid,
-                        name: decrypted.name,
-                        lastModified: timestamp,
-                        timestamp,
-                        color: folder.color,
-                        parent: (_a = folder.parent) !== null && _a !== void 0 ? _a : "shared-in",
-                        sharerEmail: (_b = folder.sharerEmail) !== null && _b !== void 0 ? _b : "",
-                        sharerId: (_c = folder.sharerId) !== null && _c !== void 0 ? _c : 0,
-                        receiverEmail: (_d = folder.receiverEmail) !== null && _d !== void 0 ? _d : "",
-                        receiverId: (_e = folder.receiverId) !== null && _e !== void 0 ? _e : 0,
-                        receivers: [],
-                        size: 0
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .folderMetadataPrivate({ metadata: folder.metadata })
+                .then(decrypted => {
+                var _a, _b, _c, _d, _e;
+                const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
+                items.push({
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    lastModified: timestamp,
+                    timestamp,
+                    color: folder.color,
+                    parent: (_a = folder.parent) !== null && _a !== void 0 ? _a : "shared-in",
+                    sharerEmail: (_b = folder.sharerEmail) !== null && _b !== void 0 ? _b : "",
+                    sharerId: (_c = folder.sharerId) !== null && _c !== void 0 ? _c : 0,
+                    receiverEmail: (_d = folder.receiverEmail) !== null && _d !== void 0 ? _d : "",
+                    receiverId: (_e = folder.receiverId) !== null && _e !== void 0 ? _e : 0,
+                    receivers: [],
+                    size: 0
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadataPrivate({ metadata: file.metadata })
-                    .then(decrypted => {
-                    var _a, _b, _c, _d;
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        version: file.version,
-                        chunks: file.chunks,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash,
-                        sharerEmail: (_a = file.sharerEmail) !== null && _a !== void 0 ? _a : "",
-                        sharerId: (_b = file.sharerId) !== null && _b !== void 0 ? _b : 0,
-                        receiverEmail: (_c = file.receiverEmail) !== null && _c !== void 0 ? _c : "",
-                        receiverId: (_d = file.receiverId) !== null && _d !== void 0 ? _d : 0,
-                        receivers: []
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadataPrivate({ metadata: file.metadata })
+                .then(decrypted => {
+                var _a, _b, _c, _d;
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    version: file.version,
+                    chunks: file.chunks,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash,
+                    sharerEmail: (_a = file.sharerEmail) !== null && _a !== void 0 ? _a : "",
+                    sharerId: (_b = file.sharerId) !== null && _b !== void 0 ? _b : 0,
+                    receiverEmail: (_c = file.receiverEmail) !== null && _c !== void 0 ? _c : "",
+                    receiverId: (_d = file.receiverId) !== null && _d !== void 0 ? _d : 0,
+                    receivers: []
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         return items;
@@ -243,76 +211,62 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .folderMetadata({ metadata: folder.metadata })
-                    .then(decrypted => {
-                    var _a, _b, _c, _d, _e;
-                    const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
-                    items.push({
-                        type: "directory",
-                        uuid: folder.uuid,
-                        name: decrypted.name,
-                        lastModified: timestamp,
-                        timestamp,
-                        color: folder.color,
-                        parent: (_a = folder.parent) !== null && _a !== void 0 ? _a : "shared-in",
-                        sharerEmail: (_b = folder.sharerEmail) !== null && _b !== void 0 ? _b : "",
-                        sharerId: (_c = folder.sharerId) !== null && _c !== void 0 ? _c : 0,
-                        receiverEmail: (_d = folder.receiverEmail) !== null && _d !== void 0 ? _d : "",
-                        receiverId: (_e = folder.receiverId) !== null && _e !== void 0 ? _e : 0,
-                        receivers: [],
-                        size: 0
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .folderMetadata({ metadata: folder.metadata })
+                .then(decrypted => {
+                var _a, _b, _c, _d, _e;
+                const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
+                items.push({
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    lastModified: timestamp,
+                    timestamp,
+                    color: folder.color,
+                    parent: (_a = folder.parent) !== null && _a !== void 0 ? _a : "shared-in",
+                    sharerEmail: (_b = folder.sharerEmail) !== null && _b !== void 0 ? _b : "",
+                    sharerId: (_c = folder.sharerId) !== null && _c !== void 0 ? _c : 0,
+                    receiverEmail: (_d = folder.receiverEmail) !== null && _d !== void 0 ? _d : "",
+                    receiverId: (_e = folder.receiverId) !== null && _e !== void 0 ? _e : 0,
+                    receivers: [],
+                    size: 0
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
-                    .then(decrypted => {
-                    var _a, _b, _c, _d;
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        version: file.version,
-                        chunks: file.chunks,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash,
-                        sharerEmail: (_a = file.sharerEmail) !== null && _a !== void 0 ? _a : "",
-                        sharerId: (_b = file.sharerId) !== null && _b !== void 0 ? _b : 0,
-                        receiverEmail: (_c = file.receiverEmail) !== null && _c !== void 0 ? _c : "",
-                        receiverId: (_d = file.receiverId) !== null && _d !== void 0 ? _d : 0,
-                        receivers: []
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadata({ metadata: file.metadata })
+                .then(decrypted => {
+                var _a, _b, _c, _d;
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    version: file.version,
+                    chunks: file.chunks,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash,
+                    sharerEmail: (_a = file.sharerEmail) !== null && _a !== void 0 ? _a : "",
+                    sharerId: (_b = file.sharerId) !== null && _b !== void 0 ? _b : 0,
+                    receiverEmail: (_c = file.receiverEmail) !== null && _c !== void 0 ? _c : "",
+                    receiverId: (_d = file.receiverId) !== null && _d !== void 0 ? _d : 0,
+                    receivers: []
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         const groups = [];
@@ -358,39 +312,32 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
-                    .then(decrypted => {
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        rm: file.rm,
-                        version: file.version,
-                        chunks: file.chunks,
-                        favorited: file.favorited === 1,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadata({ metadata: file.metadata })
+                .then(decrypted => {
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    rm: file.rm,
+                    version: file.version,
+                    chunks: file.chunks,
+                    favorited: file.favorited === 1,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         return items;
@@ -408,67 +355,53 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .folderMetadata({ metadata: folder.name })
-                    .then(decrypted => {
-                    const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
-                    items.push({
-                        type: "directory",
-                        uuid: folder.uuid,
-                        name: decrypted.name,
-                        lastModified: timestamp,
-                        timestamp,
-                        color: folder.color,
-                        parent: folder.parent,
-                        favorited: folder.favorited === 1,
-                        size: 0
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .folderMetadata({ metadata: folder.name })
+                .then(decrypted => {
+                const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
+                items.push({
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    lastModified: timestamp,
+                    timestamp,
+                    color: folder.color,
+                    parent: folder.parent,
+                    favorited: folder.favorited === 1,
+                    size: 0
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
-                    .then(decrypted => {
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        rm: file.rm,
-                        version: file.version,
-                        chunks: file.chunks,
-                        favorited: file.favorited === 1,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadata({ metadata: file.metadata })
+                .then(decrypted => {
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    rm: file.rm,
+                    version: file.version,
+                    chunks: file.chunks,
+                    favorited: file.favorited === 1,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         return items;
@@ -486,67 +419,53 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .folderMetadata({ metadata: folder.name })
-                    .then(decrypted => {
-                    const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
-                    items.push({
-                        type: "directory",
-                        uuid: folder.uuid,
-                        name: decrypted.name,
-                        lastModified: timestamp,
-                        timestamp,
-                        color: folder.color,
-                        parent: folder.parent,
-                        favorited: folder.favorited === 1,
-                        size: 0
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .folderMetadata({ metadata: folder.name })
+                .then(decrypted => {
+                const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
+                items.push({
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    lastModified: timestamp,
+                    timestamp,
+                    color: folder.color,
+                    parent: folder.parent,
+                    favorited: folder.favorited === 1,
+                    size: 0
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
-                    .then(decrypted => {
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        rm: file.rm,
-                        version: file.version,
-                        chunks: file.chunks,
-                        favorited: file.favorited === 1,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadata({ metadata: file.metadata })
+                .then(decrypted => {
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    rm: file.rm,
+                    version: file.version,
+                    chunks: file.chunks,
+                    favorited: file.favorited === 1,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         return items;
@@ -564,67 +483,53 @@ class Cloud {
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .folderMetadata({ metadata: folder.name })
-                    .then(decrypted => {
-                    const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
-                    items.push({
-                        type: "directory",
-                        uuid: folder.uuid,
-                        name: decrypted.name,
-                        lastModified: timestamp,
-                        timestamp,
-                        color: folder.color,
-                        parent: folder.parent,
-                        favorited: folder.favorited === 1,
-                        size: 0
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .folderMetadata({ metadata: folder.name })
+                .then(decrypted => {
+                const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
+                items.push({
+                    type: "directory",
+                    uuid: folder.uuid,
+                    name: decrypted.name,
+                    lastModified: timestamp,
+                    timestamp,
+                    color: folder.color,
+                    parent: folder.parent,
+                    favorited: folder.favorited === 1,
+                    size: 0
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         for (const file of content.uploads) {
-            promises.push(new Promise((resolve, reject) => this._semaphores.listSemaphore
-                .acquire()
-                .then(() => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
-                    .then(decrypted => {
-                    items.push({
-                        type: "file",
-                        uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
-                        timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
-                        parent: file.parent,
-                        rm: file.rm,
-                        version: file.version,
-                        chunks: file.chunks,
-                        favorited: file.favorited === 1,
-                        key: decrypted.key,
-                        bucket: file.bucket,
-                        region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash
-                    });
-                    resolve();
-                })
-                    .catch(reject);
+            promises.push(new Promise((resolve, reject) => this.crypto
+                .decrypt()
+                .fileMetadata({ metadata: file.metadata })
+                .then(decrypted => {
+                items.push({
+                    type: "file",
+                    uuid: file.uuid,
+                    name: decrypted.name,
+                    size: decrypted.size,
+                    mime: decrypted.mime,
+                    lastModified: (0, utils_1.convertTimestampToMs)(decrypted.lastModified),
+                    timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
+                    parent: file.parent,
+                    rm: file.rm,
+                    version: file.version,
+                    chunks: file.chunks,
+                    favorited: file.favorited === 1,
+                    key: decrypted.key,
+                    bucket: file.bucket,
+                    region: file.region,
+                    creation: decrypted.creation,
+                    hash: decrypted.hash
+                });
+                resolve();
             })
-                .catch(reject)).finally(() => {
-                this._semaphores.listSemaphore.release();
-            }));
+                .catch(reject)));
         }
         await (0, utils_1.promiseAllSettledChunked)(promises);
         return items;
@@ -1744,7 +1649,7 @@ class Cloud {
             retryDelay: 100
         });
         const writeStream = fs_extra_1.default.createWriteStream(destinationPath);
-        const readStream = (await this.downloadFileToReadableStream({
+        const readStream = this.downloadFileToReadableStream({
             uuid,
             region,
             bucket,
@@ -1759,7 +1664,7 @@ class Cloud {
             onStarted,
             start,
             end
-        }));
+        });
         await pipelineAsync(stream_1.Readable.fromWeb(readStream), writeStream);
         if (onFinished) {
             onFinished();
@@ -1808,14 +1713,7 @@ class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<ReadableStream<Uint8Array>>}
      */
-    async downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }) {
-        if (onQueued) {
-            onQueued();
-        }
-        await this._semaphores.downloads.acquire();
-        if (onStarted) {
-            onStarted();
-        }
+    downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }) {
         if (!start) {
             start = 0;
         }
@@ -1826,8 +1724,8 @@ class Cloud {
             start = end;
         }
         const [firstChunkIndex, lastChunkIndex] = utils_2.default.calculateChunkIndices({ start, end, chunks });
-        const threadsSemaphore = this._semaphores.downloadThreads;
-        const writersSemaphore = this._semaphores.downloadWriters;
+        const threadsSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_THREADS);
+        const writersSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_WRITERS);
         const downloadsSemaphore = this._semaphores.downloads;
         const api = this.api;
         const crypto = this.crypto;
@@ -1836,11 +1734,21 @@ class Cloud {
         let currentPullIndex = firstChunkIndex;
         const chunksPulled = { [firstChunkIndex]: true };
         const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex >= chunks ? chunks : lastChunkIndex;
+        let downloadsSemaphoreAcquired = false;
+        let downloadsSemaphoreReleased = false;
+        if (end > size - 1 || chunksToDownload === 0 || firstChunkIndex > lastChunkIndex || firstChunkIndex < 0 || lastChunkIndex < 0) {
+            return new ReadableStream({
+                start(controller) {
+                    controller.enqueue(Buffer.from([]));
+                    controller.close();
+                }
+            });
+        }
         const waitForPause = async () => {
             if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                 return;
             }
-            return await new Promise(resolve => {
+            await new Promise(resolve => {
                 const wait = setInterval(() => {
                     if (!pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                         clearInterval(wait);
@@ -1895,14 +1803,11 @@ class Cloud {
                 (async () => {
                     const write = async ({ index, buffer }) => {
                         try {
-                            if (abortSignal && abortSignal.aborted) {
+                            if ((abortSignal && abortSignal.aborted) || writerStopped) {
                                 throw new Error("Aborted");
                             }
                             if (pauseSignal && pauseSignal.isPaused()) {
                                 await waitForPause();
-                            }
-                            if (writerStopped) {
-                                return;
                             }
                             if (index !== currentWriteIndex) {
                                 await new Promise(resolve => {
@@ -1913,6 +1818,12 @@ class Cloud {
                                         }
                                     }, 10);
                                 });
+                            }
+                            if ((abortSignal && abortSignal.aborted) || writerStopped) {
+                                throw new Error("Aborted");
+                            }
+                            if (pauseSignal && pauseSignal.isPaused()) {
+                                await waitForPause();
                             }
                             if (buffer.byteLength > 0) {
                                 let bufferToEnqueue = buffer;
@@ -1942,6 +1853,14 @@ class Cloud {
                             throw e;
                         }
                     };
+                    if (onQueued) {
+                        onQueued();
+                    }
+                    await downloadsSemaphore.acquire();
+                    downloadsSemaphoreAcquired = true;
+                    if (onStarted) {
+                        onStarted();
+                    }
                     try {
                         await new Promise((resolve, reject) => {
                             let done = firstChunkIndex;
@@ -1952,7 +1871,7 @@ class Cloud {
                                     try {
                                         await waitForPull({ index });
                                         await Promise.all([threadsSemaphore.acquire(), writersSemaphore.acquire()]);
-                                        if (abortSignal && abortSignal.aborted) {
+                                        if ((abortSignal && abortSignal.aborted) || writerStopped) {
                                             throw new Error("Aborted");
                                         }
                                         if (pauseSignal && pauseSignal.isPaused()) {
@@ -1965,7 +1884,7 @@ class Cloud {
                                             chunk: index,
                                             abortSignal
                                         });
-                                        if (abortSignal && abortSignal.aborted) {
+                                        if ((abortSignal && abortSignal.aborted) || writerStopped) {
                                             throw new Error("Aborted");
                                         }
                                         if (pauseSignal && pauseSignal.isPaused()) {
@@ -1976,6 +1895,12 @@ class Cloud {
                                             key,
                                             version
                                         });
+                                        if ((abortSignal && abortSignal.aborted) || writerStopped) {
+                                            throw new Error("Aborted");
+                                        }
+                                        if (pauseSignal && pauseSignal.isPaused()) {
+                                            await waitForPause();
+                                        }
                                         write({ index, buffer: decryptedBuffer }).catch(err => {
                                             threadsSemaphore.release();
                                             writersSemaphore.release();
@@ -1998,17 +1923,27 @@ class Cloud {
                             }
                         });
                         await waitForWritesToBeDone();
-                        controller.close();
                     }
                     catch (e) {
                         if (onError) {
                             onError(e);
                         }
                         controller.error(e);
-                        throw e;
+                        if (!(e instanceof Error && e.message.toLowerCase().includes("aborted"))) {
+                            throw e;
+                        }
                     }
                     finally {
-                        downloadsSemaphore.release();
+                        if (downloadsSemaphoreAcquired && !downloadsSemaphoreReleased) {
+                            downloadsSemaphoreReleased = true;
+                            downloadsSemaphore.release();
+                        }
+                        try {
+                            controller.close();
+                        }
+                        catch (_a) {
+                            // Noop
+                        }
                     }
                     if (onFinished) {
                         onFinished();
@@ -2021,9 +1956,9 @@ class Cloud {
             },
             cancel() {
                 writerStopped = true;
-                for (let index = firstChunkIndex; index < chunksToDownload; index++) {
-                    threadsSemaphore.release();
-                    writersSemaphore.release();
+                if (downloadsSemaphoreAcquired && !downloadsSemaphoreReleased) {
+                    downloadsSemaphoreReleased = true;
+                    downloadsSemaphore.release();
                 }
             }
         }, {
@@ -2306,6 +2241,7 @@ class Cloud {
             const creation = parseInt(fileStats.birthtimeMs.toString());
             let bucket = constants_1.DEFAULT_UPLOAD_BUCKET;
             let region = constants_1.DEFAULT_UPLOAD_REGION;
+            const uploadThreads = new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS);
             while (dummyOffset < fileSize) {
                 fileChunks += 1;
                 dummyOffset += constants_1.UPLOAD_CHUNK_SIZE;
@@ -2336,7 +2272,7 @@ class Cloud {
                 if (!pauseSignal || !pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                     return;
                 }
-                return await new Promise(resolve => {
+                await new Promise(resolve => {
                     const wait = setInterval(() => {
                         if (!pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                             clearInterval(wait);
@@ -2350,8 +2286,8 @@ class Cloud {
                 for (let i = 0; i < fileChunks; i++) {
                     const index = i;
                     (async () => {
+                        await uploadThreads.acquire();
                         try {
-                            await this._semaphores.uploadThreads.acquire();
                             if (pauseSignal && pauseSignal.isPaused()) {
                                 await waitForPause();
                             }
@@ -2394,13 +2330,13 @@ class Cloud {
                             bucket = uploadResponse.bucket;
                             region = uploadResponse.region;
                             done += 1;
-                            this._semaphores.uploadThreads.release();
+                            uploadThreads.release();
                             if (done >= fileChunks) {
                                 resolve();
                             }
                         }
                         catch (e) {
-                            this._semaphores.uploadThreads.release();
+                            uploadThreads.release();
                             throw e;
                         }
                     })().catch(reject);
@@ -2653,6 +2589,7 @@ class Cloud {
             const lastModified = file.lastModified;
             let bucket = constants_1.DEFAULT_UPLOAD_BUCKET;
             let region = constants_1.DEFAULT_UPLOAD_REGION;
+            const uploadThreads = new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS);
             while (dummyOffset < fileSize) {
                 fileChunks += 1;
                 dummyOffset += constants_1.UPLOAD_CHUNK_SIZE;
@@ -2682,7 +2619,7 @@ class Cloud {
                 if (!pauseSignal || !pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                     return;
                 }
-                return await new Promise(resolve => {
+                await new Promise(resolve => {
                     const wait = setInterval(() => {
                         if (!pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                             clearInterval(wait);
@@ -2696,8 +2633,8 @@ class Cloud {
                 for (let i = 0; i < fileChunks; i++) {
                     const index = i;
                     (async () => {
+                        await uploadThreads.acquire();
                         try {
-                            await this._semaphores.uploadThreads.acquire();
                             if (pauseSignal && pauseSignal.isPaused()) {
                                 await waitForPause();
                             }
@@ -2740,13 +2677,13 @@ class Cloud {
                             bucket = uploadResponse.bucket;
                             region = uploadResponse.region;
                             done += 1;
-                            this._semaphores.uploadThreads.release();
+                            uploadThreads.release();
                             if (done >= fileChunks) {
                                 resolve();
                             }
                         }
                         catch (e) {
-                            this._semaphores.uploadThreads.release();
+                            uploadThreads.release();
                             throw e;
                         }
                     })().catch(reject);

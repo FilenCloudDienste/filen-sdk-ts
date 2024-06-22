@@ -38,6 +38,9 @@ exports.Semaphore = function (max) {
         }
     };
     this.release = function () {
+        if (counter <= 0) {
+            return;
+        }
         counter--;
         take();
     };
