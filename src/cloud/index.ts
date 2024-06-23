@@ -3437,12 +3437,6 @@ export class Cloud {
 					}
 				}
 
-				transformer.once("error", () => {
-					aborted = true
-
-					cleanup()
-				})
-
 				writeStream.once("uploaded", (item: FSItem) => {
 					resolve({
 						type: "file",
@@ -3466,51 +3460,39 @@ export class Cloud {
 
 				writeStream.once("close", () => {
 					closed = true
-
-					cleanup()
 				})
 
 				writeStream.once("finish", () => {
 					closed = true
-
-					cleanup()
 				})
 
-				writeStream.once("error", err => {
-					aborted = true
-
-					cleanup()
-
-					reject(err)
+				transformer.once("close", () => {
+					closed = true
 				})
 
-				source.once("error", err => {
-					aborted = true
-
-					cleanup()
-
-					reject(err)
+				transformer.once("finish", () => {
+					closed = true
 				})
 
 				source.once("close", () => {
 					closed = true
-
-					cleanup()
 				})
 
 				source.once("finish", () => {
 					closed = true
-
-					cleanup()
 				})
 
-				pipelineAsync(source, transformer, writeStream, { signal: abortSignal }).catch(err => {
-					aborted = true
+				pipelineAsync(source, transformer, writeStream, { signal: abortSignal })
+					.then(() => {
+						closed = true
+					})
+					.catch(err => {
+						aborted = true
 
-					cleanup()
+						setTimeout(cleanup, 3000)
 
-					reject(err)
-				})
+						reject(err)
+					})
 			})
 
 			if (onUploaded) {
