@@ -2384,23 +2384,29 @@ export class Cloud {
 		let downloadsSemaphoreAcquired = false
 		let downloadsSemaphoreReleased = false
 
-		if (end > size - 1 || chunksToDownload === 0 || firstChunkIndex > lastChunkIndex || firstChunkIndex < 0 || lastChunkIndex < 0) {
+		if (
+			end > size - 1 ||
+			chunksToDownload === 0 ||
+			firstChunkIndex > lastChunkIndex ||
+			firstChunkIndex < 0 ||
+			lastChunkIndex < 0 ||
+			lastChunkIndex > chunks
+		) {
 			return new ReadableStream({
 				start(controller) {
-					controller.enqueue(Buffer.from([]))
 					controller.close()
 				}
 			})
 		}
 
 		const waitForPause = async (): Promise<void> => {
-			if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
+			if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted) {
+					if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
 						clearInterval(wait)
 
 						resolve()
@@ -2409,14 +2415,14 @@ export class Cloud {
 			})
 		}
 
-		const waitForPull = async ({ index }: { index: number }) => {
-			if (chunksPulled[index]) {
+		const waitForPull = async (index: number) => {
+			if (chunksPulled[index] || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (chunksPulled[index]) {
+					if (chunksPulled[index] || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
 						clearInterval(wait)
 
 						resolve()
@@ -2426,13 +2432,13 @@ export class Cloud {
 		}
 
 		const waitForWritesToBeDone = async () => {
-			if (currentWriteIndex >= chunksToDownload) {
+			if (currentWriteIndex >= chunksToDownload || writerStopped || abortSignal?.aborted) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (currentWriteIndex >= chunksToDownload) {
+					if (currentWriteIndex >= chunksToDownload || writerStopped || abortSignal?.aborted) {
 						clearInterval(wait)
 
 						resolve()
@@ -2441,11 +2447,20 @@ export class Cloud {
 			})
 		}
 
-		const applyBackpressure = async ({ controller }: { controller: ReadableStreamDefaultController }) => {
+		const applyBackpressure = async (controller: ReadableStreamDefaultController) => {
+			if (writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
+				return
+			}
+
 			if ((controller.desiredSize ?? 1) <= 0) {
 				await new Promise<void>(resolve => {
 					const wait = setInterval(() => {
-						if (controller.desiredSize && controller.desiredSize > 0) {
+						if (
+							(controller.desiredSize && controller.desiredSize > 0) ||
+							writerStopped ||
+							abortSignal?.aborted ||
+							currentWriteIndex >= chunksToDownload
+						) {
 							clearInterval(wait)
 
 							resolve()
@@ -2453,6 +2468,34 @@ export class Cloud {
 					}, 10)
 				})
 			}
+		}
+
+		const waitForWriteSlot = async (index: number) => {
+			if (
+				currentWriteIndex >= chunksToDownload ||
+				writerStopped ||
+				abortSignal?.aborted ||
+				index === currentWriteIndex ||
+				index >= chunksToDownload
+			) {
+				return
+			}
+
+			await new Promise<void>(resolve => {
+				const wait = setInterval(() => {
+					if (
+						currentWriteIndex >= chunksToDownload ||
+						writerStopped ||
+						abortSignal?.aborted ||
+						index === currentWriteIndex ||
+						index >= chunksToDownload
+					) {
+						clearInterval(wait)
+
+						resolve()
+					}
+				}, 10)
+			})
 		}
 
 		return new ReadableStream(
@@ -2470,17 +2513,7 @@ export class Cloud {
 									await waitForPause()
 								}
 
-								if (index !== currentWriteIndex) {
-									await new Promise<void>(resolve => {
-										const wait = setInterval(() => {
-											if (index === currentWriteIndex) {
-												clearInterval(wait)
-
-												resolve()
-											}
-										}, 10)
-									})
-								}
+								await waitForWriteSlot(index)
 
 								if ((abortSignal && abortSignal.aborted) || writerStopped) {
 									throw new Error("Aborted")
@@ -2506,7 +2539,7 @@ export class Cloud {
 										}
 									}
 
-									await applyBackpressure({ controller })
+									await applyBackpressure(controller)
 
 									if (!writerStopped) {
 										controller.enqueue(bufferToEnqueue)
@@ -2547,7 +2580,15 @@ export class Cloud {
 									// eslint-disable-next-line no-extra-semi
 									;(async () => {
 										try {
-											await waitForPull({ index })
+											await waitForPull(index)
+
+											if ((abortSignal && abortSignal.aborted) || writerStopped) {
+												throw new Error("Aborted")
+											}
+
+											if (pauseSignal && pauseSignal.isPaused()) {
+												await waitForPause()
+											}
 
 											await Promise.all([threadsSemaphore.acquire(), writersSemaphore.acquire()])
 
@@ -2589,10 +2630,10 @@ export class Cloud {
 												await waitForPause()
 											}
 
-											write({ index, buffer: decryptedBuffer }).catch(err => {
-												threadsSemaphore.release()
-												writersSemaphore.release()
-
+											write({
+												index,
+												buffer: decryptedBuffer
+											}).catch(err => {
 												writerStopped = true
 
 												reject(err)
@@ -2622,8 +2663,6 @@ export class Cloud {
 							if (onError) {
 								onError(e as unknown as Error)
 							}
-
-							controller.error(e)
 
 							if (!(e instanceof Error && e.message.toLowerCase().includes("aborted"))) {
 								throw e
@@ -3057,6 +3096,7 @@ export class Cloud {
 			let bucket = DEFAULT_UPLOAD_BUCKET
 			let region = DEFAULT_UPLOAD_REGION
 			const uploadThreads = new Semaphore(MAX_UPLOAD_THREADS)
+			let aborted = false
 
 			while (dummyOffset < fileSize) {
 				fileChunks += 1
@@ -3088,13 +3128,13 @@ export class Cloud {
 			])
 
 			const waitForPause = async (): Promise<void> => {
-				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
 					return
 				}
 
 				await new Promise<void>(resolve => {
 					const wait = setInterval(() => {
-						if (!pauseSignal.isPaused() || abortSignal?.aborted) {
+						if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
 							clearInterval(wait)
 
 							resolve()
@@ -3175,11 +3215,17 @@ export class Cloud {
 								resolve()
 							}
 						} catch (e) {
+							aborted = true
+
 							uploadThreads.release()
 
 							throw e
 						}
-					})().catch(reject)
+					})().catch(err => {
+						aborted = true
+
+						reject(err)
+					})
 				}
 			})
 
@@ -3327,6 +3373,8 @@ export class Cloud {
 				throw new Error("Invalid source file name. ")
 			}
 
+			let aborted = false
+			let closed = false
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
 				this.crypto.utils.generateRandomString({ length: 32 }),
@@ -3334,13 +3382,13 @@ export class Cloud {
 			])
 
 			const waitForPause = async (): Promise<void> => {
-				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted || closed) {
 					return
 				}
 
 				return await new Promise(resolve => {
 					const wait = setInterval(() => {
-						if (!pauseSignal.isPaused() || abortSignal?.aborted) {
+						if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted || closed) {
 							clearInterval(wait)
 
 							resolve()
@@ -3351,7 +3399,7 @@ export class Cloud {
 
 			const item = await new Promise<CloudItem>((resolve, reject) => {
 				const transformer = new Transform({
-					transform(chunk, encoding, callback) {
+					transform(chunk, _, callback) {
 						waitForPause()
 							.then(() => {
 								callback(null, chunk)
@@ -3375,6 +3423,26 @@ export class Cloud {
 					onProgress
 				})
 
+				const cleanup = () => {
+					try {
+						if (!writeStream.destroyed || !writeStream.closed || !writeStream.errored) {
+							writeStream.destroy()
+						}
+
+						if (!transformer.destroyed || !transformer.closed || !transformer.errored) {
+							transformer.destroy()
+						}
+					} catch {
+						// Noop
+					}
+				}
+
+				transformer.once("error", () => {
+					aborted = true
+
+					cleanup()
+				})
+
 				writeStream.once("uploaded", (item: FSItem) => {
 					resolve({
 						type: "file",
@@ -3396,9 +3464,53 @@ export class Cloud {
 					})
 				})
 
-				writeStream.once("error", reject)
+				writeStream.once("close", () => {
+					closed = true
 
-				pipelineAsync(source, transformer, writeStream, { signal: abortSignal }).catch(reject)
+					cleanup()
+				})
+
+				writeStream.once("finish", () => {
+					closed = true
+
+					cleanup()
+				})
+
+				writeStream.once("error", err => {
+					aborted = true
+
+					cleanup()
+
+					reject(err)
+				})
+
+				source.once("error", err => {
+					aborted = true
+
+					cleanup()
+
+					reject(err)
+				})
+
+				source.once("close", () => {
+					closed = true
+
+					cleanup()
+				})
+
+				source.once("finish", () => {
+					closed = true
+
+					cleanup()
+				})
+
+				pipelineAsync(source, transformer, writeStream, { signal: abortSignal }).catch(err => {
+					aborted = true
+
+					cleanup()
+
+					reject(err)
+				})
 			})
 
 			if (onUploaded) {
@@ -3507,6 +3619,7 @@ export class Cloud {
 			let bucket = DEFAULT_UPLOAD_BUCKET
 			let region = DEFAULT_UPLOAD_REGION
 			const uploadThreads = new Semaphore(MAX_UPLOAD_THREADS)
+			let aborted = false
 
 			while (dummyOffset < fileSize) {
 				fileChunks += 1
@@ -3537,13 +3650,13 @@ export class Cloud {
 			])
 
 			const waitForPause = async (): Promise<void> => {
-				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted) {
+				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
 					return
 				}
 
 				await new Promise<void>(resolve => {
 					const wait = setInterval(() => {
-						if (!pauseSignal.isPaused() || abortSignal?.aborted) {
+						if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
 							clearInterval(wait)
 
 							resolve()
@@ -3624,11 +3737,17 @@ export class Cloud {
 								resolve()
 							}
 						} catch (e) {
+							aborted = true
+
 							uploadThreads.release()
 
 							throw e
 						}
-					})().catch(reject)
+					})().catch(err => {
+						aborted = true
+
+						reject(err)
+					})
 				}
 			})
 

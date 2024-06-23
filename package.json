@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.122",
+	"version": "0.1.126",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -13,6 +13,7 @@
 		"build:node": "tsc",
 		"build:browser": "tsc --p tsconfig.browser.json",
 		"build:clean": "rimraf ./dist && rimraf ./docs",
+		"build:publish": "npm run build && npm publish",
 		"lint": "eslint src/**/* --ext .js,.jsx,.ts,.tsx",
 		"emitTypes": "tsc --emitDeclarationOnly",
 		"bundle": "webpack --mode production --node-env production --config webpack.config.js",

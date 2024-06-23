@@ -1451,34 +1451,37 @@ export class FS {
 	}
 
 	/**
-	 * Upload a file to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
-	 * @date 2/16/2024 - 5:32:17 AM
+	 * Upload file or directory to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
 	 *
 	 * @public
 	 * @async
 	 * @param {{
 	 * 		path: string
 	 * 		source: string
+	 * 		overwriteDirectory?: boolean
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
 	 * 	}} param0
 	 * @param {string} param0.path
 	 * @param {string} param0.source
+	 * @param {boolean} [param0.overwriteDirectory=false]
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {ProgressCallback} param0.onProgress
-	 * @returns {Promise<void>}
+	 * @returns {Promise<CloudItem>}
 	 */
 	public async upload({
 		path,
 		source,
+		overwriteDirectory = false,
 		abortSignal,
 		pauseSignal,
 		onProgress
 	}: {
 		path: string
 		source: string
+		overwriteDirectory?: boolean
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -1490,12 +1493,13 @@ export class FS {
 		path = this.normalizePath({ path })
 		source = normalizePath(source)
 
+		const sourceStat = await fs.stat(source)
 		const parentPath = pathModule.posix.dirname(path)
 		let parentUUID = ""
-		const fileName = pathModule.posix.basename(path)
+		const name = pathModule.posix.basename(path)
 
-		if (fileName.length === 0 || fileName === "." || fileName === "/") {
-			throw new Error("Could not parse file name.")
+		if (name.length === 0 || name === "." || name === "/") {
+			throw new Error("Could not parse name.")
 		}
 
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
@@ -1507,61 +1511,104 @@ export class FS {
 			const parentItem = this._items[parentPath]
 
 			if (!parentItemUUID || !parentItem) {
-				throw new Error(`Could not find parent for path ${path}`)
+				throw new Error(`Could not find parent for path ${path}.`)
 			}
 
 			parentUUID = parentItem.uuid
 		}
 
-		const item = await this.cloud.uploadLocalFile({
-			source,
-			parent: parentUUID,
-			name: fileName,
-			abortSignal,
-			pauseSignal,
-			onProgress
-		})
-
-		if (item.type === "file") {
-			await this.itemsMutex.acquire()
-
-			this._items[path] = {
-				uuid: item.uuid,
-				type: "file",
-				metadata: {
-					name: item.name,
-					size: item.size,
-					mime: item.mime,
-					key: item.key,
-					lastModified: item.lastModified,
-					chunks: item.chunks,
-					region: item.region,
-					bucket: item.bucket,
-					version: item.version
-				}
+		if (sourceStat.isDirectory()) {
+			if (overwriteDirectory) {
+				await this._unlink({
+					path,
+					permanent: true,
+					type: "directory"
+				})
 			}
 
-			this._uuidToItem[item.uuid] = {
-				uuid: item.uuid,
-				type: "file",
-				path,
-				metadata: {
-					name: item.name,
-					size: item.size,
-					mime: item.mime,
-					key: item.key,
-					lastModified: item.lastModified,
-					chunks: item.chunks,
-					region: item.region,
-					bucket: item.bucket,
-					version: item.version
-				}
+			await this.cloud.uploadLocalDirectory({
+				source,
+				parent: parentUUID,
+				name,
+				abortSignal,
+				pauseSignal,
+				onProgress
+			})
+
+			const dir = await this.readdir({
+				path: parentPath
+			})
+
+			const foundUploadedDir = dir.filter(entry => entry === name && !entry.includes("/"))
+
+			if (!foundUploadedDir[0]) {
+				throw new Error("Could not find uploaded directory.")
 			}
 
-			this.itemsMutex.release()
+			const foundUploadedDirStat = await this.stat({ path: pathModule.posix.join(parentPath, foundUploadedDir[0]) })
+
+			return {
+				type: "directory",
+				uuid: foundUploadedDirStat.uuid,
+				name,
+				size: foundUploadedDirStat.size,
+				lastModified: foundUploadedDirStat.mtimeMs,
+				timestamp: Date.now(),
+				parent: parentUUID,
+				favorited: false,
+				color: null
+			} satisfies CloudItem
+		} else {
+			const item = await this.cloud.uploadLocalFile({
+				source,
+				parent: parentUUID,
+				name,
+				abortSignal,
+				pauseSignal,
+				onProgress
+			})
+
+			if (item.type === "file") {
+				await this.itemsMutex.acquire()
+
+				this._items[path] = {
+					uuid: item.uuid,
+					type: "file",
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+
+				this._uuidToItem[item.uuid] = {
+					uuid: item.uuid,
+					type: "file",
+					path,
+					metadata: {
+						name: item.name,
+						size: item.size,
+						mime: item.mime,
+						key: item.key,
+						lastModified: item.lastModified,
+						chunks: item.chunks,
+						region: item.region,
+						bucket: item.bucket,
+						version: item.version
+					}
+				}
+
+				this.itemsMutex.release()
+			}
+
+			return item
 		}
-
-		return item
 	}
 
 	/**

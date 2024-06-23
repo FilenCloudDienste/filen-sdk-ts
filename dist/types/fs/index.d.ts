@@ -391,28 +391,30 @@ export declare class FS {
         onProgress?: ProgressCallback;
     }): Promise<void>;
     /**
-     * Upload a file to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
-     * @date 2/16/2024 - 5:32:17 AM
+     * Upload file or directory to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
      *
      * @public
      * @async
      * @param {{
      * 		path: string
      * 		source: string
+     * 		overwriteDirectory?: boolean
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.source
+     * @param {boolean} [param0.overwriteDirectory=false]
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
-     * @returns {Promise<void>}
+     * @returns {Promise<CloudItem>}
      */
-    upload({ path, source, abortSignal, pauseSignal, onProgress }: {
+    upload({ path, source, overwriteDirectory, abortSignal, pauseSignal, onProgress }: {
         path: string;
         source: string;
+        overwriteDirectory?: boolean;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
