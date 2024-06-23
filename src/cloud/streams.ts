@@ -130,8 +130,6 @@ export class ChunkedUploadWriter extends Writable {
 
 					this.upload(chunkToWrite)
 						.catch(err => {
-							console.error(err)
-
 							this.destroy(err)
 						})
 						.finally(() => {

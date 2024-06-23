@@ -2385,7 +2385,7 @@ export class Cloud {
 		let downloadsSemaphoreReleased = false
 
 		if (
-			end > size - 1 ||
+			end > size ||
 			chunksToDownload === 0 ||
 			firstChunkIndex > lastChunkIndex ||
 			firstChunkIndex < 0 ||

@@ -1168,7 +1168,7 @@ export class FS {
 		}
 
 		if (!length) {
-			length = item.metadata.size
+			length = item.metadata.size - 1
 		}
 
 		const stream = this.cloud.downloadFileToReadableStream({

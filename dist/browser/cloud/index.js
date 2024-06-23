@@ -1757,7 +1757,7 @@ export class Cloud {
         const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex >= chunks ? chunks : lastChunkIndex;
         let downloadsSemaphoreAcquired = false;
         let downloadsSemaphoreReleased = false;
-        if (end > size - 1 ||
+        if (end > size ||
             chunksToDownload === 0 ||
             firstChunkIndex > lastChunkIndex ||
             firstChunkIndex < 0 ||

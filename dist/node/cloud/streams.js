@@ -91,7 +91,6 @@ class ChunkedUploadWriter extends stream_1.Writable {
                 this.chunkBuffer = this.chunkBuffer.subarray(constants_1.CHUNK_SIZE);
                 this.upload(chunkToWrite)
                     .catch(err => {
-                    console.error(err);
                     this.destroy(err);
                 })
                     .finally(() => {
