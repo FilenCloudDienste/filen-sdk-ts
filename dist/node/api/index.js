@@ -148,6 +148,7 @@ const confirmationSend_1 = __importDefault(require("./v3/confirmationSend"));
 const forgot_1 = __importDefault(require("./v3/user/password/forgot"));
 const forgotReset_1 = __importDefault(require("./v3/user/password/forgotReset"));
 const didExportMasterKeys_1 = __importDefault(require("./v3/user/didExportMasterKeys"));
+const tree_1 = __importDefault(require("./v3/dir/tree"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -199,7 +200,8 @@ class API {
                     permanent: new permanent_2.default({ apiClient: this.apiClient })
                 },
                 restore: new restore_2.default({ apiClient: this.apiClient }),
-                color: new color_1.default({ apiClient: this.apiClient })
+                color: new color_1.default({ apiClient: this.apiClient }),
+                tree: new tree_1.default({ apiClient: this.apiClient })
             },
             auth: {
                 info: new info_1.default({ apiClient: this.apiClient })
@@ -421,7 +423,8 @@ class API {
                         };
                     },
                     restore: (...params) => this._v3.dir.restore.fetch(...params),
-                    color: (...params) => this._v3.dir.color.fetch(...params)
+                    color: (...params) => this._v3.dir.color.fetch(...params),
+                    tree: (...params) => this._v3.dir.tree.fetch(...params)
                 };
             },
             auth: () => {

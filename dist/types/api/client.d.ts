@@ -21,10 +21,12 @@ export type BaseRequestParameters = {
 };
 export type GetRequestParameters = BaseRequestParameters & {
     method: "GET";
+    includeRaw?: boolean;
 };
 export type PostRequestParameters = BaseRequestParameters & {
     method: "POST";
     data: unknown;
+    includeRaw?: boolean;
 };
 export type RequestParameters = GetRequestParameters | PostRequestParameters;
 export type UploadChunkResponse = {

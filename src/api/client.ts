@@ -35,11 +35,13 @@ export type BaseRequestParameters = {
 
 export type GetRequestParameters = BaseRequestParameters & {
 	method: "GET"
+	includeRaw?: boolean
 }
 
 export type PostRequestParameters = BaseRequestParameters & {
 	method: "POST"
 	data: unknown
+	includeRaw?: boolean
 }
 
 export type RequestParameters = GetRequestParameters | PostRequestParameters
@@ -485,7 +487,10 @@ export class APIClient {
 					throw lastError
 				}
 
-				throw new APIError({ code: "request_failed_after_max_tries", message: `Request failed after ${maxRetries} tries` })
+				throw new APIError({
+					code: "request_failed_after_max_tries",
+					message: `Request failed after ${maxRetries} tries`
+				})
 			}
 
 			tries += 1
@@ -494,13 +499,32 @@ export class APIClient {
 				const response = params.method === "GET" ? await this.get(params) : await this.post(params)
 
 				if (!response || response.status !== 200) {
-					throw new APIError({ code: "invalid_http_status_code", message: `Invalid HTTP status code: ${response.status}` })
+					throw new APIError({
+						code: "invalid_http_status_code",
+						message: `Invalid HTTP status code: ${response.status}`
+					})
 				}
 
 				if (typeof response.data === "object" && typeof response.data.status === "boolean" && !response.data.status) {
 					returnImmediately = true
 
-					throw new APIError({ code: response.data.code, message: response.data.message })
+					throw new APIError({
+						code: response.data.code,
+						message: response.data.message
+					})
+				}
+
+				if (params.includeRaw) {
+					const data =
+						response.data &&
+						(response.data.data || typeof response.data.data === "number" || typeof response.data.data === "string")
+							? response.data.data
+							: response.data
+
+					return {
+						...data,
+						raw: JSON.stringify(data)
+					}
 				}
 
 				return response.data &&

@@ -142,6 +142,7 @@ import V3ConfirmationSend from "./v3/confirmationSend";
 import V3UserPasswordForgot from "./v3/user/password/forgot";
 import V3UserPasswordForgotReset from "./v3/user/password/forgotReset";
 import V3UserDidExportMasterKeys from "./v3/user/didExportMasterKeys";
+import V3DirTree from "./v3/dir/tree";
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -197,7 +198,8 @@ export class API {
                     permanent: new V3DirDeletePermanent({ apiClient: this.apiClient })
                 },
                 restore: new V3DirRestore({ apiClient: this.apiClient }),
-                color: new V3DirColor({ apiClient: this.apiClient })
+                color: new V3DirColor({ apiClient: this.apiClient }),
+                tree: new V3DirTree({ apiClient: this.apiClient })
             },
             auth: {
                 info: new V3AuthInfo({ apiClient: this.apiClient })
@@ -419,7 +421,8 @@ export class API {
                         };
                     },
                     restore: (...params) => this._v3.dir.restore.fetch(...params),
-                    color: (...params) => this._v3.dir.color.fetch(...params)
+                    color: (...params) => this._v3.dir.color.fetch(...params),
+                    tree: (...params) => this._v3.dir.tree.fetch(...params)
                 };
             },
             auth: () => {

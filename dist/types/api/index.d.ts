@@ -129,6 +129,12 @@ export declare class API {
                 uuid: string;
                 color: string;
             }) => Promise<void>;
+            tree: (params_0: {
+                uuid: string;
+                deviceId: string;
+                skipCache?: boolean | undefined;
+                includeRaw?: boolean | undefined;
+            }) => Promise<import("./v3/dir/tree").DirTreeResponse>;
         };
         auth: () => {
             info: (params_0: {
