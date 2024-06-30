@@ -1642,6 +1642,7 @@ class Cloud {
         }
         const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
         const destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
+        await fs_extra_1.default.ensureDir(destinationPath);
         await fs_extra_1.default.rm(destinationPath, {
             force: true,
             maxRetries: 60 * 10,
@@ -2035,6 +2036,9 @@ class Cloud {
         for (const folder of contents.folders) {
             try {
                 const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
+                if (folder.parent !== "base" && decrypted.name.length === 0) {
+                    continue;
+                }
                 const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`;
                 const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`;
                 folderNames[folder.uuid] = folderPath;
@@ -2060,6 +2064,10 @@ class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
+                    if (decrypted.name.length === 0) {
+                        resolve();
+                        return;
+                    }
                     const parentPath = folderNames[file.parent];
                     const filePath = `${parentPath}/${decrypted.name}`;
                     tree[filePath] = {
