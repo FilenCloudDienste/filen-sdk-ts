@@ -258,7 +258,7 @@ function replacePathStartWithFromAndTo(path, from, to) {
         from = `/${from}`;
     }
     if (!to.startsWith("/")) {
-        from = `/${to}`;
+        to = `/${to}`;
     }
     return `${to}${path.slice(from.length)}`;
 }

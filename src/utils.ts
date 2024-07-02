@@ -280,7 +280,7 @@ export function replacePathStartWithFromAndTo(path: string, from: string, to: st
 	}
 
 	if (!to.startsWith("/")) {
-		from = `/${to}`
+		to = `/${to}`
 	}
 
 	return `${to}${path.slice(from.length)}`
