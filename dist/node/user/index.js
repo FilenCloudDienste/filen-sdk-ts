@@ -536,7 +536,7 @@ class User {
         const response = await this.api.v3().user().lock({
             uuid: lockUUID,
             resource,
-            type: "acquire"
+            type: "release"
         });
         if (!response.released) {
             throw new Error(`Could not release lock for resource ${resource} with lockUUID ${lockUUID}.`);

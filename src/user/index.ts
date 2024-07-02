@@ -636,7 +636,7 @@ export class User {
 		const response = await this.api.v3().user().lock({
 			uuid: lockUUID,
 			resource,
-			type: "acquire"
+			type: "release"
 		})
 
 		if (!response.released) {
