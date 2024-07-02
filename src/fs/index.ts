@@ -6,7 +6,7 @@ import { ENOENT } from "./errors"
 import { BUFFER_SIZE, environment } from "../constants"
 import { type PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
-import { uuidv4, normalizePath } from "../utils"
+import { uuidv4, normalizePath, replacePathStartWithFromAndTo } from "../utils"
 import os from "os"
 import { type CloudItem, type Cloud } from "../cloud"
 import { Socket, type SocketEvent } from "../socket"
@@ -925,7 +925,7 @@ export class FS {
 			if (item.type === "directory") {
 				for (const oldPath in this._items) {
 					if (oldPath.startsWith(from + "/") && oldPath !== from) {
-						const newPath = oldPath.split(from).join(to)
+						const newPath = replacePathStartWithFromAndTo(oldPath, from, to)
 						const oldItem = this._items[oldPath]
 
 						if (oldItem) {

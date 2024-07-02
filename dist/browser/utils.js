@@ -214,6 +214,36 @@ export function simpleDate(timestamp) {
         return new Date().toString().split(" ").slice(0, 5).join(" ");
     }
 }
+/**
+ * Replace a path with it's new parent path.
+ *
+ * @export
+ * @param {string} path
+ * @param {string} from
+ * @param {string} to
+ * @returns {string}
+ */
+export function replacePathStartWithFromAndTo(path, from, to) {
+    if (path.endsWith("/")) {
+        path = path.slice(0, path.length - 1);
+    }
+    if (from.endsWith("/")) {
+        from = from.slice(0, from.length - 1);
+    }
+    if (to.endsWith("/")) {
+        to = to.slice(0, to.length - 1);
+    }
+    if (!path.startsWith("/")) {
+        path = `/${path}`;
+    }
+    if (!from.startsWith("/")) {
+        from = `/${from}`;
+    }
+    if (!to.startsWith("/")) {
+        from = `/${to}`;
+    }
+    return `${to}${path.slice(from.length)}`;
+}
 export const utils = {
     sleep,
     convertTimestampToMs,
@@ -225,7 +255,8 @@ export const utils = {
     clearTempDirectory,
     parseURLParams,
     getEveryPossibleDirectoryPath,
-    simpleDate
+    simpleDate,
+    replacePathStartWithFromAndTo
 };
 export default utils;
 //# sourceMappingURL=utils.js.map

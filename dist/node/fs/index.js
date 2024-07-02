@@ -715,7 +715,7 @@ class FS {
             if (item.type === "directory") {
                 for (const oldPath in this._items) {
                     if (oldPath.startsWith(from + "/") && oldPath !== from) {
-                        const newPath = oldPath.split(from).join(to);
+                        const newPath = (0, utils_1.replacePathStartWithFromAndTo)(oldPath, from, to);
                         const oldItem = this._items[oldPath];
                         if (oldItem) {
                             this._items[newPath] = oldItem;

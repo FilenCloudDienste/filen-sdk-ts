@@ -2,7 +2,7 @@ import pathModule from "path";
 import { ENOENT } from "./errors";
 import { BUFFER_SIZE, environment } from "../constants";
 import fs from "fs-extra";
-import { uuidv4, normalizePath } from "../utils";
+import { uuidv4, normalizePath, replacePathStartWithFromAndTo } from "../utils";
 import os from "os";
 import { Socket } from "../socket";
 import { Semaphore } from "../semaphore";
@@ -739,7 +739,7 @@ export class FS {
             if (item.type === "directory") {
                 for (const oldPath in this._items) {
                     if (oldPath.startsWith(from + "/") && oldPath !== from) {
-                        const newPath = oldPath.split(from).join(to);
+                        const newPath = replacePathStartWithFromAndTo(oldPath, from, to);
                         const oldItem = this._items[oldPath];
                         if (oldItem) {
                             this._items[newPath] = oldItem;

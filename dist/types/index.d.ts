@@ -863,6 +863,7 @@ export declare class FilenSDK {
         parseURLParams: typeof import("./utils").parseURLParams;
         getEveryPossibleDirectoryPath: typeof import("./utils").getEveryPossibleDirectoryPath;
         simpleDate: typeof import("./utils").simpleDate;
+        replacePathStartWithFromAndTo: typeof import("./utils").replacePathStartWithFromAndTo;
     };
 }
 export default FilenSDK;

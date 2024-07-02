@@ -122,6 +122,16 @@ export declare function getEveryPossibleDirectoryPath(path: string): string[];
  * @returns {string}
  */
 export declare function simpleDate(timestamp: number): string;
+/**
+ * Replace a path with it's new parent path.
+ *
+ * @export
+ * @param {string} path
+ * @param {string} from
+ * @param {string} to
+ * @returns {string}
+ */
+export declare function replacePathStartWithFromAndTo(path: string, from: string, to: string): string;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -134,5 +144,6 @@ export declare const utils: {
     parseURLParams: typeof parseURLParams;
     getEveryPossibleDirectoryPath: typeof getEveryPossibleDirectoryPath;
     simpleDate: typeof simpleDate;
+    replacePathStartWithFromAndTo: typeof replacePathStartWithFromAndTo;
 };
 export default utils;

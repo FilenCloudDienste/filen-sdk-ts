@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
+exports.utils = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
 const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 const constants_1 = require("./constants");
@@ -232,6 +232,37 @@ function simpleDate(timestamp) {
     }
 }
 exports.simpleDate = simpleDate;
+/**
+ * Replace a path with it's new parent path.
+ *
+ * @export
+ * @param {string} path
+ * @param {string} from
+ * @param {string} to
+ * @returns {string}
+ */
+function replacePathStartWithFromAndTo(path, from, to) {
+    if (path.endsWith("/")) {
+        path = path.slice(0, path.length - 1);
+    }
+    if (from.endsWith("/")) {
+        from = from.slice(0, from.length - 1);
+    }
+    if (to.endsWith("/")) {
+        to = to.slice(0, to.length - 1);
+    }
+    if (!path.startsWith("/")) {
+        path = `/${path}`;
+    }
+    if (!from.startsWith("/")) {
+        from = `/${from}`;
+    }
+    if (!to.startsWith("/")) {
+        from = `/${to}`;
+    }
+    return `${to}${path.slice(from.length)}`;
+}
+exports.replacePathStartWithFromAndTo = replacePathStartWithFromAndTo;
 exports.utils = {
     sleep,
     convertTimestampToMs,
@@ -243,7 +274,8 @@ exports.utils = {
     clearTempDirectory,
     parseURLParams,
     getEveryPossibleDirectoryPath,
-    simpleDate
+    simpleDate,
+    replacePathStartWithFromAndTo
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map
