@@ -9,6 +9,8 @@ import { type UserEvent } from "../api/v3/user/events"
 import { type UserEventResponse } from "../api/v3/user/event"
 import { type PaymentMethods } from "../api/v3/user/sub/create"
 import { type UserProfileResponse } from "../api/v3/user/profile"
+import { type UserLockStatus } from "../api/v3/user/lock"
+import { v4 as uuidv4 } from "uuid"
 
 export type UserConfig = {
 	sdkConfig: FilenSDKConfig
@@ -565,6 +567,122 @@ export class User {
 	 */
 	public async updateDesktopLastActive({ timestamp }: { timestamp: number }): Promise<void> {
 		await this.api.v3().user().lastActive().desktop({ timestamp })
+	}
+
+	/**
+	 * Lock a resource.
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		resource: string
+	 * 		lockUUID: string
+	 * 		maxTries?: number
+	 * 		tryTimeout?: number
+	 * 	}} param0
+	 * @param {string} param0.resource
+	 * @param {string} param0.lockUUID
+	 * @param {number} [param0.maxTries=86400]
+	 * @param {number} [param0.tryTimeout=1000]
+	 * @returns {Promise<void>}
+	 */
+	public async acquireResourceLock({
+		resource,
+		lockUUID,
+		maxTries = 86400,
+		tryTimeout = 1000
+	}: {
+		resource: string
+		lockUUID: string
+		maxTries?: number
+		tryTimeout?: number
+	}): Promise<void> {
+		let tries = 0
+
+		const acquire = async (): Promise<void> => {
+			if (tries >= maxTries) {
+				throw new Error(`Could not acquire lock for resource ${resource}. Max tries of ${maxTries} reached.`)
+			}
+
+			tries += 1
+
+			const response = await this.api.v3().user().lock({
+				uuid: lockUUID,
+				resource,
+				type: "acquire"
+			})
+
+			if (!response.acquired) {
+				await new Promise<void>(resolve => setTimeout(resolve, tryTimeout))
+
+				return await acquire()
+			}
+		}
+
+		return await acquire()
+	}
+
+	/**
+	 * Unlock a resource.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ resource: string; lockUUID: string }} param0
+	 * @param {string} param0.resource
+	 * @param {string} param0.lockUUID
+	 * @returns {Promise<void>}
+	 */
+	public async releaseResourceLock({ resource, lockUUID }: { resource: string; lockUUID: string }): Promise<void> {
+		const response = await this.api.v3().user().lock({
+			uuid: lockUUID,
+			resource,
+			type: "acquire"
+		})
+
+		if (!response.released) {
+			throw new Error(`Could not release lock for resource ${resource} with lockUUID ${lockUUID}.`)
+		}
+	}
+
+	/**
+	 * Refresh a resource lock.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ resource: string; lockUUID: string }} param0
+	 * @param {string} param0.resource
+	 * @param {string} param0.lockUUID
+	 * @returns {Promise<void>}
+	 */
+	public async refreshResourceLock({ resource, lockUUID }: { resource: string; lockUUID: string }): Promise<void> {
+		const response = await this.api.v3().user().lock({
+			uuid: lockUUID,
+			resource,
+			type: "refresh"
+		})
+
+		if (!response.released) {
+			throw new Error(`Could not refresh lock for resource ${resource} with lockUUID ${lockUUID}.`)
+		}
+	}
+
+	/**
+	 * Fetch resource lock status.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ resource: string }} param0
+	 * @param {string} param0.resource
+	 * @returns {Promise<UserLockStatus>}
+	 */
+	public async resourceLockStatus({ resource }: { resource: string }): Promise<UserLockStatus> {
+		const response = await this.api.v3().user().lock({
+			uuid: uuidv4(),
+			resource,
+			type: "status"
+		})
+
+		return response.status
 	}
 }
 

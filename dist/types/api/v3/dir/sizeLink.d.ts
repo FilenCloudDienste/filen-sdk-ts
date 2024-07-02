@@ -1,6 +1,8 @@
 import type APIClient from "../../client";
 export type DirSizeLinkResponse = {
     size: number;
+    folders: number;
+    files: number;
 };
 /**
  * DirSizeLink

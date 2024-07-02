@@ -149,6 +149,7 @@ const forgot_1 = __importDefault(require("./v3/user/password/forgot"));
 const forgotReset_1 = __importDefault(require("./v3/user/password/forgotReset"));
 const didExportMasterKeys_1 = __importDefault(require("./v3/user/didExportMasterKeys"));
 const tree_1 = __importDefault(require("./v3/dir/tree"));
+const lock_1 = __importDefault(require("./v3/user/lock"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -261,7 +262,8 @@ class API {
                     forgot: new forgot_1.default({ apiClient: this.apiClient }),
                     forgotReset: new forgotReset_1.default({ apiClient: this.apiClient })
                 },
-                didExportMasterKeys: new didExportMasterKeys_1.default({ apiClient: this.apiClient })
+                didExportMasterKeys: new didExportMasterKeys_1.default({ apiClient: this.apiClient }),
+                lock: new lock_1.default({ apiClient: this.apiClient })
             },
             shared: {
                 in: new in_1.default({ apiClient: this.apiClient }),
@@ -506,7 +508,8 @@ class API {
                             forgotReset: (...params) => this._v3.user.password.forgotReset.fetch(...params)
                         };
                     },
-                    didExportMasterKeys: (...params) => this._v3.user.didExportMasterKeys.fetch(...params)
+                    didExportMasterKeys: (...params) => this._v3.user.didExportMasterKeys.fetch(...params),
+                    lock: (...params) => this._v3.user.lock.fetch(...params)
                 };
             },
             shared: () => {

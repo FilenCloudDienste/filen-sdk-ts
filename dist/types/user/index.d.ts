@@ -10,6 +10,7 @@ import { type UserEvent } from "../api/v3/user/events";
 import { type UserEventResponse } from "../api/v3/user/event";
 import { type PaymentMethods } from "../api/v3/user/sub/create";
 import { type UserProfileResponse } from "../api/v3/user/profile";
+import { type UserLockStatus } from "../api/v3/user/lock";
 export type UserConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -408,5 +409,68 @@ export declare class User {
     updateDesktopLastActive({ timestamp }: {
         timestamp: number;
     }): Promise<void>;
+    /**
+     * Lock a resource.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		resource: string
+     * 		lockUUID: string
+     * 		maxTries?: number
+     * 		tryTimeout?: number
+     * 	}} param0
+     * @param {string} param0.resource
+     * @param {string} param0.lockUUID
+     * @param {number} [param0.maxTries=86400]
+     * @param {number} [param0.tryTimeout=1000]
+     * @returns {Promise<void>}
+     */
+    acquireResourceLock({ resource, lockUUID, maxTries, tryTimeout }: {
+        resource: string;
+        lockUUID: string;
+        maxTries?: number;
+        tryTimeout?: number;
+    }): Promise<void>;
+    /**
+     * Unlock a resource.
+     *
+     * @public
+     * @async
+     * @param {{ resource: string; lockUUID: string }} param0
+     * @param {string} param0.resource
+     * @param {string} param0.lockUUID
+     * @returns {Promise<void>}
+     */
+    releaseResourceLock({ resource, lockUUID }: {
+        resource: string;
+        lockUUID: string;
+    }): Promise<void>;
+    /**
+     * Refresh a resource lock.
+     *
+     * @public
+     * @async
+     * @param {{ resource: string; lockUUID: string }} param0
+     * @param {string} param0.resource
+     * @param {string} param0.lockUUID
+     * @returns {Promise<void>}
+     */
+    refreshResourceLock({ resource, lockUUID }: {
+        resource: string;
+        lockUUID: string;
+    }): Promise<void>;
+    /**
+     * Fetch resource lock status.
+     *
+     * @public
+     * @async
+     * @param {{ resource: string }} param0
+     * @param {string} param0.resource
+     * @returns {Promise<UserLockStatus>}
+     */
+    resourceLockStatus({ resource }: {
+        resource: string;
+    }): Promise<UserLockStatus>;
 }
 export default User;

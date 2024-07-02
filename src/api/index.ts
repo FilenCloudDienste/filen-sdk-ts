@@ -144,6 +144,7 @@ import V3UserPasswordForgot from "./v3/user/password/forgot"
 import V3UserPasswordForgotReset from "./v3/user/password/forgotReset"
 import V3UserDidExportMasterKeys from "./v3/user/didExportMasterKeys"
 import V3DirTree from "./v3/dir/tree"
+import V3UserLock from "./v3/user/lock"
 
 export type APIConfig = {
 	apiKey: string
@@ -252,6 +253,7 @@ export class API {
 				forgotReset: V3UserPasswordForgotReset
 			}
 			didExportMasterKeys: V3UserDidExportMasterKeys
+			lock: V3UserLock
 		}
 		shared: {
 			in: V3SharedIn
@@ -486,7 +488,8 @@ export class API {
 					forgot: new V3UserPasswordForgot({ apiClient: this.apiClient }),
 					forgotReset: new V3UserPasswordForgotReset({ apiClient: this.apiClient })
 				},
-				didExportMasterKeys: new V3UserDidExportMasterKeys({ apiClient: this.apiClient })
+				didExportMasterKeys: new V3UserDidExportMasterKeys({ apiClient: this.apiClient }),
+				lock: new V3UserLock({ apiClient: this.apiClient })
 			},
 			shared: {
 				in: new V3SharedIn({ apiClient: this.apiClient }),
@@ -754,7 +757,8 @@ export class API {
 						}
 					},
 					didExportMasterKeys: (...params: Parameters<typeof this._v3.user.didExportMasterKeys.fetch>) =>
-						this._v3.user.didExportMasterKeys.fetch(...params)
+						this._v3.user.didExportMasterKeys.fetch(...params),
+					lock: (...params: Parameters<typeof this._v3.user.lock.fetch>) => this._v3.user.lock.fetch(...params)
 				}
 			},
 			shared: () => {

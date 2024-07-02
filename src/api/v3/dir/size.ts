@@ -2,6 +2,8 @@ import type APIClient from "../../client"
 
 export type DirSizeResponse = {
 	size: number
+	folders: number
+	files: number
 }
 
 /**

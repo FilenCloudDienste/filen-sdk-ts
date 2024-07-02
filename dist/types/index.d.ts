@@ -398,6 +398,11 @@ export declare class FilenSDK {
                 }) => Promise<void>;
             };
             didExportMasterKeys: () => Promise<void>;
+            lock: (params_0: {
+                uuid: string;
+                resource: string;
+                type: "status" | "acquire" | "refresh" | "release";
+            }) => Promise<import("./api/v3/user/lock").UserLockResponse>;
         };
         shared: () => {
             in: (params?: {

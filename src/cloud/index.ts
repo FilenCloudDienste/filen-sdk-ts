@@ -2116,7 +2116,7 @@ export class Cloud {
 	}
 
 	/**
-	 * Fetch directory size in bytes.
+	 * Fetch directory size in bytes, including file and folder count.
 	 * @date 2/20/2024 - 9:21:16 PM
 	 *
 	 * @public
@@ -2126,7 +2126,7 @@ export class Cloud {
 	 * @param {number} param0.sharerId
 	 * @param {number} param0.receiverId
 	 * @param {boolean} param0.trash
-	 * @returns {Promise<number>}
+	 * @returns {Promise<{ size: number; folders: number; files: number }>}
 	 */
 	public async directorySize({
 		uuid,
@@ -2138,12 +2138,17 @@ export class Cloud {
 		sharerId?: number
 		receiverId?: number
 		trash?: boolean
-	}): Promise<number> {
-		return (await this.api.v3().dir().size({ uuid, sharerId, receiverId, trash })).size
+	}): Promise<{ size: number; folders: number; files: number }> {
+		return await this.api.v3().dir().size({
+			uuid,
+			sharerId,
+			receiverId,
+			trash
+		})
 	}
 
 	/**
-	 * Fetch size of a directory inside a public link in bytes.
+	 * Fetch size of a directory inside a public link in bytes, including file and folder count.
 	 * @date 2/20/2024 - 9:21:53 PM
 	 *
 	 * @public
@@ -2151,10 +2156,19 @@ export class Cloud {
 	 * @param {{uuid: string, linkUUID: string}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.linkUUID
-	 * @returns {Promise<number>}
+	 * @returns {Promise<{ size: number, folders: number, files: number }>}
 	 */
-	public async directorySizePublicLink({ uuid, linkUUID }: { uuid: string; linkUUID: string }): Promise<number> {
-		return (await this.api.v3().dir().sizeLink({ uuid, linkUUID })).size
+	public async directorySizePublicLink({
+		uuid,
+		linkUUID
+	}: {
+		uuid: string
+		linkUUID: string
+	}): Promise<{ size: number; folders: number; files: number }> {
+		return await this.api.v3().dir().sizeLink({
+			uuid,
+			linkUUID
+		})
 	}
 
 	/**

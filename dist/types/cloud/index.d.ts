@@ -758,7 +758,7 @@ export declare class Cloud {
         itemMetadata: FileMetadata | FolderMetadata;
     }): Promise<void>;
     /**
-     * Fetch directory size in bytes.
+     * Fetch directory size in bytes, including file and folder count.
      * @date 2/20/2024 - 9:21:16 PM
      *
      * @public
@@ -768,16 +768,20 @@ export declare class Cloud {
      * @param {number} param0.sharerId
      * @param {number} param0.receiverId
      * @param {boolean} param0.trash
-     * @returns {Promise<number>}
+     * @returns {Promise<{ size: number; folders: number; files: number }>}
      */
     directorySize({ uuid, sharerId, receiverId, trash }: {
         uuid: string;
         sharerId?: number;
         receiverId?: number;
         trash?: boolean;
-    }): Promise<number>;
+    }): Promise<{
+        size: number;
+        folders: number;
+        files: number;
+    }>;
     /**
-     * Fetch size of a directory inside a public link in bytes.
+     * Fetch size of a directory inside a public link in bytes, including file and folder count.
      * @date 2/20/2024 - 9:21:53 PM
      *
      * @public
@@ -785,12 +789,16 @@ export declare class Cloud {
      * @param {{uuid: string, linkUUID: string}} param0
      * @param {string} param0.uuid
      * @param {string} param0.linkUUID
-     * @returns {Promise<number>}
+     * @returns {Promise<{ size: number, folders: number, files: number }>}
      */
     directorySizePublicLink({ uuid, linkUUID }: {
         uuid: string;
         linkUUID: string;
-    }): Promise<number>;
+    }): Promise<{
+        size: number;
+        folders: number;
+        files: number;
+    }>;
     /**
      * Download a file to a local path. Only works in a Node.JS environment.
      * @date 2/15/2024 - 7:39:34 AM
