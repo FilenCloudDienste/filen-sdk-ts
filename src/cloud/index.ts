@@ -2780,15 +2780,15 @@ export class Cloud {
 		for (const folder of contents.folders) {
 			try {
 				const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
-
-				if (folder.parent !== "base" || decrypted.name.length === 0) {
-					continue
-				}
-
 				const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`
 				const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`
 
 				folderNames[folder.uuid] = folderPath
+
+				if ((folder.parent !== "base" && decrypted.name.length === 0) || folderPath.length === 0) {
+					continue
+				}
+
 				tree[folderPath] = {
 					type: "directory",
 					uuid: folder.uuid,
@@ -2822,6 +2822,12 @@ export class Cloud {
 
 							const parentPath = folderNames[file.parent]
 							const filePath = `${parentPath}/${decrypted.name}`
+
+							if (filePath.length === 0) {
+								resolve()
+
+								return
+							}
 
 							tree[filePath] = {
 								type: "file",
