@@ -2781,7 +2781,7 @@ export class Cloud {
 			try {
 				const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
 
-				if (folder.parent !== "base" && decrypted.name.length === 0) {
+				if (folder.parent !== "base" || decrypted.name.length === 0) {
 					continue
 				}
 
