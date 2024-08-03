@@ -145,6 +145,8 @@ import V3UserPasswordForgotReset from "./v3/user/password/forgotReset"
 import V3UserDidExportMasterKeys from "./v3/user/didExportMasterKeys"
 import V3DirTree from "./v3/dir/tree"
 import V3UserLock from "./v3/user/lock"
+import V3DirGet from "./v3/dir/get"
+import V3FileGet from "./v3/file/get"
 
 export type APIConfig = {
 	apiKey: string
@@ -193,6 +195,7 @@ export class API {
 			restore: V3DirRestore
 			color: V3DirColor
 			tree: V3DirTree
+			get: V3DirGet
 		}
 		auth: {
 			info: V3AuthInfo
@@ -307,6 +310,7 @@ export class API {
 					buffer: V3FileUploadChunkBuffer
 				}
 			}
+			get: V3FileGet
 		}
 		trash: {
 			empty: V3TrashEmpty
@@ -428,7 +432,8 @@ export class API {
 				},
 				restore: new V3DirRestore({ apiClient: this.apiClient }),
 				color: new V3DirColor({ apiClient: this.apiClient }),
-				tree: new V3DirTree({ apiClient: this.apiClient })
+				tree: new V3DirTree({ apiClient: this.apiClient }),
+				get: new V3DirGet({ apiClient: this.apiClient })
 			},
 			auth: {
 				info: new V3AuthInfo({ apiClient: this.apiClient })
@@ -542,7 +547,8 @@ export class API {
 					chunk: {
 						buffer: new V3FileUploadChunkBuffer({ apiClient: this.apiClient })
 					}
-				}
+				},
+				get: new V3FileGet({ apiClient: this.apiClient })
 			},
 			trash: {
 				empty: new V3TrashEmpty({ apiClient: this.apiClient })
@@ -657,7 +663,8 @@ export class API {
 					},
 					restore: (...params: Parameters<typeof this._v3.dir.restore.fetch>) => this._v3.dir.restore.fetch(...params),
 					color: (...params: Parameters<typeof this._v3.dir.color.fetch>) => this._v3.dir.color.fetch(...params),
-					tree: (...params: Parameters<typeof this._v3.dir.tree.fetch>) => this._v3.dir.tree.fetch(...params)
+					tree: (...params: Parameters<typeof this._v3.dir.tree.fetch>) => this._v3.dir.tree.fetch(...params),
+					get: (...params: Parameters<typeof this._v3.dir.get.fetch>) => this._v3.dir.get.fetch(...params)
 				}
 			},
 			auth: () => {
@@ -849,7 +856,8 @@ export class API {
 								}
 							}
 						}
-					}
+					},
+					get: (...params: Parameters<typeof this._v3.file.get.fetch>) => this._v3.file.get.fetch(...params)
 				}
 			},
 			trash: () => {

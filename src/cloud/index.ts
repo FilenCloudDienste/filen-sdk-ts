@@ -4263,6 +4263,80 @@ export class Cloud {
 	public async emptyTrash(): Promise<void> {
 		return await this.api.v3().trash().empty()
 	}
+
+	/**
+	 * Recursively find the full path of a file using it's UUID.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ uuid: string }} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<string>}
+	 */
+	public async fileUUIDToPath({ uuid }: { uuid: string }): Promise<string> {
+		const pathParts: string[] = []
+		const file = await this.api.v3().file().get({ uuid })
+		let nextParent = file.parent
+		const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata })
+
+		if (fileMetadataDecrypted.name.length === 0) {
+			throw new Error(`Could not decrypt file metadata for ${uuid}`)
+		}
+
+		pathParts.push(fileMetadataDecrypted.name)
+
+		while (nextParent !== this.sdkConfig.baseFolderUUID!) {
+			const dir = await this.api.v3().dir().get({ uuid: nextParent })
+			const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted })
+
+			if (decrypted.name.length === 0) {
+				throw new Error(`Could not decrypt directory metadata for ${dir.uuid}`)
+			}
+
+			pathParts.push(decrypted.name)
+
+			nextParent = dir.parent
+		}
+
+		return `/${pathModule.posix.join(...pathParts.reverse())}`
+	}
+
+	/**
+	 * Recursively find the full path of a file using it's UUID.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ uuid: string }} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<string>}
+	 */
+	public async directoryUUIDToPath({ uuid }: { uuid: string }): Promise<string> {
+		const pathParts: string[] = []
+		const firstDir = await this.api.v3().dir().get({ uuid })
+		let nextParent = firstDir.parent
+		const firstDirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: firstDir.nameEncrypted })
+
+		if (firstDirMetadataDecrypted.name.length === 0) {
+			throw new Error(`Could not decrypt directory metadata for ${uuid}`)
+		}
+
+		pathParts.push(firstDirMetadataDecrypted.name)
+
+		while (nextParent !== this.sdkConfig.baseFolderUUID!) {
+			const dir = await this.api.v3().dir().get({ uuid: nextParent })
+			const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted })
+
+			if (decrypted.name.length === 0) {
+				throw new Error(`Could not decrypt directory metadata for ${dir.uuid}`)
+			}
+
+			pathParts.push(decrypted.name)
+
+			nextParent = dir.parent
+		}
+
+		return `/${pathModule.posix.join(...pathParts.reverse())}`
+	}
 }
 
 export default Cloud
