@@ -2801,7 +2801,7 @@ export class Cloud {
 			}
 		}
 
-		if (Object.keys(folderNames).length === 0 || Object.keys(tree).length === 0) {
+		if (Object.keys(folderNames).length === 0) {
 			throw new Error("Could not build directory tree.")
 		}
 
