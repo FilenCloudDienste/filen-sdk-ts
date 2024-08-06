@@ -3,3 +3,4 @@ dev
 .DS_Store
 *encrypted
 *decrypted
+dev/**/*

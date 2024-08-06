@@ -6,7 +6,8 @@ import {
 	type FileMetadata,
 	type ProgressCallback,
 	type FolderMetadata,
-	type PublicLinkExpiration
+	type PublicLinkExpiration,
+	type ProgressWithTotalCallback
 } from "../types"
 import {
 	convertTimestampToMs,
@@ -1189,11 +1190,11 @@ export class Cloud {
 	 * @param {{
 	 * 		type: "file" | "directory"
 	 * 		uuid: string
-	 * 		onProgress?: ProgressCallback
+	 * 		onProgress?: ProgressWithTotalCallback
 	 * 	}} param0
 	 * @param {("file" | "directory")} param0.type
 	 * @param {string} param0.uuid
-	 * @param {ProgressCallback} param0.onProgress
+	 * @param {ProgressWithTotalCallback} param0.onProgress
 	 * @returns {Promise<string>}
 	 */
 	public async enablePublicLink({
@@ -1203,15 +1204,37 @@ export class Cloud {
 	}: {
 		type: "file" | "directory"
 		uuid: string
-		onProgress?: ProgressCallback
+		onProgress?: ProgressWithTotalCallback
 	}): Promise<string> {
 		const linkUUID = await uuidv4()
 
 		if (type === "directory") {
-			const [tree, key] = await Promise.all([this.getDirectoryTree({ uuid }), this.crypto.utils.generateRandomString({ length: 32 })])
-			const linkKeyEncrypted = await this.crypto.encrypt().metadata({ metadata: key })
+			const [tree, key, baseDir] = await Promise.all([
+				this.getDirectoryTree({ uuid }),
+				this.crypto.utils.generateRandomString({ length: 32 }),
+				this.api.v3().dir().get({ uuid })
+			])
+			const [linkKeyEncrypted, baseDirDecrypted] = await Promise.all([
+				this.crypto.encrypt().metadata({ metadata: key }),
+				this.crypto.decrypt().folderMetadata({ metadata: baseDir.nameEncrypted })
+			])
 			let done = 0
 			const promises: Promise<void>[] = []
+
+			if (baseDirDecrypted.name.length === 0) {
+				throw new Error("Could not decrypt base directory metadata.")
+			}
+
+			// Add "base" to the tree, we need it for directory public links. Serves as the "base parent" directory.
+			tree["/"] = {
+				type: "directory",
+				uuid,
+				name: baseDirDecrypted.name,
+				parent: "base",
+				size: 0
+			}
+
+			const total = Object.keys(tree).length
 
 			for (const entry in tree) {
 				const item = tree[entry]
@@ -1246,7 +1269,7 @@ export class Cloud {
 								done += 1
 
 								if (onProgress) {
-									onProgress(done)
+									onProgress(done, total)
 								}
 
 								resolve()
@@ -1654,12 +1677,12 @@ export class Cloud {
 	 * 		files: { uuid: string; parent: string; metadata: FileMetadata }[]
 	 * 		directories: { uuid: string; parent: string; metadata: FolderMetadata }[]
 	 * 		email: string
-	 * 		onProgress?: ProgressCallback
+	 * 		onProgress?: ProgressWithTotalCallback
 	 * 	}} param0
 	 * @param {{}} param0.files
 	 * @param {{}} param0.directories
 	 * @param {string} param0.email
-	 * @param {ProgressCallback} param0.onProgress
+	 * @param {ProgressWithTotalCallback} param0.onProgress
 	 * @returns {Promise<void>}
 	 */
 	public async shareItemsToUser({
@@ -1671,7 +1694,7 @@ export class Cloud {
 		files: { uuid: string; parent: string; metadata: FileMetadata }[]
 		directories: { uuid: string; parent: string; metadata: FolderMetadata }[]
 		email: string
-		onProgress?: ProgressCallback
+		onProgress?: ProgressWithTotalCallback
 	}): Promise<void> {
 		const publicKey = (await this.api.v3().user().publicKey({ email })).publicKey
 		const itemsToShare: { type: "file" | "folder"; uuid: string; parent: string; metadata: FileMetadata | FolderMetadata }[] = []
@@ -1764,7 +1787,7 @@ export class Cloud {
 							done += 1
 
 							if (onProgress) {
-								onProgress(done)
+								onProgress(done, itemsToShare.length)
 							}
 
 							resolve()
