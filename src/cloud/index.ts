@@ -804,7 +804,10 @@ export class Cloud {
 	 */
 	public async fileExists({ name, parent }: { name: string; parent: string }): Promise<FileExistsResponse> {
 		const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() })
-		const exists = await this.api.v3().file().exists({ nameHashed, parent })
+		const exists = await this.api.v3().file().exists({
+			nameHashed,
+			parent
+		})
 
 		return exists
 	}
@@ -821,7 +824,10 @@ export class Cloud {
 	 */
 	public async directoryExists({ name, parent }: { name: string; parent: string }): Promise<DirExistsResponse> {
 		const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() })
-		const exists = await this.api.v3().dir().exists({ nameHashed, parent })
+		const exists = await this.api.v3().dir().exists({
+			nameHashed,
+			parent
+		})
 
 		return exists
 	}
@@ -846,7 +852,10 @@ export class Cloud {
 		}
 
 		const get = await this.api.v3().file().get({ uuid })
-		const exists = await this.fileExists({ name, parent: get.parent })
+		const exists = await this.fileExists({
+			name,
+			parent: get.parent
+		})
 
 		if (exists.exists && exists.existsUUID === uuid) {
 			return
@@ -860,20 +869,31 @@ export class Cloud {
 					name
 				})
 			}),
-			this.crypto.encrypt().metadata({ metadata: name, key: metadata.key })
+			this.crypto.encrypt().metadata({
+				metadata: name,
+				key: metadata.key
+			})
 		])
 
 		try {
-			await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed })
+			await this.api.v3().file().rename({
+				uuid,
+				metadataEncrypted,
+				nameEncrypted,
+				nameHashed
+			})
 		} catch (e) {
 			if (e instanceof APIError) {
-				if (e.code === "file_with_name_already_exists_at_destination" || e.code === "file_not_found") {
+				if (e.code === "file_not_found") {
 					return
 				}
 			}
 		}
 
-		await this.checkIfItemIsSharedForRename({ uuid, itemMetadata: metadata })
+		await this.checkIfItemIsSharedForRename({
+			uuid,
+			itemMetadata: metadata
+		})
 	}
 
 	/**
@@ -895,7 +915,10 @@ export class Cloud {
 		}
 
 		const get = await this.api.v3().file().get({ uuid })
-		const exists = await this.directoryExists({ name, parent: get.parent })
+		const exists = await this.directoryExists({
+			name,
+			parent: get.parent
+		})
 
 		if (exists.exists && exists.uuid === uuid) {
 			return
@@ -911,10 +934,14 @@ export class Cloud {
 		])
 
 		try {
-			await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed })
+			await this.api.v3().dir().rename({
+				uuid,
+				metadataEncrypted,
+				nameHashed
+			})
 		} catch (e) {
 			if (e instanceof APIError) {
-				if (e.code === "folder_with_name_already_exists_at_destination" || e.code === "folder_not_found") {
+				if (e.code === "folder_not_found") {
 					return
 				}
 			}
@@ -941,9 +968,27 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async moveFile({ uuid, to, metadata }: { uuid: string; to: string; metadata: FileMetadata }): Promise<void> {
-		await this.api.v3().file().move({ uuid, to })
+		const get = await this.api.v3().file().get({ uuid })
+		const exists = await this.fileExists({
+			name: metadata.name,
+			parent: get.parent
+		})
 
-		await this.checkIfItemParentIsShared({ type: "file", parent: to, uuid, itemMetadata: metadata })
+		if (exists.exists && exists.existsUUID === uuid) {
+			return
+		}
+
+		await this.api.v3().file().move({
+			uuid,
+			to
+		})
+
+		await this.checkIfItemParentIsShared({
+			type: "file",
+			parent: to,
+			uuid,
+			itemMetadata: metadata
+		})
 	}
 
 	/**
@@ -959,9 +1004,27 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async moveDirectory({ uuid, to, metadata }: { uuid: string; to: string; metadata: FolderMetadata }): Promise<void> {
-		await this.api.v3().dir().move({ uuid, to })
+		const get = await this.api.v3().file().get({ uuid })
+		const exists = await this.directoryExists({
+			name: metadata.name,
+			parent: get.parent
+		})
 
-		await this.checkIfItemParentIsShared({ type: "directory", parent: to, uuid, itemMetadata: metadata })
+		if (exists.exists && exists.uuid === uuid) {
+			return
+		}
+
+		await this.api.v3().dir().move({
+			uuid,
+			to
+		})
+
+		await this.checkIfItemParentIsShared({
+			type: "directory",
+			parent: to,
+			uuid,
+			itemMetadata: metadata
+		})
 	}
 
 	/**
