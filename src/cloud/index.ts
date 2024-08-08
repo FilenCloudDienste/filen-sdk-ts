@@ -52,6 +52,8 @@ import { promisify } from "util"
 import { pipeline, Readable, Transform } from "stream"
 import { type ReadableStream as ReadableStreamWebType } from "stream/web"
 import { ChunkedUploadWriter } from "./streams"
+import { type FileExistsResponse } from "../api/v3/file/exists"
+import { type DirExistsResponse } from "../api/v3/dir/exists"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -791,6 +793,40 @@ export class Cloud {
 	}
 
 	/**
+	 * Check if a file with <NAME> exists in parent.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ name: string; parent: string }} param0
+	 * @param {string} param0.name
+	 * @param {string} param0.parent
+	 * @returns {Promise<FileExistsResponse>}
+	 */
+	public async fileExists({ name, parent }: { name: string; parent: string }): Promise<FileExistsResponse> {
+		const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() })
+		const exists = await this.api.v3().file().exists({ nameHashed, parent })
+
+		return exists
+	}
+
+	/**
+	 * Check if a directory with <NAME> exists in parent.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ name: string; parent: string }} param0
+	 * @param {string} param0.name
+	 * @param {string} param0.parent
+	 * @returns {Promise<DirExistsResponse>}
+	 */
+	public async directoryExists({ name, parent }: { name: string; parent: string }): Promise<DirExistsResponse> {
+		const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() })
+		const exists = await this.api.v3().dir().exists({ nameHashed, parent })
+
+		return exists
+	}
+
+	/**
 	 * Rename a file.
 	 * @date 2/15/2024 - 1:23:33 AM
 	 *
@@ -806,6 +842,13 @@ export class Cloud {
 		const isPresent = await this.api.v3().file().present({ uuid })
 
 		if (!isPresent.present || isPresent.trash || isPresent.versioned) {
+			return
+		}
+
+		const get = await this.api.v3().file().get({ uuid })
+		const exists = await this.fileExists({ name, parent: get.parent })
+
+		if (exists.exists && exists.existsUUID === uuid) {
 			return
 		}
 
@@ -848,6 +891,13 @@ export class Cloud {
 		const isPresent = await this.api.v3().dir().present({ uuid })
 
 		if (!isPresent.present || isPresent.trash) {
+			return
+		}
+
+		const get = await this.api.v3().file().get({ uuid })
+		const exists = await this.directoryExists({ name, parent: get.parent })
+
+		if (exists.exists && exists.uuid === uuid) {
 			return
 		}
 
@@ -959,7 +1009,7 @@ export class Cloud {
 
 		try {
 			let uuidToUse = uuid ? uuid : await uuidv4()
-			const exists = await this.api.v3().dir().exists({ name, parent })
+			const exists = await this.directoryExists({ name, parent })
 
 			if (exists.exists) {
 				uuidToUse = exists.uuid

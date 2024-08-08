@@ -144,6 +144,9 @@ import V3UserPasswordForgotReset from "./v3/user/password/forgotReset";
 import V3UserDidExportMasterKeys from "./v3/user/didExportMasterKeys";
 import V3DirTree from "./v3/dir/tree";
 import V3UserLock from "./v3/user/lock";
+import V3DirGet from "./v3/dir/get";
+import V3FileGet from "./v3/file/get";
+import V3FilePresent from "./v3/file/present";
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -200,7 +203,8 @@ export class API {
                 },
                 restore: new V3DirRestore({ apiClient: this.apiClient }),
                 color: new V3DirColor({ apiClient: this.apiClient }),
-                tree: new V3DirTree({ apiClient: this.apiClient })
+                tree: new V3DirTree({ apiClient: this.apiClient }),
+                get: new V3DirGet({ apiClient: this.apiClient })
             },
             auth: {
                 info: new V3AuthInfo({ apiClient: this.apiClient })
@@ -314,7 +318,9 @@ export class API {
                     chunk: {
                         buffer: new V3FileUploadChunkBuffer({ apiClient: this.apiClient })
                     }
-                }
+                },
+                get: new V3FileGet({ apiClient: this.apiClient }),
+                present: new V3FilePresent({ apiClient: this.apiClient })
             },
             trash: {
                 empty: new V3TrashEmpty({ apiClient: this.apiClient })
@@ -424,7 +430,8 @@ export class API {
                     },
                     restore: (...params) => this._v3.dir.restore.fetch(...params),
                     color: (...params) => this._v3.dir.color.fetch(...params),
-                    tree: (...params) => this._v3.dir.tree.fetch(...params)
+                    tree: (...params) => this._v3.dir.tree.fetch(...params),
+                    get: (...params) => this._v3.dir.get.fetch(...params)
                 };
             },
             auth: () => {
@@ -586,7 +593,9 @@ export class API {
                                 };
                             }
                         };
-                    }
+                    },
+                    get: (...params) => this._v3.file.get.fetch(...params),
+                    present: (...params) => this._v3.file.present.fetch(...params)
                 };
             },
             trash: () => {

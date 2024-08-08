@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileExists = void 0;
-const utils_1 = require("../../../crypto/utils");
 /**
  * FileExists
  * @date 2/1/2024 - 8:16:35 PM
@@ -30,20 +29,20 @@ class FileExists {
      * @public
      * @async
      * @param {{
-     *         name: string
+     *         nameHashed: string
      *         parent: string
      *     }} param0
-     * @param {string} param0.name
+     * @param {string} param0.nameHashed
      * @param {string} param0.parent
      * @returns {Promise<DirExistsResponse>}
      */
-    async fetch({ name, parent }) {
+    async fetch({ nameHashed, parent }) {
         const response = await this.apiClient.request({
             method: "POST",
             endpoint: "/v3/file/exists",
             data: {
                 parent,
-                nameHashed: await (0, utils_1.hashFn)({ input: name.toLowerCase() })
+                nameHashed
             }
         });
         return response;

@@ -1,3 +1,4 @@
+import { APIError } from "..";
 import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, promiseAllSettledChunked } from "../utils";
 import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
@@ -529,6 +530,36 @@ export class Cloud {
         return items;
     }
     /**
+     * Check if a file with <NAME> exists in parent.
+     *
+     * @public
+     * @async
+     * @param {{ name: string; parent: string }} param0
+     * @param {string} param0.name
+     * @param {string} param0.parent
+     * @returns {Promise<FileExistsResponse>}
+     */
+    async fileExists({ name, parent }) {
+        const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() });
+        const exists = await this.api.v3().file().exists({ nameHashed, parent });
+        return exists;
+    }
+    /**
+     * Check if a directory with <NAME> exists in parent.
+     *
+     * @public
+     * @async
+     * @param {{ name: string; parent: string }} param0
+     * @param {string} param0.name
+     * @param {string} param0.parent
+     * @returns {Promise<DirExistsResponse>}
+     */
+    async directoryExists({ name, parent }) {
+        const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() });
+        const exists = await this.api.v3().dir().exists({ nameHashed, parent });
+        return exists;
+    }
+    /**
      * Rename a file.
      * @date 2/15/2024 - 1:23:33 AM
      *
@@ -541,6 +572,15 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async renameFile({ uuid, metadata, name }) {
+        const isPresent = await this.api.v3().file().present({ uuid });
+        if (!isPresent.present || isPresent.trash || isPresent.versioned) {
+            return;
+        }
+        const get = await this.api.v3().file().get({ uuid });
+        const exists = await this.fileExists({ name, parent: get.parent });
+        if (exists.exists && exists.existsUUID === uuid) {
+            return;
+        }
         const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
             this.crypto.utils.hashFn({ input: name.toLowerCase() }),
             this.crypto.encrypt().metadata({
@@ -551,7 +591,16 @@ export class Cloud {
             }),
             this.crypto.encrypt().metadata({ metadata: name, key: metadata.key })
         ]);
-        await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed });
+        try {
+            await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed });
+        }
+        catch (e) {
+            if (e instanceof APIError) {
+                if (e.code === "file_with_name_already_exists_at_destination" || e.code === "file_not_found") {
+                    return;
+                }
+            }
+        }
         await this.checkIfItemIsSharedForRename({ uuid, itemMetadata: metadata });
     }
     /**
@@ -566,6 +615,15 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async renameDirectory({ uuid, name }) {
+        const isPresent = await this.api.v3().dir().present({ uuid });
+        if (!isPresent.present || isPresent.trash) {
+            return;
+        }
+        const get = await this.api.v3().file().get({ uuid });
+        const exists = await this.directoryExists({ name, parent: get.parent });
+        if (exists.exists && exists.uuid === uuid) {
+            return;
+        }
         const [nameHashed, metadataEncrypted] = await Promise.all([
             this.crypto.utils.hashFn({ input: name.toLowerCase() }),
             this.crypto.encrypt().metadata({
@@ -574,7 +632,16 @@ export class Cloud {
                 })
             })
         ]);
-        await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed });
+        try {
+            await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed });
+        }
+        catch (e) {
+            if (e instanceof APIError) {
+                if (e.code === "folder_with_name_already_exists_at_destination" || e.code === "folder_not_found") {
+                    return;
+                }
+            }
+        }
         await this.checkIfItemIsSharedForRename({
             uuid,
             itemMetadata: {
@@ -656,7 +723,7 @@ export class Cloud {
         await this._semaphores.createDirectory.acquire();
         try {
             let uuidToUse = uuid ? uuid : await uuidv4();
-            const exists = await this.api.v3().dir().exists({ name, parent });
+            const exists = await this.directoryExists({ name, parent });
             if (exists.exists) {
                 uuidToUse = exists.uuid;
             }
@@ -870,20 +937,39 @@ export class Cloud {
      * @param {{
      * 		type: "file" | "directory"
      * 		uuid: string
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressWithTotalCallback
      * 	}} param0
      * @param {("file" | "directory")} param0.type
      * @param {string} param0.uuid
-     * @param {ProgressCallback} param0.onProgress
+     * @param {ProgressWithTotalCallback} param0.onProgress
      * @returns {Promise<string>}
      */
     async enablePublicLink({ type, uuid, onProgress }) {
         const linkUUID = await uuidv4();
         if (type === "directory") {
-            const [tree, key] = await Promise.all([this.getDirectoryTree({ uuid }), this.crypto.utils.generateRandomString({ length: 32 })]);
-            const linkKeyEncrypted = await this.crypto.encrypt().metadata({ metadata: key });
+            const [tree, key, baseDir] = await Promise.all([
+                this.getDirectoryTree({ uuid }),
+                this.crypto.utils.generateRandomString({ length: 32 }),
+                this.api.v3().dir().get({ uuid })
+            ]);
+            const [linkKeyEncrypted, baseDirDecrypted] = await Promise.all([
+                this.crypto.encrypt().metadata({ metadata: key }),
+                this.crypto.decrypt().folderMetadata({ metadata: baseDir.nameEncrypted })
+            ]);
             let done = 0;
             const promises = [];
+            if (baseDirDecrypted.name.length === 0) {
+                throw new Error("Could not decrypt base directory metadata.");
+            }
+            // Add "base" to the tree, we need it for directory public links. Serves as the "base parent" directory.
+            tree["/"] = {
+                type: "directory",
+                uuid,
+                name: baseDirDecrypted.name,
+                parent: "base",
+                size: 0
+            };
+            const total = Object.keys(tree).length;
             for (const entry in tree) {
                 const item = tree[entry];
                 if (!item) {
@@ -912,7 +998,7 @@ export class Cloud {
                         .then(() => {
                         done += 1;
                         if (onProgress) {
-                            onProgress(done);
+                            onProgress(done, total);
                         }
                         resolve();
                     })
@@ -1223,12 +1309,12 @@ export class Cloud {
      * 		files: { uuid: string; parent: string; metadata: FileMetadata }[]
      * 		directories: { uuid: string; parent: string; metadata: FolderMetadata }[]
      * 		email: string
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressWithTotalCallback
      * 	}} param0
      * @param {{}} param0.files
      * @param {{}} param0.directories
      * @param {string} param0.email
-     * @param {ProgressCallback} param0.onProgress
+     * @param {ProgressWithTotalCallback} param0.onProgress
      * @returns {Promise<void>}
      */
     async shareItemsToUser({ files, directories, email, onProgress }) {
@@ -1309,7 +1395,7 @@ export class Cloud {
                     .then(() => {
                     done += 1;
                     if (onProgress) {
-                        onProgress(done);
+                        onProgress(done, itemsToShare.length);
                     }
                     resolve();
                 })
@@ -2082,7 +2168,7 @@ export class Cloud {
                 continue;
             }
         }
-        if (Object.keys(folderNames).length === 0 || Object.keys(tree).length === 0) {
+        if (Object.keys(folderNames).length === 0) {
             throw new Error("Could not build directory tree.");
         }
         const promises = [];
@@ -3172,6 +3258,64 @@ export class Cloud {
      */
     async emptyTrash() {
         return await this.api.v3().trash().empty();
+    }
+    /**
+     * Recursively find the full path of a file using it's UUID.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<string>}
+     */
+    async fileUUIDToPath({ uuid }) {
+        const pathParts = [];
+        const file = await this.api.v3().file().get({ uuid });
+        let nextParent = file.parent;
+        const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata });
+        if (fileMetadataDecrypted.name.length === 0) {
+            throw new Error(`Could not decrypt file metadata for ${uuid}`);
+        }
+        pathParts.push(fileMetadataDecrypted.name);
+        while (nextParent !== this.sdkConfig.baseFolderUUID) {
+            const dir = await this.api.v3().dir().get({ uuid: nextParent });
+            const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted });
+            if (decrypted.name.length === 0) {
+                throw new Error(`Could not decrypt directory metadata for ${dir.uuid}`);
+            }
+            pathParts.push(decrypted.name);
+            nextParent = dir.parent;
+        }
+        return `/${pathModule.posix.join(...pathParts.reverse())}`;
+    }
+    /**
+     * Recursively find the full path of a file using it's UUID.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<string>}
+     */
+    async directoryUUIDToPath({ uuid }) {
+        const pathParts = [];
+        const firstDir = await this.api.v3().dir().get({ uuid });
+        let nextParent = firstDir.parent;
+        const firstDirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: firstDir.nameEncrypted });
+        if (firstDirMetadataDecrypted.name.length === 0) {
+            throw new Error(`Could not decrypt directory metadata for ${uuid}`);
+        }
+        pathParts.push(firstDirMetadataDecrypted.name);
+        while (nextParent !== this.sdkConfig.baseFolderUUID) {
+            const dir = await this.api.v3().dir().get({ uuid: nextParent });
+            const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted });
+            if (decrypted.name.length === 0) {
+                throw new Error(`Could not decrypt directory metadata for ${dir.uuid}`);
+            }
+            pathParts.push(decrypted.name);
+            nextParent = dir.parent;
+        }
+        return `/${pathModule.posix.join(...pathParts.reverse())}`;
     }
 }
 export default Cloud;

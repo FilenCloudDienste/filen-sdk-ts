@@ -181,7 +181,7 @@ export declare class FilenSDK {
                 }) => Promise<import("./api/v3/dir/link/content").DirLinkContentResponse>;
             };
             exists: (params_0: {
-                name: string;
+                nameHashed: string;
                 parent: string;
             }) => Promise<import("./api/v3/dir/exists").DirExistsResponse>;
             create: (params_0: {
@@ -233,6 +233,9 @@ export declare class FilenSDK {
                 skipCache?: boolean | undefined;
                 includeRaw?: boolean | undefined;
             }) => Promise<import("./api/v3/dir/tree").DirTreeResponse>;
+            get: (params_0: {
+                uuid: string;
+            }) => Promise<import("./api/v3/dir/get").DirGetResponse>;
         };
         auth: () => {
             info: (params_0: {
@@ -470,7 +473,7 @@ export declare class FilenSDK {
         };
         file: () => {
             exists: (params_0: {
-                name: string;
+                nameHashed: string;
                 parent: string;
             }) => Promise<import("./api/v3/file/exists").FileExistsResponse>;
             trash: (params_0: {
@@ -573,6 +576,12 @@ export declare class FilenSDK {
                     }) => Promise<import("./api/client").UploadChunkResponse>;
                 };
             };
+            get: (params_0: {
+                uuid: string;
+            }) => Promise<import("./api/v3/file/get").FileGetResponse>;
+            present: (params_0: {
+                uuid: string;
+            }) => Promise<import("./api/v3/file/present").FilePresentResponse>;
         };
         trash: () => {
             empty: () => Promise<void>;

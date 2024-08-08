@@ -3,7 +3,7 @@
 import type API from "../api";
 import type Crypto from "../crypto";
 import { type FilenSDKConfig, type FilenSDK } from "..";
-import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration } from "../types";
+import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback } from "../types";
 import { PauseSignal } from "./signals";
 import { type DirColors } from "../api/v3/dir/color";
 import { type FileVersionsResponse } from "../api/v3/file/versions";
@@ -14,6 +14,8 @@ import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
 import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info";
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
+import { type FileExistsResponse } from "../api/v3/file/exists";
+import { type DirExistsResponse } from "../api/v3/dir/exists";
 export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
@@ -198,6 +200,34 @@ export declare class Cloud {
      * @returns {Promise<CloudItem[]>}
      */
     listPublicLinks(): Promise<CloudItem[]>;
+    /**
+     * Check if a file with <NAME> exists in parent.
+     *
+     * @public
+     * @async
+     * @param {{ name: string; parent: string }} param0
+     * @param {string} param0.name
+     * @param {string} param0.parent
+     * @returns {Promise<FileExistsResponse>}
+     */
+    fileExists({ name, parent }: {
+        name: string;
+        parent: string;
+    }): Promise<FileExistsResponse>;
+    /**
+     * Check if a directory with <NAME> exists in parent.
+     *
+     * @public
+     * @async
+     * @param {{ name: string; parent: string }} param0
+     * @param {string} param0.name
+     * @param {string} param0.parent
+     * @returns {Promise<DirExistsResponse>}
+     */
+    directoryExists({ name, parent }: {
+        name: string;
+        parent: string;
+    }): Promise<DirExistsResponse>;
     /**
      * Rename a file.
      * @date 2/15/2024 - 1:23:33 AM
@@ -489,17 +519,17 @@ export declare class Cloud {
      * @param {{
      * 		type: "file" | "directory"
      * 		uuid: string
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressWithTotalCallback
      * 	}} param0
      * @param {("file" | "directory")} param0.type
      * @param {string} param0.uuid
-     * @param {ProgressCallback} param0.onProgress
+     * @param {ProgressWithTotalCallback} param0.onProgress
      * @returns {Promise<string>}
      */
     enablePublicLink({ type, uuid, onProgress }: {
         type: "file" | "directory";
         uuid: string;
-        onProgress?: ProgressCallback;
+        onProgress?: ProgressWithTotalCallback;
     }): Promise<string>;
     /**
      * Edit a file/directory public link.
@@ -663,12 +693,12 @@ export declare class Cloud {
      * 		files: { uuid: string; parent: string; metadata: FileMetadata }[]
      * 		directories: { uuid: string; parent: string; metadata: FolderMetadata }[]
      * 		email: string
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressWithTotalCallback
      * 	}} param0
      * @param {{}} param0.files
      * @param {{}} param0.directories
      * @param {string} param0.email
-     * @param {ProgressCallback} param0.onProgress
+     * @param {ProgressWithTotalCallback} param0.onProgress
      * @returns {Promise<void>}
      */
     shareItemsToUser({ files, directories, email, onProgress }: {
@@ -683,7 +713,7 @@ export declare class Cloud {
             metadata: FolderMetadata;
         }[];
         email: string;
-        onProgress?: ProgressCallback;
+        onProgress?: ProgressWithTotalCallback;
     }): Promise<void>;
     /**
      * Checks if the parent of an item is shared or public linked.
@@ -1242,5 +1272,29 @@ export declare class Cloud {
      * @returns {Promise<void>}
      */
     emptyTrash(): Promise<void>;
+    /**
+     * Recursively find the full path of a file using it's UUID.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<string>}
+     */
+    fileUUIDToPath({ uuid }: {
+        uuid: string;
+    }): Promise<string>;
+    /**
+     * Recursively find the full path of a file using it's UUID.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<string>}
+     */
+    directoryUUIDToPath({ uuid }: {
+        uuid: string;
+    }): Promise<string>;
 }
 export default Cloud;

@@ -1,5 +1,4 @@
 import type APIClient from "../../client"
-import { hashFn } from "../../../crypto/utils"
 
 export type FileExistsResponse =
 	| {
@@ -42,20 +41,20 @@ export class FileExists {
 	 * @public
 	 * @async
 	 * @param {{
-	 *         name: string
+	 *         nameHashed: string
 	 *         parent: string
 	 *     }} param0
-	 * @param {string} param0.name
+	 * @param {string} param0.nameHashed
 	 * @param {string} param0.parent
 	 * @returns {Promise<DirExistsResponse>}
 	 */
-	public async fetch({ name, parent }: { name: string; parent: string }): Promise<FileExistsResponse> {
+	public async fetch({ nameHashed, parent }: { nameHashed: string; parent: string }): Promise<FileExistsResponse> {
 		const response = await this.apiClient.request<FileExistsResponse>({
 			method: "POST",
 			endpoint: "/v3/file/exists",
 			data: {
 				parent,
-				nameHashed: await hashFn({ input: name.toLowerCase() })
+				nameHashed
 			}
 		})
 

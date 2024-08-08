@@ -35,15 +35,15 @@ export declare class DirExists {
      * @public
      * @async
      * @param {{
-     *         name: string
+     *         nameHashed: string
      *         parent: string
      *     }} param0
-     * @param {string} param0.name
+     * @param {string} param0.nameHashed
      * @param {string} param0.parent
      * @returns {Promise<DirExistsResponse>}
      */
-    fetch({ name, parent }: {
-        name: string;
+    fetch({ nameHashed, parent }: {
+        nameHashed: string;
         parent: string;
     }): Promise<DirExistsResponse>;
 }

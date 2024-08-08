@@ -150,6 +150,9 @@ const forgotReset_1 = __importDefault(require("./v3/user/password/forgotReset"))
 const didExportMasterKeys_1 = __importDefault(require("./v3/user/didExportMasterKeys"));
 const tree_1 = __importDefault(require("./v3/dir/tree"));
 const lock_1 = __importDefault(require("./v3/user/lock"));
+const get_1 = __importDefault(require("./v3/dir/get"));
+const get_2 = __importDefault(require("./v3/file/get"));
+const present_2 = __importDefault(require("./v3/file/present"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -202,7 +205,8 @@ class API {
                 },
                 restore: new restore_2.default({ apiClient: this.apiClient }),
                 color: new color_1.default({ apiClient: this.apiClient }),
-                tree: new tree_1.default({ apiClient: this.apiClient })
+                tree: new tree_1.default({ apiClient: this.apiClient }),
+                get: new get_1.default({ apiClient: this.apiClient })
             },
             auth: {
                 info: new info_1.default({ apiClient: this.apiClient })
@@ -316,7 +320,9 @@ class API {
                     chunk: {
                         buffer: new buffer_2.default({ apiClient: this.apiClient })
                     }
-                }
+                },
+                get: new get_2.default({ apiClient: this.apiClient }),
+                present: new present_2.default({ apiClient: this.apiClient })
             },
             trash: {
                 empty: new empty_1.default({ apiClient: this.apiClient })
@@ -426,7 +432,8 @@ class API {
                     },
                     restore: (...params) => this._v3.dir.restore.fetch(...params),
                     color: (...params) => this._v3.dir.color.fetch(...params),
-                    tree: (...params) => this._v3.dir.tree.fetch(...params)
+                    tree: (...params) => this._v3.dir.tree.fetch(...params),
+                    get: (...params) => this._v3.dir.get.fetch(...params)
                 };
             },
             auth: () => {
@@ -588,7 +595,9 @@ class API {
                                 };
                             }
                         };
-                    }
+                    },
+                    get: (...params) => this._v3.file.get.fetch(...params),
+                    present: (...params) => this._v3.file.present.fetch(...params)
                 };
             },
             trash: () => {
