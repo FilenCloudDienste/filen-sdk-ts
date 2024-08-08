@@ -947,7 +947,7 @@ export class Cloud {
 			return
 		}
 
-		const get = await this.api.v3().file().get({ uuid })
+		const get = await this.api.v3().dir().get({ uuid })
 		const exists = await this.directoryExists({
 			name,
 			parent: get.parent
@@ -1079,7 +1079,7 @@ export class Cloud {
 		metadata: FolderMetadata
 		overwriteIfExists?: boolean
 	}): Promise<void> {
-		const get = await this.api.v3().file().get({ uuid })
+		const get = await this.api.v3().dir().get({ uuid })
 		const exists = await this.directoryExists({
 			name: metadata.name,
 			parent: get.parent
