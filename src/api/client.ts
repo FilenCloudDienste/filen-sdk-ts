@@ -85,7 +85,7 @@ export const APIClientDefaults = {
 	gatewayTimeout: 300000,
 	egestTimeout: 1800000,
 	ingestTimeout: 3600000,
-	maxRetries: 32,
+	maxRetries: 64,
 	retryTimeout: 1000
 } as const
 
@@ -157,7 +157,10 @@ export class APIClient {
 		if (!params.headers && !postDataIsBuffer) {
 			headers = {
 				...headers,
-				Checksum: await bufferToHash({ buffer: Buffer.from(JSON.stringify(params.data), "utf-8"), algorithm: "sha512" })
+				Checksum: await bufferToHash({
+					buffer: Buffer.from(JSON.stringify(params.data), "utf-8"),
+					algorithm: "sha512"
+				})
 			}
 		}
 
@@ -351,7 +354,7 @@ export class APIClient {
 				}
 
 				const calculateProgressTransform = new Transform({
-					transform(chunk, encoding, callback) {
+					transform(chunk, _, callback) {
 						if (params.onDownloadProgress && chunk instanceof Buffer) {
 							params.onDownloadProgress(chunk.byteLength)
 						}

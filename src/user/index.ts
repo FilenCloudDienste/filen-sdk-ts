@@ -661,7 +661,7 @@ export class User {
 			type: "refresh"
 		})
 
-		if (!response.released) {
+		if (!response.refreshed) {
 			throw new Error(`Could not refresh lock for resource ${resource} with lockUUID ${lockUUID}.`)
 		}
 	}

@@ -13,6 +13,7 @@ import axios from "axios"
 import https from "https"
 import { calculateChunkIndices } from "../src/cloud/utils"
 import { Readable } from "stream"
+import { v4 as uuidv4 } from "uuid"
 
 const filen = new FilenSDK({
 	...config,
