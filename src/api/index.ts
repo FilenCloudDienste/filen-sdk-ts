@@ -147,6 +147,7 @@ import V3DirTree from "./v3/dir/tree"
 import V3UserLock from "./v3/user/lock"
 import V3DirGet from "./v3/dir/get"
 import V3FileGet from "./v3/file/get"
+import V3FilePresent from "./v3/file/present"
 
 export type APIConfig = {
 	apiKey: string
@@ -311,6 +312,7 @@ export class API {
 				}
 			}
 			get: V3FileGet
+			present: V3FilePresent
 		}
 		trash: {
 			empty: V3TrashEmpty
@@ -548,7 +550,8 @@ export class API {
 						buffer: new V3FileUploadChunkBuffer({ apiClient: this.apiClient })
 					}
 				},
-				get: new V3FileGet({ apiClient: this.apiClient })
+				get: new V3FileGet({ apiClient: this.apiClient }),
+				present: new V3FilePresent({ apiClient: this.apiClient })
 			},
 			trash: {
 				empty: new V3TrashEmpty({ apiClient: this.apiClient })
@@ -857,7 +860,8 @@ export class API {
 							}
 						}
 					},
-					get: (...params: Parameters<typeof this._v3.file.get.fetch>) => this._v3.file.get.fetch(...params)
+					get: (...params: Parameters<typeof this._v3.file.get.fetch>) => this._v3.file.get.fetch(...params),
+					present: (...params: Parameters<typeof this._v3.file.present.fetch>) => this._v3.file.present.fetch(...params)
 				}
 			},
 			trash: () => {

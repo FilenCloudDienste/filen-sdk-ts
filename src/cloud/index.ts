@@ -1,6 +1,6 @@
 import type API from "../api"
 import type Crypto from "../crypto"
-import { type FilenSDKConfig, type FSItem, type FilenSDK } from ".."
+import { type FilenSDKConfig, type FSItem, type FilenSDK, APIError } from ".."
 import {
 	type FileEncryptionVersion,
 	type FileMetadata,
@@ -803,6 +803,12 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async renameFile({ uuid, metadata, name }: { uuid: string; metadata: FileMetadata; name: string }): Promise<void> {
+		const isPresent = await this.api.v3().file().present({ uuid })
+
+		if (!isPresent.present || isPresent.trash || isPresent.versioned) {
+			return
+		}
+
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
 			this.crypto.utils.hashFn({ input: name.toLowerCase() }),
 			this.crypto.encrypt().metadata({
@@ -814,7 +820,16 @@ export class Cloud {
 			this.crypto.encrypt().metadata({ metadata: name, key: metadata.key })
 		])
 
-		await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed })
+		try {
+			await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed })
+		} catch (e) {
+			if (e instanceof APIError) {
+				if (e.code === "file_with_name_already_exists_at_destination" || e.code === "file_not_found") {
+					return
+				}
+			}
+		}
+
 		await this.checkIfItemIsSharedForRename({ uuid, itemMetadata: metadata })
 	}
 
@@ -830,6 +845,12 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async renameDirectory({ uuid, name }: { uuid: string; name: string }): Promise<void> {
+		const isPresent = await this.api.v3().dir().present({ uuid })
+
+		if (!isPresent.present || isPresent.trash) {
+			return
+		}
+
 		const [nameHashed, metadataEncrypted] = await Promise.all([
 			this.crypto.utils.hashFn({ input: name.toLowerCase() }),
 			this.crypto.encrypt().metadata({
@@ -839,7 +860,15 @@ export class Cloud {
 			})
 		])
 
-		await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed })
+		try {
+			await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed })
+		} catch (e) {
+			if (e instanceof APIError) {
+				if (e.code === "folder_with_name_already_exists_at_destination" || e.code === "folder_not_found") {
+					return
+				}
+			}
+		}
 
 		await this.checkIfItemIsSharedForRename({
 			uuid,
