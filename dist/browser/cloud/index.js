@@ -541,7 +541,10 @@ export class Cloud {
      */
     async fileExists({ name, parent }) {
         const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() });
-        const exists = await this.api.v3().file().exists({ nameHashed, parent });
+        const exists = await this.api.v3().file().exists({
+            nameHashed,
+            parent
+        });
         return exists;
     }
     /**
@@ -556,30 +559,46 @@ export class Cloud {
      */
     async directoryExists({ name, parent }) {
         const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() });
-        const exists = await this.api.v3().dir().exists({ nameHashed, parent });
+        const exists = await this.api.v3().dir().exists({
+            nameHashed,
+            parent
+        });
         return exists;
     }
     /**
      * Rename a file.
-     * @date 2/15/2024 - 1:23:33 AM
      *
      * @public
      * @async
-     * @param {{uuid: string, metadata: FileMetadata, name: string}} param0
+     * @param {{
+     * 		uuid: string
+     * 		metadata: FileMetadata
+     * 		name: string
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {FileMetadata} param0.metadata
      * @param {string} param0.name
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    async renameFile({ uuid, metadata, name }) {
+    async renameFile({ uuid, metadata, name, overwriteIfExists = false }) {
         const isPresent = await this.api.v3().file().present({ uuid });
         if (!isPresent.present || isPresent.trash || isPresent.versioned) {
             return;
         }
         const get = await this.api.v3().file().get({ uuid });
-        const exists = await this.fileExists({ name, parent: get.parent });
-        if (exists.exists && exists.existsUUID === uuid) {
-            return;
+        const exists = await this.fileExists({
+            name,
+            parent: get.parent
+        });
+        if (exists.exists) {
+            if (exists.existsUUID === uuid) {
+                return;
+            }
+            if (overwriteIfExists) {
+                await this.trashFile({ uuid: exists.existsUUID });
+            }
         }
         const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
             this.crypto.utils.hashFn({ input: name.toLowerCase() }),
@@ -589,40 +608,63 @@ export class Cloud {
                     name
                 })
             }),
-            this.crypto.encrypt().metadata({ metadata: name, key: metadata.key })
+            this.crypto.encrypt().metadata({
+                metadata: name,
+                key: metadata.key
+            })
         ]);
         try {
-            await this.api.v3().file().rename({ uuid, metadataEncrypted, nameEncrypted, nameHashed });
+            await this.api.v3().file().rename({
+                uuid,
+                metadataEncrypted,
+                nameEncrypted,
+                nameHashed
+            });
         }
         catch (e) {
             if (e instanceof APIError) {
-                if (e.code === "file_with_name_already_exists_at_destination" || e.code === "file_not_found") {
+                if (e.code === "file_not_found") {
                     return;
                 }
             }
         }
-        await this.checkIfItemIsSharedForRename({ uuid, itemMetadata: metadata });
+        await this.checkIfItemIsSharedForRename({
+            uuid,
+            itemMetadata: metadata
+        });
     }
     /**
      * Rename a directory.
-     * @date 2/15/2024 - 1:26:43 AM
      *
      * @public
      * @async
-     * @param {{uuid: string, name: string}} param0
+     * @param {{
+     * 		uuid: string
+     * 		name: string
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.name
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    async renameDirectory({ uuid, name }) {
+    async renameDirectory({ uuid, name, overwriteIfExists = false }) {
         const isPresent = await this.api.v3().dir().present({ uuid });
         if (!isPresent.present || isPresent.trash) {
             return;
         }
         const get = await this.api.v3().file().get({ uuid });
-        const exists = await this.directoryExists({ name, parent: get.parent });
-        if (exists.exists && exists.uuid === uuid) {
-            return;
+        const exists = await this.directoryExists({
+            name,
+            parent: get.parent
+        });
+        if (exists.exists) {
+            if (exists.uuid === uuid) {
+                return;
+            }
+            if (overwriteIfExists) {
+                await this.trashDirectory({ uuid: exists.uuid });
+            }
         }
         const [nameHashed, metadataEncrypted] = await Promise.all([
             this.crypto.utils.hashFn({ input: name.toLowerCase() }),
@@ -633,11 +675,15 @@ export class Cloud {
             })
         ]);
         try {
-            await this.api.v3().dir().rename({ uuid, metadataEncrypted, nameHashed });
+            await this.api.v3().dir().rename({
+                uuid,
+                metadataEncrypted,
+                nameHashed
+            });
         }
         catch (e) {
             if (e instanceof APIError) {
-                if (e.code === "folder_with_name_already_exists_at_destination" || e.code === "folder_not_found") {
+                if (e.code === "folder_not_found") {
                     return;
                 }
             }
@@ -651,35 +697,87 @@ export class Cloud {
     }
     /**
      * Move a file.
-     * @date 2/19/2024 - 1:13:32 AM
      *
      * @public
      * @async
-     * @param {{ uuid: string; to: string, metadata: FileMetadata }} param0
+     * @param {{
+     * 		uuid: string
+     * 		to: string
+     * 		metadata: FileMetadata
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.to
      * @param {FileMetadata} param0.metadata
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    async moveFile({ uuid, to, metadata }) {
-        await this.api.v3().file().move({ uuid, to });
-        await this.checkIfItemParentIsShared({ type: "file", parent: to, uuid, itemMetadata: metadata });
+    async moveFile({ uuid, to, metadata, overwriteIfExists = false }) {
+        const get = await this.api.v3().file().get({ uuid });
+        const exists = await this.fileExists({
+            name: metadata.name,
+            parent: get.parent
+        });
+        if (exists.exists) {
+            if (exists.existsUUID === uuid) {
+                return;
+            }
+            if (overwriteIfExists) {
+                await this.trashFile({ uuid: exists.existsUUID });
+            }
+        }
+        await this.api.v3().file().move({
+            uuid,
+            to
+        });
+        await this.checkIfItemParentIsShared({
+            type: "file",
+            parent: to,
+            uuid,
+            itemMetadata: metadata
+        });
     }
     /**
      * Move a directory.
-     * @date 2/19/2024 - 1:14:04 AM
      *
      * @public
      * @async
-     * @param {{ uuid: string; to: string, metadata: FolderMetadata }} param0
+     * @param {{
+     * 		uuid: string
+     * 		to: string
+     * 		metadata: FolderMetadata
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.to
      * @param {FolderMetadata} param0.metadata
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    async moveDirectory({ uuid, to, metadata }) {
-        await this.api.v3().dir().move({ uuid, to });
-        await this.checkIfItemParentIsShared({ type: "directory", parent: to, uuid, itemMetadata: metadata });
+    async moveDirectory({ uuid, to, metadata, overwriteIfExists = false }) {
+        const get = await this.api.v3().file().get({ uuid });
+        const exists = await this.directoryExists({
+            name: metadata.name,
+            parent: get.parent
+        });
+        if (exists.exists) {
+            if (exists.uuid === uuid) {
+                return;
+            }
+            if (overwriteIfExists) {
+                await this.trashDirectory({ uuid: exists.uuid });
+            }
+        }
+        await this.api.v3().dir().move({
+            uuid,
+            to
+        });
+        await this.checkIfItemParentIsShared({
+            type: "directory",
+            parent: to,
+            uuid,
+            itemMetadata: metadata
+        });
     }
     /**
      * Send a file to the trash bin.

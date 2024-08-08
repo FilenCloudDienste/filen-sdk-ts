@@ -834,17 +834,32 @@ export class Cloud {
 
 	/**
 	 * Rename a file.
-	 * @date 2/15/2024 - 1:23:33 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string, metadata: FileMetadata, name: string}} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		metadata: FileMetadata
+	 * 		name: string
+	 * 		overwriteIfExists?: boolean
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {FileMetadata} param0.metadata
 	 * @param {string} param0.name
+	 * @param {boolean} [param0.overwriteIfExists=false]
 	 * @returns {Promise<void>}
 	 */
-	public async renameFile({ uuid, metadata, name }: { uuid: string; metadata: FileMetadata; name: string }): Promise<void> {
+	public async renameFile({
+		uuid,
+		metadata,
+		name,
+		overwriteIfExists = false
+	}: {
+		uuid: string
+		metadata: FileMetadata
+		name: string
+		overwriteIfExists?: boolean
+	}): Promise<void> {
 		const isPresent = await this.api.v3().file().present({ uuid })
 
 		if (!isPresent.present || isPresent.trash || isPresent.versioned) {
@@ -857,8 +872,14 @@ export class Cloud {
 			parent: get.parent
 		})
 
-		if (exists.exists && exists.existsUUID === uuid) {
-			return
+		if (exists.exists) {
+			if (exists.existsUUID === uuid) {
+				return
+			}
+
+			if (overwriteIfExists) {
+				await this.trashFile({ uuid: exists.existsUUID })
+			}
 		}
 
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
@@ -898,16 +919,28 @@ export class Cloud {
 
 	/**
 	 * Rename a directory.
-	 * @date 2/15/2024 - 1:26:43 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{uuid: string, name: string}} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		name: string
+	 * 		overwriteIfExists?: boolean
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.name
+	 * @param {boolean} [param0.overwriteIfExists=false]
 	 * @returns {Promise<void>}
 	 */
-	public async renameDirectory({ uuid, name }: { uuid: string; name: string }): Promise<void> {
+	public async renameDirectory({
+		uuid,
+		name,
+		overwriteIfExists = false
+	}: {
+		uuid: string
+		name: string
+		overwriteIfExists?: boolean
+	}): Promise<void> {
 		const isPresent = await this.api.v3().dir().present({ uuid })
 
 		if (!isPresent.present || isPresent.trash) {
@@ -920,8 +953,14 @@ export class Cloud {
 			parent: get.parent
 		})
 
-		if (exists.exists && exists.uuid === uuid) {
-			return
+		if (exists.exists) {
+			if (exists.uuid === uuid) {
+				return
+			}
+
+			if (overwriteIfExists) {
+				await this.trashDirectory({ uuid: exists.uuid })
+			}
 		}
 
 		const [nameHashed, metadataEncrypted] = await Promise.all([
@@ -957,25 +996,46 @@ export class Cloud {
 
 	/**
 	 * Move a file.
-	 * @date 2/19/2024 - 1:13:32 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string; to: string, metadata: FileMetadata }} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		to: string
+	 * 		metadata: FileMetadata
+	 * 		overwriteIfExists?: boolean
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.to
 	 * @param {FileMetadata} param0.metadata
+	 * @param {boolean} [param0.overwriteIfExists=false]
 	 * @returns {Promise<void>}
 	 */
-	public async moveFile({ uuid, to, metadata }: { uuid: string; to: string; metadata: FileMetadata }): Promise<void> {
+	public async moveFile({
+		uuid,
+		to,
+		metadata,
+		overwriteIfExists = false
+	}: {
+		uuid: string
+		to: string
+		metadata: FileMetadata
+		overwriteIfExists?: boolean
+	}): Promise<void> {
 		const get = await this.api.v3().file().get({ uuid })
 		const exists = await this.fileExists({
 			name: metadata.name,
 			parent: get.parent
 		})
 
-		if (exists.exists && exists.existsUUID === uuid) {
-			return
+		if (exists.exists) {
+			if (exists.existsUUID === uuid) {
+				return
+			}
+
+			if (overwriteIfExists) {
+				await this.trashFile({ uuid: exists.existsUUID })
+			}
 		}
 
 		await this.api.v3().file().move({
@@ -993,25 +1053,46 @@ export class Cloud {
 
 	/**
 	 * Move a directory.
-	 * @date 2/19/2024 - 1:14:04 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid: string; to: string, metadata: FolderMetadata }} param0
+	 * @param {{
+	 * 		uuid: string
+	 * 		to: string
+	 * 		metadata: FolderMetadata
+	 * 		overwriteIfExists?: boolean
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.to
 	 * @param {FolderMetadata} param0.metadata
+	 * @param {boolean} [param0.overwriteIfExists=false]
 	 * @returns {Promise<void>}
 	 */
-	public async moveDirectory({ uuid, to, metadata }: { uuid: string; to: string; metadata: FolderMetadata }): Promise<void> {
+	public async moveDirectory({
+		uuid,
+		to,
+		metadata,
+		overwriteIfExists = false
+	}: {
+		uuid: string
+		to: string
+		metadata: FolderMetadata
+		overwriteIfExists?: boolean
+	}): Promise<void> {
 		const get = await this.api.v3().file().get({ uuid })
 		const exists = await this.directoryExists({
 			name: metadata.name,
 			parent: get.parent
 		})
 
-		if (exists.exists && exists.uuid === uuid) {
-			return
+		if (exists.exists) {
+			if (exists.uuid === uuid) {
+				return
+			}
+
+			if (overwriteIfExists) {
+				await this.trashDirectory({ uuid: exists.uuid })
+			}
 		}
 
 		await this.api.v3().dir().move({

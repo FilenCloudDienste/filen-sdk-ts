@@ -656,13 +656,18 @@ class FS {
                     return;
                 }
                 if (item.type === "directory") {
-                    await this.cloud.renameDirectory({ uuid, name: newBasename });
+                    await this.cloud.renameDirectory({
+                        uuid,
+                        name: newBasename,
+                        overwriteIfExists: true
+                    });
                 }
                 else {
                     await this.cloud.renameFile({
                         uuid,
                         metadata: itemMetadata,
-                        name: newBasename
+                        name: newBasename,
+                        overwriteIfExists: true
                     });
                 }
             }
@@ -672,13 +677,18 @@ class FS {
                 }
                 if (oldBasename !== newBasename) {
                     if (item.type === "directory") {
-                        await this.cloud.renameDirectory({ uuid, name: newBasename });
+                        await this.cloud.renameDirectory({
+                            uuid,
+                            name: newBasename,
+                            overwriteIfExists: true
+                        });
                     }
                     else {
                         await this.cloud.renameFile({
                             uuid,
                             metadata: itemMetadata,
-                            name: newBasename
+                            name: newBasename,
+                            overwriteIfExists: true
                         });
                     }
                 }
@@ -687,11 +697,17 @@ class FS {
                         await this.cloud.moveDirectory({
                             uuid,
                             to: this.sdkConfig.baseFolderUUID,
-                            metadata: itemMetadata
+                            metadata: itemMetadata,
+                            overwriteIfExists: true
                         });
                     }
                     else {
-                        await this.cloud.moveFile({ uuid, to: this.sdkConfig.baseFolderUUID, metadata: itemMetadata });
+                        await this.cloud.moveFile({
+                            uuid,
+                            to: this.sdkConfig.baseFolderUUID,
+                            metadata: itemMetadata,
+                            overwriteIfExists: true
+                        });
                     }
                 }
                 else {
@@ -701,10 +717,20 @@ class FS {
                         throw new errors_1.ENOENT({ path: newParentPath });
                     }
                     if (item.type === "directory") {
-                        await this.cloud.moveDirectory({ uuid, to: newParentItem.uuid, metadata: itemMetadata });
+                        await this.cloud.moveDirectory({
+                            uuid,
+                            to: newParentItem.uuid,
+                            metadata: itemMetadata,
+                            overwriteIfExists: true
+                        });
                     }
                     else {
-                        await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: itemMetadata });
+                        await this.cloud.moveFile({
+                            uuid,
+                            to: newParentItem.uuid,
+                            metadata: itemMetadata,
+                            overwriteIfExists: true
+                        });
                     }
                 }
             }

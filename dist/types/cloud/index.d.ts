@@ -230,69 +230,92 @@ export declare class Cloud {
     }): Promise<DirExistsResponse>;
     /**
      * Rename a file.
-     * @date 2/15/2024 - 1:23:33 AM
      *
      * @public
      * @async
-     * @param {{uuid: string, metadata: FileMetadata, name: string}} param0
+     * @param {{
+     * 		uuid: string
+     * 		metadata: FileMetadata
+     * 		name: string
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {FileMetadata} param0.metadata
      * @param {string} param0.name
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    renameFile({ uuid, metadata, name }: {
+    renameFile({ uuid, metadata, name, overwriteIfExists }: {
         uuid: string;
         metadata: FileMetadata;
         name: string;
+        overwriteIfExists?: boolean;
     }): Promise<void>;
     /**
      * Rename a directory.
-     * @date 2/15/2024 - 1:26:43 AM
      *
      * @public
      * @async
-     * @param {{uuid: string, name: string}} param0
+     * @param {{
+     * 		uuid: string
+     * 		name: string
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.name
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    renameDirectory({ uuid, name }: {
+    renameDirectory({ uuid, name, overwriteIfExists }: {
         uuid: string;
         name: string;
+        overwriteIfExists?: boolean;
     }): Promise<void>;
     /**
      * Move a file.
-     * @date 2/19/2024 - 1:13:32 AM
      *
      * @public
      * @async
-     * @param {{ uuid: string; to: string, metadata: FileMetadata }} param0
+     * @param {{
+     * 		uuid: string
+     * 		to: string
+     * 		metadata: FileMetadata
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.to
      * @param {FileMetadata} param0.metadata
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    moveFile({ uuid, to, metadata }: {
+    moveFile({ uuid, to, metadata, overwriteIfExists }: {
         uuid: string;
         to: string;
         metadata: FileMetadata;
+        overwriteIfExists?: boolean;
     }): Promise<void>;
     /**
      * Move a directory.
-     * @date 2/19/2024 - 1:14:04 AM
      *
      * @public
      * @async
-     * @param {{ uuid: string; to: string, metadata: FolderMetadata }} param0
+     * @param {{
+     * 		uuid: string
+     * 		to: string
+     * 		metadata: FolderMetadata
+     * 		overwriteIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.to
      * @param {FolderMetadata} param0.metadata
+     * @param {boolean} [param0.overwriteIfExists=false]
      * @returns {Promise<void>}
      */
-    moveDirectory({ uuid, to, metadata }: {
+    moveDirectory({ uuid, to, metadata, overwriteIfExists }: {
         uuid: string;
         to: string;
         metadata: FolderMetadata;
+        overwriteIfExists?: boolean;
     }): Promise<void>;
     /**
      * Send a file to the trash bin.

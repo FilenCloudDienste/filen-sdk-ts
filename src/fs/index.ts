@@ -855,7 +855,10 @@ export class FS {
 				}
 
 				if (item.type === "directory") {
-					await this.cloud.renameDirectory({ uuid, name: newBasename })
+					await this.cloud.renameDirectory({
+						uuid,
+						name: newBasename
+					})
 				} else {
 					await this.cloud.renameFile({
 						uuid,
@@ -870,7 +873,10 @@ export class FS {
 
 				if (oldBasename !== newBasename) {
 					if (item.type === "directory") {
-						await this.cloud.renameDirectory({ uuid, name: newBasename })
+						await this.cloud.renameDirectory({
+							uuid,
+							name: newBasename
+						})
 					} else {
 						await this.cloud.renameFile({
 							uuid,
@@ -888,7 +894,11 @@ export class FS {
 							metadata: itemMetadata as FolderMetadata
 						})
 					} else {
-						await this.cloud.moveFile({ uuid, to: this.sdkConfig.baseFolderUUID!, metadata: itemMetadata as FileMetadata })
+						await this.cloud.moveFile({
+							uuid,
+							to: this.sdkConfig.baseFolderUUID!,
+							metadata: itemMetadata as FileMetadata
+						})
 					}
 				} else {
 					await this.mkdir({ path: newParentPath })
@@ -900,9 +910,17 @@ export class FS {
 					}
 
 					if (item.type === "directory") {
-						await this.cloud.moveDirectory({ uuid, to: newParentItem.uuid!, metadata: itemMetadata as FolderMetadata })
+						await this.cloud.moveDirectory({
+							uuid,
+							to: newParentItem.uuid!,
+							metadata: itemMetadata as FolderMetadata
+						})
 					} else {
-						await this.cloud.moveFile({ uuid, to: newParentItem.uuid, metadata: itemMetadata as FileMetadata })
+						await this.cloud.moveFile({
+							uuid,
+							to: newParentItem.uuid,
+							metadata: itemMetadata as FileMetadata
+						})
 					}
 				}
 			}
