@@ -599,11 +599,7 @@ export class User {
 	}): Promise<void> {
 		let tries = 0
 
-		const acquire = async (): Promise<void> => {
-			if (tries >= maxTries) {
-				throw new Error(`Could not acquire lock for resource ${resource}. Max tries of ${maxTries} reached.`)
-			}
-
+		while (tries < maxTries) {
 			tries += 1
 
 			const response = await this.api.v3().user().lock({
@@ -612,14 +608,14 @@ export class User {
 				type: "acquire"
 			})
 
-			if (!response.acquired) {
-				await new Promise<void>(resolve => setTimeout(resolve, tryTimeout))
-
-				return await acquire()
+			if (response.acquired) {
+				return
 			}
+
+			await new Promise<void>(resolve => setTimeout(resolve, tryTimeout))
 		}
 
-		return await acquire()
+		throw new Error(`Could not acquire lock for resource ${resource}. Max tries of ${maxTries} reached.`)
 	}
 
 	/**
