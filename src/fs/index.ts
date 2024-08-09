@@ -821,7 +821,7 @@ export class FS {
 			const uuid = await this.pathToItemUUID({ path: from })
 			const item = this._items[from]
 
-			if (!uuid || !item) {
+			if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
 				throw new ENOENT({ path: from })
 			}
 
@@ -1177,7 +1177,7 @@ export class FS {
 		const uuid = await this.pathToItemUUID({ path })
 		const item = this._items[path]
 
-		if (!uuid || !item || item.type === "directory") {
+		if (!uuid || !item || item.type === "directory" || (item.type === "file" && item.metadata.key.length === 0)) {
 			throw new ENOENT({ path })
 		}
 
@@ -1443,7 +1443,7 @@ export class FS {
 		const uuid = await this.pathToItemUUID({ path })
 		const item = this._items[path]
 
-		if (!uuid || !item) {
+		if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
 			throw new ENOENT({ path })
 		}
 
@@ -1670,7 +1670,7 @@ export class FS {
 		const uuid = await this.pathToItemUUID({ path: from })
 		const item = this._items[from]
 
-		if (!uuid || !item) {
+		if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
 			throw new ENOENT({ path: from })
 		}
 

@@ -1,5 +1,5 @@
 import { APIError } from "..";
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, promiseAllSettledChunked } from "../utils";
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils";
 import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
 import pathModule from "path";
@@ -76,7 +76,7 @@ export class Cloud {
                 items.push({
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     lastModified: timestamp,
                     timestamp,
                     color: folder.color,
@@ -96,27 +96,27 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     rm: file.rm,
                     version: file.version,
                     chunks: file.chunks,
                     favorited: file.favorited === 1,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined
                 });
                 resolve();
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return items;
     }
     /**
@@ -142,7 +142,7 @@ export class Cloud {
                 items.push({
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     lastModified: timestamp,
                     timestamp,
                     color: folder.color,
@@ -166,19 +166,19 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     version: file.version,
                     chunks: file.chunks,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash,
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined,
                     sharerEmail: file.sharerEmail ?? "",
                     sharerId: file.sharerId ?? 0,
                     receiverEmail: file.receiverEmail ?? "",
@@ -189,7 +189,7 @@ export class Cloud {
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return items;
     }
     /**
@@ -216,7 +216,7 @@ export class Cloud {
                 items.push({
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     lastModified: timestamp,
                     timestamp,
                     color: folder.color,
@@ -240,19 +240,19 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     version: file.version,
                     chunks: file.chunks,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash,
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined,
                     sharerEmail: file.sharerEmail ?? "",
                     sharerId: file.sharerId ?? 0,
                     receiverEmail: file.receiverEmail ?? "",
@@ -263,7 +263,7 @@ export class Cloud {
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         const groups = [];
         const sharedTo = {};
         const added = {};
@@ -314,27 +314,27 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     rm: file.rm,
                     version: file.version,
                     chunks: file.chunks,
                     favorited: file.favorited === 1,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined
                 });
                 resolve();
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return items;
     }
     /**
@@ -358,7 +358,7 @@ export class Cloud {
                 items.push({
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     lastModified: timestamp,
                     timestamp,
                     color: folder.color,
@@ -378,27 +378,27 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     rm: file.rm,
                     version: file.version,
                     chunks: file.chunks,
                     favorited: file.favorited === 1,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined
                 });
                 resolve();
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return items;
     }
     /**
@@ -422,7 +422,7 @@ export class Cloud {
                 items.push({
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     lastModified: timestamp,
                     timestamp,
                     color: folder.color,
@@ -442,27 +442,27 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     rm: file.rm,
                     version: file.version,
                     chunks: file.chunks,
                     favorited: file.favorited === 1,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined
                 });
                 resolve();
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return items;
     }
     /**
@@ -486,7 +486,7 @@ export class Cloud {
                 items.push({
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     lastModified: timestamp,
                     timestamp,
                     color: folder.color,
@@ -506,27 +506,27 @@ export class Cloud {
                 items.push({
                     type: "file",
                     uuid: file.uuid,
-                    name: decrypted.name,
-                    size: decrypted.size,
-                    mime: decrypted.mime,
-                    lastModified: convertTimestampToMs(decrypted.lastModified),
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                    lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
                     parent: file.parent,
                     rm: file.rm,
                     version: file.version,
                     chunks: file.chunks,
                     favorited: file.favorited === 1,
-                    key: decrypted.key,
+                    key: decrypted.name.length > 0 ? decrypted.key : "",
                     bucket: file.bucket,
                     region: file.region,
-                    creation: decrypted.creation,
-                    hash: decrypted.hash
+                    creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                    hash: decrypted.name.length > 0 ? decrypted.hash : undefined
                 });
                 resolve();
             })
                 .catch(reject)));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return items;
     }
     /**
@@ -583,6 +583,9 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async renameFile({ uuid, metadata, name, overwriteIfExists = false }) {
+        if (metadata.key.length === 0) {
+            throw new Error("Invalid metadata key.");
+        }
         const isPresent = await this.api.v3().file().present({ uuid });
         if (!isPresent.present || isPresent.trash || isPresent.versioned) {
             return;
@@ -653,7 +656,7 @@ export class Cloud {
         if (!isPresent.present || isPresent.trash) {
             return;
         }
-        const get = await this.api.v3().file().get({ uuid });
+        const get = await this.api.v3().dir().get({ uuid });
         const exists = await this.directoryExists({
             name,
             parent: get.parent
@@ -713,10 +716,9 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async moveFile({ uuid, to, metadata, overwriteIfExists = false }) {
-        const get = await this.api.v3().file().get({ uuid });
         const exists = await this.fileExists({
             name: metadata.name,
-            parent: get.parent
+            parent: to
         });
         if (exists.exists) {
             if (exists.existsUUID === uuid) {
@@ -755,10 +757,9 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async moveDirectory({ uuid, to, metadata, overwriteIfExists = false }) {
-        const get = await this.api.v3().file().get({ uuid });
         const exists = await this.directoryExists({
             name: metadata.name,
-            parent: get.parent
+            parent: to
         });
         if (exists.exists) {
             if (exists.uuid === uuid) {
@@ -1019,12 +1020,22 @@ export class Cloud {
      */
     async addItemToDirectoryPublicLink({ uuid, parent, linkUUID, type, metadata, linkKeyEncrypted, expiration }) {
         const key = await this.crypto.decrypt().folderLinkKey({ metadata: linkKeyEncrypted });
-        const metadataEncrypted = await this.crypto.encrypt().metadata({ metadata: JSON.stringify(metadata), key });
-        await this.api
-            .v3()
-            .dir()
-            .link()
-            .add({ uuid, parent, linkUUID, type, metadata: metadataEncrypted, key: linkKeyEncrypted, expiration });
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
+        const metadataEncrypted = await this.crypto.encrypt().metadata({
+            metadata: JSON.stringify(metadata),
+            key
+        });
+        await this.api.v3().dir().link().add({
+            uuid,
+            parent,
+            linkUUID,
+            type,
+            metadata: metadataEncrypted,
+            key: linkKeyEncrypted,
+            expiration
+        });
     }
     /**
      * Enable a public link for a file or a directory.
@@ -1045,32 +1056,14 @@ export class Cloud {
     async enablePublicLink({ type, uuid, onProgress }) {
         const linkUUID = await uuidv4();
         if (type === "directory") {
-            const [tree, key, baseDir] = await Promise.all([
-                this.getDirectoryTree({ uuid }),
-                this.crypto.utils.generateRandomString({ length: 32 }),
-                this.api.v3().dir().get({ uuid })
-            ]);
-            const [linkKeyEncrypted, baseDirDecrypted] = await Promise.all([
-                this.crypto.encrypt().metadata({ metadata: key }),
-                this.crypto.decrypt().folderMetadata({ metadata: baseDir.nameEncrypted })
-            ]);
+            const [tree, key] = await Promise.all([this.getDirectoryTree({ uuid }), this.crypto.utils.generateRandomString({ length: 32 })]);
+            const linkKeyEncrypted = await this.crypto.encrypt().metadata({ metadata: key });
             let done = 0;
             const promises = [];
-            if (baseDirDecrypted.name.length === 0) {
-                throw new Error("Could not decrypt base directory metadata.");
-            }
-            // Add "base" to the tree, we need it for directory public links. Serves as the "base parent" directory.
-            tree["/"] = {
-                type: "directory",
-                uuid,
-                name: baseDirDecrypted.name,
-                parent: "base",
-                size: 0
-            };
             const total = Object.keys(tree).length;
             for (const entry in tree) {
                 const item = tree[entry];
-                if (!item) {
+                if (!item || (item.type === "file" && item.key.length === 0)) {
                     continue;
                 }
                 promises.push(new Promise((resolve, reject) => {
@@ -1264,6 +1257,9 @@ export class Cloud {
      * @returns {(Promise<Omit<FileLinkInfoResponse, "size"> & { size: number }>)}
      */
     async filePublicLinkInfo({ uuid, password, salt, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const derivedPassword = password
             ? salt && salt.length === 32
                 ? await this.crypto.utils.deriveKeyFromPassword({
@@ -1274,19 +1270,33 @@ export class Cloud {
                     bitLength: 512,
                     returnHex: true
                 })
-                : await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+                : await this.crypto.utils.hashFn({
+                    input: !password ? "empty" : password
+                })
             : await this.crypto.utils.hashFn({ input: "empty" });
-        const info = await this.api.v3().file().link().info({ uuid, password: derivedPassword });
+        const info = await this.api.v3().file().link().info({
+            uuid,
+            password: derivedPassword
+        });
         const [nameDecrypted, mimeDecrypted, sizeDecrypted] = await Promise.all([
-            this.crypto.decrypt().metadata({ metadata: info.name, key }),
-            this.crypto.decrypt().metadata({ metadata: info.mime, key }),
-            this.crypto.decrypt().metadata({ metadata: info.size, key })
+            this.crypto.decrypt().metadata({
+                metadata: info.name,
+                key
+            }),
+            this.crypto.decrypt().metadata({
+                metadata: info.mime,
+                key
+            }),
+            this.crypto.decrypt().metadata({
+                metadata: info.size,
+                key
+            })
         ]);
         return {
             ...info,
-            name: nameDecrypted,
-            mime: mimeDecrypted,
-            size: parseInt(sizeDecrypted)
+            name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${uuid}`,
+            mime: nameDecrypted.length > 0 ? mimeDecrypted : "application/octet-stream",
+            size: nameDecrypted.length > 0 ? parseInt(sizeDecrypted) : 1
         };
     }
     /**
@@ -1300,6 +1310,9 @@ export class Cloud {
      * @returns {Promise<DirLinkInfoDecryptedResponse>}
      */
     async directoryPublicLinkInfo({ uuid, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const info = await this.api.v3().dir().link().info({ uuid });
         const metadataDecrypted = await this.crypto.decrypt().folderMetadata({
             metadata: info.metadata,
@@ -1307,7 +1320,9 @@ export class Cloud {
         });
         return {
             ...info,
-            metadata: metadataDecrypted
+            metadata: {
+                name: metadataDecrypted.name.length > 0 ? metadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`
+            }
         };
     }
     /**
@@ -1330,6 +1345,9 @@ export class Cloud {
      * @returns {Promise<DirLinkContentDecryptedResponse>}
      */
     async directoryPublicLinkContent({ uuid, parent, password, salt, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const derivedPassword = password
             ? salt && salt.length === 32
                 ? await this.crypto.utils.deriveKeyFromPassword({
@@ -1344,26 +1362,43 @@ export class Cloud {
             : await this.crypto.utils.hashFn({ input: "empty" });
         const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword });
         return {
-            files: await promiseAllSettledChunked(content.files.map(file => new Promise((resolve, reject) => {
+            files: await promiseAllChunked(content.files.map(file => new Promise((resolve, reject) => {
                 this.crypto
                     .decrypt()
-                    .fileMetadata({ metadata: file.metadata, key })
+                    .fileMetadata({
+                    metadata: file.metadata,
+                    key
+                })
                     .then(decryptedFileMetadata => {
                     resolve({
                         ...file,
-                        metadata: decryptedFileMetadata
+                        metadata: decryptedFileMetadata.name.length > 0
+                            ? decryptedFileMetadata
+                            : {
+                                name: `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                                mime: "application/octet-stream",
+                                size: 1,
+                                lastModified: convertTimestampToMs(file.timestamp),
+                                creation: undefined,
+                                hash: undefined,
+                                key: ""
+                            }
                     });
                 })
                     .catch(reject);
             }))),
-            folders: await promiseAllSettledChunked(content.folders.map(folder => new Promise((resolve, reject) => {
+            folders: await promiseAllChunked(content.folders.map(folder => new Promise((resolve, reject) => {
                 this.crypto
                     .decrypt()
                     .folderMetadata({ metadata: folder.metadata, key })
                     .then(decryptedFolderMetadata => {
                     resolve({
                         ...folder,
-                        metadata: decryptedFolderMetadata
+                        metadata: decryptedFolderMetadata.name.length > 0
+                            ? decryptedFolderMetadata
+                            : {
+                                name: `CANNOT_DECRYPT_NAME_${folder.uuid}`
+                            }
                     });
                 })
                     .catch(reject);
@@ -1439,7 +1474,7 @@ export class Cloud {
                     .then(tree => {
                     for (const entry in tree) {
                         const item = tree[entry];
-                        if (!item) {
+                        if (!item || (item.type === "file" && item.key.length === 0)) {
                             continue;
                         }
                         if (item.parent === "base" || item.uuid === directory.uuid) {
@@ -1552,7 +1587,7 @@ export class Cloud {
                 }
                 for (const entry in tree) {
                     const item = tree[entry];
-                    if (!item) {
+                    if (!item || (item.type === "file" && item.key.length === 0)) {
                         continue;
                     }
                     if (item.uuid === uuid || item.parent === "base") {
@@ -1630,7 +1665,7 @@ export class Cloud {
                 }
                 for (const entry in tree) {
                     const item = tree[entry];
-                    if (!item) {
+                    if (!item || (item.type === "file" && item.key.length === 0)) {
                         continue;
                     }
                     if (item.uuid === uuid || item.parent === "base") {
@@ -1724,9 +1759,21 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async renamePubliclyLinkedItem({ uuid, linkUUID, metadata, linkKeyEncrypted }) {
-        const key = await this.crypto.decrypt().folderLinkKey({ metadata: linkKeyEncrypted });
-        const metadataEncrypted = await this.crypto.encrypt().metadata({ metadata: JSON.stringify(metadata), key });
-        await this.api.v3().item().linkedRename({ uuid, linkUUID, metadata: metadataEncrypted });
+        const key = await this.crypto.decrypt().folderLinkKey({
+            metadata: linkKeyEncrypted
+        });
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
+        const metadataEncrypted = await this.crypto.encrypt().metadata({
+            metadata: JSON.stringify(metadata),
+            key
+        });
+        await this.api.v3().item().linkedRename({
+            uuid,
+            linkUUID,
+            metadata: metadataEncrypted
+        });
     }
     /**
      * Checks if an item is shared or public linked.
@@ -1847,6 +1894,9 @@ export class Cloud {
      * @returns {Promise<string>}
      */
     async downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onQueued, onStarted, onError, onFinished, size }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         if (environment !== "node") {
             throw new Error(`cloud.downloadFileToLocal is not implemented for ${environment}`);
         }
@@ -1928,6 +1978,9 @@ export class Cloud {
      * @returns {Promise<ReadableStream<Uint8Array>>}
      */
     downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         if (!start) {
             start = 0;
         }
@@ -2249,15 +2302,14 @@ export class Cloud {
             try {
                 const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
                 const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`;
-                const folderPath = folder.parent === "base" ? "" : `${parentPath}${decrypted.name}`;
+                const folderPath = folder.parent === "base"
+                    ? "/"
+                    : `${parentPath}${decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`}`;
                 folderNames[folder.uuid] = folderPath;
-                if ((folder.parent !== "base" && decrypted.name.length === 0) || folderPath.length === 0) {
-                    continue;
-                }
                 tree[folderPath] = {
                     type: "directory",
                     uuid: folder.uuid,
-                    name: decrypted.name,
+                    name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     parent: folder.parent,
                     size: 0
                 };
@@ -2276,12 +2328,8 @@ export class Cloud {
                     .decrypt()
                     .fileMetadata({ metadata: file.metadata })
                     .then(decrypted => {
-                    if (decrypted.name.length === 0) {
-                        resolve();
-                        return;
-                    }
                     const parentPath = folderNames[file.parent];
-                    const filePath = `${parentPath}/${decrypted.name}`;
+                    const filePath = `${parentPath}/${decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`}`;
                     if (filePath.length === 0) {
                         resolve();
                         return;
@@ -2289,25 +2337,25 @@ export class Cloud {
                     tree[filePath] = {
                         type: "file",
                         uuid: file.uuid,
-                        name: decrypted.name,
-                        size: decrypted.size,
-                        mime: decrypted.mime,
-                        lastModified: convertTimestampToMs(decrypted.lastModified),
+                        name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
+                        size: decrypted.name.length > 0 ? decrypted.size : 1,
+                        mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
+                        lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : Date.now()),
                         parent: file.parent,
                         version: file.version,
                         chunks: file.chunks,
-                        key: decrypted.key,
+                        key: decrypted.name.length > 0 ? decrypted.key : "",
                         bucket: file.bucket,
                         region: file.region,
-                        creation: decrypted.creation,
-                        hash: decrypted.hash
+                        creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
+                        hash: decrypted.name.length > 0 ? decrypted.hash : undefined
                     };
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return tree;
     }
     /**
@@ -2375,7 +2423,7 @@ export class Cloud {
             const promises = [];
             for (const path in tree) {
                 const item = tree[path];
-                if (!item || item.type !== "file") {
+                if (!item || item.type !== "file" || item.key.length === 0) {
                     continue;
                 }
                 const filePath = pathModule.join(destinationPath, path);
@@ -2625,7 +2673,7 @@ export class Cloud {
                 version: CURRENT_FILE_ENCRYPTION_VERSION,
                 chunks: fileChunks,
                 favorited: false,
-                key: key,
+                key,
                 bucket,
                 region,
                 creation
@@ -3017,7 +3065,7 @@ export class Cloud {
                 version: CURRENT_FILE_ENCRYPTION_VERSION,
                 chunks: fileChunks,
                 favorited: false,
-                key: key,
+                key,
                 bucket,
                 region
             };
@@ -3371,17 +3419,11 @@ export class Cloud {
         const file = await this.api.v3().file().get({ uuid });
         let nextParent = file.parent;
         const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata });
-        if (fileMetadataDecrypted.name.length === 0) {
-            throw new Error(`Could not decrypt file metadata for ${uuid}`);
-        }
-        pathParts.push(fileMetadataDecrypted.name);
+        pathParts.push(fileMetadataDecrypted.name.length > 0 ? fileMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`);
         while (nextParent !== this.sdkConfig.baseFolderUUID) {
             const dir = await this.api.v3().dir().get({ uuid: nextParent });
             const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted });
-            if (decrypted.name.length === 0) {
-                throw new Error(`Could not decrypt directory metadata for ${dir.uuid}`);
-            }
-            pathParts.push(decrypted.name);
+            pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`);
             nextParent = dir.parent;
         }
         return `/${pathModule.posix.join(...pathParts.reverse())}`;
@@ -3400,17 +3442,11 @@ export class Cloud {
         const firstDir = await this.api.v3().dir().get({ uuid });
         let nextParent = firstDir.parent;
         const firstDirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: firstDir.nameEncrypted });
-        if (firstDirMetadataDecrypted.name.length === 0) {
-            throw new Error(`Could not decrypt directory metadata for ${uuid}`);
-        }
-        pathParts.push(firstDirMetadataDecrypted.name);
+        pathParts.push(firstDirMetadataDecrypted.name.length > 0 ? firstDirMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`);
         while (nextParent !== this.sdkConfig.baseFolderUUID) {
             const dir = await this.api.v3().dir().get({ uuid: nextParent });
             const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted });
-            if (decrypted.name.length === 0) {
-                throw new Error(`Could not decrypt directory metadata for ${dir.uuid}`);
-            }
-            pathParts.push(decrypted.name);
+            pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`);
             nextParent = dir.parent;
         }
         return `/${pathModule.posix.join(...pathParts.reverse())}`;

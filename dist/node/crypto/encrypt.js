@@ -130,6 +130,9 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async chatMessage({ message, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         return await this.metadata({ metadata: JSON.stringify({ message }), key });
     }
     /**
@@ -144,6 +147,9 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async noteContent({ content, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         return await this.metadata({ metadata: JSON.stringify({ content }), key });
     }
     /**
@@ -158,6 +164,9 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async noteTitle({ title, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         return await this.metadata({ metadata: JSON.stringify({ title }), key });
     }
     /**
@@ -172,6 +181,9 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async notePreview({ preview, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         return await this.metadata({ metadata: JSON.stringify({ preview }), key });
     }
     /**
@@ -187,6 +199,9 @@ class Encrypt {
      */
     async noteTagName({ name, key }) {
         const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1];
+        if (keyToUse.length === 0) {
+            throw new Error("Invalid key.");
+        }
         return await this.metadata({ metadata: JSON.stringify({ name }), key: keyToUse });
     }
     /**
@@ -201,6 +216,9 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async chatConversationName({ name, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         return await this.metadata({ metadata: JSON.stringify({ name }), key });
     }
     /**
@@ -215,6 +233,9 @@ class Encrypt {
      * @returns {Promise<Buffer>}
      */
     async data({ data, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const iv = await (0, utils_1.generateRandomString)({ length: 12 });
         if (constants_1.environment === "node") {
             const ivBuffer = Buffer.from(iv, "utf-8");
@@ -246,6 +267,9 @@ class Encrypt {
      * @returns {Promise<string>}
      */
     async dataStream({ inputFile, key, outputFile }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         if (constants_1.environment !== "node") {
             throw new Error(`crypto.encrypt.dataStream not implemented for ${constants_1.environment} environment`);
         }

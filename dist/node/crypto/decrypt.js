@@ -49,6 +49,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async metadata({ metadata, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const sliced = metadata.slice(0, 8);
         if (sliced === "U2FsdGVk") {
             // Old and deprecated, not in use anymore, just here for backwards compatibility
@@ -98,6 +101,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async metadataPrivate({ metadata, privateKey }) {
+        if (privateKey.length === 0) {
+            throw new Error("Invalid privateKey.");
+        }
         if (constants_1.environment === "node") {
             const pemKey = await (0, utils_1.derKeyToPem)({ key: privateKey });
             const decrypted = crypto_1.default.privateDecrypt({
@@ -166,9 +172,6 @@ class Decrypt {
                 continue;
             }
         }
-        if (fileMetadata.name.length === 0) {
-            throw new Error("Could not decrypt file metadata.");
-        }
         return fileMetadata;
     }
     /**
@@ -213,9 +216,6 @@ class Decrypt {
                 continue;
             }
         }
-        if (folderMetadata.name.length === 0) {
-            throw new Error("Could not decrypt folder metadata.");
-        }
         return folderMetadata;
     }
     /**
@@ -245,6 +245,9 @@ class Decrypt {
             hash: undefined
         };
         const privateKey = key ? key : this.config.privateKey;
+        if (privateKey.length === 0) {
+            throw new Error("Invalid privateKey.");
+        }
         const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
             fileMetadata = {
@@ -259,9 +262,6 @@ class Decrypt {
             if (this.config.metadataCache) {
                 cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
             }
-        }
-        if (fileMetadata.name.length === 0) {
-            throw new Error("Could not decrypt file metadata.");
         }
         return fileMetadata;
     }
@@ -285,6 +285,9 @@ class Decrypt {
             name: ""
         };
         const privateKey = key ? key : this.config.privateKey;
+        if (privateKey.length === 0) {
+            throw new Error("Invalid privateKey.");
+        }
         const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
             folderMetadata = {
@@ -293,9 +296,6 @@ class Decrypt {
             if (this.config.metadataCache) {
                 cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
             }
-        }
-        if (folderMetadata.name.length === 0) {
-            throw new Error("Could not decrypt folder metadata.");
         }
         return folderMetadata;
     }
@@ -312,6 +312,9 @@ class Decrypt {
      */
     async fileMetadataLink({ metadata, linkKey }) {
         var _a, _b;
+        if (linkKey.length === 0) {
+            throw new Error("Invalid linkKey.");
+        }
         const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.fileMetadata.has(cacheKey)) {
             return cache_1.default.fileMetadata.get(cacheKey);
@@ -340,9 +343,6 @@ class Decrypt {
                 cache_1.default.fileMetadata.set(cacheKey, fileMetadata);
             }
         }
-        if (fileMetadata.name.length === 0) {
-            throw new Error("Could not decrypt file metadata.");
-        }
         return fileMetadata;
     }
     /**
@@ -357,6 +357,9 @@ class Decrypt {
      * @returns {Promise<FolderMetadata>}
      */
     async folderMetadataLink({ metadata, linkKey }) {
+        if (linkKey.length === 0) {
+            throw new Error("Invalid linkKey.");
+        }
         const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.folderMetadata.has(cacheKey)) {
             return cache_1.default.folderMetadata.get(cacheKey);
@@ -372,9 +375,6 @@ class Decrypt {
             if (this.config.metadataCache) {
                 cache_1.default.folderMetadata.set(cacheKey, folderMetadata);
             }
-        }
-        if (folderMetadata.name.length === 0) {
-            throw new Error("Could not decrypt folder metadata.");
         }
         return folderMetadata;
     }
@@ -423,6 +423,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async chatKeyParticipant({ metadata, privateKey }) {
+        if (privateKey.length === 0) {
+            throw new Error("Invalid privateKey.");
+        }
         const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.chatKeyParticipant.has(cacheKey)) {
             return cache_1.default.chatKeyParticipant.get(cacheKey);
@@ -492,10 +495,13 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async chatMessage({ message, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const messageDecrypted = await this.metadata({ metadata: message, key });
         const parsedMessage = JSON.parse(messageDecrypted);
         if (typeof parsedMessage.message !== "string") {
-            throw new Error("Could not decrypt chat message, malformed decrypted metadata");
+            return "";
         }
         return parsedMessage.message;
     }
@@ -544,6 +550,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteKeyParticipant({ metadata, privateKey }) {
+        if (privateKey.length === 0) {
+            throw new Error("Invalid privateKey.");
+        }
         const cacheKey = metadata;
         if (this.config.metadataCache && cache_1.default.noteKeyParticipant.has(cacheKey)) {
             return cache_1.default.noteKeyParticipant.get(cacheKey);
@@ -570,10 +579,13 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteContent({ content, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const decrypted = await this.metadata({ metadata: content, key });
         const parsed = JSON.parse(decrypted);
         if (typeof parsed.content !== "string") {
-            throw new Error("Could not decrypt note content, malformed decrypted metadata");
+            return "";
         }
         return parsed.content;
     }
@@ -589,6 +601,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async noteTitle({ title, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const cacheKey = title;
         if (this.config.metadataCache && cache_1.default.noteTitle.has(cacheKey)) {
             return cache_1.default.noteTitle.get(cacheKey);
@@ -596,7 +611,7 @@ class Decrypt {
         const decrypted = await this.metadata({ metadata: title, key });
         const parsed = JSON.parse(decrypted);
         if (typeof parsed.title !== "string") {
-            throw new Error("Could not decrypt note title, malformed decrypted metadata");
+            return "";
         }
         if (this.config.metadataCache) {
             cache_1.default.noteTitle.set(cacheKey, parsed.title);
@@ -615,6 +630,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async notePreview({ preview, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const cacheKey = preview;
         if (this.config.metadataCache && cache_1.default.notePreview.has(cacheKey)) {
             return cache_1.default.notePreview.get(cacheKey);
@@ -622,7 +640,7 @@ class Decrypt {
         const decrypted = await this.metadata({ metadata: preview, key });
         const parsed = JSON.parse(decrypted);
         if (typeof parsed.preview !== "string") {
-            throw new Error("Could not decrypt note preview, malformed decrypted metadata");
+            return "";
         }
         if (this.config.metadataCache) {
             cache_1.default.notePreview.set(cacheKey, parsed.preview);
@@ -660,7 +678,7 @@ class Decrypt {
                 continue;
             }
         }
-        throw new Error("Could not decrypt note tag name using given metadata and keys");
+        return "";
     }
     /**
      * Decrypt a chat conversation name.
@@ -677,6 +695,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async chatConversationName({ name, key }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         const cacheKey = name;
         if (this.config.metadataCache && cache_1.default.chatConversationName.has(cacheKey)) {
             return cache_1.default.chatConversationName.get(cacheKey);
@@ -684,7 +705,7 @@ class Decrypt {
         const nameDecrypted = await this.metadata({ metadata: name, key });
         const parsed = JSON.parse(nameDecrypted);
         if (typeof parsed.name !== "string") {
-            throw new Error("Could not decrypt chat conversation name, malformed decrypted metadata");
+            return "";
         }
         if (this.config.metadataCache) {
             cache_1.default.chatConversationName.set(cacheKey, parsed.name);
@@ -704,6 +725,9 @@ class Decrypt {
      * @returns {Promise<Buffer>}
      */
     async data({ data, key, version }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         if (constants_1.environment === "node") {
             if (version === 1) {
                 // Old and deprecated, not in use anymore, just here for backwards compatibility
@@ -839,6 +863,9 @@ class Decrypt {
      * @returns {Promise<string>}
      */
     async dataStream({ inputFile, key, version, outputFile }) {
+        if (key.length === 0) {
+            throw new Error("Invalid key.");
+        }
         if (constants_1.environment !== "node") {
             throw new Error(`crypto.decrypt.dataStream not implemented for ${constants_1.environment} environment`);
         }
@@ -977,17 +1004,59 @@ class Decrypt {
             event.type === "fileLinkEdited" ||
             event.type === "fileVersioned" ||
             event.type === "deleteFilePermanently") {
-            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata }) }) });
+            const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata });
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: metadataDecrypted.name.length > 0
+                        ? metadataDecrypted
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`,
+                            size: 1,
+                            lastModified: Date.now(),
+                            key: "",
+                            creation: undefined,
+                            hash: undefined,
+                            mime: "application/octet-stream"
+                        } }) });
         }
         else if (event.type === "fileRenamed") {
             const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
                 this.fileMetadata({ metadata: event.info.metadata }),
                 this.fileMetadata({ metadata: event.info.oldMetadata })
             ]);
-            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: decryptedMetadata, oldMetadataDecrypted: oldDecryptedMetadata }) });
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: decryptedMetadata.name.length > 0
+                        ? decryptedMetadata
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`,
+                            size: 1,
+                            lastModified: Date.now(),
+                            key: "",
+                            creation: undefined,
+                            hash: undefined,
+                            mime: "application/octet-stream"
+                        }, oldMetadataDecrypted: oldDecryptedMetadata.name.length > 0
+                        ? oldDecryptedMetadata
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`,
+                            size: 1,
+                            lastModified: Date.now(),
+                            key: "",
+                            creation: undefined,
+                            hash: undefined,
+                            mime: "application/octet-stream"
+                        } }) });
         }
         else if (event.type === "fileShared") {
-            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: await this.fileMetadata({ metadata: event.info.metadata }) }) });
+            const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata });
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: metadataDecrypted.name.length > 0
+                        ? metadataDecrypted
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`,
+                            size: 1,
+                            lastModified: Date.now(),
+                            key: "",
+                            creation: undefined,
+                            hash: undefined,
+                            mime: "application/octet-stream"
+                        } }) });
         }
         else if (event.type === "subFolderCreated" ||
             event.type === "folderTrash" ||
@@ -996,10 +1065,20 @@ class Decrypt {
             event.type === "folderRestored" ||
             event.type === "folderColorChanged" ||
             event.type === "deleteFolderPermanently") {
-            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: await this.folderMetadata({ metadata: event.info.name }) }) });
+            const nameDecrypted = await this.folderMetadata({ metadata: event.info.name });
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: nameDecrypted.name.length > 0
+                        ? nameDecrypted
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`
+                        } }) });
         }
         else if (event.type === "folderShared") {
-            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: await this.folderMetadata({ metadata: event.info.name }) }) });
+            const nameDecrypted = await this.folderMetadata({ metadata: event.info.name });
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: nameDecrypted.name.length > 0
+                        ? nameDecrypted
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`
+                        } }) });
         }
         else if (event.type === "itemFavorite") {
             const [folderDecrypted, fileDecrypted] = await Promise.all([
@@ -1013,7 +1092,15 @@ class Decrypt {
                 this.folderMetadata({ metadata: event.info.name }),
                 this.folderMetadata({ metadata: event.info.oldName })
             ]);
-            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: decryptedMetadata, oldNameDecrypted: oldDecryptedMetadata }) });
+            return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: decryptedMetadata.name.length > 0
+                        ? decryptedMetadata
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`
+                        }, oldNameDecrypted: oldDecryptedMetadata.name.length > 0
+                        ? oldDecryptedMetadata
+                        : {
+                            name: `CANNOT_DECRYPT_NAME_${event.uuid}`
+                        } }) });
         }
         return event;
     }

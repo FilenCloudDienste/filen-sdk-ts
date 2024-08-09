@@ -1,5 +1,5 @@
 import { MAX_CHAT_SIZE } from "..";
-import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils";
+import { promiseAllChunked, uuidv4 } from "../utils";
 /**
  * Chats
  * @date 2/1/2024 - 2:44:47 AM
@@ -95,8 +95,10 @@ export class Chats {
                         .then(([nameDecrypted, lastMessageDecrypted]) => {
                         chatConversations.push({
                             ...convo,
-                            lastMessage: lastMessageDecrypted,
-                            name: nameDecrypted
+                            lastMessage: lastMessageDecrypted.length > 0
+                                ? lastMessageDecrypted
+                                : `CANNOT_DECRYPT_LAST_MESSAGE_${convo.uuid}`,
+                            name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${convo.uuid}`
                         });
                         resolve();
                     })
@@ -105,7 +107,7 @@ export class Chats {
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return chatConversations;
     }
     /**
@@ -306,10 +308,12 @@ export class Chats {
                     .then(([messageDecrypted, replyToDecrypted]) => {
                     chatMessages.push({
                         ...message,
-                        message: messageDecrypted,
+                        message: messageDecrypted.length > 0 ? messageDecrypted : `CANNOT_DECRYPT_MESSAGE_${message.uuid}`,
                         replyTo: {
                             ...message.replyTo,
-                            message: replyToDecrypted
+                            message: replyToDecrypted.length > 0
+                                ? replyToDecrypted
+                                : `CANNOT_DECRYPT_REPLY_MESSAGE_${message.replyTo.uuid}`
                         }
                     });
                     resolve();
@@ -317,7 +321,7 @@ export class Chats {
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return chatMessages;
     }
     /**

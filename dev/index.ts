@@ -23,6 +23,8 @@ const filen = new FilenSDK({
 const main = async () => {
 	console.log("starting")
 
+	console.log(await filen.cloud().getDirectoryTree({ uuid: "443b1ca5-bea1-41f9-950a-05b6f91bdd7e" }))
+
 	console.log("done")
 }
 

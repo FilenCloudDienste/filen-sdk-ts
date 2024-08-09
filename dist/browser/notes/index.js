@@ -1,4 +1,4 @@
-import { uuidv4, simpleDate, promiseAllSettledChunked } from "../utils";
+import { uuidv4, simpleDate, promiseAllChunked } from "../utils";
 import { createNotePreviewFromContentText } from "./utils";
 import { MAX_NOTE_SIZE } from "../constants";
 /**
@@ -48,14 +48,14 @@ export class Notes {
                     .then(decryptedTagName => {
                     decryptedTags.push({
                         ...tag,
-                        name: decryptedTagName
+                        name: decryptedTagName.length > 0 ? decryptedTagName : `CANNOT_DECRYPT_NAME_${tag.uuid}`
                     });
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return decryptedTags;
     }
     /**
@@ -96,8 +96,12 @@ export class Notes {
                             .then(([decryptedNotePreview, decryptedNoteTags]) => {
                             notes.push({
                                 ...note,
-                                title: decryptedNoteTitle,
-                                preview: decryptedNotePreview,
+                                title: decryptedNoteTitle.length > 0
+                                    ? decryptedNoteTitle
+                                    : `CANNOT_DECRYPT_TITLE_${note.uuid}`,
+                                preview: decryptedNotePreview.length > 0
+                                    ? decryptedNotePreview
+                                    : `CANNOT_DECRYPT_PREVIEW_${note.uuid}`,
                                 tags: decryptedNoteTags
                             });
                             resolve();
@@ -109,7 +113,7 @@ export class Notes {
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return notes;
     }
     /**
@@ -329,9 +333,15 @@ export class Notes {
         const decryptedNoteKey = await this.noteKey({ uuid });
         const notePreviewPromise = contentEncrypted.preview.length === 0
             ? Promise.resolve("")
-            : this.crypto.decrypt().notePreview({ preview: contentEncrypted.preview, key: decryptedNoteKey });
+            : this.crypto.decrypt().notePreview({
+                preview: contentEncrypted.preview,
+                key: decryptedNoteKey
+            });
         const [contentDecrypted, previewDecrypted] = await Promise.all([
-            this.crypto.decrypt().noteContent({ content: contentEncrypted.content, key: decryptedNoteKey }),
+            this.crypto.decrypt().noteContent({
+                content: contentEncrypted.content,
+                key: decryptedNoteKey
+            }),
             notePreviewPromise
         ]);
         if (contentEncrypted.type === "checklist" &&
@@ -340,14 +350,14 @@ export class Notes {
             content = '<ul data-checked="false"><li><br></li></ul>';
         }
         else {
-            content = contentDecrypted;
+            content = contentDecrypted.length > 0 ? contentDecrypted : `CANNOT_DECRYPT_CONTENT_${uuid}`;
         }
         return {
             content,
             type: contentEncrypted.type,
             editedTimestamp: contentEncrypted.editedTimestamp,
             editorId: contentEncrypted.editorId,
-            preview: previewDecrypted
+            preview: previewDecrypted.length > 0 ? previewDecrypted : `CANNOT_DECRYPT_PREVIEW_${uuid}`
         };
     }
     /**
@@ -539,15 +549,19 @@ export class Notes {
                     .then(([noteHistoryContentDecrypted, noteHistoryPreviewDecrypted]) => {
                     notesHistory.push({
                         ...noteHistory,
-                        content: noteHistoryContentDecrypted,
-                        preview: noteHistoryPreviewDecrypted
+                        content: noteHistoryContentDecrypted.length > 0
+                            ? noteHistoryContentDecrypted
+                            : `CANNOT_DECRYPT_CONTENT_${noteHistory.id}`,
+                        preview: noteHistoryPreviewDecrypted.length > 0
+                            ? noteHistoryPreviewDecrypted
+                            : `CANNOT_DECRYPT_PREVIEW_${noteHistory.id}`
                     });
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return notesHistory;
     }
     /**
@@ -612,14 +626,14 @@ export class Notes {
                     .then(decryptedTagName => {
                     notesTags.push({
                         ...tag,
-                        name: decryptedTagName
+                        name: decryptedTagName.length > 0 ? decryptedTagName : `CANNOT_DECRYPT_NAME_${tag.uuid}`
                     });
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await promiseAllSettledChunked(promises);
+        await promiseAllChunked(promises);
         return notesTags;
     }
     /**

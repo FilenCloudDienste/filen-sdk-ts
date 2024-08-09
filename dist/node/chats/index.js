@@ -93,7 +93,9 @@ class Chats {
                         : Promise.resolve("");
                     Promise.all([namePromise, messagePromise])
                         .then(([nameDecrypted, lastMessageDecrypted]) => {
-                        chatConversations.push(Object.assign(Object.assign({}, convo), { lastMessage: lastMessageDecrypted, name: nameDecrypted }));
+                        chatConversations.push(Object.assign(Object.assign({}, convo), { lastMessage: lastMessageDecrypted.length > 0
+                                ? lastMessageDecrypted
+                                : `CANNOT_DECRYPT_LAST_MESSAGE_${convo.uuid}`, name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${convo.uuid}` }));
                         resolve();
                     })
                         .catch(reject);
@@ -101,7 +103,7 @@ class Chats {
                     .catch(reject);
             }));
         }
-        await (0, utils_1.promiseAllSettledChunked)(promises);
+        await (0, utils_1.promiseAllChunked)(promises);
         return chatConversations;
     }
     /**
@@ -300,13 +302,15 @@ class Chats {
                     : Promise.resolve("");
                 Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
                     .then(([messageDecrypted, replyToDecrypted]) => {
-                    chatMessages.push(Object.assign(Object.assign({}, message), { message: messageDecrypted, replyTo: Object.assign(Object.assign({}, message.replyTo), { message: replyToDecrypted }) }));
+                    chatMessages.push(Object.assign(Object.assign({}, message), { message: messageDecrypted.length > 0 ? messageDecrypted : `CANNOT_DECRYPT_MESSAGE_${message.uuid}`, replyTo: Object.assign(Object.assign({}, message.replyTo), { message: replyToDecrypted.length > 0
+                                ? replyToDecrypted
+                                : `CANNOT_DECRYPT_REPLY_MESSAGE_${message.replyTo.uuid}` }) }));
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await (0, utils_1.promiseAllSettledChunked)(promises);
+        await (0, utils_1.promiseAllChunked)(promises);
         return chatMessages;
     }
     /**

@@ -1,7 +1,7 @@
 import type API from "../api"
 import type Crypto from "../crypto"
 import type { FilenSDKConfig } from ".."
-import { uuidv4, simpleDate, promiseAllSettledChunked } from "../utils"
+import { uuidv4, simpleDate, promiseAllChunked } from "../utils"
 import type { NoteType, Note, NoteTag } from "../api/v3/notes"
 import { createNotePreviewFromContentText } from "./utils"
 import { MAX_NOTE_SIZE } from "../constants"
@@ -64,7 +64,7 @@ export class Notes {
 						.then(decryptedTagName => {
 							decryptedTags.push({
 								...tag,
-								name: decryptedTagName
+								name: decryptedTagName.length > 0 ? decryptedTagName : `CANNOT_DECRYPT_NAME_${tag.uuid}`
 							})
 
 							resolve()
@@ -74,7 +74,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllSettledChunked(promises)
+		await promiseAllChunked(promises)
 
 		return decryptedTags
 	}
@@ -124,8 +124,14 @@ export class Notes {
 										.then(([decryptedNotePreview, decryptedNoteTags]) => {
 											notes.push({
 												...note,
-												title: decryptedNoteTitle,
-												preview: decryptedNotePreview,
+												title:
+													decryptedNoteTitle.length > 0
+														? decryptedNoteTitle
+														: `CANNOT_DECRYPT_TITLE_${note.uuid}`,
+												preview:
+													decryptedNotePreview.length > 0
+														? decryptedNotePreview
+														: `CANNOT_DECRYPT_PREVIEW_${note.uuid}`,
 												tags: decryptedNoteTags
 											})
 
@@ -140,7 +146,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllSettledChunked(promises)
+		await promiseAllChunked(promises)
 
 		return notes
 	}
@@ -420,9 +426,15 @@ export class Notes {
 		const notePreviewPromise =
 			contentEncrypted.preview.length === 0
 				? Promise.resolve("")
-				: this.crypto.decrypt().notePreview({ preview: contentEncrypted.preview, key: decryptedNoteKey })
+				: this.crypto.decrypt().notePreview({
+						preview: contentEncrypted.preview,
+						key: decryptedNoteKey
+				  })
 		const [contentDecrypted, previewDecrypted] = await Promise.all([
-			this.crypto.decrypt().noteContent({ content: contentEncrypted.content, key: decryptedNoteKey }),
+			this.crypto.decrypt().noteContent({
+				content: contentEncrypted.content,
+				key: decryptedNoteKey
+			}),
 			notePreviewPromise
 		])
 
@@ -433,7 +445,7 @@ export class Notes {
 			// eslint-disable-next-line quotes
 			content = '<ul data-checked="false"><li><br></li></ul>'
 		} else {
-			content = contentDecrypted
+			content = contentDecrypted.length > 0 ? contentDecrypted : `CANNOT_DECRYPT_CONTENT_${uuid}`
 		}
 
 		return {
@@ -441,7 +453,7 @@ export class Notes {
 			type: contentEncrypted.type,
 			editedTimestamp: contentEncrypted.editedTimestamp,
 			editorId: contentEncrypted.editorId,
-			preview: previewDecrypted
+			preview: previewDecrypted.length > 0 ? previewDecrypted : `CANNOT_DECRYPT_PREVIEW_${uuid}`
 		}
 	}
 
@@ -656,8 +668,14 @@ export class Notes {
 						.then(([noteHistoryContentDecrypted, noteHistoryPreviewDecrypted]) => {
 							notesHistory.push({
 								...noteHistory,
-								content: noteHistoryContentDecrypted,
-								preview: noteHistoryPreviewDecrypted
+								content:
+									noteHistoryContentDecrypted.length > 0
+										? noteHistoryContentDecrypted
+										: `CANNOT_DECRYPT_CONTENT_${noteHistory.id}`,
+								preview:
+									noteHistoryPreviewDecrypted.length > 0
+										? noteHistoryPreviewDecrypted
+										: `CANNOT_DECRYPT_PREVIEW_${noteHistory.id}`
 							})
 
 							resolve()
@@ -667,7 +685,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllSettledChunked(promises)
+		await promiseAllChunked(promises)
 
 		return notesHistory
 	}
@@ -739,7 +757,7 @@ export class Notes {
 						.then(decryptedTagName => {
 							notesTags.push({
 								...tag,
-								name: decryptedTagName
+								name: decryptedTagName.length > 0 ? decryptedTagName : `CANNOT_DECRYPT_NAME_${tag.uuid}`
 							})
 
 							resolve()
@@ -749,7 +767,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllSettledChunked(promises)
+		await promiseAllChunked(promises)
 
 		return notesTags
 	}

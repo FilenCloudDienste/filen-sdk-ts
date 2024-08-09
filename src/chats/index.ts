@@ -2,7 +2,7 @@ import type API from "../api"
 import type Crypto from "../crypto"
 import { type FilenSDKConfig, MAX_CHAT_SIZE } from ".."
 import { type ChatConversation } from "../api/v3/chat/conversations"
-import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils"
+import { promiseAllChunked, uuidv4 } from "../utils"
 import { type Contact } from "../api/v3/contacts"
 import { ChatTypingType } from "../api/v3/chat/typing"
 import { type ChatMessage } from "../api/v3/chat/messages"
@@ -133,8 +133,11 @@ export class Chats {
 								.then(([nameDecrypted, lastMessageDecrypted]) => {
 									chatConversations.push({
 										...convo,
-										lastMessage: lastMessageDecrypted,
-										name: nameDecrypted
+										lastMessage:
+											lastMessageDecrypted.length > 0
+												? lastMessageDecrypted
+												: `CANNOT_DECRYPT_LAST_MESSAGE_${convo.uuid}`,
+										name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${convo.uuid}`
 									})
 
 									resolve()
@@ -146,7 +149,7 @@ export class Chats {
 			)
 		}
 
-		await promiseAllSettledChunked(promises)
+		await promiseAllChunked(promises)
 
 		return chatConversations
 	}
@@ -391,10 +394,13 @@ export class Chats {
 						.then(([messageDecrypted, replyToDecrypted]) => {
 							chatMessages.push({
 								...message,
-								message: messageDecrypted,
+								message: messageDecrypted.length > 0 ? messageDecrypted : `CANNOT_DECRYPT_MESSAGE_${message.uuid}`,
 								replyTo: {
 									...message.replyTo,
-									message: replyToDecrypted
+									message:
+										replyToDecrypted.length > 0
+											? replyToDecrypted
+											: `CANNOT_DECRYPT_REPLY_MESSAGE_${message.replyTo.uuid}`
 								}
 							})
 
@@ -405,7 +411,7 @@ export class Chats {
 			)
 		}
 
-		await promiseAllSettledChunked(promises)
+		await promiseAllChunked(promises)
 
 		return chatMessages
 	}

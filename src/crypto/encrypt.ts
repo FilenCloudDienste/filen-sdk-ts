@@ -150,6 +150,10 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async chatMessage({ message, key }: { message: string; key: string }): Promise<string> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		return await this.metadata({ metadata: JSON.stringify({ message }), key })
 	}
 
@@ -165,6 +169,10 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteContent({ content, key }: { content: string; key: string }): Promise<string> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		return await this.metadata({ metadata: JSON.stringify({ content }), key })
 	}
 
@@ -180,6 +188,10 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteTitle({ title, key }: { title: string; key: string }): Promise<string> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		return await this.metadata({ metadata: JSON.stringify({ title }), key })
 	}
 
@@ -195,6 +207,10 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async notePreview({ preview, key }: { preview: string; key: string }): Promise<string> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		return await this.metadata({ metadata: JSON.stringify({ preview }), key })
 	}
 
@@ -212,7 +228,11 @@ export class Encrypt {
 	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
 		const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1]
 
-		return await this.metadata({ metadata: JSON.stringify({ name }), key: keyToUse })
+		if (keyToUse!.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
+		return await this.metadata({ metadata: JSON.stringify({ name }), key: keyToUse! })
 	}
 
 	/**
@@ -227,6 +247,10 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async chatConversationName({ name, key }: { name: string; key: string }): Promise<string> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		return await this.metadata({ metadata: JSON.stringify({ name }), key })
 	}
 
@@ -242,6 +266,10 @@ export class Encrypt {
 	 * @returns {Promise<Buffer>}
 	 */
 	public async data({ data, key }: { data: Buffer; key: string }): Promise<Buffer> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		const iv = await generateRandomString({ length: 12 })
 
 		if (environment === "node") {
@@ -281,6 +309,10 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async dataStream({ inputFile, key, outputFile }: { inputFile: string; key: string; outputFile?: string }): Promise<string> {
+		if (key.length === 0) {
+			throw new Error("Invalid key.")
+		}
+
 		if (environment !== "node") {
 			throw new Error(`crypto.encrypt.dataStream not implemented for ${environment} environment`)
 		}

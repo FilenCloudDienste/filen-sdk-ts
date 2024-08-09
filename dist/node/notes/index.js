@@ -46,13 +46,13 @@ class Notes {
                     .decrypt()
                     .noteTagName({ name: tag.name })
                     .then(decryptedTagName => {
-                    decryptedTags.push(Object.assign(Object.assign({}, tag), { name: decryptedTagName }));
+                    decryptedTags.push(Object.assign(Object.assign({}, tag), { name: decryptedTagName.length > 0 ? decryptedTagName : `CANNOT_DECRYPT_NAME_${tag.uuid}` }));
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await (0, utils_1.promiseAllSettledChunked)(promises);
+        await (0, utils_1.promiseAllChunked)(promises);
         return decryptedTags;
     }
     /**
@@ -91,7 +91,11 @@ class Notes {
                             this.allTags({ tags: note.tags })
                         ])
                             .then(([decryptedNotePreview, decryptedNoteTags]) => {
-                            notes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle, preview: decryptedNotePreview, tags: decryptedNoteTags }));
+                            notes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle.length > 0
+                                    ? decryptedNoteTitle
+                                    : `CANNOT_DECRYPT_TITLE_${note.uuid}`, preview: decryptedNotePreview.length > 0
+                                    ? decryptedNotePreview
+                                    : `CANNOT_DECRYPT_PREVIEW_${note.uuid}`, tags: decryptedNoteTags }));
                             resolve();
                         })
                             .catch(reject);
@@ -101,7 +105,7 @@ class Notes {
                     .catch(reject);
             }));
         }
-        await (0, utils_1.promiseAllSettledChunked)(promises);
+        await (0, utils_1.promiseAllChunked)(promises);
         return notes;
     }
     /**
@@ -321,9 +325,15 @@ class Notes {
         const decryptedNoteKey = await this.noteKey({ uuid });
         const notePreviewPromise = contentEncrypted.preview.length === 0
             ? Promise.resolve("")
-            : this.crypto.decrypt().notePreview({ preview: contentEncrypted.preview, key: decryptedNoteKey });
+            : this.crypto.decrypt().notePreview({
+                preview: contentEncrypted.preview,
+                key: decryptedNoteKey
+            });
         const [contentDecrypted, previewDecrypted] = await Promise.all([
-            this.crypto.decrypt().noteContent({ content: contentEncrypted.content, key: decryptedNoteKey }),
+            this.crypto.decrypt().noteContent({
+                content: contentEncrypted.content,
+                key: decryptedNoteKey
+            }),
             notePreviewPromise
         ]);
         if (contentEncrypted.type === "checklist" &&
@@ -332,14 +342,14 @@ class Notes {
             content = '<ul data-checked="false"><li><br></li></ul>';
         }
         else {
-            content = contentDecrypted;
+            content = contentDecrypted.length > 0 ? contentDecrypted : `CANNOT_DECRYPT_CONTENT_${uuid}`;
         }
         return {
             content,
             type: contentEncrypted.type,
             editedTimestamp: contentEncrypted.editedTimestamp,
             editorId: contentEncrypted.editorId,
-            preview: previewDecrypted
+            preview: previewDecrypted.length > 0 ? previewDecrypted : `CANNOT_DECRYPT_PREVIEW_${uuid}`
         };
     }
     /**
@@ -529,13 +539,17 @@ class Notes {
                     this.crypto.decrypt().notePreview({ preview: noteHistory.preview, key: decryptedNoteKey })
                 ])
                     .then(([noteHistoryContentDecrypted, noteHistoryPreviewDecrypted]) => {
-                    notesHistory.push(Object.assign(Object.assign({}, noteHistory), { content: noteHistoryContentDecrypted, preview: noteHistoryPreviewDecrypted }));
+                    notesHistory.push(Object.assign(Object.assign({}, noteHistory), { content: noteHistoryContentDecrypted.length > 0
+                            ? noteHistoryContentDecrypted
+                            : `CANNOT_DECRYPT_CONTENT_${noteHistory.id}`, preview: noteHistoryPreviewDecrypted.length > 0
+                            ? noteHistoryPreviewDecrypted
+                            : `CANNOT_DECRYPT_PREVIEW_${noteHistory.id}` }));
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await (0, utils_1.promiseAllSettledChunked)(promises);
+        await (0, utils_1.promiseAllChunked)(promises);
         return notesHistory;
     }
     /**
@@ -598,13 +612,13 @@ class Notes {
                     .decrypt()
                     .noteTagName({ name: tag.name })
                     .then(decryptedTagName => {
-                    notesTags.push(Object.assign(Object.assign({}, tag), { name: decryptedTagName }));
+                    notesTags.push(Object.assign(Object.assign({}, tag), { name: decryptedTagName.length > 0 ? decryptedTagName : `CANNOT_DECRYPT_NAME_${tag.uuid}` }));
                     resolve();
                 })
                     .catch(reject);
             }));
         }
-        await (0, utils_1.promiseAllSettledChunked)(promises);
+        await (0, utils_1.promiseAllChunked)(promises);
         return notesTags;
     }
     /**

@@ -52,7 +52,7 @@ exports.APIClientDefaults = {
     gatewayTimeout: 300000,
     egestTimeout: 1800000,
     ingestTimeout: 3600000,
-    maxRetries: 32,
+    maxRetries: 64,
     retryTimeout: 1000
 };
 /**
@@ -109,7 +109,10 @@ class APIClient {
         }
         const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer;
         if (!params.headers && !postDataIsBuffer) {
-            headers = Object.assign(Object.assign({}, headers), { Checksum: await (0, utils_2.bufferToHash)({ buffer: Buffer.from(JSON.stringify(params.data), "utf-8"), algorithm: "sha512" }) });
+            headers = Object.assign(Object.assign({}, headers), { Checksum: await (0, utils_2.bufferToHash)({
+                    buffer: Buffer.from(JSON.stringify(params.data), "utf-8"),
+                    algorithm: "sha512"
+                }) });
         }
         let lastBytesUploaded = 0;
         if (constants_1.environment === "node") {
@@ -271,7 +274,7 @@ class APIClient {
                     params.onDownloadProgress(bytes);
                 };
                 const calculateProgressTransform = new stream_1.Transform({
-                    transform(chunk, encoding, callback) {
+                    transform(chunk, _, callback) {
                         if (params.onDownloadProgress && chunk instanceof Buffer) {
                             params.onDownloadProgress(chunk.byteLength);
                         }

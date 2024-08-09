@@ -505,22 +505,19 @@ class User {
      */
     async acquireResourceLock({ resource, lockUUID, maxTries = 86400, tryTimeout = 1000 }) {
         let tries = 0;
-        const acquire = async () => {
-            if (tries >= maxTries) {
-                throw new Error(`Could not acquire lock for resource ${resource}. Max tries of ${maxTries} reached.`);
-            }
+        while (tries < maxTries) {
             tries += 1;
             const response = await this.api.v3().user().lock({
                 uuid: lockUUID,
                 resource,
                 type: "acquire"
             });
-            if (!response.acquired) {
-                await new Promise(resolve => setTimeout(resolve, tryTimeout));
-                return await acquire();
+            if (response.acquired) {
+                return;
             }
-        };
-        return await acquire();
+            await new Promise(resolve => setTimeout(resolve, tryTimeout));
+        }
+        throw new Error(`Could not acquire lock for resource ${resource}. Max tries of ${maxTries} reached.`);
     }
     /**
      * Unlock a resource.
@@ -558,7 +555,7 @@ class User {
             resource,
             type: "refresh"
         });
-        if (!response.released) {
+        if (!response.refreshed) {
             throw new Error(`Could not refresh lock for resource ${resource} with lockUUID ${lockUUID}.`);
         }
     }

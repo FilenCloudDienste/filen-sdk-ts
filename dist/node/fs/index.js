@@ -627,7 +627,7 @@ class FS {
             }
             const uuid = await this.pathToItemUUID({ path: from });
             const item = this._items[from];
-            if (!uuid || !item) {
+            if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
                 throw new errors_1.ENOENT({ path: from });
             }
             const currentParentPath = path_1.default.posix.dirname(from);
@@ -658,16 +658,14 @@ class FS {
                 if (item.type === "directory") {
                     await this.cloud.renameDirectory({
                         uuid,
-                        name: newBasename,
-                        overwriteIfExists: true
+                        name: newBasename
                     });
                 }
                 else {
                     await this.cloud.renameFile({
                         uuid,
                         metadata: itemMetadata,
-                        name: newBasename,
-                        overwriteIfExists: true
+                        name: newBasename
                     });
                 }
             }
@@ -679,16 +677,14 @@ class FS {
                     if (item.type === "directory") {
                         await this.cloud.renameDirectory({
                             uuid,
-                            name: newBasename,
-                            overwriteIfExists: true
+                            name: newBasename
                         });
                     }
                     else {
                         await this.cloud.renameFile({
                             uuid,
                             metadata: itemMetadata,
-                            name: newBasename,
-                            overwriteIfExists: true
+                            name: newBasename
                         });
                     }
                 }
@@ -697,16 +693,14 @@ class FS {
                         await this.cloud.moveDirectory({
                             uuid,
                             to: this.sdkConfig.baseFolderUUID,
-                            metadata: itemMetadata,
-                            overwriteIfExists: true
+                            metadata: itemMetadata
                         });
                     }
                     else {
                         await this.cloud.moveFile({
                             uuid,
                             to: this.sdkConfig.baseFolderUUID,
-                            metadata: itemMetadata,
-                            overwriteIfExists: true
+                            metadata: itemMetadata
                         });
                     }
                 }
@@ -720,16 +714,14 @@ class FS {
                         await this.cloud.moveDirectory({
                             uuid,
                             to: newParentItem.uuid,
-                            metadata: itemMetadata,
-                            overwriteIfExists: true
+                            metadata: itemMetadata
                         });
                     }
                     else {
                         await this.cloud.moveFile({
                             uuid,
                             to: newParentItem.uuid,
-                            metadata: itemMetadata,
-                            overwriteIfExists: true
+                            metadata: itemMetadata
                         });
                     }
                 }
@@ -934,7 +926,7 @@ class FS {
         path = this.normalizePath({ path });
         const uuid = await this.pathToItemUUID({ path });
         const item = this._items[path];
-        if (!uuid || !item || item.type === "directory") {
+        if (!uuid || !item || item.type === "directory" || (item.type === "file" && item.metadata.key.length === 0)) {
             throw new errors_1.ENOENT({ path });
         }
         if (!position) {
@@ -1135,7 +1127,7 @@ class FS {
         destination = (0, utils_1.normalizePath)(destination);
         const uuid = await this.pathToItemUUID({ path });
         const item = this._items[path];
-        if (!uuid || !item) {
+        if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
             throw new errors_1.ENOENT({ path });
         }
         if (item.type === "directory") {
@@ -1310,7 +1302,7 @@ class FS {
         }
         const uuid = await this.pathToItemUUID({ path: from });
         const item = this._items[from];
-        if (!uuid || !item) {
+        if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
             throw new errors_1.ENOENT({ path: from });
         }
         const parentPath = path_1.default.posix.dirname(to);
