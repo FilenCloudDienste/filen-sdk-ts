@@ -254,7 +254,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -340,7 +340,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -430,7 +430,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -517,7 +517,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -597,7 +597,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -677,7 +677,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -757,7 +757,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: file.size,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
 								timestamp: convertTimestampToMs(file.timestamp),
@@ -1833,10 +1833,16 @@ export class Cloud {
 						bitLength: 512,
 						returnHex: true
 				  })
-				: await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+				: await this.crypto.utils.hashFn({
+						input: !password ? "empty" : password
+				  })
 			: await this.crypto.utils.hashFn({ input: "empty" })
 
-		const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword })
+		const content = await this.api.v3().dir().link().content({
+			uuid,
+			parent,
+			password: derivedPassword
+		})
 
 		return {
 			files: await promiseAllChunked(
@@ -1858,7 +1864,7 @@ export class Cloud {
 												: {
 														name: `CANNOT_DECRYPT_NAME_${file.uuid}`,
 														mime: "application/octet-stream",
-														size: 1,
+														size: file.size,
 														lastModified: convertTimestampToMs(file.timestamp),
 														creation: undefined,
 														hash: undefined,
@@ -3129,7 +3135,7 @@ export class Cloud {
 								type: "file",
 								uuid: file.uuid,
 								name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-								size: decrypted.name.length > 0 ? decrypted.size : 1,
+								size: decrypted.name.length > 0 ? decrypted.size : file.chunksSize ? file.chunksSize : 1,
 								mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
 								lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : Date.now()),
 								parent: file.parent,
