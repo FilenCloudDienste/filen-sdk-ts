@@ -11,6 +11,7 @@ import os from "os"
 import { type CloudItem, type Cloud } from "../cloud"
 import { Socket, type SocketEvent } from "../socket"
 import { Semaphore } from "../semaphore"
+import writeFileAtomic from "write-file-atomic"
 
 export type FSConfig = {
 	sdkConfig: FilenSDKConfig
@@ -1355,7 +1356,7 @@ export class FS {
 			recursive: true
 		})
 
-		await fs.writeFile(tmpFilePath, content)
+		await writeFileAtomic(tmpFilePath, content)
 
 		try {
 			const item = await this.cloud.uploadLocalFile({

@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.147",
+	"version": "0.1.148",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -51,6 +51,7 @@
 		"@types/progress-stream": "^2.0.5",
 		"@types/socket.io-client": "^3.0.0",
 		"@types/uuid": "^9.0.8",
+		"@types/write-file-atomic": "^4.0.3",
 		"@typescript-eslint/eslint-plugin": "^6.20.0",
 		"@typescript-eslint/parser": "^6.20.0",
 		"assert": "^2.1.0",
@@ -100,6 +101,7 @@
 		"progress-stream": "^2.0.0",
 		"socket.io-client": "^2.5.0",
 		"striptags": "^3.2.0",
-		"uuid": "^9.0.1"
+		"uuid": "^9.0.1",
+		"write-file-atomic": "^5.0.1"
 	}
 }
