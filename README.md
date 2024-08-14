@@ -52,6 +52,7 @@ type FilenSDKConfig = {
 // You can either directly supply all needed config parameters to the constructor or call the .login() function to fetch them using your login information.
 const filen = new FilenSDK({
 	metadataCache: true,
+	connectToSocket: true,
 	tmpPath: path.join(os.tmpdir(), "filen-sdk")
 })
 
