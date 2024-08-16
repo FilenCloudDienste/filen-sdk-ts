@@ -4,7 +4,7 @@ import { environment } from "./constants"
 import nodeCrypto from "crypto"
 import os from "os"
 import fs from "fs-extra"
-import imurmurhash from "imurmurhash"
+import XXH from "xxhashjs"
 
 /**
  * "Sleep" for given milliseconds.
@@ -288,7 +288,7 @@ export function replacePathStartWithFromAndTo(path: string, from: string, to: st
 }
 
 export function fastStringHash(input: string): string {
-	return imurmurhash(input).result().toString()
+	return XXH.h64(input, 0xabcd1234).toString(16)
 }
 
 export const utils = {
@@ -303,7 +303,8 @@ export const utils = {
 	parseURLParams,
 	getEveryPossibleDirectoryPath,
 	simpleDate,
-	replacePathStartWithFromAndTo
+	replacePathStartWithFromAndTo,
+	fastStringHash
 }
 
 export default utils
