@@ -4,7 +4,7 @@ import { environment } from "./constants"
 import nodeCrypto from "crypto"
 import os from "os"
 import fs from "fs-extra"
-import XXH from "xxhashjs"
+import { xxHash32 } from "js-xxhash"
 
 /**
  * "Sleep" for given milliseconds.
@@ -288,7 +288,7 @@ export function replacePathStartWithFromAndTo(path: string, from: string, to: st
 }
 
 export function fastStringHash(input: string): string {
-	return XXH.h64(input, 0xabcd1234).toString(16)
+	return xxHash32(input, xxHash32(input)).toString(16)
 }
 
 export const utils = {
