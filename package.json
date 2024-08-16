@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.148",
+	"version": "0.1.149",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -47,6 +47,7 @@
 		"@rollup/plugin-typescript": "^11.1.6",
 		"@types/crypto-js": "^4.2.2",
 		"@types/fs-extra": "^11.0.4",
+		"@types/imurmurhash": "^0.1.4",
 		"@types/mime-types": "^2.1.4",
 		"@types/progress-stream": "^2.0.5",
 		"@types/socket.io-client": "^3.0.0",
@@ -96,6 +97,7 @@
 		"crypto-api-v1": "^1.0.0",
 		"crypto-js": "^4.2.0",
 		"fs-extra": "^11.2.0",
+		"imurmurhash": "^0.1.4",
 		"js-crypto-key-utils": "^1.0.7",
 		"mime-types": "^2.1.35",
 		"progress-stream": "^2.0.0",

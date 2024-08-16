@@ -3,7 +3,7 @@ import type { CryptoConfig } from "."
 import { deriveKeyFromPassword, importPrivateKey, derKeyToPem, importRawKey, EVP_BytesToKey } from "./utils"
 import nodeCrypto from "crypto"
 import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types"
-import { convertTimestampToMs, uuidv4, normalizePath } from "../utils"
+import { convertTimestampToMs, uuidv4, normalizePath, fastStringHash } from "../utils"
 import cache from "../cache"
 import pathModule from "path"
 import fs from "fs-extra"
@@ -159,7 +159,7 @@ export class Decrypt {
 	 * @returns {Promise<FileMetadata>}
 	 */
 	public async fileMetadata({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
@@ -224,7 +224,7 @@ export class Decrypt {
 			}
 		}
 
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
@@ -271,7 +271,7 @@ export class Decrypt {
 	 * @returns {Promise<FileMetadata>}
 	 */
 	public async fileMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
@@ -326,7 +326,7 @@ export class Decrypt {
 	 * @returns {Promise<FolderMetadata>}
 	 */
 	public async folderMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FolderMetadata> {
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
@@ -373,7 +373,7 @@ export class Decrypt {
 			throw new Error("Invalid linkKey.")
 		}
 
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
@@ -426,7 +426,7 @@ export class Decrypt {
 			throw new Error("Invalid linkKey.")
 		}
 
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
@@ -463,7 +463,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async folderLinkKey({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.folderLinkKey.has(cacheKey)) {
 			return cache.folderLinkKey.get(cacheKey)!
@@ -506,7 +506,7 @@ export class Decrypt {
 			throw new Error("Invalid privateKey.")
 		}
 
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.chatKeyParticipant.has(cacheKey)) {
 			return cache.chatKeyParticipant.get(cacheKey)!
@@ -537,7 +537,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async chatKeyOwner({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.chatKeyOwner.has(cacheKey)) {
 			return cache.chatKeyOwner.get(cacheKey)!
@@ -616,7 +616,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteKeyOwner({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.noteKeyOwner.has(cacheKey)) {
 			return cache.noteKeyOwner.get(cacheKey)!
@@ -659,7 +659,7 @@ export class Decrypt {
 			throw new Error("Invalid privateKey.")
 		}
 
-		const cacheKey = metadata
+		const cacheKey = fastStringHash(metadata)
 
 		if (this.config.metadataCache && cache.noteKeyParticipant.has(cacheKey)) {
 			return cache.noteKeyParticipant.get(cacheKey)!
@@ -721,7 +721,7 @@ export class Decrypt {
 			throw new Error("Invalid key.")
 		}
 
-		const cacheKey = title
+		const cacheKey = fastStringHash(title)
 
 		if (this.config.metadataCache && cache.noteTitle.has(cacheKey)) {
 			return cache.noteTitle.get(cacheKey)!
@@ -757,7 +757,7 @@ export class Decrypt {
 			throw new Error("Invalid key.")
 		}
 
-		const cacheKey = preview
+		const cacheKey = fastStringHash(preview)
 
 		if (this.config.metadataCache && cache.notePreview.has(cacheKey)) {
 			return cache.notePreview.get(cacheKey)!
@@ -789,7 +789,7 @@ export class Decrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
-		const cacheKey = name
+		const cacheKey = fastStringHash(name)
 
 		if (this.config.metadataCache && cache.noteTagName.has(cacheKey)) {
 			return cache.noteTagName.get(cacheKey)!
@@ -835,7 +835,7 @@ export class Decrypt {
 			throw new Error("Invalid key.")
 		}
 
-		const cacheKey = name
+		const cacheKey = fastStringHash(name)
 
 		if (this.config.metadataCache && cache.chatConversationName.has(cacheKey)) {
 			return cache.chatConversationName.get(cacheKey)!

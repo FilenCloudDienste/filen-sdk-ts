@@ -4,6 +4,7 @@ import CryptoAPI from "crypto-api-v1"
 import type { AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
+import { fastStringHash } from "../utils"
 
 const textEncoder = new TextEncoder()
 
@@ -319,7 +320,7 @@ export async function importPublicKey({
 		throw new Error(`crypto.utils.importPublicKey not implemented for ${environment} environment`)
 	}
 
-	const cacheKey = `${publicKey}:${mode.join(":")}`
+	const cacheKey = fastStringHash(`${publicKey}:${mode.join(":")}`)
 
 	if (cache.importPublicKey.has(cacheKey)) {
 		return cache.importPublicKey.get(cacheKey)!
@@ -368,7 +369,7 @@ export async function importPrivateKey({
 		throw new Error(`crypto.utils.importPrivateKey not implemented for ${environment} environment`)
 	}
 
-	const cacheKey = `${privateKey}:${mode.join(":")}`
+	const cacheKey = fastStringHash(`${privateKey}:${mode.join(":")}`)
 
 	if (cache.importPrivateKey.has(cacheKey)) {
 		return cache.importPrivateKey.get(cacheKey)!
@@ -425,7 +426,7 @@ export async function importRawKey({
 		throw new Error(`crypto.utils.importRawKey not implemented for ${environment} environment`)
 	}
 
-	const cacheKey = `${key}:${algorithm}:${mode.join(":")}`
+	const cacheKey = fastStringHash(`${key}:${algorithm}:${mode.join(":")}`)
 
 	if (cache.importRawKey.has(cacheKey)) {
 		return cache.importRawKey.get(cacheKey)!
@@ -465,7 +466,7 @@ export async function importPBKDF2Key({
 		throw new Error(`crypto.utils.importPBKDF2Key not implemented for ${environment} environment`)
 	}
 
-	const cacheKey = `${key}:${mode.join(":")}`
+	const cacheKey = fastStringHash(`${key}:${mode.join(":")}`)
 
 	if (cache.importPBKDF2Key.has(cacheKey)) {
 		return cache.importPBKDF2Key.get(cacheKey)!

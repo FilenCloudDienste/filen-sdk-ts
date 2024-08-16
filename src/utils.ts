@@ -4,6 +4,7 @@ import { environment } from "./constants"
 import nodeCrypto from "crypto"
 import os from "os"
 import fs from "fs-extra"
+import imurmurhash from "imurmurhash"
 
 /**
  * "Sleep" for given milliseconds.
@@ -284,6 +285,10 @@ export function replacePathStartWithFromAndTo(path: string, from: string, to: st
 	}
 
 	return `${to}${path.slice(from.length)}`
+}
+
+export function fastStringHash(input: string): string {
+	return imurmurhash(input).result().toString()
 }
 
 export const utils = {
