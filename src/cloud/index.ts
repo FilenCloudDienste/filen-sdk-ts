@@ -170,7 +170,8 @@ export class Cloud {
 	private readonly sdk: FilenSDK
 
 	private readonly _semaphores = {
-		downloads: new Semaphore(MAX_CONCURRENT_DOWNLOADS),
+		downloadStream: new Semaphore(MAX_CONCURRENT_DOWNLOADS),
+		downloadToLocal: new Semaphore(MAX_CONCURRENT_DOWNLOADS),
 		uploads: new Semaphore(MAX_CONCURRENT_UPLOADS),
 		directoryDownloads: new Semaphore(MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
 		directoryUploads: new Semaphore(MAX_CONCURRENT_DIRECTORY_UPLOADS),
@@ -2562,42 +2563,49 @@ export class Cloud {
 			onQueued()
 		}
 
-		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
-		const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
+		await this._semaphores.downloadToLocal.acquire()
 
-		await fs.ensureDir(destinationPath)
-		await fs.rm(destinationPath, {
-			force: true,
-			maxRetries: 60 * 10,
-			recursive: true,
-			retryDelay: 100
-		})
+		try {
+			const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+			const destinationPath = normalizePath(to ? to : pathModule.join(tmpDir, "filen-sdk", await uuidv4()))
 
-		const writeStream = fs.createWriteStream(destinationPath)
-		const readStream = this.downloadFileToReadableStream({
-			uuid,
-			region,
-			bucket,
-			version,
-			key,
-			chunks,
-			size,
-			abortSignal,
-			pauseSignal,
-			onProgress,
-			onError,
-			onStarted,
-			start,
-			end
-		}) as unknown as ReadableStreamWebType<Buffer>
+			await fs.ensureDir(destinationPath)
+			await fs.rm(destinationPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
 
-		await pipelineAsync(Readable.fromWeb(readStream), writeStream)
+			const readStream = this.downloadFileToReadableStream({
+				uuid,
+				region,
+				bucket,
+				version,
+				key,
+				chunks,
+				size,
+				abortSignal,
+				pauseSignal,
+				onProgress,
+				onError,
+				onStarted,
+				start,
+				end
+			}) as unknown as ReadableStreamWebType<Buffer>
 
-		if (onFinished) {
-			onFinished()
+			const writeStream = fs.createWriteStream(destinationPath)
+
+			await pipelineAsync(Readable.fromWeb(readStream), writeStream)
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return destinationPath
+		} finally {
+			this._semaphores.downloadToLocal.release()
 		}
-
-		return destinationPath
 	}
 
 	/**
@@ -2696,7 +2704,7 @@ export class Cloud {
 		const [firstChunkIndex, lastChunkIndex] = utils.calculateChunkIndices({ start, end, chunks })
 		const threadsSemaphore = new Semaphore(MAX_DOWNLOAD_THREADS)
 		const writersSemaphore = new Semaphore(MAX_DOWNLOAD_WRITERS)
-		const downloadsSemaphore = this._semaphores.downloads
+		const downloadsSemaphore = this._semaphores.downloadStream
 		const api = this.api
 		const crypto = this.crypto
 		let currentWriteIndex = firstChunkIndex
