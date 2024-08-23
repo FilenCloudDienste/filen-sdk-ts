@@ -2528,18 +2528,13 @@ class Cloud {
                 throw new Error(`Invalid source file at path ${source}. 0 bytes.`);
             }
             const fileSize = fileStats.size;
-            let dummyOffset = 0;
-            let fileChunks = 0;
+            let fileChunks = Math.ceil(fileSize / constants_1.UPLOAD_CHUNK_SIZE);
             const lastModified = parseInt(fileStats.mtimeMs.toString());
             const creation = parseInt(fileStats.birthtimeMs.toString());
             let bucket = constants_1.DEFAULT_UPLOAD_BUCKET;
             let region = constants_1.DEFAULT_UPLOAD_REGION;
             const uploadThreads = new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS);
             let aborted = false;
-            while (dummyOffset < fileSize) {
-                fileChunks += 1;
-                dummyOffset += constants_1.UPLOAD_CHUNK_SIZE;
-            }
             const [uuid, key, rm, uploadKey] = await Promise.all([
                 (0, utils_1.uuidv4)(),
                 this.crypto.utils.generateRandomString({ length: 32 }),
@@ -2922,17 +2917,12 @@ class Cloud {
             if (fileSize <= 0) {
                 throw new Error("Empty files are not supported.");
             }
-            let dummyOffset = 0;
-            let fileChunks = 0;
+            let fileChunks = Math.ceil(fileSize / constants_1.UPLOAD_CHUNK_SIZE);
             const lastModified = file.lastModified;
             let bucket = constants_1.DEFAULT_UPLOAD_BUCKET;
             let region = constants_1.DEFAULT_UPLOAD_REGION;
             const uploadThreads = new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS);
             let aborted = false;
-            while (dummyOffset < fileSize) {
-                fileChunks += 1;
-                dummyOffset += constants_1.UPLOAD_CHUNK_SIZE;
-            }
             const [uuid, key, rm, uploadKey] = await Promise.all([
                 (0, utils_1.uuidv4)(),
                 this.crypto.utils.generateRandomString({ length: 32 }),

@@ -3431,19 +3431,13 @@ export class Cloud {
 			}
 
 			const fileSize = fileStats.size
-			let dummyOffset = 0
-			let fileChunks = 0
+			let fileChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE)
 			const lastModified = parseInt(fileStats.mtimeMs.toString())
 			const creation = parseInt(fileStats.birthtimeMs.toString())
 			let bucket = DEFAULT_UPLOAD_BUCKET
 			let region = DEFAULT_UPLOAD_REGION
 			const uploadThreads = new Semaphore(MAX_UPLOAD_THREADS)
 			let aborted = false
-
-			while (dummyOffset < fileSize) {
-				fileChunks += 1
-				dummyOffset += UPLOAD_CHUNK_SIZE
-			}
 
 			const [uuid, key, rm, uploadKey] = await Promise.all([
 				uuidv4(),
@@ -3937,18 +3931,12 @@ export class Cloud {
 				throw new Error("Empty files are not supported.")
 			}
 
-			let dummyOffset = 0
-			let fileChunks = 0
+			let fileChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE)
 			const lastModified = file.lastModified
 			let bucket = DEFAULT_UPLOAD_BUCKET
 			let region = DEFAULT_UPLOAD_REGION
 			const uploadThreads = new Semaphore(MAX_UPLOAD_THREADS)
 			let aborted = false
-
-			while (dummyOffset < fileSize) {
-				fileChunks += 1
-				dummyOffset += UPLOAD_CHUNK_SIZE
-			}
 
 			const [uuid, key, rm, uploadKey] = await Promise.all([
 				uuidv4(),

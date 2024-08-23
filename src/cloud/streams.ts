@@ -277,13 +277,7 @@ export class ChunkedUploadWriter extends Writable {
 		}
 
 		// Calculate file chunks and size. Warning: This needs to be called AFTER initiating all chunk uploads or it will spit out a wrong chunk count.
-		let fileChunks = 0
-		let dummyOffset = 0
-
-		while (dummyOffset < this.size) {
-			fileChunks += 1
-			dummyOffset += CHUNK_SIZE
-		}
+		const fileChunks = Math.ceil(this.size / CHUNK_SIZE)
 
 		await this.waitForAllChunksToBeUploaded(fileChunks)
 
