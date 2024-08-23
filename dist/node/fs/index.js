@@ -12,6 +12,7 @@ const utils_1 = require("../utils");
 const os_1 = __importDefault(require("os"));
 const socket_1 = require("../socket");
 const semaphore_1 = require("../semaphore");
+const write_file_atomic_1 = __importDefault(require("write-file-atomic"));
 /**
  * FS
  * @date 2/1/2024 - 2:44:47 AM
@@ -1059,7 +1060,7 @@ class FS {
         await fs_extra_1.default.mkdir(path_1.default.join(tmpFilePath, ".."), {
             recursive: true
         });
-        await fs_extra_1.default.writeFile(tmpFilePath, content);
+        await (0, write_file_atomic_1.default)(tmpFilePath, content);
         try {
             const item = await this.cloud.uploadLocalFile({
                 source: tmpFilePath,

@@ -93,9 +93,7 @@ class Chats {
                         : Promise.resolve("");
                     Promise.all([namePromise, messagePromise])
                         .then(([nameDecrypted, lastMessageDecrypted]) => {
-                        chatConversations.push(Object.assign(Object.assign({}, convo), { lastMessage: lastMessageDecrypted.length > 0
-                                ? lastMessageDecrypted
-                                : `CANNOT_DECRYPT_LAST_MESSAGE_${convo.uuid}`, name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${convo.uuid}` }));
+                        chatConversations.push(Object.assign(Object.assign({}, convo), { lastMessage: lastMessageDecrypted, name: nameDecrypted }));
                         resolve();
                     })
                         .catch(reject);

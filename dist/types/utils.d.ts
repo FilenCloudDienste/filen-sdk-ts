@@ -132,6 +132,7 @@ export declare function simpleDate(timestamp: number): string;
  * @returns {string}
  */
 export declare function replacePathStartWithFromAndTo(path: string, from: string, to: string): string;
+export declare function fastStringHash(input: string): string;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -145,5 +146,6 @@ export declare const utils: {
     getEveryPossibleDirectoryPath: typeof getEveryPossibleDirectoryPath;
     simpleDate: typeof simpleDate;
     replacePathStartWithFromAndTo: typeof replacePathStartWithFromAndTo;
+    fastStringHash: typeof fastStringHash;
 };
 export default utils;

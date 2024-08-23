@@ -4142,7 +4142,7 @@ export class Cloud {
 	}
 
 	/**
-	 * Upload a local directory. Only available in a Node.JS environment.
+	 *
 	 * @date 2/27/2024 - 6:42:26 AM
 	 *
 	 * @public
@@ -4184,7 +4184,8 @@ export class Cloud {
 		onStarted,
 		onError,
 		onFinished,
-		onUploaded
+		onUploaded,
+		onDirectoryCreated
 	}: {
 		source: string
 		parent: string
@@ -4197,6 +4198,7 @@ export class Cloud {
 		onError?: (err: Error) => void
 		onFinished?: () => void
 		onUploaded?: (item: CloudItem) => Promise<void>
+		onDirectoryCreated?: (item: CloudItem) => void
 	}): Promise<void> {
 		if (environment !== "node") {
 			throw new Error(`cloud.uploadDirectoryFromLocal is not implemented for ${environment}`)
@@ -4225,7 +4227,10 @@ export class Cloud {
 				throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`)
 			}
 
-			parent = await this.createDirectory({ name: baseDirectoryName, parent })
+			parent = await this.createDirectory({
+				name: baseDirectoryName,
+				parent
+			})
 
 			const content =
 				pathModule.sep === "\\"
@@ -4278,7 +4283,8 @@ export class Cloud {
 				}
 
 				const parentPath = pathModule.posix.dirname(entry)
-				const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+				const directoryParent =
+					parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
 
 				if (directoryParent.length <= 16) {
 					continue
@@ -4290,9 +4296,26 @@ export class Cloud {
 					continue
 				}
 
-				const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent })
+				const uuid = await this.createDirectory({
+					name: directoryName,
+					parent: directoryParent
+				})
 
 				pathsToUUIDs[entry] = uuid
+
+				if (onDirectoryCreated) {
+					onDirectoryCreated({
+						type: "directory",
+						uuid,
+						name: directoryName,
+						timestamp: Date.now(),
+						parent: directoryParent,
+						lastModified: Date.now(),
+						favorited: false,
+						color: null,
+						size: 0
+					})
+				}
 			}
 
 			const uploadPromises: Promise<CloudItem>[] = []
@@ -4313,7 +4336,8 @@ export class Cloud {
 				}
 
 				const parentPath = pathModule.posix.dirname(entry)
-				const fileParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+				const fileParent =
+					parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
 
 				if (fileParent.length <= 16) {
 					continue
@@ -4354,7 +4378,7 @@ export class Cloud {
 	 * @public
 	 * @async
 	 * @param {{
-	 * 		files: FileList
+	 * 		files: { file: File; path: string }[]
 	 * 		parent: string
 	 * 		name?: string
 	 * 		abortSignal?: AbortSignal
@@ -4367,7 +4391,7 @@ export class Cloud {
 	 * 		onUploaded?: (item: CloudItem) => Promise<void>
 	 * 		onDirectoryCreated?: (item: CloudItem) => void
 	 * 	}} param0
-	 * @param {FileList} param0.files
+	 * @param {{ file: File; path: string }[]} param0.files
 	 * @param {string} param0.parent
 	 * @param {string} param0.name
 	 * @param {PauseSignal} param0.pauseSignal
@@ -4395,7 +4419,7 @@ export class Cloud {
 		onUploaded,
 		onDirectoryCreated
 	}: {
-		files: FileList
+		files: { file: File; path: string }[]
 		parent: string
 		name?: string
 		abortSignal?: AbortSignal
@@ -4423,60 +4447,33 @@ export class Cloud {
 				onStarted()
 			}
 
-			const filesToUpload: { path: string; file: File }[] = []
 			let baseDirectoryName: string | null = name ? name : null
 			const pathsToUUIDs: Record<string, string> = {}
+			const directoryPaths: string[] = []
 
 			for (let i = 0; i < files.length; i++) {
 				const file = files[i]
 
-				if (
-					!file ||
-					typeof file.webkitRelativePath !== "string" ||
-					file.webkitRelativePath.length <= 0 ||
-					file.size <= 0 ||
-					!file.webkitRelativePath.includes("/")
-				) {
+				if (!file || file.path.length <= 0 || file.file.size <= 0) {
 					continue
 				}
 
-				const ex = file.webkitRelativePath.split("/")
+				const ex = file.path.split("/")
 
-				filesToUpload.push({
-					path: ex.slice(1).join("/"),
-					file
-				})
-
-				if (ex[0] && ex[0].length > 0 && !name) {
+				if (!name && ex[0] && ex[0].length > 0) {
 					baseDirectoryName = ex[0].trim()
+				}
+
+				const parentPath = pathModule.posix.dirname(file.path)
+
+				if (!directoryPaths.includes(parentPath)) {
+					directoryPaths.push(parentPath)
 				}
 			}
 
 			if (!baseDirectoryName) {
 				throw new Error(`Can not upload directory to parent directory ${parent}. Could not parse base directory name.`)
 			}
-
-			const baseParent = parent
-
-			parent = await this.createDirectory({ name: baseDirectoryName, parent: baseParent })
-
-			pathsToUUIDs[baseDirectoryName] = parent
-
-			if (onDirectoryCreated) {
-				onDirectoryCreated({
-					type: "directory",
-					uuid: parent,
-					name: baseDirectoryName,
-					timestamp: Date.now(),
-					parent: baseParent,
-					lastModified: Date.now(),
-					favorited: false,
-					color: null,
-					size: 0
-				})
-			}
-
-			const directoryPaths = filesToUpload.map(file => pathModule.posix.dirname(file.path))
 
 			for (const path of directoryPaths) {
 				const possiblePaths = getEveryPossibleDirectoryPath(path)
@@ -4488,13 +4485,16 @@ export class Cloud {
 				}
 			}
 
-			for (const path of directoryPaths) {
+			const directoryPathsSorted = directoryPaths.sort((a, b) => a.split("/").length - b.split("/").length)
+
+			for (const path of directoryPathsSorted) {
 				if (pathsToUUIDs[path]) {
 					continue
 				}
 
 				const parentPath = pathModule.posix.dirname(path)
-				const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+				const directoryParent =
+					parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
 
 				if (directoryParent.length <= 16) {
 					continue
@@ -4502,11 +4502,14 @@ export class Cloud {
 
 				const directoryName = pathModule.posix.basename(path)
 
-				if (directoryName === "." || directoryName.length <= 0) {
+				if (directoryName === "." || directoryName.length <= 0 || directoryName === "/") {
 					continue
 				}
 
-				const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent })
+				const uuid = await this.createDirectory({
+					name: directoryName,
+					parent: directoryParent
+				})
 
 				pathsToUUIDs[path] = uuid
 
@@ -4527,9 +4530,16 @@ export class Cloud {
 
 			const uploadPromises: Promise<CloudItem>[] = []
 
-			for (const entry of filesToUpload) {
-				const parentPath = pathModule.posix.dirname(entry.path)
-				const fileParent = parentPath === "." || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
+			for (let i = 0; i < files.length; i++) {
+				const file = files[i]
+
+				if (!file) {
+					continue
+				}
+
+				const parentPath = pathModule.posix.dirname(file.path)
+				const fileParent =
+					parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
 
 				if (fileParent.length <= 16) {
 					continue
@@ -4537,7 +4547,7 @@ export class Cloud {
 
 				uploadPromises.push(
 					this.uploadWebFile({
-						file: entry.file,
+						file: file.file,
 						parent: fileParent,
 						abortSignal,
 						pauseSignal,

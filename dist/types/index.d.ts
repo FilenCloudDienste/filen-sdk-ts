@@ -878,6 +878,7 @@ export declare class FilenSDK {
         getEveryPossibleDirectoryPath: typeof import("./utils").getEveryPossibleDirectoryPath;
         simpleDate: typeof import("./utils").simpleDate;
         replacePathStartWithFromAndTo: typeof import("./utils").replacePathStartWithFromAndTo;
+        fastStringHash: typeof import("./utils").fastStringHash;
     };
 }
 export default FilenSDK;

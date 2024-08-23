@@ -37,7 +37,8 @@ class Cloud {
      */
     constructor(params) {
         this._semaphores = {
-            downloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
+            downloadStream: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
+            downloadToLocal: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
             uploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_UPLOADS),
             directoryDownloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
             directoryUploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_UPLOADS),
@@ -99,7 +100,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -171,7 +172,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -247,7 +248,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -321,7 +322,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -385,7 +386,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -449,7 +450,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -513,7 +514,7 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: decrypted.name.length > 0 ? decrypted.size : 1,
+                    size: file.size,
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -1353,9 +1354,15 @@ class Cloud {
                     bitLength: 512,
                     returnHex: true
                 })
-                : await this.crypto.utils.hashFn({ input: !password ? "empty" : password })
+                : await this.crypto.utils.hashFn({
+                    input: !password ? "empty" : password
+                })
             : await this.crypto.utils.hashFn({ input: "empty" });
-        const content = await this.api.v3().dir().link().content({ uuid, parent, password: derivedPassword });
+        const content = await this.api.v3().dir().link().content({
+            uuid,
+            parent,
+            password: derivedPassword
+        });
         return {
             files: await (0, utils_1.promiseAllChunked)(content.files.map(file => new Promise((resolve, reject) => {
                 this.crypto
@@ -1370,7 +1377,7 @@ class Cloud {
                             : {
                                 name: `CANNOT_DECRYPT_NAME_${file.uuid}`,
                                 mime: "application/octet-stream",
-                                size: 1,
+                                size: file.size,
                                 lastModified: (0, utils_1.convertTimestampToMs)(file.timestamp),
                                 creation: undefined,
                                 hash: undefined,
@@ -1882,37 +1889,43 @@ class Cloud {
         if (onQueued) {
             onQueued();
         }
-        const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
-        const destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
-        await fs_extra_1.default.ensureDir(destinationPath);
-        await fs_extra_1.default.rm(destinationPath, {
-            force: true,
-            maxRetries: 60 * 10,
-            recursive: true,
-            retryDelay: 100
-        });
-        const writeStream = fs_extra_1.default.createWriteStream(destinationPath);
-        const readStream = this.downloadFileToReadableStream({
-            uuid,
-            region,
-            bucket,
-            version,
-            key,
-            chunks,
-            size,
-            abortSignal,
-            pauseSignal,
-            onProgress,
-            onError,
-            onStarted,
-            start,
-            end
-        });
-        await pipelineAsync(stream_1.Readable.fromWeb(readStream), writeStream);
-        if (onFinished) {
-            onFinished();
+        await this._semaphores.downloadToLocal.acquire();
+        try {
+            const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
+            const destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
+            await fs_extra_1.default.ensureDir(destinationPath);
+            await fs_extra_1.default.rm(destinationPath, {
+                force: true,
+                maxRetries: 60 * 10,
+                recursive: true,
+                retryDelay: 100
+            });
+            const readStream = this.downloadFileToReadableStream({
+                uuid,
+                region,
+                bucket,
+                version,
+                key,
+                chunks,
+                size,
+                abortSignal,
+                pauseSignal,
+                onProgress,
+                onError,
+                onStarted,
+                start,
+                end
+            });
+            const writeStream = fs_extra_1.default.createWriteStream(destinationPath);
+            await pipelineAsync(stream_1.Readable.fromWeb(readStream), writeStream);
+            if (onFinished) {
+                onFinished();
+            }
+            return destinationPath;
         }
-        return destinationPath;
+        finally {
+            this._semaphores.downloadToLocal.release();
+        }
     }
     /**
      * Download a file to a ReadableStream.
@@ -1972,7 +1985,7 @@ class Cloud {
         const [firstChunkIndex, lastChunkIndex] = utils_2.default.calculateChunkIndices({ start, end, chunks });
         const threadsSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_THREADS);
         const writersSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_WRITERS);
-        const downloadsSemaphore = this._semaphores.downloads;
+        const downloadsSemaphore = this._semaphores.downloadStream;
         const api = this.api;
         const crypto = this.crypto;
         let currentWriteIndex = firstChunkIndex;
@@ -2318,7 +2331,7 @@ class Cloud {
                         type: "file",
                         uuid: file.uuid,
                         name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                        size: decrypted.name.length > 0 ? decrypted.size : 1,
+                        size: decrypted.name.length > 0 ? decrypted.size : file.chunksSize ? file.chunksSize : 1,
                         mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                         lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : Date.now()),
                         parent: file.parent,
@@ -3080,7 +3093,7 @@ class Cloud {
         }
     }
     /**
-     * Upload a local directory. Only available in a Node.JS environment.
+     *
      * @date 2/27/2024 - 6:42:26 AM
      *
      * @public
@@ -3111,7 +3124,7 @@ class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<void>}
      */
-    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
         var _a, _b;
         if (constants_1.environment !== "node") {
             throw new Error(`cloud.uploadDirectoryFromLocal is not implemented for ${constants_1.environment}`);
@@ -3132,7 +3145,10 @@ class Cloud {
             if (baseDirectoryName === "." || baseDirectoryName === "/" || baseDirectoryName.length <= 0) {
                 throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`);
             }
-            parent = await this.createDirectory({ name: baseDirectoryName, parent });
+            parent = await this.createDirectory({
+                name: baseDirectoryName,
+                parent
+            });
             const content = path_1.default.sep === "\\"
                 ? (await fs_extra_1.default.readdir(source, {
                     recursive: true
@@ -3169,7 +3185,7 @@ class Cloud {
                     continue;
                 }
                 const parentPath = path_1.default.posix.dirname(entry);
-                const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : (_a = pathsToUUIDs[parentPath]) !== null && _a !== void 0 ? _a : "";
+                const directoryParent = parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : (_a = pathsToUUIDs[parentPath]) !== null && _a !== void 0 ? _a : "";
                 if (directoryParent.length <= 16) {
                     continue;
                 }
@@ -3177,8 +3193,24 @@ class Cloud {
                 if (directoryName.length <= 0) {
                     continue;
                 }
-                const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent });
+                const uuid = await this.createDirectory({
+                    name: directoryName,
+                    parent: directoryParent
+                });
                 pathsToUUIDs[entry] = uuid;
+                if (onDirectoryCreated) {
+                    onDirectoryCreated({
+                        type: "directory",
+                        uuid,
+                        name: directoryName,
+                        timestamp: Date.now(),
+                        parent: directoryParent,
+                        lastModified: Date.now(),
+                        favorited: false,
+                        color: null,
+                        size: 0
+                    });
+                }
             }
             const uploadPromises = [];
             for (const entry of sortedBySeparatorLength) {
@@ -3193,7 +3225,7 @@ class Cloud {
                     continue;
                 }
                 const parentPath = path_1.default.posix.dirname(entry);
-                const fileParent = parentPath === "." || parentPath.length <= 0 ? parent : (_b = pathsToUUIDs[parentPath]) !== null && _b !== void 0 ? _b : "";
+                const fileParent = parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : (_b = pathsToUUIDs[parentPath]) !== null && _b !== void 0 ? _b : "";
                 if (fileParent.length <= 16) {
                     continue;
                 }
@@ -3228,7 +3260,7 @@ class Cloud {
      * @public
      * @async
      * @param {{
-     * 		files: FileList
+     * 		files: { file: File; path: string }[]
      * 		parent: string
      * 		name?: string
      * 		abortSignal?: AbortSignal
@@ -3241,7 +3273,7 @@ class Cloud {
      * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
-     * @param {FileList} param0.files
+     * @param {{ file: File; path: string }[]} param0.files
      * @param {string} param0.parent
      * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
@@ -3268,47 +3300,26 @@ class Cloud {
             if (onStarted) {
                 onStarted();
             }
-            const filesToUpload = [];
             let baseDirectoryName = name ? name : null;
             const pathsToUUIDs = {};
+            const directoryPaths = [];
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                if (!file ||
-                    typeof file.webkitRelativePath !== "string" ||
-                    file.webkitRelativePath.length <= 0 ||
-                    file.size <= 0 ||
-                    !file.webkitRelativePath.includes("/")) {
+                if (!file || file.path.length <= 0 || file.file.size <= 0) {
                     continue;
                 }
-                const ex = file.webkitRelativePath.split("/");
-                filesToUpload.push({
-                    path: ex.slice(1).join("/"),
-                    file
-                });
-                if (ex[0] && ex[0].length > 0 && !name) {
+                const ex = file.path.split("/");
+                if (!name && ex[0] && ex[0].length > 0) {
                     baseDirectoryName = ex[0].trim();
+                }
+                const parentPath = path_1.default.posix.dirname(file.path);
+                if (!directoryPaths.includes(parentPath)) {
+                    directoryPaths.push(parentPath);
                 }
             }
             if (!baseDirectoryName) {
                 throw new Error(`Can not upload directory to parent directory ${parent}. Could not parse base directory name.`);
             }
-            const baseParent = parent;
-            parent = await this.createDirectory({ name: baseDirectoryName, parent: baseParent });
-            pathsToUUIDs[baseDirectoryName] = parent;
-            if (onDirectoryCreated) {
-                onDirectoryCreated({
-                    type: "directory",
-                    uuid: parent,
-                    name: baseDirectoryName,
-                    timestamp: Date.now(),
-                    parent: baseParent,
-                    lastModified: Date.now(),
-                    favorited: false,
-                    color: null,
-                    size: 0
-                });
-            }
-            const directoryPaths = filesToUpload.map(file => path_1.default.posix.dirname(file.path));
             for (const path of directoryPaths) {
                 const possiblePaths = (0, utils_1.getEveryPossibleDirectoryPath)(path);
                 for (const possiblePath of possiblePaths) {
@@ -3317,20 +3328,24 @@ class Cloud {
                     }
                 }
             }
-            for (const path of directoryPaths) {
+            const directoryPathsSorted = directoryPaths.sort((a, b) => a.split("/").length - b.split("/").length);
+            for (const path of directoryPathsSorted) {
                 if (pathsToUUIDs[path]) {
                     continue;
                 }
                 const parentPath = path_1.default.posix.dirname(path);
-                const directoryParent = parentPath === "." || parentPath.length <= 0 ? parent : (_a = pathsToUUIDs[parentPath]) !== null && _a !== void 0 ? _a : "";
+                const directoryParent = parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : (_a = pathsToUUIDs[parentPath]) !== null && _a !== void 0 ? _a : "";
                 if (directoryParent.length <= 16) {
                     continue;
                 }
                 const directoryName = path_1.default.posix.basename(path);
-                if (directoryName === "." || directoryName.length <= 0) {
+                if (directoryName === "." || directoryName.length <= 0 || directoryName === "/") {
                     continue;
                 }
-                const uuid = await this.createDirectory({ name: directoryName, parent: directoryParent });
+                const uuid = await this.createDirectory({
+                    name: directoryName,
+                    parent: directoryParent
+                });
                 pathsToUUIDs[path] = uuid;
                 if (onDirectoryCreated) {
                     onDirectoryCreated({
@@ -3347,14 +3362,18 @@ class Cloud {
                 }
             }
             const uploadPromises = [];
-            for (const entry of filesToUpload) {
-                const parentPath = path_1.default.posix.dirname(entry.path);
-                const fileParent = parentPath === "." || parentPath.length <= 0 ? parent : (_b = pathsToUUIDs[parentPath]) !== null && _b !== void 0 ? _b : "";
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                if (!file) {
+                    continue;
+                }
+                const parentPath = path_1.default.posix.dirname(file.path);
+                const fileParent = parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : (_b = pathsToUUIDs[parentPath]) !== null && _b !== void 0 ? _b : "";
                 if (fileParent.length <= 16) {
                     continue;
                 }
                 uploadPromises.push(this.uploadWebFile({
-                    file: entry.file,
+                    file: file.file,
                     parent: fileParent,
                     abortSignal,
                     pauseSignal,

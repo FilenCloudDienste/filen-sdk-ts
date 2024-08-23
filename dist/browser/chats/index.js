@@ -95,10 +95,8 @@ export class Chats {
                         .then(([nameDecrypted, lastMessageDecrypted]) => {
                         chatConversations.push({
                             ...convo,
-                            lastMessage: lastMessageDecrypted.length > 0
-                                ? lastMessageDecrypted
-                                : `CANNOT_DECRYPT_LAST_MESSAGE_${convo.uuid}`,
-                            name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${convo.uuid}`
+                            lastMessage: lastMessageDecrypted,
+                            name: nameDecrypted
                         });
                         resolve();
                     })

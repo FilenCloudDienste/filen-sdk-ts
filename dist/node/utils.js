@@ -3,13 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
+exports.utils = exports.fastStringHash = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
 const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 const constants_1 = require("./constants");
 const crypto_1 = __importDefault(require("crypto"));
 const os_1 = __importDefault(require("os"));
 const fs_extra_1 = __importDefault(require("fs-extra"));
+const js_xxhash_1 = require("js-xxhash");
 /**
  * "Sleep" for given milliseconds.
  * @date 1/31/2024 - 4:27:48 PM
@@ -263,6 +264,10 @@ function replacePathStartWithFromAndTo(path, from, to) {
     return `${to}${path.slice(from.length)}`;
 }
 exports.replacePathStartWithFromAndTo = replacePathStartWithFromAndTo;
+function fastStringHash(input) {
+    return input.substring(0, 4) + (0, js_xxhash_1.xxHash32)(input, 0).toString(16) + input.substring(input.length - 4, input.length);
+}
+exports.fastStringHash = fastStringHash;
 exports.utils = {
     sleep,
     convertTimestampToMs,
@@ -275,7 +280,8 @@ exports.utils = {
     parseURLParams,
     getEveryPossibleDirectoryPath,
     simpleDate,
-    replacePathStartWithFromAndTo
+    replacePathStartWithFromAndTo,
+    fastStringHash
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map

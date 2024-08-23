@@ -6,6 +6,7 @@ import { uuidv4, normalizePath, replacePathStartWithFromAndTo } from "../utils";
 import os from "os";
 import { Socket } from "../socket";
 import { Semaphore } from "../semaphore";
+import writeFileAtomic from "write-file-atomic";
 /**
  * FS
  * @date 2/1/2024 - 2:44:47 AM
@@ -1086,7 +1087,7 @@ export class FS {
         await fs.mkdir(pathModule.join(tmpFilePath, ".."), {
             recursive: true
         });
-        await fs.writeFile(tmpFilePath, content);
+        await writeFileAtomic(tmpFilePath, content);
         try {
             const item = await this.cloud.uploadLocalFile({
                 source: tmpFilePath,

@@ -1195,7 +1195,7 @@ export declare class Cloud {
         onUploaded?: (item: CloudItem) => Promise<void>;
     }): Promise<CloudItem>;
     /**
-     * Upload a local directory. Only available in a Node.JS environment.
+     *
      * @date 2/27/2024 - 6:42:26 AM
      *
      * @public
@@ -1226,7 +1226,7 @@ export declare class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<void>}
      */
-    uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
         source: string;
         parent: string;
         name?: string;
@@ -1238,6 +1238,7 @@ export declare class Cloud {
         onError?: (err: Error) => void;
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
+        onDirectoryCreated?: (item: CloudItem) => void;
     }): Promise<void>;
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
@@ -1246,7 +1247,7 @@ export declare class Cloud {
      * @public
      * @async
      * @param {{
-     * 		files: FileList
+     * 		files: { file: File; path: string }[]
      * 		parent: string
      * 		name?: string
      * 		abortSignal?: AbortSignal
@@ -1259,7 +1260,7 @@ export declare class Cloud {
      * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
-     * @param {FileList} param0.files
+     * @param {{ file: File; path: string }[]} param0.files
      * @param {string} param0.parent
      * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
@@ -1274,7 +1275,10 @@ export declare class Cloud {
      * @returns {Promise<void>}
      */
     uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
-        files: FileList;
+        files: {
+            file: File;
+            path: string;
+        }[];
         parent: string;
         name?: string;
         abortSignal?: AbortSignal;

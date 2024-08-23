@@ -4,6 +4,7 @@ import { environment } from "./constants";
 import nodeCrypto from "crypto";
 import os from "os";
 import fs from "fs-extra";
+import { xxHash32 } from "js-xxhash";
 /**
  * "Sleep" for given milliseconds.
  * @date 1/31/2024 - 4:27:48 PM
@@ -244,6 +245,9 @@ export function replacePathStartWithFromAndTo(path, from, to) {
     }
     return `${to}${path.slice(from.length)}`;
 }
+export function fastStringHash(input) {
+    return input.substring(0, 4) + xxHash32(input, 0).toString(16) + input.substring(input.length - 4, input.length);
+}
 export const utils = {
     sleep,
     convertTimestampToMs,
@@ -256,7 +260,8 @@ export const utils = {
     parseURLParams,
     getEveryPossibleDirectoryPath,
     simpleDate,
-    replacePathStartWithFromAndTo
+    replacePathStartWithFromAndTo,
+    fastStringHash
 };
 export default utils;
 //# sourceMappingURL=utils.js.map

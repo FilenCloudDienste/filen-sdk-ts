@@ -9,6 +9,7 @@ const crypto_1 = __importDefault(require("crypto"));
 const crypto_api_v1_1 = __importDefault(require("crypto-api-v1"));
 const js_crypto_key_utils_1 = __importDefault(require("js-crypto-key-utils"));
 const cache_1 = __importDefault(require("../cache"));
+const utils_1 = require("../utils");
 const textEncoder = new TextEncoder();
 /**
  * Generate a cryptographically secure random string of given length.
@@ -241,7 +242,7 @@ async function importPublicKey({ publicKey, mode = ["encrypt"], keyCache = true 
     if (constants_1.environment !== "browser") {
         throw new Error(`crypto.utils.importPublicKey not implemented for ${constants_1.environment} environment`);
     }
-    const cacheKey = `${publicKey}:${mode.join(":")}`;
+    const cacheKey = (0, utils_1.fastStringHash)(`${publicKey}:${mode.join(":")}`);
     if (cache_1.default.importPublicKey.has(cacheKey)) {
         return cache_1.default.importPublicKey.get(cacheKey);
     }
@@ -271,7 +272,7 @@ async function importPrivateKey({ privateKey, mode = ["encrypt"], keyCache = tru
     if (constants_1.environment !== "browser") {
         throw new Error(`crypto.utils.importPrivateKey not implemented for ${constants_1.environment} environment`);
     }
-    const cacheKey = `${privateKey}:${mode.join(":")}`;
+    const cacheKey = (0, utils_1.fastStringHash)(`${privateKey}:${mode.join(":")}`);
     if (cache_1.default.importPrivateKey.has(cacheKey)) {
         return cache_1.default.importPrivateKey.get(cacheKey);
     }
@@ -307,7 +308,7 @@ async function importRawKey({ key, algorithm, mode = ["encrypt"], keyCache = tru
     if (constants_1.environment !== "browser") {
         throw new Error(`crypto.utils.importRawKey not implemented for ${constants_1.environment} environment`);
     }
-    const cacheKey = `${key}:${algorithm}:${mode.join(":")}`;
+    const cacheKey = (0, utils_1.fastStringHash)(`${key}:${algorithm}:${mode.join(":")}`);
     if (cache_1.default.importRawKey.has(cacheKey)) {
         return cache_1.default.importRawKey.get(cacheKey);
     }
@@ -334,7 +335,7 @@ async function importPBKDF2Key({ key, mode = ["encrypt"], keyCache = true }) {
     if (constants_1.environment !== "browser") {
         throw new Error(`crypto.utils.importPBKDF2Key not implemented for ${constants_1.environment} environment`);
     }
-    const cacheKey = `${key}:${mode.join(":")}`;
+    const cacheKey = (0, utils_1.fastStringHash)(`${key}:${mode.join(":")}`);
     if (cache_1.default.importPBKDF2Key.has(cacheKey)) {
         return cache_1.default.importPBKDF2Key.get(cacheKey);
     }
