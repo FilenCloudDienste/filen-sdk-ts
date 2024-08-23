@@ -44,7 +44,7 @@ export class UserPasswordForgotReset {
     async fetch({ token, password, authVersion, salt, hasRecoveryKeys, newMasterKeys }) {
         await this.apiClient.request({
             method: "POST",
-            endpoint: "/v3/user/password/forgot",
+            endpoint: "/v3/user/password/forgot/reset",
             data: {
                 token,
                 password,
