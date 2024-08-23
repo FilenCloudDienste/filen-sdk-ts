@@ -338,6 +338,14 @@ export declare class FilenSDK {
             affiliate: () => {
                 payout: (params_0: {
                     address: string;
+                    /**
+                     * FilenSDK
+                     * @date 2/1/2024 - 2:45:02 AM
+                     *
+                     * @export
+                     * @class FilenSDK
+                     * @typedef {FilenSDK}
+                     */
                     method: string;
                 }) => Promise<void>;
             };
@@ -390,14 +398,7 @@ export declare class FilenSDK {
                     authVersion: number;
                     salt: string;
                     hasRecoveryKeys: boolean;
-                    newMasterKeys: string; /**
-                     * Creates an instance of FilenSDK.
-                     * @date 2/21/2024 - 8:58:43 AM
-                     *
-                     * @constructor
-                     * @public
-                     * @param {?FilenSDKConfig} [params]
-                     */
+                    newMasterKeys: string;
                 }) => Promise<void>;
             };
             didExportMasterKeys: () => Promise<void>;
@@ -714,6 +715,14 @@ export declare class FilenSDK {
                 id: number;
             }) => Promise<void>;
             participantsRemove: (params_0: {
+                /**
+                 * FilenSDK
+                 * @date 2/1/2024 - 2:45:02 AM
+                 *
+                 * @export
+                 * @class FilenSDK
+                 * @typedef {FilenSDK}
+                 */
                 uuid: string;
                 userId: number;
             }) => Promise<void>;
@@ -741,6 +750,14 @@ export declare class FilenSDK {
             }) => Promise<void>;
             tagsFavorite: (params_0: {
                 uuid: string;
+                /**
+                 * FilenSDK
+                 * @date 2/1/2024 - 2:45:02 AM
+                 *
+                 * @export
+                 * @class FilenSDK
+                 * @typedef {FilenSDK}
+                 */
                 favorite: boolean;
             }) => Promise<void>;
             tag: (params_0: {
@@ -869,6 +886,19 @@ export declare class FilenSDK {
         sleep: typeof import("./utils").sleep;
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
         normalizePath: typeof import("./utils").normalizePath;
+        /**
+         * Set keypair.
+         * @date 2/20/2024 - 7:48:10 AM
+         *
+         * @private
+         * @async
+         * @param {{apiKey: string, publicKey: string, privateKey: string, masterKeys: string[]}} param0
+         * @param {string} param0.apiKey
+         * @param {string} param0.publicKey
+         * @param {string} param0.privateKey
+         * @param {{}} param0.masterKeys
+         * @returns {Promise<void>}
+         */
         uuidv4: typeof import("./utils").uuidv4;
         Uint8ArrayConcat: typeof import("./utils").Uint8ArrayConcat;
         promiseAllChunked: typeof import("./utils").promiseAllChunked;

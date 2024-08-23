@@ -82,20 +82,22 @@ class Notes {
                     this._noteKeyCache.set(note.uuid, decryptedNoteKey);
                     this.crypto
                         .decrypt()
-                        .noteTitle({ title: note.title, key: decryptedNoteKey })
+                        .noteTitle({
+                        title: note.title,
+                        key: decryptedNoteKey
+                    })
                         .then(decryptedNoteTitle => {
                         Promise.all([
                             note.preview.length === 0
                                 ? Promise.resolve(decryptedNoteTitle)
-                                : this.crypto.decrypt().notePreview({ preview: note.preview, key: decryptedNoteKey }),
+                                : this.crypto.decrypt().notePreview({
+                                    preview: note.preview,
+                                    key: decryptedNoteKey
+                                }),
                             this.allTags({ tags: note.tags })
                         ])
                             .then(([decryptedNotePreview, decryptedNoteTags]) => {
-                            notes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle.length > 0
-                                    ? decryptedNoteTitle
-                                    : `CANNOT_DECRYPT_TITLE_${note.uuid}`, preview: decryptedNotePreview.length > 0
-                                    ? decryptedNotePreview
-                                    : `CANNOT_DECRYPT_PREVIEW_${note.uuid}`, tags: decryptedNoteTags }));
+                            notes.push(Object.assign(Object.assign({}, note), { title: decryptedNoteTitle, preview: decryptedNotePreview, tags: decryptedNoteTags }));
                             resolve();
                         })
                             .catch(reject);
@@ -342,14 +344,14 @@ class Notes {
             content = '<ul data-checked="false"><li><br></li></ul>';
         }
         else {
-            content = contentDecrypted.length > 0 ? contentDecrypted : `CANNOT_DECRYPT_CONTENT_${uuid}`;
+            content = contentDecrypted;
         }
         return {
             content,
             type: contentEncrypted.type,
             editedTimestamp: contentEncrypted.editedTimestamp,
             editorId: contentEncrypted.editorId,
-            preview: previewDecrypted.length > 0 ? previewDecrypted : `CANNOT_DECRYPT_PREVIEW_${uuid}`
+            preview: previewDecrypted
         };
     }
     /**
@@ -535,15 +537,17 @@ class Notes {
             }
             promises.push(new Promise((resolve, reject) => {
                 Promise.all([
-                    this.crypto.decrypt().noteContent({ content: noteHistory.content, key: decryptedNoteKey }),
-                    this.crypto.decrypt().notePreview({ preview: noteHistory.preview, key: decryptedNoteKey })
+                    this.crypto.decrypt().noteContent({
+                        content: noteHistory.content,
+                        key: decryptedNoteKey
+                    }),
+                    this.crypto.decrypt().notePreview({
+                        preview: noteHistory.preview,
+                        key: decryptedNoteKey
+                    })
                 ])
                     .then(([noteHistoryContentDecrypted, noteHistoryPreviewDecrypted]) => {
-                    notesHistory.push(Object.assign(Object.assign({}, noteHistory), { content: noteHistoryContentDecrypted.length > 0
-                            ? noteHistoryContentDecrypted
-                            : `CANNOT_DECRYPT_CONTENT_${noteHistory.id}`, preview: noteHistoryPreviewDecrypted.length > 0
-                            ? noteHistoryPreviewDecrypted
-                            : `CANNOT_DECRYPT_PREVIEW_${noteHistory.id}` }));
+                    notesHistory.push(Object.assign(Object.assign({}, noteHistory), { content: noteHistoryContentDecrypted, preview: noteHistoryPreviewDecrypted }));
                     resolve();
                 })
                     .catch(reject);
