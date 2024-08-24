@@ -3249,7 +3249,8 @@ export class Cloud {
 		onStarted,
 		onError,
 		onFinished,
-		onProgress
+		onProgress,
+		linkKey
 	}: {
 		uuid: string
 		type?: DirDownloadType
@@ -3257,6 +3258,7 @@ export class Cloud {
 		linkHasPassword?: boolean
 		linkPassword?: string
 		linkSalt?: string
+		linkKey?: string
 		to?: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
@@ -3298,7 +3300,15 @@ export class Cloud {
 				recursive: true
 			})
 
-			const tree = await this.getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt })
+			const tree = await this.getDirectoryTree({
+				uuid,
+				type,
+				linkUUID,
+				linkHasPassword,
+				linkPassword,
+				linkSalt,
+				linkKey
+			})
 			const promises: Promise<void>[] = []
 
 			for (const path in tree) {

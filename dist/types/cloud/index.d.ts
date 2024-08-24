@@ -1044,13 +1044,14 @@ export declare class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<string>}
      */
-    downloadDirectoryToLocal({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress }: {
+    downloadDirectoryToLocal({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress, linkKey }: {
         uuid: string;
         type?: DirDownloadType;
         linkUUID?: string;
         linkHasPassword?: boolean;
         linkPassword?: string;
         linkSalt?: string;
+        linkKey?: string;
         to?: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;

@@ -2425,7 +2425,7 @@ export class Cloud {
      * @param {() => void} param0.onFinished
      * @returns {Promise<string>}
      */
-    async downloadDirectoryToLocal({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress }) {
+    async downloadDirectoryToLocal({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress, linkKey }) {
         if (environment !== "node") {
             throw new Error(`cloud.downloadDirectoryToLocal is not implemented for ${environment}`);
         }
@@ -2449,7 +2449,15 @@ export class Cloud {
             await fs.mkdir(destinationPath, {
                 recursive: true
             });
-            const tree = await this.getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt });
+            const tree = await this.getDirectoryTree({
+                uuid,
+                type,
+                linkUUID,
+                linkHasPassword,
+                linkPassword,
+                linkSalt,
+                linkKey
+            });
             const promises = [];
             for (const path in tree) {
                 const item = tree[path];
