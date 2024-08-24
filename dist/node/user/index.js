@@ -105,8 +105,14 @@ class User {
      */
     async uploadAvatar({ buffer }) {
         const base64 = buffer.toString("base64");
-        const hash = await this.crypto.utils.bufferToHash({ buffer, algorithm: "sha512" });
-        await this.api.v3().user().avatar({ base64, hash });
+        const hash = await this.crypto.utils.bufferToHash({
+            buffer: Buffer.from(base64, "utf-8"),
+            algorithm: "sha512"
+        });
+        await this.api.v3().user().avatar({
+            base64,
+            hash
+        });
     }
     /**
      * Change email.

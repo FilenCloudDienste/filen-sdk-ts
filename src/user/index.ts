@@ -131,9 +131,15 @@ export class User {
 	 */
 	public async uploadAvatar({ buffer }: { buffer: Buffer }): Promise<void> {
 		const base64 = buffer.toString("base64")
-		const hash = await this.crypto.utils.bufferToHash({ buffer, algorithm: "sha512" })
+		const hash = await this.crypto.utils.bufferToHash({
+			buffer: Buffer.from(base64, "utf-8"),
+			algorithm: "sha512"
+		})
 
-		await this.api.v3().user().avatar({ base64, hash })
+		await this.api.v3().user().avatar({
+			base64,
+			hash
+		})
 	}
 
 	/**

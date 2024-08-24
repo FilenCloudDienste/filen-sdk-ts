@@ -3071,7 +3071,8 @@ export class Cloud {
 		linkHasPassword,
 		linkPassword,
 		linkSalt,
-		skipCache
+		skipCache,
+		linkKey
 	}: {
 		uuid: string
 		type?: DirDownloadType
@@ -3080,6 +3081,7 @@ export class Cloud {
 		linkPassword?: string
 		linkSalt?: string
 		skipCache?: boolean
+		linkKey?: string
 	}): Promise<Record<string, CloudItemTree>> {
 		const contents = await this.api.v3().dir().download({
 			uuid,
@@ -3095,12 +3097,24 @@ export class Cloud {
 
 		for (const folder of contents.folders) {
 			try {
-				const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
-				const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`
+				const decrypted =
+					type === "shared"
+						? await this.crypto.decrypt().folderMetadataPrivate({ metadata: folder.name })
+						: type === "linked" && linkKey
+						? await this.crypto.decrypt().folderMetadataLink({
+								metadata: folder.name,
+								linkKey
+						  })
+						: await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
+
+				const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}`
 				const folderPath =
 					folder.parent === "base"
 						? "/"
-						: `${parentPath}${decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`}`
+						: pathModule.posix.join(
+								parentPath,
+								decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`
+						  )
 
 				folderNames[folder.uuid] = folderPath
 				tree[folderPath] = {
@@ -3124,14 +3138,30 @@ export class Cloud {
 		for (const file of contents.files) {
 			promises.push(
 				new Promise((resolve, reject) => {
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					const decryptPromise =
+						type === "shared"
+							? this.crypto.decrypt().fileMetadataPrivate({ metadata: file.metadata })
+							: type === "linked" && linkKey
+							? this.crypto.decrypt().fileMetadataLink({
+									metadata: file.metadata,
+									linkKey
+							  })
+							: this.crypto.decrypt().fileMetadata({ metadata: file.metadata })
+
+					decryptPromise
 						.then(decrypted => {
 							const parentPath = folderNames[file.parent]
-							const filePath = `${parentPath}/${
+
+							if (!parentPath) {
+								resolve()
+
+								return
+							}
+
+							const filePath = pathModule.posix.join(
+								parentPath,
 								decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`
-							}`
+							)
 
 							if (filePath.length === 0) {
 								resolve()

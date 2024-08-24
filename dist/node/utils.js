@@ -265,7 +265,7 @@ function replacePathStartWithFromAndTo(path, from, to) {
 }
 exports.replacePathStartWithFromAndTo = replacePathStartWithFromAndTo;
 function fastStringHash(input) {
-    return input.substring(0, 4) + (0, js_xxhash_1.xxHash32)(input, 0).toString(16) + input.substring(input.length - 4, input.length);
+    return input.substring(0, 8) + (0, js_xxhash_1.xxHash32)(input, 0).toString(16) + input.substring(input.length - 8, input.length);
 }
 exports.fastStringHash = fastStringHash;
 exports.utils = {

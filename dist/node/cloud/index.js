@@ -2279,7 +2279,7 @@ class Cloud {
      * @param {boolean} param0.skipCache
      * @returns {Promise<Record<string, CloudItemTree>>}
      */
-    async getDirectoryTree({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }) {
+    async getDirectoryTree({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache, linkKey }) {
         const contents = await this.api.v3().dir().download({
             uuid,
             type,
@@ -2293,11 +2293,18 @@ class Cloud {
         const folderNames = { base: "/" };
         for (const folder of contents.folders) {
             try {
-                const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
-                const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}/`;
+                const decrypted = type === "shared"
+                    ? await this.crypto.decrypt().folderMetadataPrivate({ metadata: folder.name })
+                    : type === "linked" && linkKey
+                        ? await this.crypto.decrypt().folderMetadataLink({
+                            metadata: folder.name,
+                            linkKey
+                        })
+                        : await this.crypto.decrypt().folderMetadata({ metadata: folder.name });
+                const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}`;
                 const folderPath = folder.parent === "base"
                     ? "/"
-                    : `${parentPath}${decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`}`;
+                    : path_1.default.posix.join(parentPath, decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`);
                 folderNames[folder.uuid] = folderPath;
                 tree[folderPath] = {
                     type: "directory",
@@ -2317,12 +2324,22 @@ class Cloud {
         const promises = [];
         for (const file of contents.files) {
             promises.push(new Promise((resolve, reject) => {
-                this.crypto
-                    .decrypt()
-                    .fileMetadata({ metadata: file.metadata })
+                const decryptPromise = type === "shared"
+                    ? this.crypto.decrypt().fileMetadataPrivate({ metadata: file.metadata })
+                    : type === "linked" && linkKey
+                        ? this.crypto.decrypt().fileMetadataLink({
+                            metadata: file.metadata,
+                            linkKey
+                        })
+                        : this.crypto.decrypt().fileMetadata({ metadata: file.metadata });
+                decryptPromise
                     .then(decrypted => {
                     const parentPath = folderNames[file.parent];
-                    const filePath = `${parentPath}/${decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`}`;
+                    if (!parentPath) {
+                        resolve();
+                        return;
+                    }
+                    const filePath = path_1.default.posix.join(parentPath, decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`);
                     if (filePath.length === 0) {
                         resolve();
                         return;

@@ -997,7 +997,7 @@ export declare class Cloud {
      * @param {boolean} param0.skipCache
      * @returns {Promise<Record<string, CloudItemTree>>}
      */
-    getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache }: {
+    getDirectoryTree({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache, linkKey }: {
         uuid: string;
         type?: DirDownloadType;
         linkUUID?: string;
@@ -1005,6 +1005,7 @@ export declare class Cloud {
         linkPassword?: string;
         linkSalt?: string;
         skipCache?: boolean;
+        linkKey?: string;
     }): Promise<Record<string, CloudItemTree>>;
     /**
      * Download a directory to path. Only available in a Node.JS environment.

@@ -288,7 +288,7 @@ export function replacePathStartWithFromAndTo(path: string, from: string, to: st
 }
 
 export function fastStringHash(input: string): string {
-	return input.substring(0, 4) + xxHash32(input, 0).toString(16) + input.substring(input.length - 4, input.length)
+	return input.substring(0, 8) + xxHash32(input, 0).toString(16) + input.substring(input.length - 8, input.length)
 }
 
 export const utils = {
