@@ -1,9 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Notes = void 0;
 const utils_1 = require("../utils");
 const utils_2 = require("./utils");
 const constants_1 = require("../constants");
+const striptags_1 = __importDefault(require("striptags"));
 /**
  * Notes
  * @date 2/1/2024 - 2:44:47 AM
@@ -366,13 +370,33 @@ class Notes {
      * @returns {Promise<void>}
      */
     async changeType({ uuid, newType }) {
-        const [decryptedNoteKey, decryptedNoteContent] = await Promise.all([this.noteKey({ uuid }), this.content({ uuid })]);
-        const preview = (0, utils_2.createNotePreviewFromContentText)({ content: decryptedNoteContent.content, type: newType });
-        const [contentEncrypted, previewEncrypted] = await Promise.all([
-            this.crypto.encrypt().noteContent({ content: decryptedNoteContent.content, key: decryptedNoteKey }),
-            this.crypto.encrypt().notePreview({ preview, key: decryptedNoteKey })
+        const [decryptedNoteKey, decryptedNoteContent, noteInfo] = await Promise.all([
+            this.noteKey({ uuid }),
+            this.content({ uuid }),
+            this.get({ uuid })
         ]);
-        await this.api.v3().notes().typeChange({ uuid, type: newType, preview: previewEncrypted, content: contentEncrypted });
+        const strippedContent = (noteInfo.type === "checklist" || noteInfo.type === "rich") && decryptedNoteContent.content.length > 0
+            ? (0, striptags_1.default)(decryptedNoteContent.content)
+            : decryptedNoteContent.content;
+        const [contentEncrypted, previewEncrypted] = await Promise.all([
+            this.crypto.encrypt().noteContent({
+                content: strippedContent,
+                key: decryptedNoteKey
+            }),
+            this.crypto.encrypt().notePreview({
+                preview: (0, utils_2.createNotePreviewFromContentText)({
+                    content: strippedContent,
+                    type: newType
+                }),
+                key: decryptedNoteKey
+            })
+        ]);
+        await this.api.v3().notes().typeChange({
+            uuid,
+            type: newType,
+            preview: previewEncrypted,
+            content: contentEncrypted
+        });
     }
     /**
      * Edit a note.

@@ -1,6 +1,7 @@
 import { uuidv4, simpleDate, promiseAllChunked } from "../utils";
 import { createNotePreviewFromContentText } from "./utils";
 import { MAX_NOTE_SIZE } from "../constants";
+import striptags from "striptags";
 /**
  * Notes
  * @date 2/1/2024 - 2:44:47 AM
@@ -374,13 +375,33 @@ export class Notes {
      * @returns {Promise<void>}
      */
     async changeType({ uuid, newType }) {
-        const [decryptedNoteKey, decryptedNoteContent] = await Promise.all([this.noteKey({ uuid }), this.content({ uuid })]);
-        const preview = createNotePreviewFromContentText({ content: decryptedNoteContent.content, type: newType });
-        const [contentEncrypted, previewEncrypted] = await Promise.all([
-            this.crypto.encrypt().noteContent({ content: decryptedNoteContent.content, key: decryptedNoteKey }),
-            this.crypto.encrypt().notePreview({ preview, key: decryptedNoteKey })
+        const [decryptedNoteKey, decryptedNoteContent, noteInfo] = await Promise.all([
+            this.noteKey({ uuid }),
+            this.content({ uuid }),
+            this.get({ uuid })
         ]);
-        await this.api.v3().notes().typeChange({ uuid, type: newType, preview: previewEncrypted, content: contentEncrypted });
+        const strippedContent = (noteInfo.type === "checklist" || noteInfo.type === "rich") && decryptedNoteContent.content.length > 0
+            ? striptags(decryptedNoteContent.content)
+            : decryptedNoteContent.content;
+        const [contentEncrypted, previewEncrypted] = await Promise.all([
+            this.crypto.encrypt().noteContent({
+                content: strippedContent,
+                key: decryptedNoteKey
+            }),
+            this.crypto.encrypt().notePreview({
+                preview: createNotePreviewFromContentText({
+                    content: strippedContent,
+                    type: newType
+                }),
+                key: decryptedNoteKey
+            })
+        ]);
+        await this.api.v3().notes().typeChange({
+            uuid,
+            type: newType,
+            preview: previewEncrypted,
+            content: contentEncrypted
+        });
     }
     /**
      * Edit a note.
