@@ -77,6 +77,16 @@ describe("downloadFileToReadableStream", () => {
 			description: "entire file"
 		},
 		{
+			start: undefined,
+			end: undefined,
+			description: "start and end undefined"
+		},
+		{
+			start: undefined,
+			end: 1337,
+			description: "start undefined end defined"
+		},
+		{
 			start: 0,
 			end: 1024,
 			description: "first 1 KiB"
@@ -85,6 +95,11 @@ describe("downloadFileToReadableStream", () => {
 			start: chunkSize - 512,
 			end: chunkSize + 512,
 			description: "crossing chunk boundary"
+		},
+		{
+			start: 1.5 * chunkSize - 512,
+			end: 3 * chunkSize + 512,
+			description: "crossing chunk boundary large"
 		},
 		{
 			start: chunkSize * 2,
