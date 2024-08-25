@@ -1973,14 +1973,23 @@ class Cloud {
         if (key.length === 0) {
             throw new Error("Invalid key.");
         }
-        if (!start) {
+        const streamEntireFile = typeof start === "undefined" && typeof end === "undefined";
+        if (typeof start === "undefined") {
             start = 0;
         }
-        if (!end) {
+        if (typeof end === "undefined") {
             end = size - 1;
         }
-        if (start >= end) {
-            start = end;
+        if (start <= 0 && end <= 0) {
+            start = 0;
+            end = 0;
+        }
+        if (end > size - 1 || start < 0 || start > end) {
+            return new ReadableStream({
+                start(controller) {
+                    controller.close();
+                }
+            });
         }
         const [firstChunkIndex, lastChunkIndex] = utils_2.default.calculateChunkIndices({ start, end, chunks });
         const threadsSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_THREADS);
@@ -1995,8 +2004,7 @@ class Cloud {
         const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex >= chunks ? chunks : lastChunkIndex;
         let downloadsSemaphoreAcquired = false;
         let downloadsSemaphoreReleased = false;
-        if (end > size ||
-            chunksToDownload === 0 ||
+        if (chunksToDownload === 0 ||
             firstChunkIndex > lastChunkIndex ||
             firstChunkIndex < 0 ||
             lastChunkIndex < 0 ||
@@ -2108,15 +2116,11 @@ class Cloud {
                             }
                             if (buffer.byteLength > 0) {
                                 let bufferToEnqueue = buffer;
-                                if (index === firstChunkIndex && start !== 0) {
-                                    bufferToEnqueue = buffer.subarray(start % buffer.byteLength);
-                                }
-                                if (index === lastChunkIndex - 1 && end + 1 !== size) {
-                                    const endBytePositionInChunk = (end % constants_1.UPLOAD_CHUNK_SIZE) + 1;
-                                    const isEndByteInThisChunk = endBytePositionInChunk > 0;
-                                    if (isEndByteInThisChunk) {
-                                        bufferToEnqueue = bufferToEnqueue.subarray(0, endBytePositionInChunk);
-                                    }
+                                if (!streamEntireFile) {
+                                    const chunkStartOffset = index * constants_1.UPLOAD_CHUNK_SIZE;
+                                    const startInChunk = index === Math.floor(start / constants_1.UPLOAD_CHUNK_SIZE) ? start % constants_1.UPLOAD_CHUNK_SIZE : 0;
+                                    const endInChunk = Math.min(constants_1.UPLOAD_CHUNK_SIZE, end - chunkStartOffset + 1);
+                                    bufferToEnqueue = bufferToEnqueue.subarray(startInChunk, endInChunk);
                                 }
                                 await applyBackpressure(controller);
                                 if (!writerStopped) {

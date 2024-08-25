@@ -2689,16 +2689,27 @@ export class Cloud {
 			throw new Error("Invalid key.")
 		}
 
-		if (!start) {
+		const streamEntireFile = typeof start === "undefined" && typeof end === "undefined"
+
+		if (typeof start === "undefined") {
 			start = 0
 		}
 
-		if (!end) {
+		if (typeof end === "undefined") {
 			end = size - 1
 		}
 
-		if (start >= end) {
-			start = end
+		if (start <= 0 && end <= 0) {
+			start = 0
+			end = 0
+		}
+
+		if (end > size - 1 || start < 0 || start > end) {
+			return new ReadableStream({
+				start(controller) {
+					controller.close()
+				}
+			})
 		}
 
 		const [firstChunkIndex, lastChunkIndex] = utils.calculateChunkIndices({ start, end, chunks })
@@ -2716,7 +2727,6 @@ export class Cloud {
 		let downloadsSemaphoreReleased = false
 
 		if (
-			end > size ||
 			chunksToDownload === 0 ||
 			firstChunkIndex > lastChunkIndex ||
 			firstChunkIndex < 0 ||
@@ -2857,17 +2867,13 @@ export class Cloud {
 								if (buffer.byteLength > 0) {
 									let bufferToEnqueue = buffer
 
-									if (index === firstChunkIndex && start !== 0) {
-										bufferToEnqueue = buffer.subarray(start! % buffer.byteLength)
-									}
+									if (!streamEntireFile) {
+										const chunkStartOffset = index * UPLOAD_CHUNK_SIZE
+										const startInChunk =
+											index === Math.floor(start! / UPLOAD_CHUNK_SIZE) ? start! % UPLOAD_CHUNK_SIZE : 0
+										const endInChunk = Math.min(UPLOAD_CHUNK_SIZE, end! - chunkStartOffset + 1)
 
-									if (index === lastChunkIndex - 1 && end! + 1 !== size) {
-										const endBytePositionInChunk = (end! % UPLOAD_CHUNK_SIZE) + 1
-										const isEndByteInThisChunk = endBytePositionInChunk > 0
-
-										if (isEndByteInThisChunk) {
-											bufferToEnqueue = bufferToEnqueue.subarray(0, endBytePositionInChunk)
-										}
+										bufferToEnqueue = bufferToEnqueue.subarray(startInChunk, endInChunk)
 									}
 
 									await applyBackpressure(controller)

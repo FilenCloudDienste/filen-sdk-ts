@@ -4,3 +4,5 @@ dev
 *encrypted
 *decrypted
 dev/**/*
+tests/test.config.json
+tests/testfile

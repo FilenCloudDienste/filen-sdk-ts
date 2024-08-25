@@ -1,0 +1,11 @@
+{
+	"email": "",
+	"password": "",
+	"masterKeys": [""],
+	"apiKey": "",
+	"publicKey": "",
+	"privateKey": "",
+	"authVersion": 2,
+	"baseFolderUUID": "",
+	"userId": 0
+}
