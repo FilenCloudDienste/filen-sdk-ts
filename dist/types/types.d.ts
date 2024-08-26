@@ -1,3 +1,5 @@
+import { type FileGetResponse } from "./api/v3/file/get";
+import { type DirGetResponse } from "./api/v3/dir/get";
 export type AuthVersion = 1 | 2;
 export type FileEncryptionVersion = 1 | 2;
 export type Environment = "node" | "browser";
@@ -20,3 +22,10 @@ export type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K
 export type Prettify<T> = {
     [K in keyof T]: T[K];
 } & {};
+export type GetFileResult = FileGetResponse & {
+    metadataDecrypted: FileMetadata;
+    chunks: number;
+};
+export type GetDirResult = DirGetResponse & {
+    metadataDecrypted: FolderMetadata;
+};

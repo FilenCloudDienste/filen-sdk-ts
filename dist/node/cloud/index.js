@@ -3471,6 +3471,34 @@ class Cloud {
         }
         return `/${path_1.default.posix.join(...pathParts.reverse())}`;
     }
+    /**
+     * Get info about a file and decrypt its metadata.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<GetFileResult>}
+     */
+    async getFile({ uuid }) {
+        const file = await this.api.v3().file().get({ uuid });
+        const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata });
+        return Object.assign(Object.assign({}, file), { metadataDecrypted: fileMetadataDecrypted, chunks: Math.ceil(file.size / constants_1.UPLOAD_CHUNK_SIZE) });
+    }
+    /**
+     * Get info about a directory and decrypt its metadata.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<GetDirResult>}
+     */
+    async getDirectory({ uuid }) {
+        const dir = await this.api.v3().dir().get({ uuid });
+        const dirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted });
+        return Object.assign(Object.assign({}, dir), { metadataDecrypted: dirMetadataDecrypted });
+    }
 }
 exports.Cloud = Cloud;
 exports.default = Cloud;

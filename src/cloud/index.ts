@@ -7,7 +7,9 @@ import {
 	type ProgressCallback,
 	type FolderMetadata,
 	type PublicLinkExpiration,
-	type ProgressWithTotalCallback
+	type ProgressWithTotalCallback,
+	type GetFileResult,
+	type GetDirResult
 } from "../types"
 import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils"
 import {
@@ -4674,6 +4676,45 @@ export class Cloud {
 		}
 
 		return `/${pathModule.posix.join(...pathParts.reverse())}`
+	}
+
+	/**
+	 * Get info about a file and decrypt its metadata.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ uuid: string }} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<GetFileResult>}
+	 */
+	public async getFile({ uuid }: { uuid: string }): Promise<GetFileResult> {
+		const file = await this.api.v3().file().get({ uuid })
+		const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata })
+
+		return {
+			...file,
+			metadataDecrypted: fileMetadataDecrypted,
+			chunks: Math.ceil(file.size / UPLOAD_CHUNK_SIZE)
+		}
+	}
+
+	/**
+	 * Get info about a directory and decrypt its metadata.
+	 *
+	 * @public
+	 * @async
+	 * @param {{ uuid: string }} param0
+	 * @param {string} param0.uuid
+	 * @returns {Promise<GetDirResult>}
+	 */
+	public async getDirectory({ uuid }: { uuid: string }): Promise<GetDirResult> {
+		const dir = await this.api.v3().dir().get({ uuid })
+		const dirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted })
+
+		return {
+			...dir,
+			metadataDecrypted: dirMetadataDecrypted
+		}
 	}
 }
 

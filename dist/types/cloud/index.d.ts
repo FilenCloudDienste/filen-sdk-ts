@@ -3,7 +3,7 @@
 import type API from "../api";
 import type Crypto from "../crypto";
 import { type FilenSDKConfig, type FilenSDK } from "..";
-import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback } from "../types";
+import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback, type GetFileResult, type GetDirResult } from "../types";
 import { PauseSignal } from "./signals";
 import { type DirColors } from "../api/v3/dir/color";
 import { type FileVersionsResponse } from "../api/v3/file/versions";
@@ -1325,5 +1325,29 @@ export declare class Cloud {
     directoryUUIDToPath({ uuid }: {
         uuid: string;
     }): Promise<string>;
+    /**
+     * Get info about a file and decrypt its metadata.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<GetFileResult>}
+     */
+    getFile({ uuid }: {
+        uuid: string;
+    }): Promise<GetFileResult>;
+    /**
+     * Get info about a directory and decrypt its metadata.
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string }} param0
+     * @param {string} param0.uuid
+     * @returns {Promise<GetDirResult>}
+     */
+    getDirectory({ uuid }: {
+        uuid: string;
+    }): Promise<GetDirResult>;
 }
 export default Cloud;
