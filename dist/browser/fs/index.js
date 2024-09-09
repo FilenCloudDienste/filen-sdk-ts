@@ -212,7 +212,7 @@ export class FS {
      * @returns {string}
      */
     normalizePath({ path }) {
-        path = pathModule.posix.normalize(path.trim());
+        path = pathModule.posix.normalize(path);
         if (path.endsWith("/")) {
             path = path.substring(0, path.length - 1);
         }

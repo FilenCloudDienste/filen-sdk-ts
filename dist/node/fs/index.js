@@ -210,7 +210,7 @@ class FS {
      * @returns {string}
      */
     normalizePath({ path }) {
-        path = path_1.default.posix.normalize(path.trim());
+        path = path_1.default.posix.normalize(path);
         if (path.endsWith("/")) {
             path = path.substring(0, path.length - 1);
         }
