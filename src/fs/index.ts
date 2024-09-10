@@ -38,7 +38,7 @@ export type FSItemFileMetadata = Prettify<FSItemFileBase & FileMetadata>
 export type FSItem = Prettify<
 	| (FSItemBase & {
 			type: "directory"
-			metadata: FolderMetadata
+			metadata: FolderMetadata & { timestamp: number }
 	  })
 	| (FSItemBase & {
 			type: "file"
@@ -54,12 +54,20 @@ export type FSStatsBase = {
 	birthtimeMs: number
 	isDirectory: () => boolean
 	isFile: () => boolean
-	isSymbolicLink: () => boolean
 }
 
 export type FSStats = Prettify<
-	| (FolderMetadata & FSStatsBase & { type: "directory"; uuid: string })
-	| (FSItemFileBase & FileMetadata & FSStatsBase & { type: "file"; uuid: string })
+	| (FolderMetadata &
+			FSStatsBase & {
+				type: "directory"
+				uuid: string
+			})
+	| (FSItemFileBase &
+			FileMetadata &
+			FSStatsBase & {
+				type: "file"
+				uuid: string
+			})
 >
 
 export type StatFS = {
@@ -113,7 +121,8 @@ export class FS {
 				uuid: this.sdkConfig.baseFolderUUID!,
 				type: "directory",
 				metadata: {
-					name: "Cloud Drive"
+					name: "Cloud Drive",
+					timestamp: Date.now()
 				}
 			}
 		}
@@ -124,7 +133,8 @@ export class FS {
 				type: "directory",
 				path: "/",
 				metadata: {
-					name: "Cloud Drive"
+					name: "Cloud Drive",
+					timestamp: Date.now()
 				}
 			}
 		}
@@ -367,7 +377,8 @@ export class FS {
 						uuid: item.uuid,
 						type: "directory",
 						metadata: {
-							name: item.name
+							name: item.name,
+							timestamp: item.timestamp
 						}
 					}
 
@@ -376,7 +387,8 @@ export class FS {
 						type: "directory",
 						path: itemPath,
 						metadata: {
-							name: item.name
+							name: item.name,
+							timestamp: item.timestamp
 						}
 					}
 				} else {
@@ -445,7 +457,10 @@ export class FS {
 	public async readdir({ path, recursive = false }: { path: string; recursive?: boolean }): Promise<string[]> {
 		path = this.normalizePath({ path })
 
-		const uuid = await this.pathToItemUUID({ path, type: "directory" })
+		const uuid = await this.pathToItemUUID({
+			path,
+			type: "directory"
+		})
 
 		if (!uuid) {
 			throw new ENOENT({ path })
@@ -479,7 +494,8 @@ export class FS {
 						uuid: item.uuid,
 						type: "directory",
 						metadata: {
-							name: item.name
+							name: item.name,
+							timestamp: item.timestamp
 						}
 					}
 
@@ -488,7 +504,8 @@ export class FS {
 						type: "directory",
 						path: itemPath,
 						metadata: {
-							name: item.name
+							name: item.name,
+							timestamp: item.timestamp
 						}
 					}
 				} else {
@@ -553,7 +570,8 @@ export class FS {
 					uuid: item.uuid,
 					type: "directory",
 					metadata: {
-						name: item.name
+						name: item.name,
+						timestamp: item.timestamp
 					}
 				}
 
@@ -562,7 +580,8 @@ export class FS {
 					type: "directory",
 					path: itemPath,
 					metadata: {
-						name: item.name
+						name: item.name,
+						timestamp: item.timestamp
 					}
 				}
 			} else {
@@ -644,27 +663,21 @@ export class FS {
 				},
 				isFile() {
 					return true
-				},
-				isSymbolicLink() {
-					return false
 				}
 			}
 		}
 
 		return {
-			...item.metadata,
+			name: item.metadata.name,
 			uuid,
 			size: 0,
-			mtimeMs: now,
-			birthtimeMs: now,
+			mtimeMs: item.metadata.timestamp ?? now,
+			birthtimeMs: item.metadata.timestamp ?? now,
 			type: "directory",
 			isDirectory() {
 				return true
 			},
 			isFile() {
-				return false
-			},
-			isSymbolicLink() {
 				return false
 			}
 		}
@@ -721,7 +734,8 @@ export class FS {
 					uuid,
 					type: "directory",
 					metadata: {
-						name: basename
+						name: basename,
+						timestamp: Date.now()
 					}
 				}
 
@@ -730,7 +744,8 @@ export class FS {
 					type: "directory",
 					path,
 					metadata: {
-						name: basename
+						name: basename,
+						timestamp: Date.now()
 					}
 				}
 
@@ -760,7 +775,11 @@ export class FS {
 
 					const parentIsBase = partParentPath === "/" || partParentPath === "." || partParentPath === ""
 					const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID! : parentItem.uuid
-					const uuid = await this.cloud.createDirectory({ name: partBasename, parent: parentUUID })
+
+					const uuid = await this.cloud.createDirectory({
+						name: partBasename,
+						parent: parentUUID
+					})
 
 					await this.itemsMutex.acquire()
 
@@ -768,7 +787,8 @@ export class FS {
 						uuid,
 						type: "directory",
 						metadata: {
-							name: partBasename
+							name: partBasename,
+							timestamp: Date.now()
 						}
 					}
 
@@ -777,7 +797,8 @@ export class FS {
 						type: "directory",
 						path: builtPath,
 						metadata: {
-							name: partBasename
+							name: partBasename,
+							timestamp: Date.now()
 						}
 					}
 

@@ -167,7 +167,7 @@ export class Decrypt {
 
 		let fileMetadata: FileMetadata = {
 			name: "",
-			size: 0,
+			size: 1,
 			mime: "application/octet-stream",
 			key: "",
 			lastModified: Date.now(),
@@ -182,9 +182,11 @@ export class Decrypt {
 				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
 
 				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+					const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
+
 					fileMetadata = {
 						size: parseInt(decrypted.size ?? 0),
-						lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+						lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
 						creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
 						name: decrypted.name,
 						key: decrypted.key,
@@ -279,7 +281,7 @@ export class Decrypt {
 
 		let fileMetadata: FileMetadata = {
 			name: "",
-			size: 0,
+			size: 1,
 			mime: "application/octet-stream",
 			key: "",
 			lastModified: Date.now(),
@@ -296,9 +298,11 @@ export class Decrypt {
 		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
+
 			fileMetadata = {
 				size: parseInt(decrypted.size ?? 0),
-				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+				lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
 				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
 				name: decrypted.name,
 				key: decrypted.key,
@@ -381,7 +385,7 @@ export class Decrypt {
 
 		let fileMetadata: FileMetadata = {
 			name: "",
-			size: 0,
+			size: 1,
 			mime: "application/octet-stream",
 			key: "",
 			lastModified: Date.now(),
@@ -392,9 +396,11 @@ export class Decrypt {
 		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+			const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
+
 			fileMetadata = {
 				size: parseInt(decrypted.size ?? 0),
-				lastModified: convertTimestampToMs(parseInt(decrypted.lastModified ?? Date.now())),
+				lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
 				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
 				name: decrypted.name,
 				key: decrypted.key,
@@ -981,7 +987,11 @@ export class Decrypt {
 							name: "AES-CBC",
 							iv: ivBytes
 						},
-						await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }),
+						await importRawKey({
+							key: keyBytes,
+							algorithm: "AES-CBC",
+							mode: ["decrypt"]
+						}),
 						data.subarray(16)
 					)
 
@@ -996,7 +1006,11 @@ export class Decrypt {
 							name: "AES-CBC",
 							iv: ivBytes
 						},
-						await importRawKey({ key: keyBytes, algorithm: "AES-CBC", mode: ["decrypt"] }),
+						await importRawKey({
+							key: keyBytes,
+							algorithm: "AES-CBC",
+							mode: ["decrypt"]
+						}),
 						data
 					)
 
@@ -1011,7 +1025,11 @@ export class Decrypt {
 						name: "AES-GCM",
 						iv
 					},
-					await importRawKey({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }),
+					await importRawKey({
+						key: keyBytes,
+						algorithm: "AES-GCM",
+						mode: ["decrypt"]
+					}),
 					encData
 				)
 

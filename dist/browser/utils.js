@@ -248,6 +248,9 @@ export function replacePathStartWithFromAndTo(path, from, to) {
 export function fastStringHash(input) {
     return input.substring(0, 8) + xxHash32(input, 0).toString(16) + input.substring(input.length - 8, input.length);
 }
+export function realFileSize({ chunksSize, metadataDecrypted }) {
+    return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1;
+}
 export const utils = {
     sleep,
     convertTimestampToMs,

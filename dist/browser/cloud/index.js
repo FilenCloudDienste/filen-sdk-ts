@@ -1,5 +1,5 @@
 import { APIError } from "..";
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath } from "../utils";
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize } from "../utils";
 import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
 import pathModule from "path";
@@ -98,7 +98,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -168,7 +171,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -242,7 +248,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -316,7 +325,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -380,7 +392,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -444,7 +459,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -508,7 +526,10 @@ export class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: realFileSize({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: convertTimestampToMs(file.timestamp),
@@ -1384,7 +1405,10 @@ export class Cloud {
                             : {
                                 name: `CANNOT_DECRYPT_NAME_${file.uuid}`,
                                 mime: "application/octet-stream",
-                                size: file.size,
+                                size: realFileSize({
+                                    chunksSize: file.size,
+                                    metadataDecrypted: decryptedFileMetadata
+                                }),
                                 lastModified: convertTimestampToMs(file.timestamp),
                                 creation: undefined,
                                 hash: undefined,
@@ -2335,7 +2359,9 @@ export class Cloud {
                     uuid: folder.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     parent: folder.parent,
-                    size: 0
+                    size: 0,
+                    timestamp: typeof folder.timestamp === "number" ? convertTimestampToMs(folder.timestamp) : Date.now(),
+                    lastModified: typeof folder.timestamp === "number" ? convertTimestampToMs(folder.timestamp) : Date.now()
                 };
             }
             catch {
@@ -2372,7 +2398,10 @@ export class Cloud {
                         type: "file",
                         uuid: file.uuid,
                         name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                        size: decrypted.name.length > 0 ? decrypted.size : file.chunksSize ? file.chunksSize : 1,
+                        size: realFileSize({
+                            chunksSize: file.chunksSize,
+                            metadataDecrypted: decrypted
+                        }),
                         mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                         lastModified: convertTimestampToMs(decrypted.name.length > 0 ? decrypted.lastModified : Date.now()),
                         parent: file.parent,
@@ -2382,7 +2411,8 @@ export class Cloud {
                         bucket: file.bucket,
                         region: file.region,
                         creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
-                        hash: decrypted.name.length > 0 ? decrypted.hash : undefined
+                        hash: decrypted.name.length > 0 ? decrypted.hash : undefined,
+                        timestamp: typeof file.timestamp === "number" ? convertTimestampToMs(file.timestamp) : Date.now()
                     };
                     resolve();
                 })

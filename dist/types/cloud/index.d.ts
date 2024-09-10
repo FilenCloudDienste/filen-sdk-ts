@@ -75,9 +75,9 @@ export type CloudItemShared = ({
 } & CloudItemBaseShared & CloudItemFileShared & CloudItemSharedBase);
 export type CloudItemTree = Omit<{
     type: "directory";
-} & CloudItemBase & CloudItemDirectory, "color" | "favorited" | "timestamp" | "lastModified"> | Omit<{
+} & CloudItemBase & CloudItemDirectory, "color" | "favorited"> | Omit<{
     type: "file";
-} & CloudItemBase & CloudItemFile, "favorited" | "rm" | "timestamp">;
+} & CloudItemBase & CloudItemFile, "favorited" | "rm">;
 export type FileToShare = {
     uuid: string;
     parent: string;

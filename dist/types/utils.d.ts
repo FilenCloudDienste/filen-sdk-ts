@@ -1,3 +1,4 @@
+import { type FileMetadata } from "./types";
 /**
  * "Sleep" for given milliseconds.
  * @date 1/31/2024 - 4:27:48 PM
@@ -133,6 +134,10 @@ export declare function simpleDate(timestamp: number): string;
  */
 export declare function replacePathStartWithFromAndTo(path: string, from: string, to: string): string;
 export declare function fastStringHash(input: string): string;
+export declare function realFileSize({ chunksSize, metadataDecrypted }: {
+    chunksSize?: number;
+    metadataDecrypted: FileMetadata;
+}): number;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;

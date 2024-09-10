@@ -886,19 +886,6 @@ export declare class FilenSDK {
         sleep: typeof import("./utils").sleep;
         convertTimestampToMs: typeof import("./utils").convertTimestampToMs;
         normalizePath: typeof import("./utils").normalizePath;
-        /**
-         * Set keypair.
-         * @date 2/20/2024 - 7:48:10 AM
-         *
-         * @private
-         * @async
-         * @param {{apiKey: string, publicKey: string, privateKey: string, masterKeys: string[]}} param0
-         * @param {string} param0.apiKey
-         * @param {string} param0.publicKey
-         * @param {string} param0.privateKey
-         * @param {{}} param0.masterKeys
-         * @returns {Promise<void>}
-         */
         uuidv4: typeof import("./utils").uuidv4;
         Uint8ArrayConcat: typeof import("./utils").Uint8ArrayConcat;
         promiseAllChunked: typeof import("./utils").promiseAllChunked;

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.fastStringHash = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
+exports.utils = exports.realFileSize = exports.fastStringHash = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
 const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 const constants_1 = require("./constants");
@@ -268,6 +268,10 @@ function fastStringHash(input) {
     return input.substring(0, 8) + (0, js_xxhash_1.xxHash32)(input, 0).toString(16) + input.substring(input.length - 8, input.length);
 }
 exports.fastStringHash = fastStringHash;
+function realFileSize({ chunksSize, metadataDecrypted }) {
+    return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1;
+}
+exports.realFileSize = realFileSize;
 exports.utils = {
     sleep,
     convertTimestampToMs,

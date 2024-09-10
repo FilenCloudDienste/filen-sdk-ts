@@ -43,7 +43,8 @@ class FS {
                 uuid: this.sdkConfig.baseFolderUUID,
                 type: "directory",
                 metadata: {
-                    name: "Cloud Drive"
+                    name: "Cloud Drive",
+                    timestamp: Date.now()
                 }
             }
         };
@@ -53,7 +54,8 @@ class FS {
                 type: "directory",
                 path: "/",
                 metadata: {
-                    name: "Cloud Drive"
+                    name: "Cloud Drive",
+                    timestamp: Date.now()
                 }
             }
         };
@@ -256,7 +258,8 @@ class FS {
                         uuid: item.uuid,
                         type: "directory",
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                     this._uuidToItem[item.uuid] = {
@@ -264,7 +267,8 @@ class FS {
                         type: "directory",
                         path: itemPath,
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                 }
@@ -326,7 +330,10 @@ class FS {
      */
     async readdir({ path, recursive = false }) {
         path = this.normalizePath({ path });
-        const uuid = await this.pathToItemUUID({ path, type: "directory" });
+        const uuid = await this.pathToItemUUID({
+            path,
+            type: "directory"
+        });
         if (!uuid) {
             throw new errors_1.ENOENT({ path });
         }
@@ -350,7 +357,8 @@ class FS {
                         uuid: item.uuid,
                         type: "directory",
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                     this._uuidToItem[item.uuid] = {
@@ -358,7 +366,8 @@ class FS {
                         type: "directory",
                         path: itemPath,
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                 }
@@ -414,7 +423,8 @@ class FS {
                     uuid: item.uuid,
                     type: "directory",
                     metadata: {
-                        name: item.name
+                        name: item.name,
+                        timestamp: item.timestamp
                     }
                 };
                 this._uuidToItem[item.uuid] = {
@@ -422,7 +432,8 @@ class FS {
                     type: "directory",
                     path: itemPath,
                     metadata: {
-                        name: item.name
+                        name: item.name,
+                        timestamp: item.timestamp
                     }
                 };
             }
@@ -476,7 +487,7 @@ class FS {
         return await this.readdir(...params);
     }
     async stat({ path }) {
-        var _a;
+        var _a, _b, _c;
         path = this.normalizePath({ path });
         const uuid = await this.pathToItemUUID({ path });
         const item = this._items[path];
@@ -490,20 +501,22 @@ class FS {
                 },
                 isFile() {
                     return true;
-                },
-                isSymbolicLink() {
-                    return false;
                 } });
         }
-        return Object.assign(Object.assign({}, item.metadata), { uuid, size: 0, mtimeMs: now, birthtimeMs: now, type: "directory", isDirectory() {
+        return {
+            name: item.metadata.name,
+            uuid,
+            size: 0,
+            mtimeMs: (_b = item.metadata.timestamp) !== null && _b !== void 0 ? _b : now,
+            birthtimeMs: (_c = item.metadata.timestamp) !== null && _c !== void 0 ? _c : now,
+            type: "directory",
+            isDirectory() {
                 return true;
             },
             isFile() {
                 return false;
-            },
-            isSymbolicLink() {
-                return false;
-            } });
+            }
+        };
     }
     /**
      * Alias of stat.
@@ -547,7 +560,8 @@ class FS {
                     uuid,
                     type: "directory",
                     metadata: {
-                        name: basename
+                        name: basename,
+                        timestamp: Date.now()
                     }
                 };
                 this._uuidToItem[uuid] = {
@@ -555,7 +569,8 @@ class FS {
                     type: "directory",
                     path,
                     metadata: {
-                        name: basename
+                        name: basename,
+                        timestamp: Date.now()
                     }
                 };
                 this.itemsMutex.release();
@@ -577,13 +592,17 @@ class FS {
                     }
                     const parentIsBase = partParentPath === "/" || partParentPath === "." || partParentPath === "";
                     const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID : parentItem.uuid;
-                    const uuid = await this.cloud.createDirectory({ name: partBasename, parent: parentUUID });
+                    const uuid = await this.cloud.createDirectory({
+                        name: partBasename,
+                        parent: parentUUID
+                    });
                     await this.itemsMutex.acquire();
                     this._items[builtPath] = {
                         uuid,
                         type: "directory",
                         metadata: {
-                            name: partBasename
+                            name: partBasename,
+                            timestamp: Date.now()
                         }
                     };
                     this._uuidToItem[uuid] = {
@@ -591,7 +610,8 @@ class FS {
                         type: "directory",
                         path: builtPath,
                         metadata: {
-                            name: partBasename
+                            name: partBasename,
+                            timestamp: Date.now()
                         }
                     };
                     this.itemsMutex.release();

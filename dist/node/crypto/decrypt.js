@@ -141,7 +141,7 @@ class Decrypt {
         }
         let fileMetadata = {
             name: "",
-            size: 0,
+            size: 1,
             mime: "application/octet-stream",
             key: "",
             lastModified: Date.now(),
@@ -153,9 +153,10 @@ class Decrypt {
             try {
                 const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }));
                 if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+                    const lastModifiedParsed = parseInt((_a = decrypted.lastModified) !== null && _a !== void 0 ? _a : Date.now());
                     fileMetadata = {
-                        size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
-                        lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                        size: parseInt((_b = decrypted.size) !== null && _b !== void 0 ? _b : 0),
+                        lastModified: lastModifiedParsed > 0 ? (0, utils_2.convertTimestampToMs)(lastModifiedParsed) : Date.now(),
                         creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
                         name: decrypted.name,
                         key: decrypted.key,
@@ -237,7 +238,7 @@ class Decrypt {
         }
         let fileMetadata = {
             name: "",
-            size: 0,
+            size: 1,
             mime: "application/octet-stream",
             key: "",
             lastModified: Date.now(),
@@ -250,9 +251,10 @@ class Decrypt {
         }
         const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+            const lastModifiedParsed = parseInt((_a = decrypted.lastModified) !== null && _a !== void 0 ? _a : Date.now());
             fileMetadata = {
-                size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
-                lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                size: parseInt((_b = decrypted.size) !== null && _b !== void 0 ? _b : 0),
+                lastModified: lastModifiedParsed > 0 ? (0, utils_2.convertTimestampToMs)(lastModifiedParsed) : Date.now(),
                 creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
                 name: decrypted.name,
                 key: decrypted.key,
@@ -321,7 +323,7 @@ class Decrypt {
         }
         let fileMetadata = {
             name: "",
-            size: 0,
+            size: 1,
             mime: "application/octet-stream",
             key: "",
             lastModified: Date.now(),
@@ -330,9 +332,10 @@ class Decrypt {
         };
         const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }));
         if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+            const lastModifiedParsed = parseInt((_a = decrypted.lastModified) !== null && _a !== void 0 ? _a : Date.now());
             fileMetadata = {
-                size: parseInt((_a = decrypted.size) !== null && _a !== void 0 ? _a : 0),
-                lastModified: (0, utils_2.convertTimestampToMs)(parseInt((_b = decrypted.lastModified) !== null && _b !== void 0 ? _b : Date.now())),
+                size: parseInt((_b = decrypted.size) !== null && _b !== void 0 ? _b : 0),
+                lastModified: lastModifiedParsed > 0 ? (0, utils_2.convertTimestampToMs)(lastModifiedParsed) : Date.now(),
                 creation: typeof decrypted.creation === "number" ? (0, utils_2.convertTimestampToMs)(parseInt(decrypted.creation)) : undefined,
                 name: decrypted.name,
                 key: decrypted.key,
@@ -817,7 +820,11 @@ class Decrypt {
                     const decrypted = await globalThis.crypto.subtle.decrypt({
                         name: "AES-CBC",
                         iv: ivBytes
-                    }, await (0, utils_1.importRawKey)({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), data.subarray(16));
+                    }, await (0, utils_1.importRawKey)({
+                        key: keyBytes,
+                        algorithm: "AES-CBC",
+                        mode: ["decrypt"]
+                    }), data.subarray(16));
                     return Buffer.from(decrypted);
                 }
                 else {
@@ -827,7 +834,11 @@ class Decrypt {
                     const decrypted = await globalThis.crypto.subtle.decrypt({
                         name: "AES-CBC",
                         iv: ivBytes
-                    }, await (0, utils_1.importRawKey)({ key: keyBytes, algorithm: "AES-CBC", mode: ["decrypt"] }), data);
+                    }, await (0, utils_1.importRawKey)({
+                        key: keyBytes,
+                        algorithm: "AES-CBC",
+                        mode: ["decrypt"]
+                    }), data);
                     return Buffer.from(decrypted);
                 }
             }
@@ -838,7 +849,11 @@ class Decrypt {
                 const decrypted = await globalThis.crypto.subtle.decrypt({
                     name: "AES-GCM",
                     iv
-                }, await (0, utils_1.importRawKey)({ key: keyBytes, algorithm: "AES-GCM", mode: ["decrypt"] }), encData);
+                }, await (0, utils_1.importRawKey)({
+                    key: keyBytes,
+                    algorithm: "AES-GCM",
+                    mode: ["decrypt"]
+                }), encData);
                 return Buffer.from(decrypted);
             }
         }

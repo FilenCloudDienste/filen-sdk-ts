@@ -23,7 +23,9 @@ export type FSItemFileBase = {
 export type FSItemFileMetadata = Prettify<FSItemFileBase & FileMetadata>;
 export type FSItem = Prettify<(FSItemBase & {
     type: "directory";
-    metadata: FolderMetadata;
+    metadata: FolderMetadata & {
+        timestamp: number;
+    };
 }) | (FSItemBase & {
     type: "file";
     metadata: FSItemFileMetadata;
@@ -35,7 +37,6 @@ export type FSStatsBase = {
     birthtimeMs: number;
     isDirectory: () => boolean;
     isFile: () => boolean;
-    isSymbolicLink: () => boolean;
 };
 export type FSStats = Prettify<(FolderMetadata & FSStatsBase & {
     type: "directory";

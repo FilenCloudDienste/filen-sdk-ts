@@ -100,7 +100,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -172,7 +175,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -248,7 +254,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -322,7 +331,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -386,7 +398,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -450,7 +465,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -514,7 +532,10 @@ class Cloud {
                     type: "file",
                     uuid: file.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                    size: file.size,
+                    size: (0, utils_1.realFileSize)({
+                        chunksSize: file.size,
+                        metadataDecrypted: decrypted
+                    }),
                     mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                     lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : file.timestamp),
                     timestamp: (0, utils_1.convertTimestampToMs)(file.timestamp),
@@ -1377,7 +1398,10 @@ class Cloud {
                             : {
                                 name: `CANNOT_DECRYPT_NAME_${file.uuid}`,
                                 mime: "application/octet-stream",
-                                size: file.size,
+                                size: (0, utils_1.realFileSize)({
+                                    chunksSize: file.size,
+                                    metadataDecrypted: decryptedFileMetadata
+                                }),
                                 lastModified: (0, utils_1.convertTimestampToMs)(file.timestamp),
                                 creation: undefined,
                                 hash: undefined,
@@ -2315,7 +2339,9 @@ class Cloud {
                     uuid: folder.uuid,
                     name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${folder.uuid}`,
                     parent: folder.parent,
-                    size: 0
+                    size: 0,
+                    timestamp: typeof folder.timestamp === "number" ? (0, utils_1.convertTimestampToMs)(folder.timestamp) : Date.now(),
+                    lastModified: typeof folder.timestamp === "number" ? (0, utils_1.convertTimestampToMs)(folder.timestamp) : Date.now()
                 };
             }
             catch (_a) {
@@ -2352,7 +2378,10 @@ class Cloud {
                         type: "file",
                         uuid: file.uuid,
                         name: decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${file.uuid}`,
-                        size: decrypted.name.length > 0 ? decrypted.size : file.chunksSize ? file.chunksSize : 1,
+                        size: (0, utils_1.realFileSize)({
+                            chunksSize: file.chunksSize,
+                            metadataDecrypted: decrypted
+                        }),
                         mime: decrypted.name.length > 0 ? decrypted.mime : "application/octet-stream",
                         lastModified: (0, utils_1.convertTimestampToMs)(decrypted.name.length > 0 ? decrypted.lastModified : Date.now()),
                         parent: file.parent,
@@ -2362,7 +2391,8 @@ class Cloud {
                         bucket: file.bucket,
                         region: file.region,
                         creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
-                        hash: decrypted.name.length > 0 ? decrypted.hash : undefined
+                        hash: decrypted.name.length > 0 ? decrypted.hash : undefined,
+                        timestamp: typeof file.timestamp === "number" ? (0, utils_1.convertTimestampToMs)(file.timestamp) : Date.now()
                     };
                     resolve();
                 })

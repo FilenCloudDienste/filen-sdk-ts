@@ -42,7 +42,8 @@ export class FS {
                 uuid: this.sdkConfig.baseFolderUUID,
                 type: "directory",
                 metadata: {
-                    name: "Cloud Drive"
+                    name: "Cloud Drive",
+                    timestamp: Date.now()
                 }
             }
         };
@@ -52,7 +53,8 @@ export class FS {
                 type: "directory",
                 path: "/",
                 metadata: {
-                    name: "Cloud Drive"
+                    name: "Cloud Drive",
+                    timestamp: Date.now()
                 }
             }
         };
@@ -258,7 +260,8 @@ export class FS {
                         uuid: item.uuid,
                         type: "directory",
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                     this._uuidToItem[item.uuid] = {
@@ -266,7 +269,8 @@ export class FS {
                         type: "directory",
                         path: itemPath,
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                 }
@@ -328,7 +332,10 @@ export class FS {
      */
     async readdir({ path, recursive = false }) {
         path = this.normalizePath({ path });
-        const uuid = await this.pathToItemUUID({ path, type: "directory" });
+        const uuid = await this.pathToItemUUID({
+            path,
+            type: "directory"
+        });
         if (!uuid) {
             throw new ENOENT({ path });
         }
@@ -352,7 +359,8 @@ export class FS {
                         uuid: item.uuid,
                         type: "directory",
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                     this._uuidToItem[item.uuid] = {
@@ -360,7 +368,8 @@ export class FS {
                         type: "directory",
                         path: itemPath,
                         metadata: {
-                            name: item.name
+                            name: item.name,
+                            timestamp: item.timestamp
                         }
                     };
                 }
@@ -416,7 +425,8 @@ export class FS {
                     uuid: item.uuid,
                     type: "directory",
                     metadata: {
-                        name: item.name
+                        name: item.name,
+                        timestamp: item.timestamp
                     }
                 };
                 this._uuidToItem[item.uuid] = {
@@ -424,7 +434,8 @@ export class FS {
                     type: "directory",
                     path: itemPath,
                     metadata: {
-                        name: item.name
+                        name: item.name,
+                        timestamp: item.timestamp
                     }
                 };
             }
@@ -498,26 +509,20 @@ export class FS {
                 },
                 isFile() {
                     return true;
-                },
-                isSymbolicLink() {
-                    return false;
                 }
             };
         }
         return {
-            ...item.metadata,
+            name: item.metadata.name,
             uuid,
             size: 0,
-            mtimeMs: now,
-            birthtimeMs: now,
+            mtimeMs: item.metadata.timestamp ?? now,
+            birthtimeMs: item.metadata.timestamp ?? now,
             type: "directory",
             isDirectory() {
                 return true;
             },
             isFile() {
-                return false;
-            },
-            isSymbolicLink() {
                 return false;
             }
         };
@@ -564,7 +569,8 @@ export class FS {
                     uuid,
                     type: "directory",
                     metadata: {
-                        name: basename
+                        name: basename,
+                        timestamp: Date.now()
                     }
                 };
                 this._uuidToItem[uuid] = {
@@ -572,7 +578,8 @@ export class FS {
                     type: "directory",
                     path,
                     metadata: {
-                        name: basename
+                        name: basename,
+                        timestamp: Date.now()
                     }
                 };
                 this.itemsMutex.release();
@@ -594,13 +601,17 @@ export class FS {
                     }
                     const parentIsBase = partParentPath === "/" || partParentPath === "." || partParentPath === "";
                     const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID : parentItem.uuid;
-                    const uuid = await this.cloud.createDirectory({ name: partBasename, parent: parentUUID });
+                    const uuid = await this.cloud.createDirectory({
+                        name: partBasename,
+                        parent: parentUUID
+                    });
                     await this.itemsMutex.acquire();
                     this._items[builtPath] = {
                         uuid,
                         type: "directory",
                         metadata: {
-                            name: partBasename
+                            name: partBasename,
+                            timestamp: Date.now()
                         }
                     };
                     this._uuidToItem[uuid] = {
@@ -608,7 +619,8 @@ export class FS {
                         type: "directory",
                         path: builtPath,
                         metadata: {
-                            name: partBasename
+                            name: partBasename,
+                            timestamp: Date.now()
                         }
                     };
                     this.itemsMutex.release();
