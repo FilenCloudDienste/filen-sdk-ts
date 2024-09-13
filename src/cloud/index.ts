@@ -1153,17 +1153,32 @@ export class Cloud {
 
 	/**
 	 * Create a directory under parent.
-	 * @date 2/15/2024 - 2:27:36 AM
 	 *
 	 * @public
 	 * @async
-	 * @param {{ uuid?: string; name: string; parent: string }} param0
+	 * @param {{
+	 * 		uuid?: string
+	 * 		name: string
+	 * 		parent: string
+	 * 		renameIfExists?: boolean
+	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.name
 	 * @param {string} param0.parent
+	 * @param {boolean} [param0.renameIfExists=false]
 	 * @returns {Promise<string>}
 	 */
-	public async createDirectory({ uuid, name, parent }: { uuid?: string; name: string; parent: string }): Promise<string> {
+	public async createDirectory({
+		uuid,
+		name,
+		parent,
+		renameIfExists = false
+	}: {
+		uuid?: string
+		name: string
+		parent: string
+		renameIfExists?: boolean
+	}): Promise<string> {
 		await this._semaphores.createDirectory.acquire()
 
 		try {
@@ -1172,6 +1187,14 @@ export class Cloud {
 
 			if (exists.exists) {
 				uuidToUse = exists.uuid
+
+				if (renameIfExists) {
+					await this.renameDirectory({
+						uuid: uuidToUse,
+						name,
+						overwriteIfExists: false
+					})
+				}
 			} else {
 				const [metadataEncrypted, nameHashed] = await Promise.all([
 					this.crypto.encrypt().metadata({ metadata: JSON.stringify({ name }) }),

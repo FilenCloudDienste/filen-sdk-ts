@@ -345,20 +345,26 @@ export declare class Cloud {
     }): Promise<void>;
     /**
      * Create a directory under parent.
-     * @date 2/15/2024 - 2:27:36 AM
      *
      * @public
      * @async
-     * @param {{ uuid?: string; name: string; parent: string }} param0
+     * @param {{
+     * 		uuid?: string
+     * 		name: string
+     * 		parent: string
+     * 		renameIfExists?: boolean
+     * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.name
      * @param {string} param0.parent
+     * @param {boolean} [param0.renameIfExists=false]
      * @returns {Promise<string>}
      */
-    createDirectory({ uuid, name, parent }: {
+    createDirectory({ uuid, name, parent, renameIfExists }: {
         uuid?: string;
         name: string;
         parent: string;
+        renameIfExists?: boolean;
     }): Promise<string>;
     /**
      * Change the color of a directory.
