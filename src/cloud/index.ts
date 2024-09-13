@@ -883,7 +883,7 @@ export class Cloud {
 
 		const isPresent = await this.api.v3().file().present({ uuid })
 
-		if (!isPresent.present || isPresent.trash || isPresent.versioned) {
+		if (!isPresent.present) {
 			return
 		}
 
@@ -893,13 +893,11 @@ export class Cloud {
 			parent: get.parent
 		})
 
-		if (exists.exists) {
-			if (exists.existsUUID === uuid) {
-				return
-			}
-
+		if (exists.exists && exists.uuid !== uuid) {
 			if (overwriteIfExists) {
-				await this.trashFile({ uuid: exists.existsUUID })
+				await this.trashFile({ uuid: exists.uuid })
+			} else {
+				throw new Error("A file with the same name already exists in this directory.")
 			}
 		}
 
@@ -964,7 +962,7 @@ export class Cloud {
 	}): Promise<void> {
 		const isPresent = await this.api.v3().dir().present({ uuid })
 
-		if (!isPresent.present || isPresent.trash) {
+		if (!isPresent.present) {
 			return
 		}
 
@@ -974,13 +972,11 @@ export class Cloud {
 			parent: get.parent
 		})
 
-		if (exists.exists) {
-			if (exists.uuid === uuid) {
-				return
-			}
-
+		if (exists.exists && exists.uuid !== uuid) {
 			if (overwriteIfExists) {
 				await this.trashDirectory({ uuid: exists.uuid })
+			} else {
+				throw new Error("A directory with the same name already exists in this directory.")
 			}
 		}
 
@@ -1049,12 +1045,12 @@ export class Cloud {
 		})
 
 		if (exists.exists) {
-			if (exists.existsUUID === uuid) {
+			if (exists.uuid === uuid) {
 				return
 			}
 
 			if (overwriteIfExists) {
-				await this.trashFile({ uuid: exists.existsUUID })
+				await this.trashFile({ uuid: exists.uuid })
 			}
 		}
 

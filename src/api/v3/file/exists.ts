@@ -3,11 +3,11 @@ import type APIClient from "../../client"
 export type FileExistsResponse =
 	| {
 			exists: false
-			existsUUID?: string
+			uuid?: string
 	  }
 	| {
 			exists: true
-			existsUUID: string
+			uuid: string
 	  }
 
 /**

@@ -691,7 +691,7 @@ class FS {
                 }
             }
             else {
-                if (to.startsWith(from)) {
+                if (to.startsWith(from + "/")) {
                     return;
                 }
                 if (oldBasename !== newBasename) {
@@ -1318,7 +1318,7 @@ class FS {
         }
         from = this.normalizePath({ path: from });
         to = this.normalizePath({ path: to });
-        if (from === "/" || from === to || to.startsWith(from)) {
+        if (from === "/" || from === to || to.startsWith(from + "/")) {
             return;
         }
         const uuid = await this.pathToItemUUID({ path: from });

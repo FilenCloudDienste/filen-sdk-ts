@@ -609,7 +609,7 @@ export class Cloud {
             throw new Error("Invalid metadata key.");
         }
         const isPresent = await this.api.v3().file().present({ uuid });
-        if (!isPresent.present || isPresent.trash || isPresent.versioned) {
+        if (!isPresent.present) {
             return;
         }
         const get = await this.api.v3().file().get({ uuid });
@@ -617,12 +617,12 @@ export class Cloud {
             name,
             parent: get.parent
         });
-        if (exists.exists) {
-            if (exists.existsUUID === uuid) {
-                return;
-            }
+        if (exists.exists && exists.uuid !== uuid) {
             if (overwriteIfExists) {
-                await this.trashFile({ uuid: exists.existsUUID });
+                await this.trashFile({ uuid: exists.uuid });
+            }
+            else {
+                throw new Error("A file with the same name already exists in this directory.");
             }
         }
         const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
@@ -675,7 +675,7 @@ export class Cloud {
      */
     async renameDirectory({ uuid, name, overwriteIfExists = false }) {
         const isPresent = await this.api.v3().dir().present({ uuid });
-        if (!isPresent.present || isPresent.trash) {
+        if (!isPresent.present) {
             return;
         }
         const get = await this.api.v3().dir().get({ uuid });
@@ -683,12 +683,12 @@ export class Cloud {
             name,
             parent: get.parent
         });
-        if (exists.exists) {
-            if (exists.uuid === uuid) {
-                return;
-            }
+        if (exists.exists && exists.uuid !== uuid) {
             if (overwriteIfExists) {
                 await this.trashDirectory({ uuid: exists.uuid });
+            }
+            else {
+                throw new Error("A directory with the same name already exists in this directory.");
             }
         }
         const [nameHashed, metadataEncrypted] = await Promise.all([
@@ -743,11 +743,11 @@ export class Cloud {
             parent: to
         });
         if (exists.exists) {
-            if (exists.existsUUID === uuid) {
+            if (exists.uuid === uuid) {
                 return;
             }
             if (overwriteIfExists) {
-                await this.trashFile({ uuid: exists.existsUUID });
+                await this.trashFile({ uuid: exists.uuid });
             }
         }
         await this.api.v3().file().move({
