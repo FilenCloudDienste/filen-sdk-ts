@@ -297,7 +297,10 @@ class User {
             return true;
         }
         catch (e) {
-            if (e instanceof __1.APIError && e.code === "api_key_not_found") {
+            if (e instanceof __1.APIError && (e.code === "api_key_not_found" || e.code === "invalid_api_key")) {
+                return false;
+            }
+            if (e instanceof Error && e.message.toLowerCase().includes("api") && e.message.toLowerCase().includes("key")) {
                 return false;
             }
             throw e;
