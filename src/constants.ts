@@ -1,16 +1,13 @@
 import type { Environment } from "./types"
 
-const env = {
-	isBrowser:
-		(typeof window !== "undefined" && typeof window.document !== "undefined") ||
-		// @ts-expect-error WorkerEnv's are not typed
-		(typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
-		// @ts-expect-error WorkerEnv's are not typed
-		(typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope),
-	isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null
-} as const
+export const isBrowser =
+	(typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.navigator !== "undefined") ||
+	// @ts-expect-error WorkerEnv's are not typed
+	(typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
+	// @ts-expect-error WorkerEnv's are not typed
+	(typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope)
 
-export const environment: Environment = env.isBrowser ? "browser" : "node"
+export const environment: Environment = isBrowser ? "browser" : "node"
 
 export const CHUNK_SIZE = 1024 * 1024
 export const BUFFER_SIZE = 4096

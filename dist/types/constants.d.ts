@@ -1,4 +1,5 @@
 import type { Environment } from "./types";
+export declare const isBrowser: boolean;
 export declare const environment: Environment;
 export declare const CHUNK_SIZE: number;
 export declare const BUFFER_SIZE = 4096;

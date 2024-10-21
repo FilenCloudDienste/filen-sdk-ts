@@ -1,15 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MAX_CHAT_SIZE = exports.MAX_CONCURRENT_DIRECTORY_DOWNLOADS = exports.MAX_CONCURRENT_DIRECTORY_UPLOADS = exports.MAX_CONCURRENT_UPLOADS = exports.MAX_CONCURRENT_LISTING_OPS = exports.MAX_NOTE_SIZE = exports.UPLOAD_CHUNK_SIZE = exports.DEFAULT_UPLOAD_BUCKET = exports.DEFAULT_UPLOAD_REGION = exports.CURRENT_FILE_ENCRYPTION_VERSION = exports.MAX_UPLOAD_THREADS = exports.MAX_DOWNLOAD_WRITERS = exports.MAX_DOWNLOAD_THREADS = exports.MAX_CONCURRENT_DOWNLOADS = exports.BASE64_BUFFER_SIZE = exports.BUFFER_SIZE = exports.CHUNK_SIZE = exports.environment = void 0;
-const env = {
-    isBrowser: (typeof window !== "undefined" && typeof window.document !== "undefined") ||
-        // @ts-expect-error WorkerEnv's are not typed
-        (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
-        // @ts-expect-error WorkerEnv's are not typed
-        (typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope),
-    isNode: typeof process !== "undefined" && process.versions !== null && process.versions.node !== null
-};
-exports.environment = env.isBrowser ? "browser" : "node";
+exports.MAX_CHAT_SIZE = exports.MAX_CONCURRENT_DIRECTORY_DOWNLOADS = exports.MAX_CONCURRENT_DIRECTORY_UPLOADS = exports.MAX_CONCURRENT_UPLOADS = exports.MAX_CONCURRENT_LISTING_OPS = exports.MAX_NOTE_SIZE = exports.UPLOAD_CHUNK_SIZE = exports.DEFAULT_UPLOAD_BUCKET = exports.DEFAULT_UPLOAD_REGION = exports.CURRENT_FILE_ENCRYPTION_VERSION = exports.MAX_UPLOAD_THREADS = exports.MAX_DOWNLOAD_WRITERS = exports.MAX_DOWNLOAD_THREADS = exports.MAX_CONCURRENT_DOWNLOADS = exports.BASE64_BUFFER_SIZE = exports.BUFFER_SIZE = exports.CHUNK_SIZE = exports.environment = exports.isBrowser = void 0;
+exports.isBrowser = (typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.navigator !== "undefined") ||
+    // @ts-expect-error WorkerEnv's are not typed
+    (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
+    // @ts-expect-error WorkerEnv's are not typed
+    (typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope);
+exports.environment = exports.isBrowser ? "browser" : "node";
 exports.CHUNK_SIZE = 1024 * 1024;
 exports.BUFFER_SIZE = 4096;
 exports.BASE64_BUFFER_SIZE = 3 * 1024;
