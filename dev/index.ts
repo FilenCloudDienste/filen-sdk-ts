@@ -26,6 +26,8 @@ const filen = new FilenSDK({
 const main = async () => {
 	console.log("starting")
 
+	console.log(await filen.fs().readdir({ path: "/" }))
+
 	console.log("done")
 }
 

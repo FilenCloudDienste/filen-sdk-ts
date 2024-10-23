@@ -1,4 +1,4 @@
-import axios, { ResponseType, AxiosResponse, InternalAxiosRequestConfig } from "axios"
+import axios, { type ResponseType, type AxiosResponse, type AxiosRequestConfig } from "axios"
 import { sleep, getRandomArbitrary, normalizePath, parseURLParams } from "../utils"
 import { environment } from "../constants"
 import { promisify } from "util"
@@ -6,7 +6,7 @@ import { pipeline, Readable, Transform } from "stream"
 import fs from "fs-extra"
 import { APIError } from "./errors"
 import { bufferToHash } from "../crypto/utils"
-import type { ProgressCallback } from "../types"
+import { type ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
@@ -191,7 +191,7 @@ export class APIClient {
 								statusText: "",
 								data: null,
 								headers,
-								config: null as unknown as InternalAxiosRequestConfig
+								config: null as unknown as AxiosRequestConfig
 							})
 
 							return
@@ -203,7 +203,7 @@ export class APIClient {
 								statusText: "",
 								data: response,
 								headers,
-								config: null as unknown as InternalAxiosRequestConfig
+								config: null as unknown as AxiosRequestConfig
 							})
 						} else {
 							const chunks: Buffer[] = []
@@ -227,7 +227,7 @@ export class APIClient {
 											? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
 											: Buffer.concat(chunks),
 										headers,
-										config: null as unknown as InternalAxiosRequestConfig
+										config: null as unknown as AxiosRequestConfig
 									})
 								} catch (e) {
 									reject(e)
@@ -237,6 +237,18 @@ export class APIClient {
 
 						response.on("error", reject)
 					}
+				)
+
+				params.abortSignal?.addEventListener(
+					"abort",
+					() => {
+						try {
+							request?.destroy()
+						} catch {
+							// Noop
+						}
+					},
+					{ once: true }
 				)
 
 				request.on("error", reject)
@@ -282,7 +294,6 @@ export class APIClient {
 			maxRedirects: 0,
 			maxBodyLength: Infinity,
 			maxContentLength: Infinity,
-			maxRate: Infinity,
 			onUploadProgress: event => {
 				if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
 					return
@@ -382,7 +393,7 @@ export class APIClient {
 								statusText: "",
 								data: null,
 								headers,
-								config: null as unknown as InternalAxiosRequestConfig
+								config: null as unknown as AxiosRequestConfig
 							})
 
 							return
@@ -394,7 +405,7 @@ export class APIClient {
 								statusText: "",
 								data: response.pipe(calculateProgressTransform),
 								headers,
-								config: null as unknown as InternalAxiosRequestConfig
+								config: null as unknown as AxiosRequestConfig
 							})
 						} else {
 							const chunks: Buffer[] = []
@@ -420,7 +431,7 @@ export class APIClient {
 											? JSON.parse(Buffer.concat(chunks).toString("utf-8"))
 											: Buffer.concat(chunks),
 										headers,
-										config: null as unknown as InternalAxiosRequestConfig
+										config: null as unknown as AxiosRequestConfig
 									})
 								} catch (e) {
 									reject(e)
@@ -430,6 +441,18 @@ export class APIClient {
 
 						response.on("error", reject)
 					}
+				)
+
+				params.abortSignal?.addEventListener(
+					"abort",
+					() => {
+						try {
+							request?.destroy()
+						} catch {
+							// Noop
+						}
+					},
+					{ once: true }
 				)
 
 				request.on("error", reject)
@@ -447,7 +470,6 @@ export class APIClient {
 			maxRedirects: 0,
 			maxBodyLength: Infinity,
 			maxContentLength: Infinity,
-			maxRate: Infinity,
 			onDownloadProgress: event => {
 				if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
 					return

@@ -180,6 +180,14 @@ export class APIClient {
                     }
                     response.on("error", reject);
                 });
+                params.abortSignal?.addEventListener("abort", () => {
+                    try {
+                        request?.destroy();
+                    }
+                    catch {
+                        // Noop
+                    }
+                }, { once: true });
                 request.on("error", reject);
                 request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)));
                 if (postDataIsBuffer) {
@@ -218,7 +226,6 @@ export class APIClient {
             maxRedirects: 0,
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
-            maxRate: Infinity,
             onUploadProgress: event => {
                 if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
                     return;
@@ -343,6 +350,14 @@ export class APIClient {
                     }
                     response.on("error", reject);
                 });
+                params.abortSignal?.addEventListener("abort", () => {
+                    try {
+                        request?.destroy();
+                    }
+                    catch {
+                        // Noop
+                    }
+                }, { once: true });
                 request.on("error", reject);
                 request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)));
                 request.end();
@@ -356,7 +371,6 @@ export class APIClient {
             maxRedirects: 0,
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
-            maxRate: Infinity,
             onDownloadProgress: event => {
                 if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
                     return;

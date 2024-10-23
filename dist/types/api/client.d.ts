@@ -1,8 +1,8 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import { ResponseType } from "axios";
+import { type ResponseType } from "axios";
 import fs from "fs-extra";
-import type { ProgressCallback } from "../types";
+import { type ProgressCallback } from "../types";
 export type APIClientConfig = {
     apiKey: string;
 };

@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.171",
+	"version": "0.1.172",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -8,7 +8,7 @@
 	"private": false,
 	"scripts": {
 		"test": "jest",
-		"dev": "ts-node --files dev/index.ts",
+		"dev": "node --import tsx --trace-warnings --trace-uncaught ./dev/index.ts",
 		"build": "npm run build:clean && npm run lint && npm run build:node && npm run build:browser",
 		"build:node": "tsc",
 		"build:browser": "tsc --p tsconfig.browser.json",
@@ -83,7 +83,7 @@
 		"terser-webpack-plugin": "^5.3.10",
 		"ts-jest": "^29.2.5",
 		"ts-loader": "^9.5.1",
-		"ts-node": "^10.9.2",
+		"tsx": "^4.19.1",
 		"typedoc": "^0.25.7",
 		"typedoc-plugin-missing-exports": "^2.2.0",
 		"typescript": "^5.3.3",
@@ -94,7 +94,7 @@
 	},
 	"dependencies": {
 		"agentkeepalive": "^4.5.0",
-		"axios": "^1.6.7",
+		"axios": "^0.28.1",
 		"crypto-api-v1": "^1.0.0",
 		"crypto-js": "^4.2.0",
 		"fs-extra": "^11.2.0",
@@ -104,7 +104,7 @@
 		"progress-stream": "^2.0.0",
 		"socket.io-client": "^2.5.0",
 		"striptags": "^3.2.0",
-		"uuid": "^9.0.1",
-		"write-file-atomic": "^5.0.1"
+		"uuid": "^10.0.0",
+		"write-file-atomic": "^6.0.0"
 	}
 }
