@@ -11,15 +11,7 @@ import {
 	type GetFileResult,
 	type GetDirResult
 } from "../types"
-import {
-	convertTimestampToMs,
-	promiseAllChunked,
-	uuidv4,
-	normalizePath,
-	getEveryPossibleDirectoryPath,
-	realFileSize,
-	nodeStreamToBuffer
-} from "../utils"
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize } from "../utils"
 import {
 	environment,
 	MAX_DOWNLOAD_THREADS,
@@ -57,7 +49,6 @@ import { type ReadableStream as ReadableStreamWebType } from "stream/web"
 import { ChunkedUploadWriter } from "./streams"
 import { type FileExistsResponse } from "../api/v3/file/exists"
 import { type DirExistsResponse } from "../api/v3/dir/exists"
-import { Jimp } from "jimp"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -4773,65 +4764,6 @@ export class Cloud {
 			...dir,
 			metadataDecrypted: dirMetadataDecrypted
 		}
-	}
-
-	/**
-	 * Generate a thumbnail from an image.
-	 *
-	 * @public
-	 * @async
-	 * @param {{
-	 * 		source: Buffer | Readable
-	 * 		options: {
-	 * 			width: number
-	 * 			height?: number
-	 * 			quality?: number
-	 * 			maintainAspectRatio?: boolean
-	 * 			fit?: "contain" | "cover"
-	 * 		}
-	 * 	}} param0
-	 * @param {*} param0.source
-	 * @param {({ width: number; height?: number; quality?: number; maintainAspectRatio?: boolean; fit?: "contain" | "cover"; })} param0.options
-	 * @returns {Promise<Buffer>}
-	 */
-	public async generateImageThumbnail({
-		source,
-		options
-	}: {
-		source: Buffer | Readable
-		options: {
-			width: number
-			height?: number
-			quality?: number
-			maintainAspectRatio?: boolean
-			fit?: "contain" | "cover"
-		}
-	}): Promise<Buffer> {
-		const image = await (Buffer.isBuffer(source) ? Jimp.read(source) : Jimp.read(await nodeStreamToBuffer(source)))
-
-		if (!options.height && options.maintainAspectRatio) {
-			const aspect = image.height / image.width
-
-			options.height = Math.round(options.width * aspect)
-		}
-
-		const targetHeight = options.height || options.width
-
-		if (options.fit === "contain") {
-			image.contain({
-				w: options.width,
-				h: targetHeight
-			})
-		} else {
-			image.cover({
-				w: options.width,
-				h: targetHeight
-			})
-		}
-
-		return image.getBuffer("image/jpeg", {
-			quality: options.quality ?? 80
-		})
 	}
 }
 

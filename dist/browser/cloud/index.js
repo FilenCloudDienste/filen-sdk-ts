@@ -1,5 +1,5 @@
 import { APIError } from "..";
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize, nodeStreamToBuffer } from "../utils";
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize } from "../utils";
 import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
 import pathModule from "path";
@@ -11,7 +11,6 @@ import utils from "./utils";
 import { promisify } from "util";
 import { pipeline, Readable, Transform } from "stream";
 import { ChunkedUploadWriter } from "./streams";
-import { Jimp } from "jimp";
 const pipelineAsync = promisify(pipeline);
 /**
  * Cloud
@@ -3566,48 +3565,6 @@ export class Cloud {
             ...dir,
             metadataDecrypted: dirMetadataDecrypted
         };
-    }
-    /**
-     * Generate a thumbnail from an image.
-     *
-     * @public
-     * @async
-     * @param {{
-     * 		source: Buffer | Readable
-     * 		options: {
-     * 			width: number
-     * 			height?: number
-     * 			quality?: number
-     * 			maintainAspectRatio?: boolean
-     * 			fit?: "contain" | "cover"
-     * 		}
-     * 	}} param0
-     * @param {*} param0.source
-     * @param {({ width: number; height?: number; quality?: number; maintainAspectRatio?: boolean; fit?: "contain" | "cover"; })} param0.options
-     * @returns {Promise<Buffer>}
-     */
-    async generateImageThumbnail({ source, options }) {
-        const image = await (Buffer.isBuffer(source) ? Jimp.read(source) : Jimp.read(await nodeStreamToBuffer(source)));
-        if (!options.height && options.maintainAspectRatio) {
-            const aspect = image.height / image.width;
-            options.height = Math.round(options.width * aspect);
-        }
-        const targetHeight = options.height || options.width;
-        if (options.fit === "contain") {
-            image.contain({
-                w: options.width,
-                h: targetHeight
-            });
-        }
-        else {
-            image.cover({
-                w: options.width,
-                h: targetHeight
-            });
-        }
-        return image.getBuffer("image/jpeg", {
-            quality: options.quality ?? 80
-        });
     }
 }
 export default Cloud;

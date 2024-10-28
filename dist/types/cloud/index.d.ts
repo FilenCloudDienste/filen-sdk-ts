@@ -1,6 +1,5 @@
 /// <reference types="node" />
 /// <reference types="node" />
-/// <reference types="node" />
 import type API from "../api";
 import type Crypto from "../crypto";
 import { type FilenSDKConfig, type FilenSDK } from "..";
@@ -15,7 +14,6 @@ import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
 import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info";
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
-import { Readable } from "stream";
 import { type FileExistsResponse } from "../api/v3/file/exists";
 import { type DirExistsResponse } from "../api/v3/dir/exists";
 export type CloudConfig = {
@@ -1357,34 +1355,5 @@ export declare class Cloud {
     getDirectory({ uuid }: {
         uuid: string;
     }): Promise<GetDirResult>;
-    /**
-     * Generate a thumbnail from an image.
-     *
-     * @public
-     * @async
-     * @param {{
-     * 		source: Buffer | Readable
-     * 		options: {
-     * 			width: number
-     * 			height?: number
-     * 			quality?: number
-     * 			maintainAspectRatio?: boolean
-     * 			fit?: "contain" | "cover"
-     * 		}
-     * 	}} param0
-     * @param {*} param0.source
-     * @param {({ width: number; height?: number; quality?: number; maintainAspectRatio?: boolean; fit?: "contain" | "cover"; })} param0.options
-     * @returns {Promise<Buffer>}
-     */
-    generateImageThumbnail({ source, options }: {
-        source: Buffer | Readable;
-        options: {
-            width: number;
-            height?: number;
-            quality?: number;
-            maintainAspectRatio?: boolean;
-            fit?: "contain" | "cover";
-        };
-    }): Promise<Buffer>;
 }
 export default Cloud;
