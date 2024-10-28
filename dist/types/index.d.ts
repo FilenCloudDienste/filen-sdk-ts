@@ -896,6 +896,7 @@ export declare class FilenSDK {
         simpleDate: typeof import("./utils").simpleDate;
         replacePathStartWithFromAndTo: typeof import("./utils").replacePathStartWithFromAndTo;
         fastStringHash: typeof import("./utils").fastStringHash;
+        nodeStreamToBuffer: typeof import("./utils").nodeStreamToBuffer;
     };
 }
 export default FilenSDK;

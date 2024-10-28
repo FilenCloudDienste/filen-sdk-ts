@@ -6,6 +6,7 @@ import os from "os"
 import fs from "fs-extra"
 import { xxHash32 } from "js-xxhash"
 import { type FileMetadata } from "./types"
+import { type Readable } from "stream"
 
 /**
  * "Sleep" for given milliseconds.
@@ -296,6 +297,16 @@ export function realFileSize({ chunksSize, metadataDecrypted }: { chunksSize?: n
 	return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1
 }
 
+export async function nodeStreamToBuffer(stream: Readable): Promise<Buffer> {
+	const chunks: Buffer[] = []
+
+	for await (const chunk of stream) {
+		chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+	}
+
+	return Buffer.concat(chunks)
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -309,7 +320,8 @@ export const utils = {
 	getEveryPossibleDirectoryPath,
 	simpleDate,
 	replacePathStartWithFromAndTo,
-	fastStringHash
+	fastStringHash,
+	nodeStreamToBuffer
 }
 
 export default utils

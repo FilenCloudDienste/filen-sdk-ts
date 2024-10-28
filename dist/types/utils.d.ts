@@ -1,4 +1,7 @@
+/// <reference types="node" />
+/// <reference types="node" />
 import { type FileMetadata } from "./types";
+import { type Readable } from "stream";
 /**
  * "Sleep" for given milliseconds.
  * @date 1/31/2024 - 4:27:48 PM
@@ -138,6 +141,7 @@ export declare function realFileSize({ chunksSize, metadataDecrypted }: {
     chunksSize?: number;
     metadataDecrypted: FileMetadata;
 }): number;
+export declare function nodeStreamToBuffer(stream: Readable): Promise<Buffer>;
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -152,5 +156,6 @@ export declare const utils: {
     simpleDate: typeof simpleDate;
     replacePathStartWithFromAndTo: typeof replacePathStartWithFromAndTo;
     fastStringHash: typeof fastStringHash;
+    nodeStreamToBuffer: typeof nodeStreamToBuffer;
 };
 export default utils;

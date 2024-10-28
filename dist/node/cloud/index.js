@@ -17,6 +17,7 @@ const utils_2 = __importDefault(require("./utils"));
 const util_1 = require("util");
 const stream_1 = require("stream");
 const streams_1 = require("./streams");
+const jimp_1 = require("jimp");
 const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
 /**
  * Cloud
@@ -3540,6 +3541,49 @@ class Cloud {
         const dir = await this.api.v3().dir().get({ uuid });
         const dirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted });
         return Object.assign(Object.assign({}, dir), { metadataDecrypted: dirMetadataDecrypted });
+    }
+    /**
+     * Generate a thumbnail from an image.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		source: Buffer | Readable
+     * 		options: {
+     * 			width: number
+     * 			height?: number
+     * 			quality?: number
+     * 			maintainAspectRatio?: boolean
+     * 			fit?: "contain" | "cover"
+     * 		}
+     * 	}} param0
+     * @param {*} param0.source
+     * @param {({ width: number; height?: number; quality?: number; maintainAspectRatio?: boolean; fit?: "contain" | "cover"; })} param0.options
+     * @returns {Promise<Buffer>}
+     */
+    async generateImageThumbnail({ source, options }) {
+        var _a;
+        const image = await (Buffer.isBuffer(source) ? jimp_1.Jimp.read(source) : jimp_1.Jimp.read(await (0, utils_1.nodeStreamToBuffer)(source)));
+        if (!options.height && options.maintainAspectRatio) {
+            const aspect = image.height / image.width;
+            options.height = Math.round(options.width * aspect);
+        }
+        const targetHeight = options.height || options.width;
+        if (options.fit === "contain") {
+            image.contain({
+                w: options.width,
+                h: targetHeight
+            });
+        }
+        else {
+            image.cover({
+                w: options.width,
+                h: targetHeight
+            });
+        }
+        return image.getBuffer("image/jpeg", {
+            quality: (_a = options.quality) !== null && _a !== void 0 ? _a : 80
+        });
     }
 }
 exports.Cloud = Cloud;

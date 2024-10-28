@@ -15,6 +15,7 @@ import https from "https"
 import { calculateChunkIndices } from "../src/cloud/utils"
 import { Readable } from "stream"
 import { v4 as uuidv4 } from "uuid"
+import { type ReadableStream as ReadableStreamWeb } from "stream/web"
 
 const filen = new FilenSDK({
 	...config,
@@ -25,8 +26,6 @@ const filen = new FilenSDK({
 
 const main = async () => {
 	console.log("starting")
-
-	console.log(await filen.fs().readdir({ path: "/" }))
 
 	console.log("done")
 }

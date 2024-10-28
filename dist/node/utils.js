@@ -1,9 +1,16 @@
 "use strict";
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.realFileSize = exports.fastStringHash = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
+exports.utils = exports.nodeStreamToBuffer = exports.realFileSize = exports.fastStringHash = exports.replacePathStartWithFromAndTo = exports.simpleDate = exports.getEveryPossibleDirectoryPath = exports.parseURLParams = exports.clearTempDirectory = exports.getRandomArbitrary = exports.promiseAllSettledChunked = exports.promiseAllChunked = exports.Uint8ArrayConcat = exports.uuidv4 = exports.normalizePath = exports.convertTimestampToMs = exports.sleep = void 0;
 const path_1 = __importDefault(require("path"));
 const uuid_1 = require("uuid");
 const constants_1 = require("./constants");
@@ -272,6 +279,27 @@ function realFileSize({ chunksSize, metadataDecrypted }) {
     return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1;
 }
 exports.realFileSize = realFileSize;
+async function nodeStreamToBuffer(stream) {
+    var _a, e_1, _b, _c;
+    const chunks = [];
+    try {
+        for (var _d = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = await stream_1.next(), _a = stream_1_1.done, !_a; _d = true) {
+            _c = stream_1_1.value;
+            _d = false;
+            const chunk = _c;
+            chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        }
+    }
+    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+    finally {
+        try {
+            if (!_d && !_a && (_b = stream_1.return)) await _b.call(stream_1);
+        }
+        finally { if (e_1) throw e_1.error; }
+    }
+    return Buffer.concat(chunks);
+}
+exports.nodeStreamToBuffer = nodeStreamToBuffer;
 exports.utils = {
     sleep,
     convertTimestampToMs,
@@ -285,7 +313,8 @@ exports.utils = {
     getEveryPossibleDirectoryPath,
     simpleDate,
     replacePathStartWithFromAndTo,
-    fastStringHash
+    fastStringHash,
+    nodeStreamToBuffer
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map

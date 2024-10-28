@@ -251,6 +251,13 @@ export function fastStringHash(input) {
 export function realFileSize({ chunksSize, metadataDecrypted }) {
     return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1;
 }
+export async function nodeStreamToBuffer(stream) {
+    const chunks = [];
+    for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+}
 export const utils = {
     sleep,
     convertTimestampToMs,
@@ -264,7 +271,8 @@ export const utils = {
     getEveryPossibleDirectoryPath,
     simpleDate,
     replacePathStartWithFromAndTo,
-    fastStringHash
+    fastStringHash,
+    nodeStreamToBuffer
 };
 export default utils;
 //# sourceMappingURL=utils.js.map
