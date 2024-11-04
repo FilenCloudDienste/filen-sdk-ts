@@ -117,7 +117,6 @@ class APIClient {
         let lastBytesUploaded = 0;
         if (constants_1.environment === "node") {
             return new Promise((resolve, reject) => {
-                var _a;
                 const urlParsed = url_1.default.parse(url, true);
                 const timeout = params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout;
                 const request = https_1.default.request({
@@ -129,10 +128,20 @@ class APIClient {
                     agent: keepAliveAgent,
                     headers: Object.assign(Object.assign({}, headers), (postDataIsBuffer ? {} : { "Content-Type": "application/json" }))
                 }, response => {
-                    var _a;
+                    var _a, _b;
+                    if ((_a = params.abortSignal) === null || _a === void 0 ? void 0 : _a.aborted) {
+                        request.destroy();
+                        response.destroy();
+                        reject(new Error("Aborted"));
+                        return;
+                    }
+                    if (request.destroyed || response.destroyed) {
+                        reject(new Error("Aborted"));
+                        return;
+                    }
                     if (response.statusCode !== 200) {
                         resolve({
-                            status: (_a = response.statusCode) !== null && _a !== void 0 ? _a : 500,
+                            status: (_b = response.statusCode) !== null && _b !== void 0 ? _b : 500,
                             statusText: "",
                             data: null,
                             headers,
@@ -175,19 +184,18 @@ class APIClient {
                                 reject(e);
                             }
                         });
+                        response.on("error", reject);
                     }
-                    response.on("error", reject);
                 });
-                (_a = params.abortSignal) === null || _a === void 0 ? void 0 : _a.addEventListener("abort", () => {
-                    try {
-                        request === null || request === void 0 ? void 0 : request.destroy();
-                    }
-                    catch (_a) {
-                        // Noop
-                    }
-                }, { once: true });
                 request.on("error", reject);
                 request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)));
+                request.on("socket", socket => {
+                    socket.setKeepAlive(true, 1000 * 60);
+                });
+                request.setTimeout(params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout, () => {
+                    request.destroy();
+                    reject(new Error(`Request timed out after ${params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout}ms`));
+                });
                 if (postDataIsBuffer) {
                     const readableBuffer = params.data;
                     const progressStreamInstance = (0, progress_stream_1.default)({
@@ -265,7 +273,6 @@ class APIClient {
         let lastBytesDownloaded = 0;
         if (constants_1.environment === "node") {
             return new Promise((resolve, reject) => {
-                var _a;
                 const urlParsed = url_1.default.parse(url, true);
                 const timeout = params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout;
                 const calculateProgress = (transferred) => {
@@ -300,10 +307,20 @@ class APIClient {
                     headers,
                     agent: keepAliveAgent
                 }, response => {
-                    var _a;
+                    var _a, _b;
+                    if ((_a = params.abortSignal) === null || _a === void 0 ? void 0 : _a.aborted) {
+                        request.destroy();
+                        response.destroy();
+                        reject(new Error("Aborted"));
+                        return;
+                    }
+                    if (request.destroyed || response.destroyed) {
+                        reject(new Error("Aborted"));
+                        return;
+                    }
                     if (response.statusCode !== 200) {
                         resolve({
-                            status: (_a = response.statusCode) !== null && _a !== void 0 ? _a : 500,
+                            status: (_b = response.statusCode) !== null && _b !== void 0 ? _b : 500,
                             statusText: "",
                             data: null,
                             headers,
@@ -347,19 +364,18 @@ class APIClient {
                                 reject(e);
                             }
                         });
+                        response.on("error", reject);
                     }
-                    response.on("error", reject);
                 });
-                (_a = params.abortSignal) === null || _a === void 0 ? void 0 : _a.addEventListener("abort", () => {
-                    try {
-                        request === null || request === void 0 ? void 0 : request.destroy();
-                    }
-                    catch (_a) {
-                        // Noop
-                    }
-                }, { once: true });
                 request.on("error", reject);
                 request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)));
+                request.on("socket", socket => {
+                    socket.setKeepAlive(true, 1000 * 60);
+                });
+                request.setTimeout(params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout, () => {
+                    request.destroy();
+                    reject(new Error(`Request timed out after ${params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout}ms`));
+                });
                 request.end();
             });
         }

@@ -132,6 +132,16 @@ export class APIClient {
                         ...(postDataIsBuffer ? {} : { "Content-Type": "application/json" })
                     }
                 }, response => {
+                    if (params.abortSignal?.aborted) {
+                        request.destroy();
+                        response.destroy();
+                        reject(new Error("Aborted"));
+                        return;
+                    }
+                    if (request.destroyed || response.destroyed) {
+                        reject(new Error("Aborted"));
+                        return;
+                    }
                     if (response.statusCode !== 200) {
                         resolve({
                             status: response.statusCode ?? 500,
@@ -177,19 +187,18 @@ export class APIClient {
                                 reject(e);
                             }
                         });
+                        response.on("error", reject);
                     }
-                    response.on("error", reject);
                 });
-                params.abortSignal?.addEventListener("abort", () => {
-                    try {
-                        request?.destroy();
-                    }
-                    catch {
-                        // Noop
-                    }
-                }, { once: true });
                 request.on("error", reject);
                 request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)));
+                request.on("socket", socket => {
+                    socket.setKeepAlive(true, 1000 * 60);
+                });
+                request.setTimeout(params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout, () => {
+                    request.destroy();
+                    reject(new Error(`Request timed out after ${params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout}ms`));
+                });
                 if (postDataIsBuffer) {
                     const readableBuffer = params.data;
                     const progressStreamInstance = progressStream({
@@ -301,6 +310,16 @@ export class APIClient {
                     headers,
                     agent: keepAliveAgent
                 }, response => {
+                    if (params.abortSignal?.aborted) {
+                        request.destroy();
+                        response.destroy();
+                        reject(new Error("Aborted"));
+                        return;
+                    }
+                    if (request.destroyed || response.destroyed) {
+                        reject(new Error("Aborted"));
+                        return;
+                    }
                     if (response.statusCode !== 200) {
                         resolve({
                             status: response.statusCode ?? 500,
@@ -347,19 +366,18 @@ export class APIClient {
                                 reject(e);
                             }
                         });
+                        response.on("error", reject);
                     }
-                    response.on("error", reject);
                 });
-                params.abortSignal?.addEventListener("abort", () => {
-                    try {
-                        request?.destroy();
-                    }
-                    catch {
-                        // Noop
-                    }
-                }, { once: true });
                 request.on("error", reject);
                 request.on("timeout", () => reject(new Error(`Request timed out after ${timeout}ms`)));
+                request.on("socket", socket => {
+                    socket.setKeepAlive(true, 1000 * 60);
+                });
+                request.setTimeout(params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout, () => {
+                    request.destroy();
+                    reject(new Error(`Request timed out after ${params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout}ms`));
+                });
                 request.end();
             });
         }
