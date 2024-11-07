@@ -25,7 +25,7 @@ npm install @filen/sdk@latest
 2. Initialize the SDK.
 
 ```typescript
-import FilenSDK from "@filen/sdk"
+import { FilenSDK } from "@filen/sdk"
 import path from "path"
 import os from "os"
 
