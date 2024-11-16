@@ -31,6 +31,7 @@ export declare class ChunkedUploadWriter extends Writable {
     private chunksUploaded;
     private readonly sdk;
     private readonly onProgress?;
+    private readonly creation;
     /**
      * Creates an instance of ChunkedUploadWriter.
      *
@@ -44,7 +45,9 @@ export declare class ChunkedUploadWriter extends Writable {
      * 		name: string
      * 		uploadKey: string
      * 		parent: string
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressCallback,
+     * 		lastModified?: number
+     * 		creation?: number
      * 	}} param0
      * @param {ConstructorParameters<any>} [param0.options=undefined]
      * @param {string} param0.uuid
@@ -54,8 +57,10 @@ export declare class ChunkedUploadWriter extends Writable {
      * @param {string} param0.parent
      * @param {FilenSDK} param0.sdk
      * @param {ProgressCallback} param0.onProgress
+     * @param {number} param0.lastModified
+     * @param {number} param0.creation
      */
-    constructor({ options, uuid, key, name, uploadKey, parent, sdk, onProgress }: {
+    constructor({ options, uuid, key, name, uploadKey, parent, sdk, onProgress, lastModified, creation }: {
         options?: ConstructorParameters<typeof Writable>[0];
         sdk: FilenSDK;
         uuid: string;
@@ -64,6 +69,8 @@ export declare class ChunkedUploadWriter extends Writable {
         uploadKey: string;
         parent: string;
         onProgress?: ProgressCallback;
+        lastModified?: number;
+        creation?: number;
     });
     /**
      * Write data to the stream.

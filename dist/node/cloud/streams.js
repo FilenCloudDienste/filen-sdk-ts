@@ -32,7 +32,9 @@ class ChunkedUploadWriter extends stream_1.Writable {
      * 		name: string
      * 		uploadKey: string
      * 		parent: string
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressCallback,
+     * 		lastModified?: number
+     * 		creation?: number
      * 	}} param0
      * @param {ConstructorParameters<any>} [param0.options=undefined]
      * @param {string} param0.uuid
@@ -42,8 +44,10 @@ class ChunkedUploadWriter extends stream_1.Writable {
      * @param {string} param0.parent
      * @param {FilenSDK} param0.sdk
      * @param {ProgressCallback} param0.onProgress
+     * @param {number} param0.lastModified
+     * @param {number} param0.creation
      */
-    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress }) {
+    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress, lastModified, creation }) {
         super(options);
         this.uploadSemaphore = new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS);
         this.processingMutex = new semaphore_1.Semaphore(1);
@@ -56,7 +60,8 @@ class ChunkedUploadWriter extends stream_1.Writable {
         this.version = 2;
         this.size = 0;
         this.name = name;
-        this.lastModified = Date.now();
+        this.lastModified = lastModified ? lastModified : Date.now();
+        this.creation = creation ? creation : Date.now();
         this.mime = mime_types_1.default.lookup(name) || "application/octet-stream";
         this.bucket = "";
         this.region = "";
@@ -163,13 +168,17 @@ class ChunkedUploadWriter extends stream_1.Writable {
         this.index += 1;
         this.size += chunk.byteLength;
         this.hasher.update(chunk);
-        const encryptedChunk = await this.sdk.crypto().encrypt().data({ data: chunk, key: this.key });
-        const response = await this.sdk
-            .api(3)
-            .file()
-            .upload()
-            .chunk()
-            .buffer({ uuid: this.uuid, index: this.index, uploadKey: this.uploadKey, parent: this.parent, buffer: encryptedChunk });
+        const encryptedChunk = await this.sdk.crypto().encrypt().data({
+            data: chunk,
+            key: this.key
+        });
+        const response = await this.sdk.api(3).file().upload().chunk().buffer({
+            uuid: this.uuid,
+            index: this.index,
+            uploadKey: this.uploadKey,
+            parent: this.parent,
+            buffer: encryptedChunk
+        });
         this.bucket = response.bucket;
         this.region = response.region;
         this.chunksUploaded += 1;
@@ -244,7 +253,7 @@ class ChunkedUploadWriter extends stream_1.Writable {
                     mime: this.mime,
                     key: this.key,
                     lastModified: this.lastModified,
-                    creation: this.lastModified,
+                    creation: this.creation,
                     hash
                 })
             })
@@ -258,7 +267,7 @@ class ChunkedUploadWriter extends stream_1.Writable {
                 size: this.size,
                 mime: this.mime,
                 lastModified: this.lastModified,
-                creation: this.lastModified,
+                creation: this.creation,
                 key: this.key,
                 hash
             }
@@ -272,7 +281,7 @@ class ChunkedUploadWriter extends stream_1.Writable {
                 mime: this.mime,
                 key: this.key,
                 lastModified: this.lastModified,
-                creation: this.lastModified,
+                creation: this.creation,
                 hash,
                 version: this.version,
                 region: this.region,

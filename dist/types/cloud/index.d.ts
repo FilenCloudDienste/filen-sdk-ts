@@ -1129,7 +1129,9 @@ export declare class Cloud {
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
-     * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		onUploaded?: (item: CloudItem) => Promise<void>,
+     * 		lastModified?: number
+     * 		creation?: number
      * 	}} param0
      * @param {NodeJS.ReadableStream} param0.source
      * @param {string} param0.parent
@@ -1142,9 +1144,11 @@ export declare class Cloud {
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @param {number} param0.lastModified
+     * @param {number} param0.creation
      * @returns {Promise<CloudItem>}
      */
-    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }: {
         source: NodeJS.ReadableStream;
         parent: string;
         name: string;
@@ -1156,6 +1160,8 @@ export declare class Cloud {
         onError?: (err: Error) => void;
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
+        lastModified?: number;
+        creation?: number;
     }): Promise<CloudItem>;
     /**
      * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.

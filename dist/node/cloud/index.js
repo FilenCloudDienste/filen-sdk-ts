@@ -2785,7 +2785,9 @@ class Cloud {
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
-     * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		onUploaded?: (item: CloudItem) => Promise<void>,
+     * 		lastModified?: number
+     * 		creation?: number
      * 	}} param0
      * @param {NodeJS.ReadableStream} param0.source
      * @param {string} param0.parent
@@ -2798,9 +2800,11 @@ class Cloud {
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @param {number} param0.lastModified
+     * @param {number} param0.creation
      * @returns {Promise<CloudItem>}
      */
-    async uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }) {
         if (constants_1.environment !== "node") {
             throw new Error(`cloud.uploadLocalFileStream is not implemented for ${constants_1.environment}`);
         }
@@ -2857,7 +2861,9 @@ class Cloud {
                     uploadKey,
                     name,
                     parent,
-                    onProgress
+                    onProgress,
+                    lastModified,
+                    creation
                 });
                 const cleanup = () => {
                     try {

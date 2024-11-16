@@ -34,6 +34,7 @@ export class ChunkedUploadWriter extends Writable {
 	private chunksUploaded = 0
 	private readonly sdk: FilenSDK
 	private readonly onProgress?: ProgressCallback
+	private readonly creation: number
 
 	/**
 	 * Creates an instance of ChunkedUploadWriter.
@@ -48,7 +49,9 @@ export class ChunkedUploadWriter extends Writable {
 	 * 		name: string
 	 * 		uploadKey: string
 	 * 		parent: string
-	 * 		onProgress?: ProgressCallback
+	 * 		onProgress?: ProgressCallback,
+	 * 		lastModified?: number
+	 * 		creation?: number
 	 * 	}} param0
 	 * @param {ConstructorParameters<any>} [param0.options=undefined]
 	 * @param {string} param0.uuid
@@ -58,6 +61,8 @@ export class ChunkedUploadWriter extends Writable {
 	 * @param {string} param0.parent
 	 * @param {FilenSDK} param0.sdk
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {number} param0.lastModified
+	 * @param {number} param0.creation
 	 */
 	public constructor({
 		options = undefined,
@@ -67,7 +72,9 @@ export class ChunkedUploadWriter extends Writable {
 		uploadKey,
 		parent,
 		sdk,
-		onProgress
+		onProgress,
+		lastModified,
+		creation
 	}: {
 		options?: ConstructorParameters<typeof Writable>[0]
 		sdk: FilenSDK
@@ -77,6 +84,8 @@ export class ChunkedUploadWriter extends Writable {
 		uploadKey: string
 		parent: string
 		onProgress?: ProgressCallback
+		lastModified?: number
+		creation?: number
 	}) {
 		super(options)
 
@@ -88,7 +97,8 @@ export class ChunkedUploadWriter extends Writable {
 		this.version = 2
 		this.size = 0
 		this.name = name
-		this.lastModified = Date.now()
+		this.lastModified = lastModified ? lastModified : Date.now()
+		this.creation = creation ? creation : Date.now()
 		this.mime = mimeTypes.lookup(name) || "application/octet-stream"
 		this.bucket = ""
 		this.region = ""
@@ -212,13 +222,18 @@ export class ChunkedUploadWriter extends Writable {
 
 		this.hasher.update(chunk)
 
-		const encryptedChunk = await this.sdk.crypto().encrypt().data({ data: chunk, key: this.key })
-		const response = await this.sdk
-			.api(3)
-			.file()
-			.upload()
-			.chunk()
-			.buffer({ uuid: this.uuid, index: this.index, uploadKey: this.uploadKey, parent: this.parent, buffer: encryptedChunk })
+		const encryptedChunk = await this.sdk.crypto().encrypt().data({
+			data: chunk,
+			key: this.key
+		})
+
+		const response = await this.sdk.api(3).file().upload().chunk().buffer({
+			uuid: this.uuid,
+			index: this.index,
+			uploadKey: this.uploadKey,
+			parent: this.parent,
+			buffer: encryptedChunk
+		})
 
 		this.bucket = response.bucket
 		this.region = response.region
@@ -306,7 +321,7 @@ export class ChunkedUploadWriter extends Writable {
 							mime: this.mime,
 							key: this.key,
 							lastModified: this.lastModified,
-							creation: this.lastModified,
+							creation: this.creation,
 							hash
 						})
 					})
@@ -321,7 +336,7 @@ export class ChunkedUploadWriter extends Writable {
 				size: this.size,
 				mime: this.mime,
 				lastModified: this.lastModified,
-				creation: this.lastModified,
+				creation: this.creation,
 				key: this.key,
 				hash
 			}
@@ -336,7 +351,7 @@ export class ChunkedUploadWriter extends Writable {
 				mime: this.mime,
 				key: this.key,
 				lastModified: this.lastModified,
-				creation: this.lastModified,
+				creation: this.creation,
 				hash,
 				version: this.version,
 				region: this.region,
