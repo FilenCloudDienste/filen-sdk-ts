@@ -31,19 +31,25 @@ export declare class Register {
      * 		email: string
      * 		password: string
      * 		salt: string
-     * 		authVersion: AuthVersion
+     * 		authVersion: AuthVersion,
+     * 		refId?: string,
+     * 		affId?: string
      * 	}} param0
      * @param {string} param0.email
      * @param {string} param0.password
      * @param {string} param0.salt
      * @param {AuthVersion} param0.authVersion
+     * @param {string} param0.refId
+     * @param {string} param0.affId
      * @returns {Promise<void>}
      */
-    fetch({ email, password, salt, authVersion }: {
+    fetch({ email, password, salt, authVersion, refId, affId }: {
         email: string;
         password: string;
         salt: string;
         authVersion: AuthVersion;
+        refId?: string;
+        affId?: string;
     }): Promise<void>;
 }
 export default Register;

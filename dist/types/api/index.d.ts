@@ -155,6 +155,8 @@ export declare class API {
             password: string;
             salt: string;
             authVersion: import("..").AuthVersion;
+            refId?: string | undefined;
+            affId?: string | undefined;
         }) => Promise<void>;
         confirmationSend: (params_0: {
             email: string;

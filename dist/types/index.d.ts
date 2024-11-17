@@ -253,6 +253,8 @@ export declare class FilenSDK {
             password: string;
             salt: string;
             authVersion: AuthVersion;
+            refId?: string | undefined;
+            affId?: string | undefined;
         }) => Promise<void>;
         confirmationSend: (params_0: {
             email: string;
