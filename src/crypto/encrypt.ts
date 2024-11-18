@@ -286,7 +286,12 @@ export class Encrypt {
 					name: "AES-GCM",
 					iv: this.textEncoder.encode(iv)
 				},
-				await importRawKey({ key: Buffer.from(key, "utf-8"), algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }),
+				await importRawKey({
+					key: Buffer.from(key, "utf-8"),
+					algorithm: "AES-GCM",
+					mode: ["encrypt"],
+					keyCache: false
+				}),
 				data
 			)
 

@@ -863,12 +863,18 @@ export class APIClient {
 			uploadKey
 		} as unknown as Record<string, string>).toString()
 
-		const bufferHash = await bufferToHash({ buffer, algorithm: "sha512" })
+		const bufferHash = await bufferToHash({
+			buffer,
+			algorithm: "sha512"
+		})
 		const fullURL = `${
 			APIClientDefaults.ingestURLs[getRandomArbitrary(0, APIClientDefaults.ingestURLs.length - 1)]
 		}/v3/upload?${urlParams}&hash=${bufferHash}`
 		const parsedURLParams = parseURLParams({ url: fullURL })
-		const urlParamsHash = await bufferToHash({ buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"), algorithm: "sha512" })
+		const urlParamsHash = await bufferToHash({
+			buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"),
+			algorithm: "sha512"
+		})
 		const builtHeaders = this.buildHeaders({ apiKey: undefined })
 
 		const response = await this.request<UploadChunkResponse>({
