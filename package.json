@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.178",
+	"version": "0.1.180",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -96,6 +96,7 @@
 		"axios": "^0.28.1",
 		"crypto-api-v1": "^1.0.0",
 		"crypto-js": "^4.2.0",
+		"eventemitter3": "^5.0.1",
 		"fs-extra": "^11.2.0",
 		"js-crypto-key-utils": "^1.0.7",
 		"js-xxhash": "^4.0.0",

@@ -49,7 +49,16 @@ class FileDownloadChunkLocal {
      * @returns {Promise<void>}
      */
     async fetch({ uuid, bucket, region, chunk, timeout, abortSignal, to, onProgress }) {
-        await this.apiClient.downloadChunkToLocal({ uuid, bucket, region, chunk, timeout, abortSignal, to, onProgress });
+        await this.apiClient.downloadChunkToLocal({
+            uuid,
+            bucket,
+            region,
+            chunk,
+            timeout,
+            abortSignal,
+            to,
+            onProgress
+        });
     }
 }
 exports.FileDownloadChunkLocal = FileDownloadChunkLocal;

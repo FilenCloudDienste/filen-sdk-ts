@@ -1,11 +1,10 @@
 /// <reference types="node" />
 import type API from "../api";
-import { type FilenSDKConfig } from "..";
+import { type FilenSDKConfig, FilenSDK } from "..";
 import { type UserInfoResponse } from "../api/v3/user/info";
 import { type UserSettingsResponse } from "../api/v3/user/settings";
 import { type UserAccountResponse } from "../api/v3/user/account";
 import { type UserGDPRResponse } from "../api/v3/user/gdpr";
-import type Crypto from "../crypto";
 import { type UserEvent } from "../api/v3/user/events";
 import { type UserEventResponse } from "../api/v3/user/event";
 import { type PaymentMethods } from "../api/v3/user/sub/create";
@@ -14,7 +13,7 @@ import { type UserLockStatus } from "../api/v3/user/lock";
 export type UserConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
-    crypto: Crypto;
+    sdk: FilenSDK;
 };
 /**
  * User
@@ -27,7 +26,7 @@ export type UserConfig = {
 export declare class User {
     private readonly api;
     private readonly sdkConfig;
-    private readonly crypto;
+    private readonly sdk;
     /**
      * Creates an instance of User.
      * @date 2/9/2024 - 5:54:11 AM

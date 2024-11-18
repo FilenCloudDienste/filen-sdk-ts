@@ -1,6 +1,5 @@
 import type API from "../api"
-import type Crypto from "../crypto"
-import { type FilenSDKConfig, MAX_CHAT_SIZE } from ".."
+import { type FilenSDKConfig, MAX_CHAT_SIZE, FilenSDK } from ".."
 import { type ChatConversation } from "../api/v3/chat/conversations"
 import { promiseAllChunked, uuidv4 } from "../utils"
 import { type Contact } from "../api/v3/contacts"
@@ -12,7 +11,7 @@ import { type ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate"
 export type ChatsConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
-	crypto: Crypto
+	sdk: FilenSDK
 }
 
 /**
@@ -25,9 +24,9 @@ export type ChatsConfig = {
  */
 export class Chats {
 	private readonly api: API
-	private readonly crypto: Crypto
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly _chatKeyCache = new Map<string, string>()
+	private readonly sdk: FilenSDK
 
 	/**
 	 * Creates an instance of Chats.
@@ -39,8 +38,8 @@ export class Chats {
 	 */
 	public constructor(params: ChatsConfig) {
 		this.api = params.api
-		this.crypto = params.crypto
 		this.sdkConfig = params.sdkConfig
+		this.sdk = params.sdk
 	}
 
 	/**
@@ -66,7 +65,7 @@ export class Chats {
 		}
 
 		if (chat[0].ownerId === this.sdkConfig.userId && chat[0].ownerMetadata) {
-			const decryptedChatKey = await this.crypto.decrypt().chatKeyOwner({ metadata: chat[0].ownerMetadata })
+			const decryptedChatKey = await this.sdk.getWorker().crypto.decrypt.chatKeyOwner({ metadata: chat[0].ownerMetadata })
 
 			this._chatKeyCache.set(conversation, decryptedChatKey)
 
@@ -79,9 +78,9 @@ export class Chats {
 			throw new Error(`Could not find participant metadata for chat ${conversation}.`)
 		}
 
-		const decryptedChatKey = await this.crypto
-			.decrypt()
-			.chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey! })
+		const decryptedChatKey = await this.sdk
+			.getWorker()
+			.crypto.decrypt.chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey! })
 
 		this._chatKeyCache.set(conversation, decryptedChatKey)
 
@@ -122,11 +121,17 @@ export class Chats {
 
 							const namePromise =
 								typeof convo.name === "string" && convo.name.length > 0
-									? this.crypto.decrypt().chatConversationName({ name: convo.name, key: decryptedChatKey })
+									? this.sdk.getWorker().crypto.decrypt.chatConversationName({
+											name: convo.name,
+											key: decryptedChatKey
+									  })
 									: Promise.resolve("")
 							const messagePromise =
 								typeof convo.lastMessage === "string" && convo.lastMessage.length > 0
-									? this.crypto.decrypt().chatMessage({ message: convo.lastMessage, key: decryptedChatKey })
+									? this.sdk.getWorker().crypto.decrypt.chatMessage({
+											message: convo.lastMessage,
+											key: decryptedChatKey
+									  })
 									: Promise.resolve("")
 
 							Promise.all([namePromise, messagePromise])
@@ -204,15 +209,15 @@ export class Chats {
 	public async create({ uuid, contacts }: { uuid?: string; contacts?: Contact[] }): Promise<string> {
 		const [uuidToUse, key] = await Promise.all([
 			uuid ? Promise.resolve(uuid) : await uuidv4(),
-			this.crypto.utils.generateRandomString({ length: 32 })
+			this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 		])
 
 		const [metadata, ownerMetadata] = await Promise.all([
-			this.crypto.encrypt().metadataPublic({
+			this.sdk.getWorker().crypto.encrypt.metadataPublic({
 				metadata: JSON.stringify({ key }),
 				publicKey: this.sdkConfig.publicKey!
 			}),
-			this.crypto.encrypt().metadata({ metadata: JSON.stringify({ key }) })
+			this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ key }) })
 		])
 
 		await this.api.v3().chat().conversationsCreate({
@@ -278,9 +283,15 @@ export class Chats {
 	 */
 	public async editConversationName({ conversation, name }: { conversation: string; name: string }): Promise<void> {
 		const key = await this.chatKey({ conversation })
-		const nameEncrypted = await this.crypto.encrypt().chatConversationName({ name, key })
+		const nameEncrypted = await this.sdk.getWorker().crypto.encrypt.chatConversationName({
+			name,
+			key
+		})
 
-		await this.api.v3().chat().conversationsName().edit({ uuid: conversation, name: nameEncrypted })
+		await this.api.v3().chat().conversationsName().edit({
+			uuid: conversation,
+			name: nameEncrypted
+		})
 	}
 
 	/**
@@ -297,13 +308,20 @@ export class Chats {
 	 */
 	public async editMessage({ uuid, conversation, message }: { uuid: string; conversation: string; message: string }): Promise<void> {
 		const key = await this.chatKey({ conversation })
-		const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key })
+		const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
+			message,
+			key
+		})
 
 		if (messageEncrypted.length >= MAX_CHAT_SIZE) {
 			throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`)
 		}
 
-		await this.api.v3().chat().edit({ uuid, conversation, message: messageEncrypted })
+		await this.api.v3().chat().edit({
+			uuid,
+			conversation,
+			message: messageEncrypted
+		})
 	}
 
 	/**
@@ -331,13 +349,21 @@ export class Chats {
 		replyTo: string
 	}): Promise<string> {
 		const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : uuidv4()])
-		const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key })
+		const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
+			message,
+			key
+		})
 
 		if (messageEncrypted.length >= MAX_CHAT_SIZE) {
 			throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`)
 		}
 
-		await this.api.v3().chat().send({ uuid: uuidToUse, conversation, message: messageEncrypted, replyTo })
+		await this.api.v3().chat().send({
+			uuid: uuidToUse,
+			conversation,
+			message: messageEncrypted,
+			replyTo
+		})
 
 		return uuidToUse
 	}
@@ -354,7 +380,10 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async sendTyping({ conversation, type }: { conversation: string; type: ChatTypingType }): Promise<void> {
-		await this.api.v3().chat().typing({ conversation, type })
+		await this.api.v3().chat().typing({
+			conversation,
+			type
+		})
 	}
 
 	/**
@@ -374,7 +403,10 @@ export class Chats {
 			this.api
 				.v3()
 				.chat()
-				.messages({ conversation, timestamp: timestamp ? timestamp : Date.now() + 3600000 })
+				.messages({
+					conversation,
+					timestamp: timestamp ? timestamp : Date.now() + 3600000
+				})
 		])
 		const chatMessages: ChatMessage[] = []
 		const promises: Promise<void>[] = []
@@ -384,10 +416,19 @@ export class Chats {
 				new Promise<void>((resolve, reject) => {
 					const replyToPromise =
 						message.replyTo.uuid.length > 0 && message.replyTo.message.length > 0
-							? this.crypto.decrypt().chatMessage({ message: message.replyTo.message, key })
+							? this.sdk.getWorker().crypto.decrypt.chatMessage({
+									message: message.replyTo.message,
+									key
+							  })
 							: Promise.resolve("")
 
-					Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
+					Promise.all([
+						this.sdk.getWorker().crypto.decrypt.chatMessage({
+							message: message.message,
+							key
+						}),
+						replyToPromise
+					])
 						.then(([messageDecrypted, replyToDecrypted]) => {
 							chatMessages.push({
 								...message,
@@ -427,9 +468,16 @@ export class Chats {
 	public async addParticipant({ conversation, contact }: { conversation: string; contact: Contact }): Promise<void> {
 		const key = await this.chatKey({ conversation })
 		const publicKey = (await this.api.v3().user().publicKey({ email: contact.email })).publicKey
-		const metadata = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify({ key }), publicKey })
+		const metadata = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+			metadata: JSON.stringify({ key }),
+			publicKey
+		})
 
-		await this.api.v3().chat().conversationsParticipants().add({ uuid: conversation, contactUUID: contact.uuid, metadata })
+		await this.api.v3().chat().conversationsParticipants().add({
+			uuid: conversation,
+			contactUUID: contact.uuid,
+			metadata
+		})
 	}
 
 	/**
@@ -444,7 +492,10 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async removeParticipant({ conversation, userId }: { conversation: string; userId: number }): Promise<void> {
-		await this.api.v3().chat().conversationsParticipants().remove({ uuid: conversation, userId })
+		await this.api.v3().chat().conversationsParticipants().remove({
+			uuid: conversation,
+			userId
+		})
 	}
 
 	/**

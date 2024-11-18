@@ -1,5 +1,4 @@
 import APIClient from "./client"
-import type Crypto from "../crypto"
 import V3Health from "./v3/health"
 import V3DirContent from "./v3/dir/content"
 import V3AuthInfo from "./v3/auth/info"
@@ -148,10 +147,11 @@ import V3UserLock from "./v3/user/lock"
 import V3DirGet from "./v3/dir/get"
 import V3FileGet from "./v3/file/get"
 import V3FilePresent from "./v3/file/present"
+import type FilenSDK from ".."
 
 export type APIConfig = {
 	apiKey: string
-	crypto: Crypto
+	sdk: FilenSDK
 }
 
 /**
@@ -165,7 +165,6 @@ export type APIConfig = {
 export class API {
 	private readonly config: APIConfig
 	private readonly apiClient: APIClient
-	private readonly crypto: Crypto
 
 	private readonly _v3: {
 		health: V3Health
@@ -403,8 +402,10 @@ export class API {
 			throw new Error("Invalid apiKey")
 		}
 
-		this.apiClient = new APIClient({ apiKey: this.config.apiKey })
-		this.crypto = params.crypto
+		this.apiClient = new APIClient({
+			apiKey: this.config.apiKey,
+			sdk: this.config.sdk
+		})
 
 		this._v3 = {
 			health: new V3Health({ apiClient: this.apiClient }),

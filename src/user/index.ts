@@ -1,10 +1,9 @@
 import type API from "../api"
-import { type FilenSDKConfig, APIError } from ".."
+import { type FilenSDKConfig, APIError, FilenSDK } from ".."
 import { type UserInfoResponse } from "../api/v3/user/info"
 import { type UserSettingsResponse } from "../api/v3/user/settings"
 import { type UserAccountResponse } from "../api/v3/user/account"
 import { type UserGDPRResponse } from "../api/v3/user/gdpr"
-import type Crypto from "../crypto"
 import { type UserEvent } from "../api/v3/user/events"
 import { type UserEventResponse } from "../api/v3/user/event"
 import { type PaymentMethods } from "../api/v3/user/sub/create"
@@ -15,7 +14,7 @@ import { v4 as uuidv4 } from "uuid"
 export type UserConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
-	crypto: Crypto
+	sdk: FilenSDK
 }
 
 /**
@@ -29,7 +28,7 @@ export type UserConfig = {
 export class User {
 	private readonly api: API
 	private readonly sdkConfig: FilenSDKConfig
-	private readonly crypto: Crypto
+	private readonly sdk: FilenSDK
 
 	/**
 	 * Creates an instance of User.
@@ -42,7 +41,7 @@ export class User {
 	public constructor(params: UserConfig) {
 		this.api = params.api
 		this.sdkConfig = params.sdkConfig
-		this.crypto = params.crypto
+		this.sdk = params.sdk
 	}
 
 	/**
@@ -131,7 +130,7 @@ export class User {
 	 */
 	public async uploadAvatar({ buffer }: { buffer: Buffer }): Promise<void> {
 		const base64 = buffer.toString("base64")
-		const hash = await this.crypto.utils.bufferToHash({
+		const hash = await this.sdk.getWorker().crypto.utils.bufferToHash({
 			buffer: Buffer.from(base64, "utf-8"),
 			algorithm: "sha512"
 		})
@@ -155,7 +154,7 @@ export class User {
 	 */
 	public async changeEmail({ email, password }: { email: string; password: string }): Promise<void> {
 		const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email! })
-		const derived = await this.crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+		const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: password,
 			authVersion: this.sdkConfig.authVersion!,
 			salt: authInfo.salt
@@ -311,13 +310,13 @@ export class User {
 	 */
 	public async changePassword({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }): Promise<void> {
 		const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email! })
-		const derivedCurrent = await this.crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+		const derivedCurrent = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: currentPassword,
 			authVersion: this.sdkConfig.authVersion!,
 			salt: authInfo.salt
 		})
-		const newSalt = await this.crypto.utils.generateRandomString({ length: 256 })
-		const derivedNew = await this.crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+		const newSalt = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 256 })
+		const derivedNew = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: newPassword,
 			authVersion: this.sdkConfig.authVersion!,
 			salt: newSalt
@@ -326,9 +325,10 @@ export class User {
 			...this.sdkConfig.masterKeys!.filter(key => key !== derivedNew.derivedMasterKeys),
 			derivedNew.derivedMasterKeys
 		]
-		const newMasterKeysEncrypted = await this.crypto
-			.encrypt()
-			.metadata({ metadata: newMasterKeys.join("|"), key: derivedNew.derivedMasterKeys })
+		const newMasterKeysEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
+			metadata: newMasterKeys.join("|"),
+			key: derivedNew.derivedMasterKeys
+		})
 
 		await this.api.v3().user().settingsPassword().change({
 			password: derivedNew.derivedPassword,
@@ -420,7 +420,7 @@ export class User {
 				filter: params && params.filter ? params.filter : "all"
 			})
 
-		return await Promise.all(result.map(event => this.crypto.decrypt().event({ event })))
+		return await Promise.all(result.map(event => this.sdk.getWorker().crypto.decrypt.event({ event })))
 	}
 
 	/**
@@ -434,7 +434,7 @@ export class User {
 	 * @returns {Promise<UserEventResponse>}
 	 */
 	public async event({ uuid }: { uuid: string }): Promise<UserEventResponse> {
-		return await this.crypto.decrypt().event({ event: await this.api.v3().user().event({ uuid }) })
+		return await this.sdk.getWorker().crypto.decrypt.event({ event: await this.api.v3().user().event({ uuid }) })
 	}
 
 	/**

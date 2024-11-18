@@ -158,7 +158,6 @@ import V3FilePresent from "./v3/file/present";
 export class API {
     config;
     apiClient;
-    crypto;
     _v3;
     /**
      * Creates an instance of API.
@@ -173,8 +172,10 @@ export class API {
         if (this.config.apiKey.length === 0) {
             throw new Error("Invalid apiKey");
         }
-        this.apiClient = new APIClient({ apiKey: this.config.apiKey });
-        this.crypto = params.crypto;
+        this.apiClient = new APIClient({
+            apiKey: this.config.apiKey,
+            sdk: this.config.sdk
+        });
         this._v3 = {
             health: new V3Health({ apiClient: this.apiClient }),
             dir: {

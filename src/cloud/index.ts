@@ -1,5 +1,4 @@
 import type API from "../api"
-import type Crypto from "../crypto"
 import { type FilenSDKConfig, type FSItem, type FilenSDK, APIError } from ".."
 import {
 	type FileEncryptionVersion,
@@ -55,7 +54,6 @@ const pipelineAsync = promisify(pipeline)
 export type CloudConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
-	crypto: Crypto
 	sdk: FilenSDK
 }
 
@@ -167,7 +165,6 @@ export type DirectoryToShare = {
  */
 export class Cloud {
 	private readonly api: API
-	private readonly crypto: Crypto
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly sdk: FilenSDK
 
@@ -190,7 +187,6 @@ export class Cloud {
 	 */
 	public constructor(params: CloudConfig) {
 		this.api = params.api
-		this.crypto = params.crypto
 		this.sdkConfig = params.sdkConfig
 		this.sdk = params.sdk
 	}
@@ -221,9 +217,9 @@ export class Cloud {
 		for (const folder of content.folders) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.folderMetadata({ metadata: folder.name })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
@@ -249,9 +245,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -306,9 +302,9 @@ export class Cloud {
 		for (const folder of content.folders) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.folderMetadataPrivate({ metadata: folder.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.folderMetadataPrivate({ metadata: folder.metadata })
 						.then(decrypted => {
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
@@ -338,9 +334,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadataPrivate({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadataPrivate({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -399,9 +395,9 @@ export class Cloud {
 		for (const folder of content.folders) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.folderMetadata({ metadata: folder.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.folderMetadata({ metadata: folder.metadata })
 						.then(decrypted => {
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
@@ -431,9 +427,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -521,9 +517,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -576,9 +572,9 @@ export class Cloud {
 		for (const folder of content.folders) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.folderMetadata({ metadata: folder.name })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
@@ -604,9 +600,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -659,9 +655,9 @@ export class Cloud {
 		for (const folder of content.folders) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.folderMetadata({ metadata: folder.name })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
@@ -687,9 +683,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -742,9 +738,9 @@ export class Cloud {
 		for (const folder of content.folders) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.folderMetadata({ metadata: folder.name })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.folderMetadata({ metadata: folder.name })
 						.then(decrypted => {
 							const timestamp = convertTimestampToMs(folder.timestamp)
 
@@ -770,9 +766,9 @@ export class Cloud {
 		for (const file of content.uploads) {
 			promises.push(
 				new Promise<void>((resolve, reject) =>
-					this.crypto
-						.decrypt()
-						.fileMetadata({ metadata: file.metadata })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.fileMetadata({ metadata: file.metadata })
 						.then(decrypted => {
 							items.push({
 								type: "file",
@@ -820,7 +816,7 @@ export class Cloud {
 	 * @returns {Promise<FileExistsResponse>}
 	 */
 	public async fileExists({ name, parent }: { name: string; parent: string }): Promise<FileExistsResponse> {
-		const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() })
+		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() })
 		const exists = await this.api.v3().file().exists({
 			nameHashed,
 			parent
@@ -840,7 +836,7 @@ export class Cloud {
 	 * @returns {Promise<DirExistsResponse>}
 	 */
 	public async directoryExists({ name, parent }: { name: string; parent: string }): Promise<DirExistsResponse> {
-		const nameHashed = await this.crypto.utils.hashFn({ input: name.toLowerCase() })
+		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() })
 		const exists = await this.api.v3().dir().exists({
 			nameHashed,
 			parent
@@ -902,14 +898,14 @@ export class Cloud {
 		}
 
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-			this.crypto.utils.hashFn({ input: name.toLowerCase() }),
-			this.crypto.encrypt().metadata({
+			this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() }),
+			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
 					...metadata,
 					name
 				})
 			}),
-			this.crypto.encrypt().metadata({
+			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: name,
 				key: metadata.key
 			})
@@ -981,8 +977,8 @@ export class Cloud {
 		}
 
 		const [nameHashed, metadataEncrypted] = await Promise.all([
-			this.crypto.utils.hashFn({ input: name.toLowerCase() }),
-			this.crypto.encrypt().metadata({
+			this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() }),
+			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
 					name
 				})
@@ -1197,8 +1193,8 @@ export class Cloud {
 				}
 			} else {
 				const [metadataEncrypted, nameHashed] = await Promise.all([
-					this.crypto.encrypt().metadata({ metadata: JSON.stringify({ name }) }),
-					this.crypto.utils.hashFn({ input: name.toLowerCase() })
+					this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ name }) }),
+					this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() })
 				])
 
 				await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent })
@@ -1386,9 +1382,18 @@ export class Cloud {
 		publicKey: string
 		metadata: FileMetadata | FolderMetadata
 	}): Promise<void> {
-		const metadataEncrypted = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify(metadata), publicKey })
+		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+			metadata: JSON.stringify(metadata),
+			publicKey
+		})
 
-		await this.api.v3().item().share({ uuid, parent, email, type, metadata: metadataEncrypted })
+		await this.api.v3().item().share({
+			uuid,
+			parent,
+			email,
+			type,
+			metadata: metadataEncrypted
+		})
 	}
 
 	/**
@@ -1432,13 +1437,13 @@ export class Cloud {
 		linkKeyEncrypted: string
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const key = await this.crypto.decrypt().folderLinkKey({ metadata: linkKeyEncrypted })
+		const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted })
 
 		if (key.length === 0) {
 			throw new Error("Invalid key.")
 		}
 
-		const metadataEncrypted = await this.crypto.encrypt().metadata({
+		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
 			metadata: JSON.stringify(metadata),
 			key
 		})
@@ -1482,8 +1487,11 @@ export class Cloud {
 		const linkUUID = await uuidv4()
 
 		if (type === "directory") {
-			const [tree, key] = await Promise.all([this.getDirectoryTree({ uuid }), this.crypto.utils.generateRandomString({ length: 32 })])
-			const linkKeyEncrypted = await this.crypto.encrypt().metadata({ metadata: key })
+			const [tree, key] = await Promise.all([
+				this.getDirectoryTree({ uuid }),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+			])
+			const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({ metadata: key })
 			let done = 0
 			const promises: Promise<void>[] = []
 
@@ -1546,10 +1554,10 @@ export class Cloud {
 				fileUUID: uuid,
 				expiration: "never",
 				password: "empty",
-				passwordHashed: await this.crypto.utils.hashFn({ input: "empty" }),
+				passwordHashed: await this.sdk.getWorker().crypto.utils.hashFn({ input: "empty" }),
 				downloadBtn: true,
 				type: "enable",
-				salt: await this.crypto.utils.generateRandomString({ length: 32 })
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 			})
 
 		return linkUUID
@@ -1592,11 +1600,11 @@ export class Cloud {
 		enableDownload?: boolean
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const salt = await this.crypto.utils.generateRandomString({ length: 32 })
+		const salt = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 		const pass = password && password.length > 0 ? "notempty" : "empty"
 		const passHashed =
 			password && password.length > 0
-				? await this.crypto.utils.deriveKeyFromPassword({
+				? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
 						password,
 						salt,
 						iterations: 200000,
@@ -1679,8 +1687,8 @@ export class Cloud {
 				fileUUID: itemUUID,
 				expiration: "never",
 				password: "empty",
-				passwordHashed: await this.crypto.utils.hashPassword({ password: "empty" }),
-				salt: await this.crypto.utils.generateRandomString({ length: 32 }),
+				passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({ password: "empty" }),
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
 				downloadBtn: true,
 				type: "disable"
 			})
@@ -1760,7 +1768,7 @@ export class Cloud {
 
 		const derivedPassword = password
 			? salt && salt.length === 32
-				? await this.crypto.utils.deriveKeyFromPassword({
+				? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
 						password,
 						salt,
 						iterations: 200000,
@@ -1768,10 +1776,10 @@ export class Cloud {
 						bitLength: 512,
 						returnHex: true
 				  })
-				: await this.crypto.utils.hashFn({
+				: await this.sdk.getWorker().crypto.utils.hashFn({
 						input: !password ? "empty" : password
 				  })
-			: await this.crypto.utils.hashFn({ input: "empty" })
+			: await this.sdk.getWorker().crypto.utils.hashFn({ input: "empty" })
 
 		const info = await this.api.v3().file().link().info({
 			uuid,
@@ -1779,15 +1787,15 @@ export class Cloud {
 		})
 
 		const [nameDecrypted, mimeDecrypted, sizeDecrypted] = await Promise.all([
-			this.crypto.decrypt().metadata({
+			this.sdk.getWorker().crypto.decrypt.metadata({
 				metadata: info.name,
 				key
 			}),
-			this.crypto.decrypt().metadata({
+			this.sdk.getWorker().crypto.decrypt.metadata({
 				metadata: info.mime,
 				key
 			}),
-			this.crypto.decrypt().metadata({
+			this.sdk.getWorker().crypto.decrypt.metadata({
 				metadata: info.size,
 				key
 			})
@@ -1817,7 +1825,7 @@ export class Cloud {
 		}
 
 		const info = await this.api.v3().dir().link().info({ uuid })
-		const metadataDecrypted = await this.crypto.decrypt().folderMetadata({
+		const metadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
 			metadata: info.metadata,
 			key
 		})
@@ -1868,7 +1876,7 @@ export class Cloud {
 
 		const derivedPassword = password
 			? salt && salt.length === 32
-				? await this.crypto.utils.deriveKeyFromPassword({
+				? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
 						password,
 						salt,
 						iterations: 200000,
@@ -1876,10 +1884,10 @@ export class Cloud {
 						bitLength: 512,
 						returnHex: true
 				  })
-				: await this.crypto.utils.hashFn({
+				: await this.sdk.getWorker().crypto.utils.hashFn({
 						input: !password ? "empty" : password
 				  })
-			: await this.crypto.utils.hashFn({ input: "empty" })
+			: await this.sdk.getWorker().crypto.utils.hashFn({ input: "empty" })
 
 		const content = await this.api.v3().dir().link().content({
 			uuid,
@@ -1892,9 +1900,9 @@ export class Cloud {
 				content.files.map(
 					file =>
 						new Promise((resolve, reject) => {
-							this.crypto
-								.decrypt()
-								.fileMetadata({
+							this.sdk
+								.getWorker()
+								.crypto.decrypt.fileMetadata({
 									metadata: file.metadata,
 									key
 								})
@@ -1926,9 +1934,9 @@ export class Cloud {
 				content.folders.map(
 					folder =>
 						new Promise((resolve, reject) => {
-							this.crypto
-								.decrypt()
-								.folderMetadata({ metadata: folder.metadata, key })
+							this.sdk
+								.getWorker()
+								.crypto.decrypt.folderMetadata({ metadata: folder.metadata, key })
 								.then(decryptedFolderMetadata => {
 									resolve({
 										...folder,
@@ -2360,7 +2368,9 @@ export class Cloud {
 		metadata: FileMetadata | FolderMetadata
 		publicKey: string
 	}): Promise<void> {
-		const metadataEncrypted = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify(metadata), publicKey })
+		const metadataEncrypted = await this.sdk
+			.getWorker()
+			.crypto.encrypt.metadataPublic({ metadata: JSON.stringify(metadata), publicKey })
 
 		await this.api.v3().item().sharedRename({ uuid, receiverId, metadata: metadataEncrypted })
 	}
@@ -2389,7 +2399,7 @@ export class Cloud {
 		metadata: FileMetadata | FolderMetadata
 		linkKeyEncrypted: string
 	}): Promise<void> {
-		const key = await this.crypto.decrypt().folderLinkKey({
+		const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({
 			metadata: linkKeyEncrypted
 		})
 
@@ -2397,7 +2407,7 @@ export class Cloud {
 			throw new Error("Invalid key.")
 		}
 
-		const metadataEncrypted = await this.crypto.encrypt().metadata({
+		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
 			metadata: JSON.stringify(metadata),
 			key
 		})
@@ -2761,8 +2771,8 @@ export class Cloud {
 		const threadsSemaphore = new Semaphore(MAX_DOWNLOAD_THREADS)
 		const writersSemaphore = new Semaphore(MAX_DOWNLOAD_WRITERS)
 		const downloadsSemaphore = this._semaphores.downloadStream
-		const api = this.api
-		const crypto = this.crypto
+		const api = this.sdk.getWorker().api
+		const crypto = this.sdk.getWorker().crypto
 		let currentWriteIndex = firstChunkIndex
 		let writerStopped = false
 		let currentPullIndex = firstChunkIndex
@@ -2982,7 +2992,7 @@ export class Cloud {
 												await waitForPause()
 											}
 
-											const encryptedBuffer = await api.v3().file().download().chunk().buffer({
+											const encryptedBuffer = await api.v3.file.download.chunk.buffer.fetch({
 												uuid,
 												bucket,
 												region,
@@ -2998,7 +3008,7 @@ export class Cloud {
 												await waitForPause()
 											}
 
-											const decryptedBuffer = await crypto.decrypt().data({
+											const decryptedBuffer = await crypto.decrypt.data({
 												data: encryptedBuffer,
 												key,
 												version
@@ -3150,13 +3160,13 @@ export class Cloud {
 			try {
 				const decrypted =
 					type === "shared"
-						? await this.crypto.decrypt().folderMetadataPrivate({ metadata: folder.name })
+						? await this.sdk.getWorker().crypto.decrypt.folderMetadataPrivate({ metadata: folder.name })
 						: type === "linked" && linkKey
-						? await this.crypto.decrypt().folderMetadataLink({
+						? await this.sdk.getWorker().crypto.decrypt.folderMetadataLink({
 								metadata: folder.name,
 								linkKey
 						  })
-						: await this.crypto.decrypt().folderMetadata({ metadata: folder.name })
+						: await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: folder.name })
 
 				const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}`
 				const folderPath =
@@ -3193,13 +3203,13 @@ export class Cloud {
 				new Promise((resolve, reject) => {
 					const decryptPromise =
 						type === "shared"
-							? this.crypto.decrypt().fileMetadataPrivate({ metadata: file.metadata })
+							? this.sdk.getWorker().crypto.decrypt.fileMetadataPrivate({ metadata: file.metadata })
 							: type === "linked" && linkKey
-							? this.crypto.decrypt().fileMetadataLink({
+							? this.sdk.getWorker().crypto.decrypt.fileMetadataLink({
 									metadata: file.metadata,
 									linkKey
 							  })
-							: this.crypto.decrypt().fileMetadata({ metadata: file.metadata })
+							: this.sdk.getWorker().crypto.decrypt.fileMetadata({ metadata: file.metadata })
 
 					decryptPromise
 						.then(decrypted => {
@@ -3538,16 +3548,16 @@ export class Cloud {
 
 			const [uuid, key, rm, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.crypto.utils.generateRandomString({ length: 32 }),
-				this.crypto.utils.generateRandomString({ length: 32 }),
-				this.crypto.utils.generateRandomString({ length: 32 })
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 			])
 
 			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
-				this.crypto.encrypt().metadata({ metadata: fileName, key }),
-				this.crypto.encrypt().metadata({ metadata: mimeType, key }),
-				this.crypto.encrypt().metadata({ metadata: fileSize.toString(), key }),
-				this.crypto.encrypt().metadata({
+				this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileName, key }),
+				this.sdk.getWorker().crypto.encrypt.metadata({ metadata: mimeType, key }),
+				this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileSize.toString(), key }),
+				this.sdk.getWorker().crypto.encrypt.metadata({
 					metadata: JSON.stringify({
 						name: fileName,
 						size: fileSize,
@@ -3557,7 +3567,7 @@ export class Cloud {
 						creation
 					})
 				}),
-				this.crypto.utils.hashFn({ input: fileName.toLowerCase() })
+				this.sdk.getWorker().crypto.utils.hashFn({ input: fileName.toLowerCase() })
 			])
 
 			const waitForPause = async (): Promise<void> => {
@@ -3612,7 +3622,7 @@ export class Cloud {
 								return
 							}
 
-							const encryptedChunkBuffer = await this.crypto.encrypt().data({
+							const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
 								data: chunkBuffer,
 								key
 							})
@@ -3627,7 +3637,7 @@ export class Cloud {
 								return
 							}
 
-							const uploadResponse = await this.api.v3().file().upload().chunk().buffer({
+							const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
 								uuid,
 								index,
 								parent,
@@ -3818,8 +3828,8 @@ export class Cloud {
 			let closed = false
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.crypto.utils.generateRandomString({ length: 32 }),
-				this.crypto.utils.generateRandomString({ length: 32 })
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 			])
 
 			const waitForPause = async (): Promise<void> => {
@@ -3960,7 +3970,6 @@ export class Cloud {
 
 	/**
 	 * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.
-	 * @date 2/27/2024 - 6:41:52 AM
 	 *
 	 * @public
 	 * @async
@@ -3968,6 +3977,7 @@ export class Cloud {
 	 * 		file: File
 	 * 		parent: string
 	 * 		name?: string
+	 * 		uuid?: string,
 	 * 		abortSignal?: AbortSignal
 	 * 		pauseSignal?: PauseSignal
 	 * 		onProgress?: ProgressCallback
@@ -3980,6 +3990,7 @@ export class Cloud {
 	 * @param {File} param0.file
 	 * @param {string} param0.parent
 	 * @param {string} param0.name
+	 * @param {string} param0.uuid
 	 * @param {PauseSignal} param0.pauseSignal
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {ProgressCallback} param0.onProgress
@@ -3994,6 +4005,7 @@ export class Cloud {
 		file,
 		parent,
 		name,
+		uuid,
 		pauseSignal,
 		abortSignal,
 		onProgress,
@@ -4006,6 +4018,7 @@ export class Cloud {
 		file: File
 		parent: string
 		name?: string
+		uuid?: string
 		abortSignal?: AbortSignal
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
@@ -4045,18 +4058,18 @@ export class Cloud {
 			const uploadThreads = new Semaphore(MAX_UPLOAD_THREADS)
 			let aborted = false
 
-			const [uuid, key, rm, uploadKey] = await Promise.all([
-				uuidv4(),
-				this.crypto.utils.generateRandomString({ length: 32 }),
-				this.crypto.utils.generateRandomString({ length: 32 }),
-				this.crypto.utils.generateRandomString({ length: 32 })
+			const [fileUUID, key, rm, uploadKey] = await Promise.all([
+				uuid ? Promise.resolve(uuid) : uuidv4(),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
+				this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 			])
 
 			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
-				this.crypto.encrypt().metadata({ metadata: fileName, key }),
-				this.crypto.encrypt().metadata({ metadata: mimeType, key }),
-				this.crypto.encrypt().metadata({ metadata: fileSize.toString(), key }),
-				this.crypto.encrypt().metadata({
+				this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileName, key }),
+				this.sdk.getWorker().crypto.encrypt.metadata({ metadata: mimeType, key }),
+				this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileSize.toString(), key }),
+				this.sdk.getWorker().crypto.encrypt.metadata({
 					metadata: JSON.stringify({
 						name: fileName,
 						size: fileSize,
@@ -4065,7 +4078,7 @@ export class Cloud {
 						lastModified
 					})
 				}),
-				this.crypto.utils.hashFn({ input: fileName.toLowerCase() })
+				this.sdk.getWorker().crypto.utils.hashFn({ input: fileName.toLowerCase() })
 			])
 
 			const waitForPause = async (): Promise<void> => {
@@ -4120,7 +4133,7 @@ export class Cloud {
 								return
 							}
 
-							const encryptedChunkBuffer = await this.crypto.encrypt().data({
+							const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
 								data: chunkBuffer,
 								key
 							})
@@ -4135,8 +4148,8 @@ export class Cloud {
 								return
 							}
 
-							const uploadResponse = await this.api.v3().file().upload().chunk().buffer({
-								uuid,
+							const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
+								uuid: fileUUID,
 								index,
 								parent,
 								uploadKey,
@@ -4171,7 +4184,7 @@ export class Cloud {
 			})
 
 			const done = await this.api.v3().upload().done({
-				uuid,
+				uuid: fileUUID,
 				name: nameEncrypted,
 				nameHashed,
 				size: sizeEncrypted,
@@ -4187,7 +4200,7 @@ export class Cloud {
 
 			const item: CloudItem = {
 				type: "file",
-				uuid,
+				uuid: fileUUID,
 				name: fileName,
 				size: fileSize,
 				mime: mimeType,
@@ -4206,7 +4219,7 @@ export class Cloud {
 			await this.checkIfItemParentIsShared({
 				type: "file",
 				parent,
-				uuid,
+				uuid: fileUUID,
 				itemMetadata: {
 					name: fileName,
 					size: fileSize,
@@ -4692,13 +4705,13 @@ export class Cloud {
 		const pathParts: string[] = []
 		const file = await this.api.v3().file().get({ uuid })
 		let nextParent = file.parent
-		const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata })
+		const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({ metadata: file.metadata })
 
 		pathParts.push(fileMetadataDecrypted.name.length > 0 ? fileMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`)
 
 		while (nextParent !== this.sdkConfig.baseFolderUUID!) {
 			const dir = await this.api.v3().dir().get({ uuid: nextParent })
-			const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted })
+			const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: dir.nameEncrypted })
 
 			pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`)
 
@@ -4721,13 +4734,13 @@ export class Cloud {
 		const pathParts: string[] = []
 		const firstDir = await this.api.v3().dir().get({ uuid })
 		let nextParent = firstDir.parent
-		const firstDirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: firstDir.nameEncrypted })
+		const firstDirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: firstDir.nameEncrypted })
 
 		pathParts.push(firstDirMetadataDecrypted.name.length > 0 ? firstDirMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`)
 
 		while (nextParent !== this.sdkConfig.baseFolderUUID!) {
 			const dir = await this.api.v3().dir().get({ uuid: nextParent })
-			const decrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted })
+			const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: dir.nameEncrypted })
 
 			pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`)
 
@@ -4748,7 +4761,7 @@ export class Cloud {
 	 */
 	public async getFile({ uuid }: { uuid: string }): Promise<GetFileResult> {
 		const file = await this.api.v3().file().get({ uuid })
-		const fileMetadataDecrypted = await this.crypto.decrypt().fileMetadata({ metadata: file.metadata })
+		const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({ metadata: file.metadata })
 
 		return {
 			...file,
@@ -4768,7 +4781,7 @@ export class Cloud {
 	 */
 	public async getDirectory({ uuid }: { uuid: string }): Promise<GetDirResult> {
 		const dir = await this.api.v3().dir().get({ uuid })
-		const dirMetadataDecrypted = await this.crypto.decrypt().folderMetadata({ metadata: dir.nameEncrypted })
+		const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: dir.nameEncrypted })
 
 		return {
 			...dir,

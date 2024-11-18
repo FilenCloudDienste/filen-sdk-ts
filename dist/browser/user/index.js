@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 export class User {
     api;
     sdkConfig;
-    crypto;
+    sdk;
     /**
      * Creates an instance of User.
      * @date 2/9/2024 - 5:54:11 AM
@@ -23,7 +23,7 @@ export class User {
     constructor(params) {
         this.api = params.api;
         this.sdkConfig = params.sdkConfig;
-        this.crypto = params.crypto;
+        this.sdk = params.sdk;
     }
     /**
      * Fetch the user's info.
@@ -105,7 +105,7 @@ export class User {
      */
     async uploadAvatar({ buffer }) {
         const base64 = buffer.toString("base64");
-        const hash = await this.crypto.utils.bufferToHash({
+        const hash = await this.sdk.getWorker().crypto.utils.bufferToHash({
             buffer: Buffer.from(base64, "utf-8"),
             algorithm: "sha512"
         });
@@ -127,7 +127,7 @@ export class User {
      */
     async changeEmail({ email, password }) {
         const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email });
-        const derived = await this.crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+        const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
             rawPassword: password,
             authVersion: this.sdkConfig.authVersion,
             salt: authInfo.salt
@@ -248,13 +248,13 @@ export class User {
      */
     async changePassword({ currentPassword, newPassword }) {
         const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email });
-        const derivedCurrent = await this.crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+        const derivedCurrent = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
             rawPassword: currentPassword,
             authVersion: this.sdkConfig.authVersion,
             salt: authInfo.salt
         });
-        const newSalt = await this.crypto.utils.generateRandomString({ length: 256 });
-        const derivedNew = await this.crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+        const newSalt = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 256 });
+        const derivedNew = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
             rawPassword: newPassword,
             authVersion: this.sdkConfig.authVersion,
             salt: newSalt
@@ -263,9 +263,10 @@ export class User {
             ...this.sdkConfig.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
             derivedNew.derivedMasterKeys
         ];
-        const newMasterKeysEncrypted = await this.crypto
-            .encrypt()
-            .metadata({ metadata: newMasterKeys.join("|"), key: derivedNew.derivedMasterKeys });
+        const newMasterKeysEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
+            metadata: newMasterKeys.join("|"),
+            key: derivedNew.derivedMasterKeys
+        });
         await this.api.v3().user().settingsPassword().change({
             password: derivedNew.derivedPassword,
             currentPassword: derivedCurrent.derivedPassword,
@@ -348,7 +349,7 @@ export class User {
             lastTimestamp: params && params.timestamp ? params.timestamp : Math.floor(Date.now() / 1000) + 60,
             filter: params && params.filter ? params.filter : "all"
         });
-        return await Promise.all(result.map(event => this.crypto.decrypt().event({ event })));
+        return await Promise.all(result.map(event => this.sdk.getWorker().crypto.decrypt.event({ event })));
     }
     /**
      * Fetch info about an event.
@@ -361,7 +362,7 @@ export class User {
      * @returns {Promise<UserEventResponse>}
      */
     async event({ uuid }) {
-        return await this.crypto.decrypt().event({ event: await this.api.v3().user().event({ uuid }) });
+        return await this.sdk.getWorker().crypto.decrypt.event({ event: await this.api.v3().user().event({ uuid }) });
     }
     /**
      * Cancel a subscription.

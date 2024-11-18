@@ -183,7 +183,7 @@ export class ChunkedUploadWriter extends Writable {
             data: chunk,
             key: this.key
         });
-        const response = await this.sdk.api(3).file().upload().chunk().buffer({
+        const response = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
             uuid: this.uuid,
             index: this.index,
             uploadKey: this.uploadKey,

@@ -34,6 +34,7 @@ const notes_1 = __importDefault(require("./notes"));
 const contacts_1 = __importDefault(require("./contacts"));
 const user_1 = __importDefault(require("./user"));
 const socket_1 = __importDefault(require("./socket"));
+const events_1 = __importDefault(require("./events"));
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -45,15 +46,16 @@ const socket_1 = __importDefault(require("./socket"));
 class FilenSDK {
     /**
      * Creates an instance of FilenSDK.
-     * @date 2/21/2024 - 8:58:43 AM
      *
      * @constructor
      * @public
      * @param {?FilenSDKConfig} [params]
+     * @param {?SDKWorker[]} [workers]
      */
-    constructor(params) {
+    constructor(params, workers) {
         this.socket = new socket_1.default();
         this._updateKeyPairTries = 0;
+        this.currentWorkerWorkIndex = 0;
         this.utils = Object.assign(Object.assign({}, utils_1.default), { crypto: utils_2.default, streams: {
                 append: append_1.default,
                 decodeBase64: base64_1.streamDecodeBase64,
@@ -63,6 +65,8 @@ class FilenSDK {
             params = {};
         }
         this.config = params;
+        this.workers = workers ? workers : null;
+        this.events = new events_1.default();
         this._crypto =
             params.masterKeys && params.publicKey && params.privateKey
                 ? new crypto_1.default({
@@ -88,14 +92,137 @@ class FilenSDK {
                             : utils_1.default.normalizePath(os_1.default.tmpdir())
                 });
         this._api = params.apiKey
-            ? new api_1.default({ apiKey: params.apiKey, crypto: this._crypto })
-            : new api_1.default({ apiKey: "anonymous", crypto: this._crypto });
-        this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this });
-        this._fs = new fs_1.default({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket });
-        this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
-        this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
-        this._contacts = new contacts_1.default({ sdkConfig: params, api: this._api });
-        this._user = new user_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
+            ? new api_1.default({
+                apiKey: params.apiKey,
+                sdk: this
+            })
+            : new api_1.default({
+                apiKey: "anonymous",
+                sdk: this
+            });
+        this._cloud = new cloud_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+        this._fs = new fs_1.default({
+            sdkConfig: params,
+            api: this._api,
+            cloud: this._cloud,
+            connectToSocket: params.connectToSocket
+        });
+        this._notes = new notes_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+        this._chats = new chats_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+        this._contacts = new contacts_1.default({
+            sdkConfig: params,
+            api: this._api
+        });
+        this._user = new user_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+    }
+    /**
+     * Update the SDK Worker pool.
+     *
+     * @public
+     * @param {SDKWorker[]} sdkWorkers
+     */
+    setSDKWorkers(sdkWorkers) {
+        this.workers = sdkWorkers;
+    }
+    getBaseWorker() {
+        const baseWorker = {
+            crypto: {
+                encrypt: this.crypto().encrypt(),
+                decrypt: this.crypto().decrypt(),
+                utils: utils_2.default
+            },
+            api: {
+                v3: {
+                    file: {
+                        upload: {
+                            chunk: {
+                                buffer: {
+                                    fetch: params => {
+                                        return this._api.v3().file().upload().chunk().buffer(params);
+                                    }
+                                }
+                            }
+                        },
+                        download: {
+                            chunk: {
+                                buffer: {
+                                    fetch: params => {
+                                        return this._api.v3().file().download().chunk().buffer(params);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        return baseWorker;
+    }
+    /**
+     * Get a worker from the SDK Worker pool if set. Greatly improves performance.
+     *
+     * @public
+     * @returns {SDKWorker}
+     */
+    getWorker() {
+        const baseWorker = {
+            crypto: {
+                encrypt: this.crypto().encrypt(),
+                decrypt: this.crypto().decrypt(),
+                utils: utils_2.default
+            },
+            api: {
+                v3: {
+                    file: {
+                        upload: {
+                            chunk: {
+                                buffer: {
+                                    fetch: params => {
+                                        return this._api.v3().file().upload().chunk().buffer(params);
+                                    }
+                                }
+                            }
+                        },
+                        download: {
+                            chunk: {
+                                buffer: {
+                                    fetch: params => {
+                                        return this._api.v3().file().download().chunk().buffer(params);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        if (!this.workers || this.workers.length === 0) {
+            return baseWorker;
+        }
+        if (this.currentWorkerWorkIndex === undefined ||
+            this.currentWorkerWorkIndex < 0 ||
+            this.currentWorkerWorkIndex >= this.workers.length) {
+            this.currentWorkerWorkIndex = 0;
+        }
+        const workerToUse = this.workers[this.currentWorkerWorkIndex];
+        this.currentWorkerWorkIndex = (this.currentWorkerWorkIndex + 1) % this.workers.length;
+        return workerToUse || baseWorker;
     }
     /**
      * Initialize the SDK again (after logging in for example).
@@ -131,14 +258,44 @@ class FilenSDK {
                             : utils_1.default.normalizePath(os_1.default.tmpdir())
                 });
         this._api = params.apiKey
-            ? new api_1.default({ apiKey: params.apiKey, crypto: this._crypto })
-            : new api_1.default({ apiKey: "anonymous", crypto: this._crypto });
-        this._cloud = new cloud_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this });
-        this._fs = new fs_1.default({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket });
-        this._notes = new notes_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
-        this._chats = new chats_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
-        this._contacts = new contacts_1.default({ sdkConfig: params, api: this._api });
-        this._user = new user_1.default({ sdkConfig: params, api: this._api, crypto: this._crypto });
+            ? new api_1.default({
+                apiKey: params.apiKey,
+                sdk: this
+            })
+            : new api_1.default({
+                apiKey: "anonymous",
+                sdk: this
+            });
+        this._cloud = new cloud_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+        this._fs = new fs_1.default({
+            sdkConfig: params,
+            api: this._api,
+            cloud: this._cloud,
+            connectToSocket: params.connectToSocket
+        });
+        this._notes = new notes_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+        this._chats = new chats_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
+        this._contacts = new contacts_1.default({
+            sdkConfig: params,
+            api: this._api
+        });
+        this._user = new user_1.default({
+            sdkConfig: params,
+            api: this._api,
+            sdk: this
+        });
     }
     /**
      * Check if the SDK user is authenticated.
@@ -177,7 +334,7 @@ class FilenSDK {
      * @returns {Promise<void>}
      */
     async _updateKeyPair({ apiKey, publicKey, privateKey, masterKeys }) {
-        const encryptedPrivateKey = await this._crypto.encrypt().metadata({
+        const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
             metadata: privateKey,
             key: masterKeys[masterKeys.length - 1]
         });
@@ -201,7 +358,7 @@ class FilenSDK {
      * @returns {Promise<void>}
      */
     async _setKeyPair({ apiKey, publicKey, privateKey, masterKeys }) {
-        const encryptedPrivateKey = await this._crypto.encrypt().metadata({
+        const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
             metadata: privateKey,
             key: masterKeys[masterKeys.length - 1]
         });
@@ -220,7 +377,7 @@ class FilenSDK {
             let privateKey = null;
             for (const masterKey of masterKeys) {
                 try {
-                    const decryptedPrivateKey = await this._crypto.decrypt().metadata({
+                    const decryptedPrivateKey = await this.getWorker().crypto.decrypt.metadata({
                         metadata: keyPairInfo.privateKey,
                         key: masterKey
                     });
@@ -244,7 +401,7 @@ class FilenSDK {
                         masterKeys
                     });
                 }
-                const generatedKeyPair = await this._crypto.utils.generateKeyPair();
+                const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair();
                 await this._updateKeyPair({
                     apiKey,
                     publicKey: generatedKeyPair.publicKey,
@@ -267,7 +424,7 @@ class FilenSDK {
                 privateKey
             };
         }
-        const generatedKeyPair = await this._crypto.utils.generateKeyPair();
+        const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair();
         await this._setKeyPair({
             apiKey,
             publicKey: generatedKeyPair.publicKey,
@@ -284,7 +441,7 @@ class FilenSDK {
         if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
             throw new Error("Invalid current master key.");
         }
-        const encryptedMasterKeys = await this._crypto.encrypt().metadata({
+        const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
             metadata: masterKeys.join("|"),
             key: currentLastMasterKey
         });
@@ -295,7 +452,7 @@ class FilenSDK {
         const newMasterKeys = [...masterKeys];
         for (const masterKey of masterKeys) {
             try {
-                const decryptedMasterKeys = await this._crypto.decrypt().metadata({
+                const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
                     metadata: masterKeysResponse.keys,
                     key: masterKey
                 });
@@ -346,7 +503,7 @@ class FilenSDK {
         }
         const authInfo = await this._api.v3().auth().info({ email: emailToUse });
         const authVersion = authInfo.authVersion;
-        const derived = await this._crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+        const derived = await this.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
             rawPassword: passwordToUse,
             authVersion: authInfo.authVersion,
             salt: authInfo.salt

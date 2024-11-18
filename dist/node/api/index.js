@@ -175,8 +175,10 @@ class API {
         if (this.config.apiKey.length === 0) {
             throw new Error("Invalid apiKey");
         }
-        this.apiClient = new client_1.default({ apiKey: this.config.apiKey });
-        this.crypto = params.crypto;
+        this.apiClient = new client_1.default({
+            apiKey: this.config.apiKey,
+            sdk: this.config.sdk
+        });
         this._v3 = {
             health: new health_1.default({ apiClient: this.apiClient }),
             dir: {

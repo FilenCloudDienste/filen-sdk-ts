@@ -1,7 +1,6 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import type API from "../api";
-import type Crypto from "../crypto";
 import { type FilenSDKConfig, type FilenSDK } from "..";
 import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback, type GetFileResult, type GetDirResult } from "../types";
 import { PauseSignal } from "./signals";
@@ -19,7 +18,6 @@ import { type DirExistsResponse } from "../api/v3/dir/exists";
 export type CloudConfig = {
     sdkConfig: FilenSDKConfig;
     api: API;
-    crypto: Crypto;
     sdk: FilenSDK;
 };
 export type CloudItemReceiver = {
@@ -98,7 +96,6 @@ export type DirectoryToShare = {
  */
 export declare class Cloud {
     private readonly api;
-    private readonly crypto;
     private readonly sdkConfig;
     private readonly sdk;
     private readonly _semaphores;
@@ -1165,7 +1162,6 @@ export declare class Cloud {
     }): Promise<CloudItem>;
     /**
      * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.
-     * @date 2/27/2024 - 6:41:52 AM
      *
      * @public
      * @async
@@ -1173,6 +1169,7 @@ export declare class Cloud {
      * 		file: File
      * 		parent: string
      * 		name?: string
+     * 		uuid?: string,
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
@@ -1185,6 +1182,7 @@ export declare class Cloud {
      * @param {File} param0.file
      * @param {string} param0.parent
      * @param {string} param0.name
+     * @param {string} param0.uuid
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
@@ -1195,10 +1193,11 @@ export declare class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    uploadWebFile({ file, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadWebFile({ file, parent, name, uuid, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
         file: File;
         parent: string;
         name?: string;
+        uuid?: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;

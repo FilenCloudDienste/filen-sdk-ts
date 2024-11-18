@@ -1,6 +1,5 @@
 import type API from "../api"
-import type Crypto from "../crypto"
-import type { FilenSDKConfig } from ".."
+import type { FilenSDKConfig, FilenSDK } from ".."
 import { uuidv4, simpleDate, promiseAllChunked } from "../utils"
 import type { NoteType, Note, NoteTag } from "../api/v3/notes"
 import { createNotePreviewFromContentText } from "./utils"
@@ -11,7 +10,7 @@ import striptags from "striptags"
 export type NotesConfig = {
 	sdkConfig: FilenSDKConfig
 	api: API
-	crypto: Crypto
+	sdk: FilenSDK
 }
 
 /**
@@ -24,9 +23,9 @@ export type NotesConfig = {
  */
 export class Notes {
 	private readonly api: API
-	private readonly crypto: Crypto
 	private readonly sdkConfig: FilenSDKConfig
 	private readonly _noteKeyCache = new Map<string, string>()
+	private readonly sdk: FilenSDK
 
 	/**
 	 * Creates an instance of Notes.
@@ -38,8 +37,8 @@ export class Notes {
 	 */
 	public constructor(params: NotesConfig) {
 		this.api = params.api
-		this.crypto = params.crypto
 		this.sdkConfig = params.sdkConfig
+		this.sdk = params.sdk
 	}
 
 	/**
@@ -59,9 +58,9 @@ export class Notes {
 		for (const tag of tags) {
 			promises.push(
 				new Promise((resolve, reject) => {
-					this.crypto
-						.decrypt()
-						.noteTagName({ name: tag.name })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.noteTagName({ name: tag.name })
 						.then(decryptedTagName => {
 							decryptedTags.push({
 								...tag,
@@ -112,9 +111,9 @@ export class Notes {
 						.then(decryptedNoteKey => {
 							this._noteKeyCache.set(note.uuid, decryptedNoteKey)
 
-							this.crypto
-								.decrypt()
-								.noteTitle({
+							this.sdk
+								.getWorker()
+								.crypto.decrypt.noteTitle({
 									title: note.title,
 									key: decryptedNoteKey
 								})
@@ -122,7 +121,7 @@ export class Notes {
 									Promise.all([
 										note.preview.length === 0
 											? Promise.resolve(decryptedNoteTitle)
-											: this.crypto.decrypt().notePreview({
+											: this.sdk.getWorker().crypto.decrypt.notePreview({
 													preview: note.preview,
 													key: decryptedNoteKey
 											  }),
@@ -266,7 +265,7 @@ export class Notes {
 		}
 
 		if (note[0].ownerId === this.sdkConfig.userId) {
-			const decryptedNoteKey = await this.crypto.decrypt().noteKeyOwner({ metadata: note[0].metadata })
+			const decryptedNoteKey = await this.sdk.getWorker().crypto.decrypt.noteKeyOwner({ metadata: note[0].metadata })
 
 			this._noteKeyCache.set(uuid, decryptedNoteKey)
 
@@ -279,9 +278,10 @@ export class Notes {
 			throw new Error(`Could not find participant metadata for note ${uuid}.`)
 		}
 
-		const decryptedNoteKey = await this.crypto
-			.decrypt()
-			.noteKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey! })
+		const decryptedNoteKey = await this.sdk.getWorker().crypto.decrypt.noteKeyParticipant({
+			metadata: participant[0].metadata,
+			privateKey: this.sdkConfig.privateKey!
+		})
 
 		this._noteKeyCache.set(uuid, decryptedNoteKey)
 
@@ -313,9 +313,17 @@ export class Notes {
 		publicKey: string
 	}): Promise<void> {
 		const decryptedNoteKey = await this.noteKey({ uuid })
-		const metadata = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify({ key: decryptedNoteKey }), publicKey })
+		const metadata = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+			metadata: JSON.stringify({ key: decryptedNoteKey }),
+			publicKey
+		})
 
-		await this.api.v3().notes().participantsAdd({ uuid, metadata, contactUUID, permissionsWrite })
+		await this.api.v3().notes().participantsAdd({
+			uuid,
+			metadata,
+			contactUUID,
+			permissionsWrite
+		})
 	}
 
 	/**
@@ -330,7 +338,10 @@ export class Notes {
 	 * @returns {Promise<void>}
 	 */
 	public async removeParticipant({ uuid, userId }: { uuid: string; userId: number }): Promise<void> {
-		await this.api.v3().notes().participantsRemove({ uuid, userId })
+		await this.api.v3().notes().participantsRemove({
+			uuid,
+			userId
+		})
 	}
 
 	/**
@@ -371,17 +382,29 @@ export class Notes {
 	public async create({ uuid, title }: { uuid?: string; title?: string }): Promise<string> {
 		const uuidToUse = uuid ? uuid : await uuidv4()
 		const titleToUse = title ? title : simpleDate(Date.now())
-		const key = await this.crypto.utils.generateRandomString({ length: 32 })
+		const key = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
 		const [metadataEncrypted, titleEncrypted] = await Promise.all([
-			this.crypto.encrypt().metadata({ metadata: JSON.stringify({ key }) }),
-			this.crypto.encrypt().noteTitle({ title: titleToUse, key })
+			this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ key }) }),
+			this.sdk.getWorker().crypto.encrypt.noteTitle({
+				title: titleToUse,
+				key
+			})
 		])
 
-		await this.api.v3().notes().create({ uuid: uuidToUse, title: titleEncrypted, metadata: metadataEncrypted })
+		await this.api.v3().notes().create({
+			uuid: uuidToUse,
+			title: titleEncrypted,
+			metadata: metadataEncrypted
+		})
 
 		this._noteKeyCache.set(uuidToUse, key)
 
-		await this.addParticipant({ uuid: uuidToUse, contactUUID: "owner", permissionsWrite: true, publicKey: this.sdkConfig.publicKey! })
+		await this.addParticipant({
+			uuid: uuidToUse,
+			contactUUID: "owner",
+			permissionsWrite: true,
+			publicKey: this.sdkConfig.publicKey!
+		})
 
 		return uuidToUse
 	}
@@ -427,12 +450,12 @@ export class Notes {
 		const notePreviewPromise =
 			contentEncrypted.preview.length === 0
 				? Promise.resolve("")
-				: this.crypto.decrypt().notePreview({
+				: this.sdk.getWorker().crypto.decrypt.notePreview({
 						preview: contentEncrypted.preview,
 						key: decryptedNoteKey
 				  })
 		const [contentDecrypted, previewDecrypted] = await Promise.all([
-			this.crypto.decrypt().noteContent({
+			this.sdk.getWorker().crypto.decrypt.noteContent({
 				content: contentEncrypted.content,
 				key: decryptedNoteKey
 			}),
@@ -482,11 +505,11 @@ export class Notes {
 				: decryptedNoteContent.content
 
 		const [contentEncrypted, previewEncrypted] = await Promise.all([
-			this.crypto.encrypt().noteContent({
+			this.sdk.getWorker().crypto.encrypt.noteContent({
 				content: strippedContent,
 				key: decryptedNoteKey
 			}),
-			this.crypto.encrypt().notePreview({
+			this.sdk.getWorker().crypto.encrypt.notePreview({
 				preview: createNotePreviewFromContentText({
 					content: strippedContent,
 					type: newType
@@ -519,15 +542,26 @@ export class Notes {
 		const decryptedNoteKey = await this.noteKey({ uuid })
 		const preview = createNotePreviewFromContentText({ content, type })
 		const [contentEncrypted, previewEncrypted] = await Promise.all([
-			this.crypto.encrypt().noteContent({ content, key: decryptedNoteKey }),
-			this.crypto.encrypt().notePreview({ preview, key: decryptedNoteKey })
+			this.sdk.getWorker().crypto.encrypt.noteContent({
+				content,
+				key: decryptedNoteKey
+			}),
+			this.sdk.getWorker().crypto.encrypt.notePreview({
+				preview,
+				key: decryptedNoteKey
+			})
 		])
 
 		if (contentEncrypted.length >= MAX_NOTE_SIZE) {
 			throw new Error(`Encrypted note content size too big, maximum is ${MAX_NOTE_SIZE} bytes.`)
 		}
 
-		await this.api.v3().notes().contentEdit({ uuid, preview: previewEncrypted, content: contentEncrypted, type })
+		await this.api.v3().notes().contentEdit({
+			uuid,
+			preview: previewEncrypted,
+			content: contentEncrypted,
+			type
+		})
 	}
 
 	/**
@@ -543,9 +577,15 @@ export class Notes {
 	 */
 	public async editTitle({ uuid, title }: { uuid: string; title: string }): Promise<void> {
 		const decryptedNoteKey = await this.noteKey({ uuid })
-		const titleEncrypted = await this.crypto.encrypt().noteTitle({ title, key: decryptedNoteKey })
+		const titleEncrypted = await this.sdk.getWorker().crypto.encrypt.noteTitle({
+			title,
+			key: decryptedNoteKey
+		})
 
-		await this.api.v3().notes().titleEdit({ uuid, title: titleEncrypted })
+		await this.api.v3().notes().titleEdit({
+			uuid,
+			title: titleEncrypted
+		})
 	}
 
 	/**
@@ -686,11 +726,11 @@ export class Notes {
 			promises.push(
 				new Promise<void>((resolve, reject) => {
 					Promise.all([
-						this.crypto.decrypt().noteContent({
+						this.sdk.getWorker().crypto.decrypt.noteContent({
 							content: noteHistory.content,
 							key: decryptedNoteKey
 						}),
-						this.crypto.decrypt().notePreview({
+						this.sdk.getWorker().crypto.decrypt.notePreview({
 							preview: noteHistory.preview,
 							key: decryptedNoteKey
 						})
@@ -775,9 +815,9 @@ export class Notes {
 		for (const tag of _tags) {
 			promises.push(
 				new Promise<void>((resolve, reject) => {
-					this.crypto
-						.decrypt()
-						.noteTagName({ name: tag.name })
+					this.sdk
+						.getWorker()
+						.crypto.decrypt.noteTagName({ name: tag.name })
 						.then(decryptedTagName => {
 							notesTags.push({
 								...tag,
@@ -842,7 +882,7 @@ export class Notes {
 			return filtered[0].uuid
 		}
 
-		const nameEncrypted = await this.crypto.encrypt().noteTagName({ name })
+		const nameEncrypted = await this.sdk.getWorker().crypto.encrypt.noteTagName({ name })
 		const response = await this.api.v3().notes().tagsCreate({ name: nameEncrypted })
 
 		return response.uuid
@@ -867,9 +907,12 @@ export class Notes {
 			throw new Error(`Tag with name ${name} already exists.`)
 		}
 
-		const nameEncrypted = await this.crypto.encrypt().noteTagName({ name })
+		const nameEncrypted = await this.sdk.getWorker().crypto.encrypt.noteTagName({ name })
 
-		await this.api.v3().notes().tagsRename({ uuid, name: nameEncrypted })
+		await this.api.v3().notes().tagsRename({
+			uuid,
+			name: nameEncrypted
+		})
 	}
 
 	/**
@@ -884,7 +927,10 @@ export class Notes {
 	 * @returns {Promise<void>}
 	 */
 	public async tagFavorite({ uuid, favorite }: { uuid: string; favorite: boolean }): Promise<void> {
-		await this.api.v3().notes().tagsFavorite({ uuid, favorite })
+		await this.api.v3().notes().tagsFavorite({
+			uuid,
+			favorite
+		})
 	}
 
 	/**

@@ -1,9 +1,9 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import type Crypto from "../crypto";
+import type FilenSDK from "..";
 export type APIConfig = {
     apiKey: string;
-    crypto: Crypto;
+    sdk: FilenSDK;
 };
 /**
  * API
@@ -16,7 +16,6 @@ export type APIConfig = {
 export declare class API {
     private readonly config;
     private readonly apiClient;
-    private readonly crypto;
     private readonly _v3;
     /**
      * Creates an instance of API.
@@ -301,7 +300,7 @@ export declare class API {
             lock: (params_0: {
                 uuid: string;
                 resource: string;
-                type: "status" | "acquire" | "refresh" | "release";
+                type: "acquire" | "refresh" | "status" | "release";
             }) => Promise<import("./v3/user/lock").UserLockResponse>;
         };
         shared: () => {
@@ -444,7 +443,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         onProgress?: import("..").ProgressCallback | undefined;
-                    }) => Promise<import("fs").ReadStream | ReadableStream<any>>;
+                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
                         bucket: string;

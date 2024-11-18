@@ -1,5 +1,5 @@
 import API from "./api"
-import type { AuthVersion } from "./types"
+import type { AuthVersion, ClassMethods } from "./types"
 import Crypto from "./crypto"
 import utils from "./utils"
 import { environment } from "./constants"
@@ -15,6 +15,35 @@ import Notes from "./notes"
 import Contacts from "./contacts"
 import User from "./user"
 import Socket from "./socket"
+import type Encrypt from "./crypto/encrypt"
+import type Decrypt from "./crypto/decrypt"
+import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer"
+import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer"
+import TypedEventEmitter, { type Events } from "./events"
+
+export type SDKWorker = {
+	crypto: {
+		encrypt: ClassMethods<Encrypt>
+		decrypt: ClassMethods<Decrypt>
+		utils: typeof cryptoUtils
+	}
+	api: {
+		v3: {
+			file: {
+				upload: {
+					chunk: {
+						buffer: ClassMethods<APIV3FileUploadChunkBuffer>
+					}
+				}
+				download: {
+					chunk: {
+						buffer: ClassMethods<APIV3FileDownloadChunkBuffer>
+					}
+				}
+			}
+		}
+	}
+}
 
 export type FilenSDKConfig = {
 	email?: string
@@ -52,21 +81,27 @@ export class FilenSDK {
 	private _user: User
 	public socket: Socket = new Socket()
 	private _updateKeyPairTries = 0
+	public workers: SDKWorker[] | null
+	private currentWorkerWorkIndex: number = 0
+	public readonly events: TypedEventEmitter<Events>
 
 	/**
 	 * Creates an instance of FilenSDK.
-	 * @date 2/21/2024 - 8:58:43 AM
 	 *
 	 * @constructor
 	 * @public
 	 * @param {?FilenSDKConfig} [params]
+	 * @param {?SDKWorker[]} [workers]
 	 */
-	public constructor(params?: FilenSDKConfig) {
+	public constructor(params?: FilenSDKConfig, workers?: SDKWorker[]) {
 		if (!params) {
 			params = {}
 		}
 
 		this.config = params
+		this.workers = workers ? workers : null
+		this.events = new TypedEventEmitter<Events>()
+
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
 				? new Crypto({
@@ -93,15 +128,156 @@ export class FilenSDK {
 								? utils.normalizePath(params.tmpPath)
 								: utils.normalizePath(os.tmpdir())
 				  })
+
 		this._api = params.apiKey
-			? new API({ apiKey: params.apiKey, crypto: this._crypto })
-			: new API({ apiKey: "anonymous", crypto: this._crypto })
-		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this })
-		this._fs = new FS({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket })
-		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto })
-		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto })
-		this._contacts = new Contacts({ sdkConfig: params, api: this._api })
-		this._user = new User({ sdkConfig: params, api: this._api, crypto: this._crypto })
+			? new API({
+					apiKey: params.apiKey,
+					sdk: this
+			  })
+			: new API({
+					apiKey: "anonymous",
+					sdk: this
+			  })
+
+		this._cloud = new Cloud({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+
+		this._fs = new FS({
+			sdkConfig: params,
+			api: this._api,
+			cloud: this._cloud,
+			connectToSocket: params.connectToSocket
+		})
+
+		this._notes = new Notes({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+
+		this._chats = new Chats({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+
+		this._contacts = new Contacts({
+			sdkConfig: params,
+			api: this._api
+		})
+
+		this._user = new User({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+	}
+
+	/**
+	 * Update the SDK Worker pool.
+	 *
+	 * @public
+	 * @param {SDKWorker[]} sdkWorkers
+	 */
+	public setSDKWorkers(sdkWorkers: SDKWorker[]): void {
+		this.workers = sdkWorkers
+	}
+
+	public getBaseWorker(): SDKWorker {
+		const baseWorker: SDKWorker = {
+			crypto: {
+				encrypt: this.crypto().encrypt(),
+				decrypt: this.crypto().decrypt(),
+				utils: cryptoUtils
+			},
+			api: {
+				v3: {
+					file: {
+						upload: {
+							chunk: {
+								buffer: {
+									fetch: params => {
+										return this._api.v3().file().upload().chunk().buffer(params)
+									}
+								}
+							}
+						},
+						download: {
+							chunk: {
+								buffer: {
+									fetch: params => {
+										return this._api.v3().file().download().chunk().buffer(params)
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return baseWorker
+	}
+
+	/**
+	 * Get a worker from the SDK Worker pool if set. Greatly improves performance.
+	 *
+	 * @public
+	 * @returns {SDKWorker}
+	 */
+	public getWorker(): SDKWorker {
+		const baseWorker: SDKWorker = {
+			crypto: {
+				encrypt: this.crypto().encrypt(),
+				decrypt: this.crypto().decrypt(),
+				utils: cryptoUtils
+			},
+			api: {
+				v3: {
+					file: {
+						upload: {
+							chunk: {
+								buffer: {
+									fetch: params => {
+										return this._api.v3().file().upload().chunk().buffer(params)
+									}
+								}
+							}
+						},
+						download: {
+							chunk: {
+								buffer: {
+									fetch: params => {
+										return this._api.v3().file().download().chunk().buffer(params)
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (!this.workers || this.workers.length === 0) {
+			return baseWorker
+		}
+
+		if (
+			this.currentWorkerWorkIndex === undefined ||
+			this.currentWorkerWorkIndex < 0 ||
+			this.currentWorkerWorkIndex >= this.workers.length
+		) {
+			this.currentWorkerWorkIndex = 0
+		}
+
+		const workerToUse = this.workers[this.currentWorkerWorkIndex]
+
+		this.currentWorkerWorkIndex = (this.currentWorkerWorkIndex + 1) % this.workers.length
+
+		return workerToUse || baseWorker
 	}
 
 	/**
@@ -113,6 +289,7 @@ export class FilenSDK {
 	 */
 	public init(params: FilenSDKConfig): void {
 		this.config = params
+
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey
 				? new Crypto({
@@ -139,15 +316,52 @@ export class FilenSDK {
 								? utils.normalizePath(params.tmpPath)
 								: utils.normalizePath(os.tmpdir())
 				  })
+
 		this._api = params.apiKey
-			? new API({ apiKey: params.apiKey, crypto: this._crypto })
-			: new API({ apiKey: "anonymous", crypto: this._crypto })
-		this._cloud = new Cloud({ sdkConfig: params, api: this._api, crypto: this._crypto, sdk: this })
-		this._fs = new FS({ sdkConfig: params, api: this._api, cloud: this._cloud, connectToSocket: params.connectToSocket })
-		this._notes = new Notes({ sdkConfig: params, api: this._api, crypto: this._crypto })
-		this._chats = new Chats({ sdkConfig: params, api: this._api, crypto: this._crypto })
-		this._contacts = new Contacts({ sdkConfig: params, api: this._api })
-		this._user = new User({ sdkConfig: params, api: this._api, crypto: this._crypto })
+			? new API({
+					apiKey: params.apiKey,
+					sdk: this
+			  })
+			: new API({
+					apiKey: "anonymous",
+					sdk: this
+			  })
+
+		this._cloud = new Cloud({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+
+		this._fs = new FS({
+			sdkConfig: params,
+			api: this._api,
+			cloud: this._cloud,
+			connectToSocket: params.connectToSocket
+		})
+
+		this._notes = new Notes({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+
+		this._chats = new Chats({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
+
+		this._contacts = new Contacts({
+			sdkConfig: params,
+			api: this._api
+		})
+
+		this._user = new User({
+			sdkConfig: params,
+			api: this._api,
+			sdk: this
+		})
 	}
 
 	/**
@@ -200,7 +414,7 @@ export class FilenSDK {
 		privateKey: string
 		masterKeys: string[]
 	}): Promise<void> {
-		const encryptedPrivateKey = await this._crypto.encrypt().metadata({
+		const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
 			metadata: privateKey,
 			key: masterKeys[masterKeys.length - 1]
 		})
@@ -236,7 +450,7 @@ export class FilenSDK {
 		privateKey: string
 		masterKeys: string[]
 	}): Promise<void> {
-		const encryptedPrivateKey = await this._crypto.encrypt().metadata({
+		const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
 			metadata: privateKey,
 			key: masterKeys[masterKeys.length - 1]
 		})
@@ -267,7 +481,7 @@ export class FilenSDK {
 
 			for (const masterKey of masterKeys) {
 				try {
-					const decryptedPrivateKey = await this._crypto.decrypt().metadata({
+					const decryptedPrivateKey = await this.getWorker().crypto.decrypt.metadata({
 						metadata: keyPairInfo.privateKey,
 						key: masterKey
 					})
@@ -296,7 +510,7 @@ export class FilenSDK {
 					})
 				}
 
-				const generatedKeyPair = await this._crypto.utils.generateKeyPair()
+				const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair()
 
 				await this._updateKeyPair({
 					apiKey,
@@ -324,7 +538,7 @@ export class FilenSDK {
 			}
 		}
 
-		const generatedKeyPair = await this._crypto.utils.generateKeyPair()
+		const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair()
 
 		await this._setKeyPair({
 			apiKey,
@@ -352,7 +566,7 @@ export class FilenSDK {
 			throw new Error("Invalid current master key.")
 		}
 
-		const encryptedMasterKeys = await this._crypto.encrypt().metadata({
+		const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
 			metadata: masterKeys.join("|"),
 			key: currentLastMasterKey
 		})
@@ -366,7 +580,7 @@ export class FilenSDK {
 
 		for (const masterKey of masterKeys) {
 			try {
-				const decryptedMasterKeys = await this._crypto.decrypt().metadata({
+				const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
 					metadata: masterKeysResponse.keys,
 					key: masterKey
 				})
@@ -425,7 +639,7 @@ export class FilenSDK {
 		const authInfo = await this._api.v3().auth().info({ email: emailToUse })
 		const authVersion = authInfo.authVersion
 
-		const derived = await this._crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+		const derived = await this.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: passwordToUse,
 			authVersion: authInfo.authVersion,
 			salt: authInfo.salt

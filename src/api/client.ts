@@ -5,18 +5,19 @@ import { promisify } from "util"
 import { pipeline, Readable, Transform } from "stream"
 import fs from "fs-extra"
 import { APIError } from "./errors"
-import { bufferToHash } from "../crypto/utils"
 import { type ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
 import Agent from "agentkeepalive"
+import type FilenSDK from ".."
 
 const pipelineAsync = promisify(pipeline)
 const keepAliveAgent = new Agent.HttpsAgent()
 
 export type APIClientConfig = {
 	apiKey: string
+	sdk: FilenSDK
 }
 
 export type BaseRequestParameters = {
@@ -98,9 +99,8 @@ export const APIClientDefaults = {
  * @typedef {APIClient}
  */
 export class APIClient {
-	private readonly config: APIClientConfig = {
-		apiKey: ""
-	} as const
+	public readonly apiKey: string
+	public readonly sdk: FilenSDK
 
 	/**
 	 * Creates an instance of APIClient.
@@ -111,7 +111,8 @@ export class APIClient {
 	 * @param {APIClientConfig} params
 	 */
 	public constructor(params: APIClientConfig) {
-		this.config = params
+		this.apiKey = params.apiKey
+		this.sdk = params.sdk
 	}
 
 	/**
@@ -124,7 +125,7 @@ export class APIClient {
 	 */
 	private buildHeaders(params?: { apiKey?: string }): Record<string, string> {
 		return {
-			Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey),
+			Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.apiKey),
 			Accept: "application/json, text/plain, */*",
 			...(environment === "node" ? { "User-Agent": "filen-sdk" } : {})
 		}
@@ -157,7 +158,7 @@ export class APIClient {
 		if (!params.headers && !postDataIsBuffer) {
 			headers = {
 				...headers,
-				Checksum: await bufferToHash({
+				Checksum: await this.sdk.getWorker().crypto.utils.bufferToHash({
 					buffer: Buffer.from(JSON.stringify(params.data), "utf-8"),
 					algorithm: "sha512"
 				})
@@ -276,7 +277,7 @@ export class APIClient {
 					})
 
 					progressStreamInstance.on("progress", info => {
-						if (!params.onUploadProgress || !info || typeof info.transferred !== "number") {
+						if (!info || typeof info.transferred !== "number") {
 							return
 						}
 
@@ -289,7 +290,7 @@ export class APIClient {
 							lastBytesUploaded = info.transferred
 						}
 
-						params.onUploadProgress(bytes)
+						params.onUploadProgress?.(bytes)
 					})
 
 					Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request)
@@ -310,7 +311,7 @@ export class APIClient {
 			maxBodyLength: Infinity,
 			maxContentLength: Infinity,
 			onUploadProgress: event => {
-				if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
+				if (!event || typeof event.loaded !== "number") {
 					return
 				}
 
@@ -323,7 +324,7 @@ export class APIClient {
 					lastBytesUploaded = event.loaded
 				}
 
-				params.onUploadProgress(bytes)
+				params.onUploadProgress?.(bytes)
 			}
 		})
 	}
@@ -363,10 +364,6 @@ export class APIClient {
 				const timeout = params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
 
 				const calculateProgress = (transferred: number) => {
-					if (!params.onDownloadProgress) {
-						return
-					}
-
 					let bytes = transferred
 
 					if (lastBytesDownloaded === 0) {
@@ -376,7 +373,7 @@ export class APIClient {
 						lastBytesDownloaded = transferred
 					}
 
-					params.onDownloadProgress(bytes)
+					params.onDownloadProgress?.(bytes)
 				}
 
 				const calculateProgressTransform = new Transform({
@@ -500,7 +497,7 @@ export class APIClient {
 			maxBodyLength: Infinity,
 			maxContentLength: Infinity,
 			onDownloadProgress: event => {
-				if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
+				if (!event || typeof event.loaded !== "number") {
 					return
 				}
 
@@ -513,7 +510,7 @@ export class APIClient {
 					lastBytesDownloaded = event.loaded
 				}
 
-				params.onDownloadProgress(bytes)
+				params.onDownloadProgress?.(bytes)
 			}
 		})
 	}
@@ -863,18 +860,22 @@ export class APIClient {
 			uploadKey
 		} as unknown as Record<string, string>).toString()
 
-		const bufferHash = await bufferToHash({
+		const bufferHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
 			buffer,
 			algorithm: "sha512"
 		})
+
 		const fullURL = `${
 			APIClientDefaults.ingestURLs[getRandomArbitrary(0, APIClientDefaults.ingestURLs.length - 1)]
 		}/v3/upload?${urlParams}&hash=${bufferHash}`
+
 		const parsedURLParams = parseURLParams({ url: fullURL })
-		const urlParamsHash = await bufferToHash({
+
+		const urlParamsHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
 			buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"),
 			algorithm: "sha512"
 		})
+
 		const builtHeaders = this.buildHeaders({ apiKey: undefined })
 
 		const response = await this.request<UploadChunkResponse>({

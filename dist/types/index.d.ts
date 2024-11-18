@@ -1,16 +1,45 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import type { AuthVersion } from "./types";
+import type { AuthVersion, ClassMethods } from "./types";
 import Crypto from "./crypto";
 import FS from "./fs";
 import appendStream from "./streams/append";
 import { streamDecodeBase64, streamEncodeBase64 } from "./streams/base64";
+import cryptoUtils from "./crypto/utils";
 import Cloud from "./cloud";
 import Chats from "./chats";
 import Notes from "./notes";
 import Contacts from "./contacts";
 import User from "./user";
 import Socket from "./socket";
+import type Encrypt from "./crypto/encrypt";
+import type Decrypt from "./crypto/decrypt";
+import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer";
+import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer";
+import TypedEventEmitter, { type Events } from "./events";
+export type SDKWorker = {
+    crypto: {
+        encrypt: ClassMethods<Encrypt>;
+        decrypt: ClassMethods<Decrypt>;
+        utils: typeof cryptoUtils;
+    };
+    api: {
+        v3: {
+            file: {
+                upload: {
+                    chunk: {
+                        buffer: ClassMethods<APIV3FileUploadChunkBuffer>;
+                    };
+                };
+                download: {
+                    chunk: {
+                        buffer: ClassMethods<APIV3FileDownloadChunkBuffer>;
+                    };
+                };
+            };
+        };
+    };
+};
 export type FilenSDKConfig = {
     email?: string;
     password?: string;
@@ -46,15 +75,33 @@ export declare class FilenSDK {
     private _user;
     socket: Socket;
     private _updateKeyPairTries;
+    workers: SDKWorker[] | null;
+    private currentWorkerWorkIndex;
+    readonly events: TypedEventEmitter<Events>;
     /**
      * Creates an instance of FilenSDK.
-     * @date 2/21/2024 - 8:58:43 AM
      *
      * @constructor
      * @public
      * @param {?FilenSDKConfig} [params]
+     * @param {?SDKWorker[]} [workers]
      */
-    constructor(params?: FilenSDKConfig);
+    constructor(params?: FilenSDKConfig, workers?: SDKWorker[]);
+    /**
+     * Update the SDK Worker pool.
+     *
+     * @public
+     * @param {SDKWorker[]} sdkWorkers
+     */
+    setSDKWorkers(sdkWorkers: SDKWorker[]): void;
+    getBaseWorker(): SDKWorker;
+    /**
+     * Get a worker from the SDK Worker pool if set. Greatly improves performance.
+     *
+     * @public
+     * @returns {SDKWorker}
+     */
+    getWorker(): SDKWorker;
     /**
      * Initialize the SDK again (after logging in for example).
      * @date 2/1/2024 - 3:23:58 PM
@@ -130,6 +177,14 @@ export declare class FilenSDK {
         dir: () => {
             content: (params_0: {
                 uuid: string;
+                /**
+                 * FilenSDK
+                 * @date 2/1/2024 - 2:45:02 AM
+                 *
+                 * @export
+                 * @class FilenSDK
+                 * @typedef {FilenSDK}
+                 */
                 dirsOnly?: boolean | undefined;
             }) => Promise<import("./api/v3/dir/content").DirContentResponse>;
             download: (params_0: {
@@ -340,14 +395,6 @@ export declare class FilenSDK {
             affiliate: () => {
                 payout: (params_0: {
                     address: string;
-                    /**
-                     * FilenSDK
-                     * @date 2/1/2024 - 2:45:02 AM
-                     *
-                     * @export
-                     * @class FilenSDK
-                     * @typedef {FilenSDK}
-                     */
                     method: string;
                 }) => Promise<void>;
             };
@@ -407,7 +454,7 @@ export declare class FilenSDK {
             lock: (params_0: {
                 uuid: string;
                 resource: string;
-                type: "status" | "acquire" | "refresh" | "release";
+                type: "acquire" | "refresh" | "status" | "release";
             }) => Promise<import("./api/v3/user/lock").UserLockResponse>;
         };
         shared: () => {
@@ -424,6 +471,14 @@ export declare class FilenSDK {
                 uuid: string;
                 name: string;
                 nameHashed: string;
+                /**
+                 * FilenSDK
+                 * @date 2/1/2024 - 2:45:02 AM
+                 *
+                 * @export
+                 * @class FilenSDK
+                 * @typedef {FilenSDK}
+                 */
                 size: string;
                 chunks: number;
                 mime: string;
@@ -550,7 +605,7 @@ export declare class FilenSDK {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         onProgress?: import("./types").ProgressCallback | undefined;
-                    }) => Promise<import("fs").ReadStream | ReadableStream<any>>;
+                    }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
                         bucket: string;
@@ -717,14 +772,6 @@ export declare class FilenSDK {
                 id: number;
             }) => Promise<void>;
             participantsRemove: (params_0: {
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 uuid: string;
                 userId: number;
             }) => Promise<void>;
@@ -752,14 +799,6 @@ export declare class FilenSDK {
             }) => Promise<void>;
             tagsFavorite: (params_0: {
                 uuid: string;
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 favorite: boolean;
             }) => Promise<void>;
             tag: (params_0: {

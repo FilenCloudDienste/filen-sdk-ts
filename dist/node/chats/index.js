@@ -23,8 +23,8 @@ class Chats {
     constructor(params) {
         this._chatKeyCache = new Map();
         this.api = params.api;
-        this.crypto = params.crypto;
         this.sdkConfig = params.sdkConfig;
+        this.sdk = params.sdk;
     }
     /**
      * Get the encryption key of a chat.
@@ -46,7 +46,7 @@ class Chats {
             throw new Error(`Could not find chat ${conversation}.`);
         }
         if (chat[0].ownerId === this.sdkConfig.userId && chat[0].ownerMetadata) {
-            const decryptedChatKey = await this.crypto.decrypt().chatKeyOwner({ metadata: chat[0].ownerMetadata });
+            const decryptedChatKey = await this.sdk.getWorker().crypto.decrypt.chatKeyOwner({ metadata: chat[0].ownerMetadata });
             this._chatKeyCache.set(conversation, decryptedChatKey);
             return decryptedChatKey;
         }
@@ -54,9 +54,9 @@ class Chats {
         if (participant.length === 0 || !participant[0]) {
             throw new Error(`Could not find participant metadata for chat ${conversation}.`);
         }
-        const decryptedChatKey = await this.crypto
-            .decrypt()
-            .chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey });
+        const decryptedChatKey = await this.sdk
+            .getWorker()
+            .crypto.decrypt.chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey });
         this._chatKeyCache.set(conversation, decryptedChatKey);
         return decryptedChatKey;
     }
@@ -86,10 +86,16 @@ class Chats {
                     .then(decryptedChatKey => {
                     this._chatKeyCache.set(convo.uuid, decryptedChatKey);
                     const namePromise = typeof convo.name === "string" && convo.name.length > 0
-                        ? this.crypto.decrypt().chatConversationName({ name: convo.name, key: decryptedChatKey })
+                        ? this.sdk.getWorker().crypto.decrypt.chatConversationName({
+                            name: convo.name,
+                            key: decryptedChatKey
+                        })
                         : Promise.resolve("");
                     const messagePromise = typeof convo.lastMessage === "string" && convo.lastMessage.length > 0
-                        ? this.crypto.decrypt().chatMessage({ message: convo.lastMessage, key: decryptedChatKey })
+                        ? this.sdk.getWorker().crypto.decrypt.chatMessage({
+                            message: convo.lastMessage,
+                            key: decryptedChatKey
+                        })
                         : Promise.resolve("");
                     Promise.all([namePromise, messagePromise])
                         .then(([nameDecrypted, lastMessageDecrypted]) => {
@@ -151,14 +157,14 @@ class Chats {
     async create({ uuid, contacts }) {
         const [uuidToUse, key] = await Promise.all([
             uuid ? Promise.resolve(uuid) : await (0, utils_1.uuidv4)(),
-            this.crypto.utils.generateRandomString({ length: 32 })
+            this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
         ]);
         const [metadata, ownerMetadata] = await Promise.all([
-            this.crypto.encrypt().metadataPublic({
+            this.sdk.getWorker().crypto.encrypt.metadataPublic({
                 metadata: JSON.stringify({ key }),
                 publicKey: this.sdkConfig.publicKey
             }),
-            this.crypto.encrypt().metadata({ metadata: JSON.stringify({ key }) })
+            this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ key }) })
         ]);
         await this.api.v3().chat().conversationsCreate({
             uuid: uuidToUse,
@@ -213,8 +219,14 @@ class Chats {
      */
     async editConversationName({ conversation, name }) {
         const key = await this.chatKey({ conversation });
-        const nameEncrypted = await this.crypto.encrypt().chatConversationName({ name, key });
-        await this.api.v3().chat().conversationsName().edit({ uuid: conversation, name: nameEncrypted });
+        const nameEncrypted = await this.sdk.getWorker().crypto.encrypt.chatConversationName({
+            name,
+            key
+        });
+        await this.api.v3().chat().conversationsName().edit({
+            uuid: conversation,
+            name: nameEncrypted
+        });
     }
     /**
      * Edit a chat message.
@@ -230,11 +242,18 @@ class Chats {
      */
     async editMessage({ uuid, conversation, message }) {
         const key = await this.chatKey({ conversation });
-        const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
+        const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
+            message,
+            key
+        });
         if (messageEncrypted.length >= __1.MAX_CHAT_SIZE) {
             throw new Error(`Maximum encrypted message size is ${__1.MAX_CHAT_SIZE} characters.`);
         }
-        await this.api.v3().chat().edit({ uuid, conversation, message: messageEncrypted });
+        await this.api.v3().chat().edit({
+            uuid,
+            conversation,
+            message: messageEncrypted
+        });
     }
     /**
      * Send a message.
@@ -251,11 +270,19 @@ class Chats {
      */
     async sendMessage({ uuid, conversation, message, replyTo }) {
         const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : (0, utils_1.uuidv4)()]);
-        const messageEncrypted = await this.crypto.encrypt().chatMessage({ message, key });
+        const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
+            message,
+            key
+        });
         if (messageEncrypted.length >= __1.MAX_CHAT_SIZE) {
             throw new Error(`Maximum encrypted message size is ${__1.MAX_CHAT_SIZE} characters.`);
         }
-        await this.api.v3().chat().send({ uuid: uuidToUse, conversation, message: messageEncrypted, replyTo });
+        await this.api.v3().chat().send({
+            uuid: uuidToUse,
+            conversation,
+            message: messageEncrypted,
+            replyTo
+        });
         return uuidToUse;
     }
     /**
@@ -270,7 +297,10 @@ class Chats {
      * @returns {Promise<void>}
      */
     async sendTyping({ conversation, type }) {
-        await this.api.v3().chat().typing({ conversation, type });
+        await this.api.v3().chat().typing({
+            conversation,
+            type
+        });
     }
     /**
      * Fetch chat messages from the given timestamp ordered DESC. Can be used for pagination.
@@ -289,16 +319,28 @@ class Chats {
             this.api
                 .v3()
                 .chat()
-                .messages({ conversation, timestamp: timestamp ? timestamp : Date.now() + 3600000 })
+                .messages({
+                conversation,
+                timestamp: timestamp ? timestamp : Date.now() + 3600000
+            })
         ]);
         const chatMessages = [];
         const promises = [];
         for (const message of _messages) {
             promises.push(new Promise((resolve, reject) => {
                 const replyToPromise = message.replyTo.uuid.length > 0 && message.replyTo.message.length > 0
-                    ? this.crypto.decrypt().chatMessage({ message: message.replyTo.message, key })
+                    ? this.sdk.getWorker().crypto.decrypt.chatMessage({
+                        message: message.replyTo.message,
+                        key
+                    })
                     : Promise.resolve("");
-                Promise.all([this.crypto.decrypt().chatMessage({ message: message.message, key }), replyToPromise])
+                Promise.all([
+                    this.sdk.getWorker().crypto.decrypt.chatMessage({
+                        message: message.message,
+                        key
+                    }),
+                    replyToPromise
+                ])
                     .then(([messageDecrypted, replyToDecrypted]) => {
                     chatMessages.push(Object.assign(Object.assign({}, message), { message: messageDecrypted.length > 0 ? messageDecrypted : `CANNOT_DECRYPT_MESSAGE_${message.uuid}`, replyTo: Object.assign(Object.assign({}, message.replyTo), { message: replyToDecrypted.length > 0
                                 ? replyToDecrypted
@@ -325,8 +367,15 @@ class Chats {
     async addParticipant({ conversation, contact }) {
         const key = await this.chatKey({ conversation });
         const publicKey = (await this.api.v3().user().publicKey({ email: contact.email })).publicKey;
-        const metadata = await this.crypto.encrypt().metadataPublic({ metadata: JSON.stringify({ key }), publicKey });
-        await this.api.v3().chat().conversationsParticipants().add({ uuid: conversation, contactUUID: contact.uuid, metadata });
+        const metadata = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+            metadata: JSON.stringify({ key }),
+            publicKey
+        });
+        await this.api.v3().chat().conversationsParticipants().add({
+            uuid: conversation,
+            contactUUID: contact.uuid,
+            metadata
+        });
     }
     /**
      * Remove a participant from a chat.
@@ -340,7 +389,10 @@ class Chats {
      * @returns {Promise<void>}
      */
     async removeParticipant({ conversation, userId }) {
-        await this.api.v3().chat().conversationsParticipants().remove({ uuid: conversation, userId });
+        await this.api.v3().chat().conversationsParticipants().remove({
+            uuid: conversation,
+            userId
+        });
     }
     /**
      * Mark a conversation as read.

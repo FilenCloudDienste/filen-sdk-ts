@@ -249,7 +249,12 @@ class Encrypt {
             const encrypted = await globalThis.crypto.subtle.encrypt({
                 name: "AES-GCM",
                 iv: this.textEncoder.encode(iv)
-            }, await (0, utils_1.importRawKey)({ key: Buffer.from(key, "utf-8"), algorithm: "AES-GCM", mode: ["encrypt"], keyCache: false }), data);
+            }, await (0, utils_1.importRawKey)({
+                key: Buffer.from(key, "utf-8"),
+                algorithm: "AES-GCM",
+                mode: ["encrypt"],
+                keyCache: false
+            }), data);
             return Buffer.concat([this.textEncoder.encode(iv), new Uint8Array(encrypted)]);
         }
         throw new Error(`crypto.decrypt.data not implemented for ${constants_1.environment} environment`);

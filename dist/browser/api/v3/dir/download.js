@@ -1,4 +1,3 @@
-import { deriveKeyFromPassword, hashFn } from "../../../crypto/utils";
 /**
  * DirDownload
  * @date 2/1/2024 - 6:04:48 PM
@@ -57,7 +56,7 @@ export class DirDownload {
                 parent: uuid,
                 password: linkHasPassword && linkSalt && linkPassword
                     ? linkSalt.length === 32
-                        ? await deriveKeyFromPassword({
+                        ? await this.apiClient.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
                             password: linkPassword,
                             salt: linkSalt,
                             iterations: 200000,
@@ -65,8 +64,10 @@ export class DirDownload {
                             bitLength: 512,
                             returnHex: true
                         })
-                        : await hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
-                    : await hashFn({ input: "empty" }),
+                        : await this.apiClient.sdk
+                            .getWorker()
+                            .crypto.utils.hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
+                    : await this.apiClient.sdk.getWorker().crypto.utils.hashFn({ input: "empty" }),
                 ...(skipCache ? { skipCache } : {})
             };
         const response = await this.apiClient.request({

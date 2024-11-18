@@ -29,3 +29,7 @@ export type GetFileResult = FileGetResponse & {
 export type GetDirResult = DirGetResponse & {
     metadataDecrypted: FolderMetadata;
 };
+export type ClassMethodNames<T> = {
+    [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
+}[keyof T];
+export type ClassMethods<T> = Pick<T, ClassMethodNames<T>>;

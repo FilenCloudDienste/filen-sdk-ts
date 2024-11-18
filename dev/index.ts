@@ -16,6 +16,7 @@ import { calculateChunkIndices } from "../src/cloud/utils"
 import { Readable } from "stream"
 import { v4 as uuidv4 } from "uuid"
 import { type ReadableStream as ReadableStreamWeb } from "stream/web"
+import type Encrypt from "../src/crypto/encrypt"
 
 const filen = new FilenSDK({
 	...config,

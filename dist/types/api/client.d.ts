@@ -3,8 +3,10 @@
 import { type ResponseType } from "axios";
 import fs from "fs-extra";
 import { type ProgressCallback } from "../types";
+import type FilenSDK from "..";
 export type APIClientConfig = {
     apiKey: string;
+    sdk: FilenSDK;
 };
 export type BaseRequestParameters = {
     endpoint: string;
@@ -52,7 +54,8 @@ export declare const APIClientDefaults: {
  * @typedef {APIClient}
  */
 export declare class APIClient {
-    private readonly config;
+    readonly apiKey: string;
+    readonly sdk: FilenSDK;
     /**
      * Creates an instance of APIClient.
      * @date 1/31/2024 - 4:09:17 PM

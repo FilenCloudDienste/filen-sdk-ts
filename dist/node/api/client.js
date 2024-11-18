@@ -11,7 +11,6 @@ const util_1 = require("util");
 const stream_1 = require("stream");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const errors_1 = require("./errors");
-const utils_2 = require("../crypto/utils");
 const https_1 = __importDefault(require("https"));
 const url_1 = __importDefault(require("url"));
 const progress_stream_1 = __importDefault(require("progress-stream"));
@@ -73,10 +72,8 @@ class APIClient {
      * @param {APIClientConfig} params
      */
     constructor(params) {
-        this.config = {
-            apiKey: ""
-        };
-        this.config = params;
+        this.apiKey = params.apiKey;
+        this.sdk = params.sdk;
     }
     /**
      * Build API request headers.
@@ -87,7 +84,7 @@ class APIClient {
      * @returns {Record<string, string>}
      */
     buildHeaders(params) {
-        return Object.assign({ Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey), Accept: "application/json, text/plain, */*" }, (constants_1.environment === "node" ? { "User-Agent": "filen-sdk" } : {}));
+        return Object.assign({ Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.apiKey), Accept: "application/json, text/plain, */*" }, (constants_1.environment === "node" ? { "User-Agent": "filen-sdk" } : {}));
     }
     /**
      * Send a POST request.
@@ -109,7 +106,7 @@ class APIClient {
         }
         const postDataIsBuffer = params.data instanceof Buffer || params.data instanceof Uint8Array || params.data instanceof ArrayBuffer;
         if (!params.headers && !postDataIsBuffer) {
-            headers = Object.assign(Object.assign({}, headers), { Checksum: await (0, utils_2.bufferToHash)({
+            headers = Object.assign(Object.assign({}, headers), { Checksum: await this.sdk.getWorker().crypto.utils.bufferToHash({
                     buffer: Buffer.from(JSON.stringify(params.data), "utf-8"),
                     algorithm: "sha512"
                 }) });
@@ -203,7 +200,8 @@ class APIClient {
                         time: 100
                     });
                     progressStreamInstance.on("progress", info => {
-                        if (!params.onUploadProgress || !info || typeof info.transferred !== "number") {
+                        var _a;
+                        if (!info || typeof info.transferred !== "number") {
                             return;
                         }
                         let bytes = info.transferred;
@@ -214,7 +212,7 @@ class APIClient {
                             bytes = Math.floor(info.transferred - lastBytesUploaded);
                             lastBytesUploaded = info.transferred;
                         }
-                        params.onUploadProgress(bytes);
+                        (_a = params.onUploadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
                     });
                     stream_1.Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request);
                 }
@@ -233,7 +231,8 @@ class APIClient {
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
             onUploadProgress: event => {
-                if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
+                var _a;
+                if (!event || typeof event.loaded !== "number") {
                     return;
                 }
                 let bytes = event.loaded;
@@ -244,7 +243,7 @@ class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesUploaded);
                     lastBytesUploaded = event.loaded;
                 }
-                params.onUploadProgress(bytes);
+                (_a = params.onUploadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
             }
         });
     }
@@ -276,9 +275,7 @@ class APIClient {
                 const urlParsed = url_1.default.parse(url, true);
                 const timeout = params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout;
                 const calculateProgress = (transferred) => {
-                    if (!params.onDownloadProgress) {
-                        return;
-                    }
+                    var _a;
                     let bytes = transferred;
                     if (lastBytesDownloaded === 0) {
                         lastBytesDownloaded = transferred;
@@ -287,7 +284,7 @@ class APIClient {
                         bytes = Math.floor(transferred - lastBytesDownloaded);
                         lastBytesDownloaded = transferred;
                     }
-                    params.onDownloadProgress(bytes);
+                    (_a = params.onDownloadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
                 };
                 const calculateProgressTransform = new stream_1.Transform({
                     transform(chunk, _, callback) {
@@ -388,7 +385,8 @@ class APIClient {
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
             onDownloadProgress: event => {
-                if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
+                var _a;
+                if (!event || typeof event.loaded !== "number") {
                     return;
                 }
                 let bytes = event.loaded;
@@ -399,7 +397,7 @@ class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesDownloaded);
                     lastBytesDownloaded = event.loaded;
                 }
-                params.onDownloadProgress(bytes);
+                (_a = params.onDownloadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
             }
         });
     }
@@ -637,10 +635,16 @@ class APIClient {
             parent,
             uploadKey
         }).toString();
-        const bufferHash = await (0, utils_2.bufferToHash)({ buffer, algorithm: "sha512" });
+        const bufferHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
+            buffer,
+            algorithm: "sha512"
+        });
         const fullURL = `${exports.APIClientDefaults.ingestURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.ingestURLs.length - 1)]}/v3/upload?${urlParams}&hash=${bufferHash}`;
         const parsedURLParams = (0, utils_1.parseURLParams)({ url: fullURL });
-        const urlParamsHash = await (0, utils_2.bufferToHash)({ buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"), algorithm: "sha512" });
+        const urlParamsHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
+            buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"),
+            algorithm: "sha512"
+        });
         const builtHeaders = this.buildHeaders({ apiKey: undefined });
         const response = await this.request({
             method: "POST",

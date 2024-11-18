@@ -5,7 +5,6 @@ import { promisify } from "util";
 import { pipeline, Readable, Transform } from "stream";
 import fs from "fs-extra";
 import { APIError } from "./errors";
-import { bufferToHash } from "../crypto/utils";
 import https from "https";
 import urlModule from "url";
 import progressStream from "progress-stream";
@@ -58,9 +57,8 @@ export const APIClientDefaults = {
  * @typedef {APIClient}
  */
 export class APIClient {
-    config = {
-        apiKey: ""
-    };
+    apiKey;
+    sdk;
     /**
      * Creates an instance of APIClient.
      * @date 1/31/2024 - 4:09:17 PM
@@ -70,7 +68,8 @@ export class APIClient {
      * @param {APIClientConfig} params
      */
     constructor(params) {
-        this.config = params;
+        this.apiKey = params.apiKey;
+        this.sdk = params.sdk;
     }
     /**
      * Build API request headers.
@@ -82,7 +81,7 @@ export class APIClient {
      */
     buildHeaders(params) {
         return {
-            Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.config.apiKey),
+            Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.apiKey),
             Accept: "application/json, text/plain, */*",
             ...(environment === "node" ? { "User-Agent": "filen-sdk" } : {})
         };
@@ -109,7 +108,7 @@ export class APIClient {
         if (!params.headers && !postDataIsBuffer) {
             headers = {
                 ...headers,
-                Checksum: await bufferToHash({
+                Checksum: await this.sdk.getWorker().crypto.utils.bufferToHash({
                     buffer: Buffer.from(JSON.stringify(params.data), "utf-8"),
                     algorithm: "sha512"
                 })
@@ -206,7 +205,7 @@ export class APIClient {
                         time: 100
                     });
                     progressStreamInstance.on("progress", info => {
-                        if (!params.onUploadProgress || !info || typeof info.transferred !== "number") {
+                        if (!info || typeof info.transferred !== "number") {
                             return;
                         }
                         let bytes = info.transferred;
@@ -217,7 +216,7 @@ export class APIClient {
                             bytes = Math.floor(info.transferred - lastBytesUploaded);
                             lastBytesUploaded = info.transferred;
                         }
-                        params.onUploadProgress(bytes);
+                        params.onUploadProgress?.(bytes);
                     });
                     Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request);
                 }
@@ -236,7 +235,7 @@ export class APIClient {
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
             onUploadProgress: event => {
-                if (!params.onUploadProgress || !event || typeof event.loaded !== "number") {
+                if (!event || typeof event.loaded !== "number") {
                     return;
                 }
                 let bytes = event.loaded;
@@ -247,7 +246,7 @@ export class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesUploaded);
                     lastBytesUploaded = event.loaded;
                 }
-                params.onUploadProgress(bytes);
+                params.onUploadProgress?.(bytes);
             }
         });
     }
@@ -279,9 +278,6 @@ export class APIClient {
                 const urlParsed = urlModule.parse(url, true);
                 const timeout = params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout;
                 const calculateProgress = (transferred) => {
-                    if (!params.onDownloadProgress) {
-                        return;
-                    }
                     let bytes = transferred;
                     if (lastBytesDownloaded === 0) {
                         lastBytesDownloaded = transferred;
@@ -290,7 +286,7 @@ export class APIClient {
                         bytes = Math.floor(transferred - lastBytesDownloaded);
                         lastBytesDownloaded = transferred;
                     }
-                    params.onDownloadProgress(bytes);
+                    params.onDownloadProgress?.(bytes);
                 };
                 const calculateProgressTransform = new Transform({
                     transform(chunk, _, callback) {
@@ -390,7 +386,7 @@ export class APIClient {
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
             onDownloadProgress: event => {
-                if (!params.onDownloadProgress || !event || typeof event.loaded !== "number") {
+                if (!event || typeof event.loaded !== "number") {
                     return;
                 }
                 let bytes = event.loaded;
@@ -401,7 +397,7 @@ export class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesDownloaded);
                     lastBytesDownloaded = event.loaded;
                 }
-                params.onDownloadProgress(bytes);
+                params.onDownloadProgress?.(bytes);
             }
         });
     }
@@ -642,10 +638,16 @@ export class APIClient {
             parent,
             uploadKey
         }).toString();
-        const bufferHash = await bufferToHash({ buffer, algorithm: "sha512" });
+        const bufferHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
+            buffer,
+            algorithm: "sha512"
+        });
         const fullURL = `${APIClientDefaults.ingestURLs[getRandomArbitrary(0, APIClientDefaults.ingestURLs.length - 1)]}/v3/upload?${urlParams}&hash=${bufferHash}`;
         const parsedURLParams = parseURLParams({ url: fullURL });
-        const urlParamsHash = await bufferToHash({ buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"), algorithm: "sha512" });
+        const urlParamsHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
+            buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"),
+            algorithm: "sha512"
+        });
         const builtHeaders = this.buildHeaders({ apiKey: undefined });
         const response = await this.request({
             method: "POST",

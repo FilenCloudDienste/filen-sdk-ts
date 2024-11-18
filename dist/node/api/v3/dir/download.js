@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DirDownload = void 0;
-const utils_1 = require("../../../crypto/utils");
 /**
  * DirDownload
  * @date 2/1/2024 - 6:04:48 PM
@@ -52,7 +51,7 @@ class DirDownload {
         const data = type === "shared" || type === "normal"
             ? Object.assign({ uuid }, (skipCache ? { skipCache } : {})) : Object.assign({ uuid: linkUUID, parent: uuid, password: linkHasPassword && linkSalt && linkPassword
                 ? linkSalt.length === 32
-                    ? await (0, utils_1.deriveKeyFromPassword)({
+                    ? await this.apiClient.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
                         password: linkPassword,
                         salt: linkSalt,
                         iterations: 200000,
@@ -60,8 +59,10 @@ class DirDownload {
                         bitLength: 512,
                         returnHex: true
                     })
-                    : await (0, utils_1.hashFn)({ input: linkPassword.length === 0 ? "empty" : linkPassword })
-                : await (0, utils_1.hashFn)({ input: "empty" }) }, (skipCache ? { skipCache } : {}));
+                    : await this.apiClient.sdk
+                        .getWorker()
+                        .crypto.utils.hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
+                : await this.apiClient.sdk.getWorker().crypto.utils.hashFn({ input: "empty" }) }, (skipCache ? { skipCache } : {}));
         const response = await this.apiClient.request({
             method: "POST",
             endpoint,

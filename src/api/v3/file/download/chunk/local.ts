@@ -70,7 +70,16 @@ export class FileDownloadChunkLocal {
 		to: string
 		onProgress?: ProgressCallback
 	}): Promise<void> {
-		await this.apiClient.downloadChunkToLocal({ uuid, bucket, region, chunk, timeout, abortSignal, to, onProgress })
+		await this.apiClient.downloadChunkToLocal({
+			uuid,
+			bucket,
+			region,
+			chunk,
+			timeout,
+			abortSignal,
+			to,
+			onProgress
+		})
 	}
 }
 
