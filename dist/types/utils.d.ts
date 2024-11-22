@@ -69,7 +69,7 @@ export declare function promiseAllChunked<T>(promises: Promise<T>[], chunkSize?:
  * @async
  * @template T
  * @param {Promise<T>[]} promises
- * @param {number} [chunkSize=100000]
+ * @param {number} [chunkSize=10000]
  * @returns {Promise<T[]>}
  */
 export declare function promiseAllSettledChunked<T>(promises: Promise<T>[], chunkSize?: number): Promise<T[]>;

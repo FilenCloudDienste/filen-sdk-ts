@@ -42,7 +42,8 @@ class Cloud {
             uploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_UPLOADS),
             directoryDownloads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
             directoryUploads: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DIRECTORY_UPLOADS),
-            createDirectory: new semaphore_1.Semaphore(1)
+            createDirectory: new semaphore_1.Semaphore(1),
+            share: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_SHARES)
         };
         this.utils = {
             signals: {
@@ -1027,17 +1028,23 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async shareItem({ uuid, parent, email, type, publicKey, metadata }) {
-        const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
-            metadata: JSON.stringify(metadata),
-            publicKey
-        });
-        await this.api.v3().item().share({
-            uuid,
-            parent,
-            email,
-            type,
-            metadata: metadataEncrypted
-        });
+        await this._semaphores.share.acquire();
+        try {
+            const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+                metadata: JSON.stringify(metadata),
+                publicKey
+            });
+            await this.api.v3().item().share({
+                uuid,
+                parent,
+                email,
+                type,
+                metadata: metadataEncrypted
+            });
+        }
+        finally {
+            this._semaphores.share.release();
+        }
     }
     /**
      * Add an item to a directory public link.
@@ -1064,23 +1071,29 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async addItemToDirectoryPublicLink({ uuid, parent, linkUUID, type, metadata, linkKeyEncrypted, expiration }) {
-        const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted });
-        if (key.length === 0) {
-            throw new Error("Invalid key.");
+        await this._semaphores.share.acquire();
+        try {
+            const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted });
+            if (key.length === 0) {
+                throw new Error("Invalid key.");
+            }
+            const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
+                metadata: JSON.stringify(metadata),
+                key
+            });
+            await this.api.v3().dir().link().add({
+                uuid,
+                parent,
+                linkUUID,
+                type,
+                metadata: metadataEncrypted,
+                key: linkKeyEncrypted,
+                expiration
+            });
         }
-        const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
-            metadata: JSON.stringify(metadata),
-            key
-        });
-        await this.api.v3().dir().link().add({
-            uuid,
-            parent,
-            linkUUID,
-            type,
-            metadata: metadataEncrypted,
-            key: linkKeyEncrypted,
-            expiration
-        });
+        finally {
+            this._semaphores.share.release();
+        }
     }
     /**
      * Enable a public link for a file or a directory.

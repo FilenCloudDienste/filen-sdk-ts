@@ -1,6 +1,6 @@
 import { APIError } from "..";
 import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize } from "../utils";
-import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, BUFFER_SIZE } from "../constants";
+import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, MAX_CONCURRENT_SHARES, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
 import pathModule from "path";
 import os from "os";
@@ -30,7 +30,8 @@ export class Cloud {
         uploads: new Semaphore(MAX_CONCURRENT_UPLOADS),
         directoryDownloads: new Semaphore(MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
         directoryUploads: new Semaphore(MAX_CONCURRENT_DIRECTORY_UPLOADS),
-        createDirectory: new Semaphore(1)
+        createDirectory: new Semaphore(1),
+        share: new Semaphore(MAX_CONCURRENT_SHARES)
     };
     /**
      * Creates an instance of Cloud.
@@ -1023,17 +1024,23 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async shareItem({ uuid, parent, email, type, publicKey, metadata }) {
-        const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
-            metadata: JSON.stringify(metadata),
-            publicKey
-        });
-        await this.api.v3().item().share({
-            uuid,
-            parent,
-            email,
-            type,
-            metadata: metadataEncrypted
-        });
+        await this._semaphores.share.acquire();
+        try {
+            const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+                metadata: JSON.stringify(metadata),
+                publicKey
+            });
+            await this.api.v3().item().share({
+                uuid,
+                parent,
+                email,
+                type,
+                metadata: metadataEncrypted
+            });
+        }
+        finally {
+            this._semaphores.share.release();
+        }
     }
     /**
      * Add an item to a directory public link.
@@ -1060,23 +1067,29 @@ export class Cloud {
      * @returns {Promise<void>}
      */
     async addItemToDirectoryPublicLink({ uuid, parent, linkUUID, type, metadata, linkKeyEncrypted, expiration }) {
-        const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted });
-        if (key.length === 0) {
-            throw new Error("Invalid key.");
+        await this._semaphores.share.acquire();
+        try {
+            const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted });
+            if (key.length === 0) {
+                throw new Error("Invalid key.");
+            }
+            const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
+                metadata: JSON.stringify(metadata),
+                key
+            });
+            await this.api.v3().dir().link().add({
+                uuid,
+                parent,
+                linkUUID,
+                type,
+                metadata: metadataEncrypted,
+                key: linkKeyEncrypted,
+                expiration
+            });
         }
-        const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
-            metadata: JSON.stringify(metadata),
-            key
-        });
-        await this.api.v3().dir().link().add({
-            uuid,
-            parent,
-            linkUUID,
-            type,
-            metadata: metadataEncrypted,
-            key: linkKeyEncrypted,
-            expiration
-        });
+        finally {
+            this._semaphores.share.release();
+        }
     }
     /**
      * Enable a public link for a file or a directory.

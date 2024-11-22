@@ -83,7 +83,7 @@ export function Uint8ArrayConcat(a1, a2) {
  * @param {number} [chunkSize=10000]
  * @returns {Promise<T[]>}
  */
-export async function promiseAllChunked(promises, chunkSize = 100000) {
+export async function promiseAllChunked(promises, chunkSize = 10000) {
     const results = [];
     for (let i = 0; i < promises.length; i += chunkSize) {
         const chunkResults = await Promise.all(promises.slice(i, i + chunkSize));
@@ -99,10 +99,10 @@ export async function promiseAllChunked(promises, chunkSize = 100000) {
  * @async
  * @template T
  * @param {Promise<T>[]} promises
- * @param {number} [chunkSize=100000]
+ * @param {number} [chunkSize=10000]
  * @returns {Promise<T[]>}
  */
-export async function promiseAllSettledChunked(promises, chunkSize = 100000) {
+export async function promiseAllSettledChunked(promises, chunkSize = 10000) {
     const results = [];
     for (let i = 0; i < promises.length; i += chunkSize) {
         const chunkPromisesSettled = await Promise.allSettled(promises.slice(i, i + chunkSize));

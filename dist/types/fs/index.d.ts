@@ -87,10 +87,20 @@ export declare class FS {
      */
     constructor(params: FSConfig);
     /**
+     * Wait for an API key (login) to become available
+     *
+     * @private
+     * @async
+     * @returns {Promise<string>}
+     */
+    private waitForValidAPIKey;
+    /**
      * Attach listeners for relevant realtime events.
      *
      * @private
+     * @async
      * @param {?boolean} [connect]
+     * @returns {Promise<void>}
      */
     private _initSocketEvents;
     /**
