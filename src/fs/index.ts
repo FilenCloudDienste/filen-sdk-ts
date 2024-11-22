@@ -139,118 +139,167 @@ export class FS {
 			}
 		}
 
-		this._initSocketEvents(params.connectToSocket)
+		this._initSocketEvents(params.connectToSocket).catch(() => {})
+	}
+
+	/**
+	 * Wait for an API key (login) to become available
+	 *
+	 * @private
+	 * @async
+	 * @returns {Promise<string>}
+	 */
+	private async waitForValidAPIKey(): Promise<string> {
+		if (this.sdkConfig.apiKey && this.sdkConfig.apiKey.length >= 16) {
+			return this.sdkConfig.apiKey
+		}
+
+		return await new Promise<string>(resolve => {
+			const interval = setInterval(() => {
+				if (this.sdkConfig.apiKey && this.sdkConfig.apiKey.length >= 16) {
+					clearInterval(interval)
+
+					resolve(this.sdkConfig.apiKey)
+				}
+			}, 250)
+		})
 	}
 
 	/**
 	 * Attach listeners for relevant realtime events.
 	 *
 	 * @private
+	 * @async
 	 * @param {?boolean} [connect]
+	 * @returns {Promise<void>}
 	 */
-	private _initSocketEvents(connect?: boolean): void {
-		if (!connect || !this.sdkConfig.apiKey) {
+	private async _initSocketEvents(connect?: boolean): Promise<void> {
+		if (!connect) {
 			return
 		}
 
-		this.socket.connect({ apiKey: this.sdkConfig.apiKey })
+		const apiKey = await this.waitForValidAPIKey()
+
+		this.socket.connect({ apiKey })
 
 		this.socket.addListener("socketEvent", async (event: SocketEvent) => {
 			await this.itemsMutex.acquire()
 
-			if (event.type === "fileArchiveRestored") {
-				const currentItem = this._uuidToItem[event.data.currentUUID]
-				const item = this._uuidToItem[event.data.uuid]
+			try {
+				if (event.type === "fileArchiveRestored") {
+					const currentItem = this._uuidToItem[event.data.currentUUID]
+					const item = this._uuidToItem[event.data.uuid]
 
-				if (currentItem) {
-					delete this._items[currentItem.path]
-					delete this._uuidToItem[event.data.currentUUID]
-				}
-
-				if (item) {
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "fileRename") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "fileMove") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "fileTrash") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "fileArchived") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "folderTrash") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					for (const path in this._items) {
-						if (path.startsWith(item.path + "/") || item.path === path) {
-							delete this._items[path]
-						}
+					if (currentItem) {
+						delete this._items[currentItem.path]
+						delete this._uuidToItem[event.data.currentUUID]
 					}
 
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "fileDeletedPermanent") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "folderMove") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					for (const path in this._items) {
-						if (path.startsWith(item.path + "/") || item.path === path) {
-							delete this._items[path]
-						}
+					if (item) {
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
 					}
+				} else if (event.type === "fileRename") {
+					const item = this._uuidToItem[event.data.uuid]
 
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
-				}
-			} else if (event.type === "folderRename") {
-				const item = this._uuidToItem[event.data.uuid]
-
-				if (item) {
-					for (const path in this._items) {
-						if (path.startsWith(item.path + "/") || item.path === path) {
-							delete this._items[path]
-						}
+					if (item) {
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
 					}
+				} else if (event.type === "fileMove") {
+					const item = this._uuidToItem[event.data.uuid]
 
-					delete this._items[item.path]
-					delete this._uuidToItem[event.data.uuid]
+					if (item) {
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "fileTrash") {
+					const item = this._uuidToItem[event.data.uuid]
+
+					if (item) {
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "fileArchived") {
+					const item = this._uuidToItem[event.data.uuid]
+
+					if (item) {
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "folderTrash") {
+					const item = this._uuidToItem[event.data.uuid]
+
+					if (item) {
+						for (const path in this._items) {
+							if (path.startsWith(item.path + "/") || item.path === path) {
+								const oldItem = this._items[path]
+
+								if (oldItem) {
+									delete this._uuidToItem[oldItem.uuid]
+								}
+
+								delete this._items[path]
+							}
+						}
+
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "fileDeletedPermanent") {
+					const item = this._uuidToItem[event.data.uuid]
+
+					if (item) {
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "folderMove") {
+					const item = this._uuidToItem[event.data.uuid]
+
+					if (item) {
+						for (const path in this._items) {
+							if (path.startsWith(item.path + "/") || item.path === path) {
+								const oldItem = this._items[path]
+
+								if (oldItem) {
+									delete this._uuidToItem[oldItem.uuid]
+								}
+
+								delete this._items[path]
+							}
+						}
+
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "folderRename") {
+					const item = this._uuidToItem[event.data.uuid]
+
+					if (item) {
+						for (const path in this._items) {
+							if (path.startsWith(item.path + "/") || item.path === path) {
+								const oldItem = this._items[path]
+
+								if (oldItem) {
+									delete this._uuidToItem[oldItem.uuid]
+								}
+
+								delete this._items[path]
+							}
+						}
+
+						delete this._items[item.path]
+						delete this._uuidToItem[event.data.uuid]
+					}
+				} else if (event.type === "passwordChanged") {
+					this._items = {}
+					this._uuidToItem = {}
 				}
-			} else if (event.type === "passwordChanged") {
-				this._items = {}
-				this._uuidToItem = {}
+			} catch {
+				// Noop
+			} finally {
+				this.itemsMutex.release()
 			}
-
-			this.itemsMutex.release()
 		})
 	}
 
