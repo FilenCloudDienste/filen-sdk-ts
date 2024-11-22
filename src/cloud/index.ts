@@ -24,6 +24,7 @@ import {
 	MAX_CONCURRENT_UPLOADS,
 	MAX_CONCURRENT_DIRECTORY_DOWNLOADS,
 	MAX_CONCURRENT_DIRECTORY_UPLOADS,
+	MAX_CONCURRENT_SHARES,
 	BUFFER_SIZE
 } from "../constants"
 import { PauseSignal } from "./signals"
@@ -174,7 +175,8 @@ export class Cloud {
 		uploads: new Semaphore(MAX_CONCURRENT_UPLOADS),
 		directoryDownloads: new Semaphore(MAX_CONCURRENT_DIRECTORY_DOWNLOADS),
 		directoryUploads: new Semaphore(MAX_CONCURRENT_DIRECTORY_UPLOADS),
-		createDirectory: new Semaphore(1)
+		createDirectory: new Semaphore(1),
+		share: new Semaphore(MAX_CONCURRENT_SHARES)
 	}
 
 	/**
@@ -1382,18 +1384,24 @@ export class Cloud {
 		publicKey: string
 		metadata: FileMetadata | FolderMetadata
 	}): Promise<void> {
-		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
-			metadata: JSON.stringify(metadata),
-			publicKey
-		})
+		await this._semaphores.share.acquire()
 
-		await this.api.v3().item().share({
-			uuid,
-			parent,
-			email,
-			type,
-			metadata: metadataEncrypted
-		})
+		try {
+			const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+				metadata: JSON.stringify(metadata),
+				publicKey
+			})
+
+			await this.api.v3().item().share({
+				uuid,
+				parent,
+				email,
+				type,
+				metadata: metadataEncrypted
+			})
+		} finally {
+			this._semaphores.share.release()
+		}
 	}
 
 	/**
@@ -1437,26 +1445,32 @@ export class Cloud {
 		linkKeyEncrypted: string
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted })
+		await this._semaphores.share.acquire()
 
-		if (key.length === 0) {
-			throw new Error("Invalid key.")
+		try {
+			const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted })
+
+			if (key.length === 0) {
+				throw new Error("Invalid key.")
+			}
+
+			const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
+				metadata: JSON.stringify(metadata),
+				key
+			})
+
+			await this.api.v3().dir().link().add({
+				uuid,
+				parent,
+				linkUUID,
+				type,
+				metadata: metadataEncrypted,
+				key: linkKeyEncrypted,
+				expiration
+			})
+		} finally {
+			this._semaphores.share.release()
 		}
-
-		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
-			metadata: JSON.stringify(metadata),
-			key
-		})
-
-		await this.api.v3().dir().link().add({
-			uuid,
-			parent,
-			linkUUID,
-			type,
-			metadata: metadataEncrypted,
-			key: linkKeyEncrypted,
-			expiration
-		})
 	}
 
 	/**
@@ -1494,7 +1508,6 @@ export class Cloud {
 			const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({ metadata: key })
 			let done = 0
 			const promises: Promise<void>[] = []
-
 			const total = Object.keys(tree).length
 
 			for (const entry in tree) {
