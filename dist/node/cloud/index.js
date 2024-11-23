@@ -594,6 +594,47 @@ class Cloud {
         return exists;
     }
     /**
+     * Edit metadata of a file (currently uses the rename endpoint, might change later).
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string; metadata: FileMetadata }} param0
+     * @param {string} param0.uuid
+     * @param {FileMetadata} param0.metadata
+     * @returns {Promise<void>}
+     */
+    async editFileMetadata({ uuid, metadata }) {
+        const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
+            this.sdk.getWorker().crypto.utils.hashFn({ input: metadata.name.toLowerCase() }),
+            this.sdk.getWorker().crypto.encrypt.metadata({
+                metadata: JSON.stringify(metadata)
+            }),
+            this.sdk.getWorker().crypto.encrypt.metadata({
+                metadata: metadata.name,
+                key: metadata.key
+            })
+        ]);
+        try {
+            await this.api.v3().file().rename({
+                uuid,
+                metadataEncrypted,
+                nameEncrypted,
+                nameHashed
+            });
+        }
+        catch (e) {
+            if (e instanceof __1.APIError) {
+                if (e.code === "file_not_found") {
+                    return;
+                }
+            }
+        }
+        await this.checkIfItemIsSharedForRename({
+            uuid,
+            itemMetadata: metadata
+        });
+    }
+    /**
      * Rename a file.
      *
      * @public
@@ -990,7 +1031,15 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async restoreFileVersion({ uuid, currentUUID }) {
-        await this.api.v3().file().version().restore({ uuid, currentUUID });
+        const currentFile = await this.getFile({ uuid: currentUUID });
+        await this.api.v3().file().version().restore({
+            uuid,
+            currentUUID
+        });
+        await this.editFileMetadata({
+            uuid,
+            metadata: Object.assign(Object.assign({}, currentFile.metadataDecrypted), { lastModified: Date.now() })
+        });
     }
     /**
      * Retrieve all versions of a file.
@@ -1849,12 +1898,22 @@ class Cloud {
         const promises = [];
         if (isSharingItem.sharing) {
             for (const user of isSharingItem.users) {
-                promises.push(this.renameSharedItem({ uuid, receiverId: user.id, metadata: itemMetadata, publicKey: user.publicKey }));
+                promises.push(this.renameSharedItem({
+                    uuid,
+                    receiverId: user.id,
+                    metadata: itemMetadata,
+                    publicKey: user.publicKey
+                }));
             }
         }
         if (isLinkingItem.link) {
             for (const link of isLinkingItem.links) {
-                promises.push(this.renamePubliclyLinkedItem({ uuid, linkUUID: link.linkUUID, metadata: itemMetadata, linkKeyEncrypted: link.linkKey }));
+                promises.push(this.renamePubliclyLinkedItem({
+                    uuid,
+                    linkUUID: link.linkUUID,
+                    metadata: itemMetadata,
+                    linkKeyEncrypted: link.linkKey
+                }));
             }
         }
         if (promises.length > 0) {

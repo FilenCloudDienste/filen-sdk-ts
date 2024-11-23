@@ -226,6 +226,20 @@ export declare class Cloud {
         parent: string;
     }): Promise<DirExistsResponse>;
     /**
+     * Edit metadata of a file (currently uses the rename endpoint, might change later).
+     *
+     * @public
+     * @async
+     * @param {{ uuid: string; metadata: FileMetadata }} param0
+     * @param {string} param0.uuid
+     * @param {FileMetadata} param0.metadata
+     * @returns {Promise<void>}
+     */
+    editFileMetadata({ uuid, metadata }: {
+        uuid: string;
+        metadata: FileMetadata;
+    }): Promise<void>;
+    /**
      * Rename a file.
      *
      * @public
