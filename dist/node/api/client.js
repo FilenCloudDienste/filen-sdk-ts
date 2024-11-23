@@ -212,7 +212,7 @@ class APIClient {
                             bytes = Math.floor(info.transferred - lastBytesUploaded);
                             lastBytesUploaded = info.transferred;
                         }
-                        (_a = params.onUploadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
+                        (_a = params.onUploadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes, params.onUploadProgressId);
                     });
                     stream_1.Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request);
                 }
@@ -243,7 +243,7 @@ class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesUploaded);
                     lastBytesUploaded = event.loaded;
                 }
-                (_a = params.onUploadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
+                (_a = params.onUploadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes, params.onUploadProgressId);
             }
         });
     }
@@ -284,12 +284,12 @@ class APIClient {
                         bytes = Math.floor(transferred - lastBytesDownloaded);
                         lastBytesDownloaded = transferred;
                     }
-                    (_a = params.onDownloadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
+                    (_a = params.onDownloadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes, params.onDownloadProgressId);
                 };
                 const calculateProgressTransform = new stream_1.Transform({
                     transform(chunk, _, callback) {
                         if (params.onDownloadProgress && chunk instanceof Buffer) {
-                            params.onDownloadProgress(chunk.byteLength);
+                            params.onDownloadProgress(chunk.byteLength, params.onDownloadProgressId);
                         }
                         this.push(chunk);
                         callback();
@@ -397,7 +397,7 @@ class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesDownloaded);
                     lastBytesDownloaded = event.loaded;
                 }
-                (_a = params.onDownloadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes);
+                (_a = params.onDownloadProgress) === null || _a === void 0 ? void 0 : _a.call(params, bytes, params.onDownloadProgressId);
             }
         });
     }
@@ -468,7 +468,6 @@ class APIClient {
     }
     /**
      * Downloads a file chunk to a local path.
-     * @date 2/17/2024 - 6:40:58 AM
      *
      * @public
      * @async
@@ -482,7 +481,8 @@ class APIClient {
      * 		abortSignal?: AbortSignal
      * 		maxRetries?: number
      * 		retryTimeout?: number
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressCallback,
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -494,9 +494,10 @@ class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    async downloadChunkToLocal({ uuid, bucket, region, chunk, to, timeout, abortSignal, maxRetries, retryTimeout, onProgress }) {
+    async downloadChunkToLocal({ uuid, bucket, region, chunk, to, timeout, abortSignal, maxRetries, retryTimeout, onProgress, onProgressId }) {
         if (constants_1.environment !== "node") {
             throw new Error("cloud.downloadChunkToLocal is only available in a Node.JS environment");
         }
@@ -510,13 +511,13 @@ class APIClient {
             responseType: "stream",
             maxRetries,
             retryTimeout,
-            onDownloadProgress: onProgress
+            onDownloadProgress: onProgress,
+            onDownloadProgressId: onProgressId
         });
         await pipelineAsync(response, fs_extra_1.default.createWriteStream(to));
     }
     /**
      * Downloads a file chunk and returns a readable stream.
-     * @date 2/17/2024 - 6:40:44 AM
      *
      * @public
      * @async
@@ -530,6 +531,7 @@ class APIClient {
      * 		maxRetries?: number
      * 		retryTimeout?: number
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -540,9 +542,10 @@ class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<ReadableStream | fs.ReadStream>}
      */
-    async downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress }) {
+    async downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress, onProgressId }) {
         const response = await this.request({
             method: "GET",
             url: `${exports.APIClientDefaults.egestURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.egestURLs.length - 1)]}`,
@@ -552,13 +555,13 @@ class APIClient {
             responseType: "stream",
             maxRetries,
             retryTimeout,
-            onDownloadProgress: onProgress
+            onDownloadProgress: onProgress,
+            onDownloadProgressId: onProgressId
         });
         return response;
     }
     /**
      * Download a chunk buffer.
-     * @date 2/17/2024 - 6:40:21 AM
      *
      * @public
      * @async
@@ -570,8 +573,9 @@ class APIClient {
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
      * 		maxRetries?: number
-     * 		retryTimeout?: number,
-     * 		onProgress: ProgressCallback
+     * 		retryTimeout?: number
+     * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -582,9 +586,10 @@ class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<Buffer>}
      */
-    async downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress }) {
+    async downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress, onProgressId }) {
         const response = await this.request({
             method: "GET",
             url: `${exports.APIClientDefaults.egestURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.egestURLs.length - 1)]}`,
@@ -594,13 +599,13 @@ class APIClient {
             responseType: "arraybuffer",
             maxRetries,
             retryTimeout,
-            onDownloadProgress: onProgress
+            onDownloadProgress: onProgress,
+            onDownloadProgressId: onProgressId
         });
         return Buffer.from(response);
     }
     /**
      * Upload a chunk buffer.
-     * @date 2/17/2024 - 5:08:04 AM
      *
      * @public
      * @async
@@ -613,8 +618,9 @@ class APIClient {
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
      * 		maxRetries?: number
-     * 		retryTimeout?: number,
+     * 		retryTimeout?: number
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {number} param0.index
@@ -626,9 +632,10 @@ class APIClient {
      * @param {number} param0.timeout
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<UploadChunkResponse>}
      */
-    async uploadChunkBuffer({ uuid, index, parent, uploadKey, buffer, abortSignal, maxRetries, timeout, retryTimeout, onProgress }) {
+    async uploadChunkBuffer({ uuid, index, parent, uploadKey, buffer, abortSignal, maxRetries, timeout, retryTimeout, onProgress, onProgressId }) {
         const urlParams = new URLSearchParams({
             uuid,
             index,
@@ -656,7 +663,8 @@ class APIClient {
             timeout: timeout ? timeout : exports.APIClientDefaults.ingestTimeout,
             retryTimeout,
             headers: Object.assign(Object.assign({}, builtHeaders), { Checksum: urlParamsHash }),
-            onUploadProgress: onProgress
+            onUploadProgress: onProgress,
+            onUploadProgressId: onProgressId
         });
         return response;
     }

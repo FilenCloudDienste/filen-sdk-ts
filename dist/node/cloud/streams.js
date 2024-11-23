@@ -32,7 +32,8 @@ class ChunkedUploadWriter extends stream_1.Writable {
      * 		name: string
      * 		uploadKey: string
      * 		parent: string
-     * 		onProgress?: ProgressCallback,
+     * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		lastModified?: number
      * 		creation?: number
      * 	}} param0
@@ -44,15 +45,17 @@ class ChunkedUploadWriter extends stream_1.Writable {
      * @param {string} param0.parent
      * @param {FilenSDK} param0.sdk
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {number} param0.lastModified
      * @param {number} param0.creation
      */
-    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress, lastModified, creation }) {
+    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress, onProgressId, lastModified, creation }) {
         super(options);
         this.uploadSemaphore = new semaphore_1.Semaphore(constants_1.MAX_UPLOAD_THREADS);
         this.processingMutex = new semaphore_1.Semaphore(1);
         this.chunksUploaded = 0;
         this.onProgress = onProgress;
+        this.onProgressId = onProgressId;
         this.sdk = sdk;
         this.chunkBuffer = Buffer.from([]);
         this.uuid = uuid;
@@ -183,7 +186,7 @@ class ChunkedUploadWriter extends stream_1.Writable {
         this.region = response.region;
         this.chunksUploaded += 1;
         if (this.onProgress) {
-            this.onProgress(chunk.byteLength);
+            this.onProgress(chunk.byteLength, this.onProgressId);
         }
     }
     /**

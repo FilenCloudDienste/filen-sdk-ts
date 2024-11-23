@@ -22,7 +22,6 @@ export class FileDownloadChunkLocal {
     }
     /**
      * Download a file chunk.
-     * @date 2/17/2024 - 6:38:36 AM
      *
      * @public
      * @async
@@ -35,6 +34,7 @@ export class FileDownloadChunkLocal {
      * 		abortSignal?: AbortSignal
      * 		to: string
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -44,9 +44,10 @@ export class FileDownloadChunkLocal {
      * @param {AbortSignal} param0.abortSignal
      * @param {string} param0.to
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    async fetch({ uuid, bucket, region, chunk, timeout, abortSignal, to, onProgress }) {
+    async fetch({ uuid, bucket, region, chunk, timeout, abortSignal, to, onProgress, onProgressId }) {
         await this.apiClient.downloadChunkToLocal({
             uuid,
             bucket,
@@ -55,7 +56,8 @@ export class FileDownloadChunkLocal {
             timeout,
             abortSignal,
             to,
-            onProgress
+            onProgress,
+            onProgressId
         });
     }
 }

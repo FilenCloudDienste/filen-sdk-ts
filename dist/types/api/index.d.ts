@@ -434,6 +434,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         onProgress?: import("..").ProgressCallback | undefined;
+                        onProgressId?: string | undefined;
                     }) => Promise<Buffer>;
                     stream: (params_0: {
                         uuid: string;
@@ -443,6 +444,7 @@ export declare class API {
                         timeout?: number | undefined;
                         abortSignal?: AbortSignal | undefined;
                         onProgress?: import("..").ProgressCallback | undefined;
+                        onProgressId?: string | undefined;
                     }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
@@ -453,6 +455,7 @@ export declare class API {
                         abortSignal?: AbortSignal | undefined;
                         to: string;
                         onProgress?: import("..").ProgressCallback | undefined;
+                        onProgressId?: string | undefined;
                     }) => Promise<void>;
                 };
             };
@@ -469,6 +472,7 @@ export declare class API {
                         timeout?: number | undefined;
                         buffer: Buffer;
                         onProgress?: import("..").ProgressCallback | undefined;
+                        onProgressId?: string | undefined;
                     }) => Promise<import("./client").UploadChunkResponse>;
                 };
             };

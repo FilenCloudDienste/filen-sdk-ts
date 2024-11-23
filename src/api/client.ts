@@ -31,6 +31,8 @@ export type BaseRequestParameters = {
 	headers?: Record<string, string>
 	onUploadProgress?: ProgressCallback
 	onDownloadProgress?: ProgressCallback
+	onUploadProgressId?: string
+	onDownloadProgressId?: string
 	apiKey?: string
 }
 
@@ -290,7 +292,7 @@ export class APIClient {
 							lastBytesUploaded = info.transferred
 						}
 
-						params.onUploadProgress?.(bytes)
+						params.onUploadProgress?.(bytes, params.onUploadProgressId)
 					})
 
 					Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request)
@@ -324,7 +326,7 @@ export class APIClient {
 					lastBytesUploaded = event.loaded
 				}
 
-				params.onUploadProgress?.(bytes)
+				params.onUploadProgress?.(bytes, params.onUploadProgressId)
 			}
 		})
 	}
@@ -373,13 +375,13 @@ export class APIClient {
 						lastBytesDownloaded = transferred
 					}
 
-					params.onDownloadProgress?.(bytes)
+					params.onDownloadProgress?.(bytes, params.onDownloadProgressId)
 				}
 
 				const calculateProgressTransform = new Transform({
 					transform(chunk, _, callback) {
 						if (params.onDownloadProgress && chunk instanceof Buffer) {
-							params.onDownloadProgress(chunk.byteLength)
+							params.onDownloadProgress(chunk.byteLength, params.onDownloadProgressId)
 						}
 
 						this.push(chunk)
@@ -510,7 +512,7 @@ export class APIClient {
 					lastBytesDownloaded = event.loaded
 				}
 
-				params.onDownloadProgress?.(bytes)
+				params.onDownloadProgress?.(bytes, params.onDownloadProgressId)
 			}
 		})
 	}
@@ -600,7 +602,6 @@ export class APIClient {
 
 	/**
 	 * Downloads a file chunk to a local path.
-	 * @date 2/17/2024 - 6:40:58 AM
 	 *
 	 * @public
 	 * @async
@@ -614,7 +615,8 @@ export class APIClient {
 	 * 		abortSignal?: AbortSignal
 	 * 		maxRetries?: number
 	 * 		retryTimeout?: number
-	 * 		onProgress?: ProgressCallback
+	 * 		onProgress?: ProgressCallback,
+	 * 		onProgressId?: string
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -626,6 +628,7 @@ export class APIClient {
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.retryTimeout
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {string} param0.onProgressId
 	 * @returns {Promise<void>}
 	 */
 	public async downloadChunkToLocal({
@@ -638,7 +641,8 @@ export class APIClient {
 		abortSignal,
 		maxRetries,
 		retryTimeout,
-		onProgress
+		onProgress,
+		onProgressId
 	}: {
 		uuid: string
 		bucket: string
@@ -650,6 +654,7 @@ export class APIClient {
 		maxRetries?: number
 		retryTimeout?: number
 		onProgress?: ProgressCallback
+		onProgressId?: string
 	}): Promise<void> {
 		if (environment !== "node") {
 			throw new Error("cloud.downloadChunkToLocal is only available in a Node.JS environment")
@@ -666,7 +671,8 @@ export class APIClient {
 			responseType: "stream",
 			maxRetries,
 			retryTimeout,
-			onDownloadProgress: onProgress
+			onDownloadProgress: onProgress,
+			onDownloadProgressId: onProgressId
 		})
 
 		await pipelineAsync(response, fs.createWriteStream(to))
@@ -674,7 +680,6 @@ export class APIClient {
 
 	/**
 	 * Downloads a file chunk and returns a readable stream.
-	 * @date 2/17/2024 - 6:40:44 AM
 	 *
 	 * @public
 	 * @async
@@ -688,6 +693,7 @@ export class APIClient {
 	 * 		maxRetries?: number
 	 * 		retryTimeout?: number
 	 * 		onProgress?: ProgressCallback
+	 * 		onProgressId?: string
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -698,6 +704,7 @@ export class APIClient {
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.retryTimeout
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {string} param0.onProgressId
 	 * @returns {Promise<ReadableStream | fs.ReadStream>}
 	 */
 	public async downloadChunkToStream({
@@ -709,7 +716,8 @@ export class APIClient {
 		abortSignal,
 		maxRetries,
 		retryTimeout,
-		onProgress
+		onProgress,
+		onProgressId
 	}: {
 		uuid: string
 		bucket: string
@@ -720,6 +728,7 @@ export class APIClient {
 		maxRetries?: number
 		retryTimeout?: number
 		onProgress?: ProgressCallback
+		onProgressId?: string
 	}): Promise<ReadableStream | fs.ReadStream> {
 		const response = await this.request<ReadableStream | fs.ReadStream>({
 			method: "GET",
@@ -730,7 +739,8 @@ export class APIClient {
 			responseType: "stream",
 			maxRetries,
 			retryTimeout,
-			onDownloadProgress: onProgress
+			onDownloadProgress: onProgress,
+			onDownloadProgressId: onProgressId
 		})
 
 		return response
@@ -738,7 +748,6 @@ export class APIClient {
 
 	/**
 	 * Download a chunk buffer.
-	 * @date 2/17/2024 - 6:40:21 AM
 	 *
 	 * @public
 	 * @async
@@ -750,8 +759,9 @@ export class APIClient {
 	 * 		timeout?: number
 	 * 		abortSignal?: AbortSignal
 	 * 		maxRetries?: number
-	 * 		retryTimeout?: number,
-	 * 		onProgress: ProgressCallback
+	 * 		retryTimeout?: number
+	 * 		onProgress?: ProgressCallback
+	 * 		onProgressId?: string
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -762,6 +772,7 @@ export class APIClient {
 	 * @param {number} param0.maxRetries
 	 * @param {number} param0.retryTimeout
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {string} param0.onProgressId
 	 * @returns {Promise<Buffer>}
 	 */
 	public async downloadChunkToBuffer({
@@ -773,7 +784,8 @@ export class APIClient {
 		abortSignal,
 		maxRetries,
 		retryTimeout,
-		onProgress
+		onProgress,
+		onProgressId
 	}: {
 		uuid: string
 		bucket: string
@@ -784,6 +796,7 @@ export class APIClient {
 		maxRetries?: number
 		retryTimeout?: number
 		onProgress?: ProgressCallback
+		onProgressId?: string
 	}): Promise<Buffer> {
 		const response = await this.request<ArrayBuffer>({
 			method: "GET",
@@ -794,7 +807,8 @@ export class APIClient {
 			responseType: "arraybuffer",
 			maxRetries,
 			retryTimeout,
-			onDownloadProgress: onProgress
+			onDownloadProgress: onProgress,
+			onDownloadProgressId: onProgressId
 		})
 
 		return Buffer.from(response)
@@ -802,7 +816,6 @@ export class APIClient {
 
 	/**
 	 * Upload a chunk buffer.
-	 * @date 2/17/2024 - 5:08:04 AM
 	 *
 	 * @public
 	 * @async
@@ -815,8 +828,9 @@ export class APIClient {
 	 * 		timeout?: number
 	 * 		abortSignal?: AbortSignal
 	 * 		maxRetries?: number
-	 * 		retryTimeout?: number,
+	 * 		retryTimeout?: number
 	 * 		onProgress?: ProgressCallback
+	 * 		onProgressId?: string
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {number} param0.index
@@ -828,6 +842,7 @@ export class APIClient {
 	 * @param {number} param0.timeout
 	 * @param {number} param0.retryTimeout
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {string} param0.onProgressId
 	 * @returns {Promise<UploadChunkResponse>}
 	 */
 	public async uploadChunkBuffer({
@@ -840,7 +855,8 @@ export class APIClient {
 		maxRetries,
 		timeout,
 		retryTimeout,
-		onProgress
+		onProgress,
+		onProgressId
 	}: {
 		uuid: string
 		index: number
@@ -852,6 +868,7 @@ export class APIClient {
 		maxRetries?: number
 		retryTimeout?: number
 		onProgress?: ProgressCallback
+		onProgressId?: string
 	}): Promise<UploadChunkResponse> {
 		const urlParams = new URLSearchParams({
 			uuid,
@@ -891,7 +908,8 @@ export class APIClient {
 				...builtHeaders,
 				Checksum: urlParamsHash
 			},
-			onUploadProgress: onProgress
+			onUploadProgress: onProgress,
+			onUploadProgressId: onProgressId
 		})
 
 		return response

@@ -282,7 +282,6 @@ export declare class FS {
     rmfile(...params: Parameters<typeof this.unlink>): Promise<void>;
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
-     * @date 3/18/2024 - 12:07:38 AM
      *
      * @public
      * @async
@@ -294,6 +293,7 @@ export declare class FS {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {number} param0.offset
@@ -302,9 +302,10 @@ export declare class FS {
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<Buffer>}
      */
-    read({ path, offset, length, position, abortSignal, pauseSignal, onProgress }: {
+    read({ path, offset, length, position, abortSignal, pauseSignal, onProgress, onProgressId }: {
         path: string;
         offset?: number;
         length?: number;
@@ -312,6 +313,7 @@ export declare class FS {
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<Buffer>;
     /**
      * Alias of writeFile.
@@ -325,7 +327,6 @@ export declare class FS {
     write(...params: Parameters<typeof this.writeFile>): Promise<CloudItem>;
     /**
      * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
-     * @date 2/16/2024 - 5:32:31 AM
      *
      * @public
      * @async
@@ -334,22 +335,24 @@ export declare class FS {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<Buffer>}
      */
-    readFile({ path, abortSignal, pauseSignal, onProgress }: {
+    readFile({ path, abortSignal, pauseSignal, onProgress, onProgressId }: {
         path: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<Buffer>;
     /**
      * Write to a file. Warning: This reads the whole file into memory and can be very inefficient. Only available in a Node.JS environment.
-     * @date 2/16/2024 - 5:36:19 AM
      *
      * @public
      * @async
@@ -358,25 +361,27 @@ export declare class FS {
      * 		content: Buffer
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressCallback,
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {Buffer} param0.content
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
-     * @returns {Promise<void>}
+     * @param {string} param0.onProgressId
+     * @returns {Promise<CloudItem>}
      */
-    writeFile({ path, content, abortSignal, pauseSignal, onProgress }: {
+    writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId }: {
         path: string;
         content: Buffer;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<CloudItem>;
     /**
      * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
-     * @date 2/15/2024 - 5:59:23 AM
      *
      * @public
      * @async
@@ -384,22 +389,25 @@ export declare class FS {
      * 		path: string
      * 		destination: string
      * 		abortSignal?: AbortSignal
-     * 		pauseSignal?: PauseSignal,
+     * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.destination
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    download({ path, destination, abortSignal, pauseSignal, onProgress }: {
+    download({ path, destination, abortSignal, pauseSignal, onProgress, onProgressId }: {
         path: string;
         destination: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<void>;
     /**
      * Upload file or directory to path from a local source path. Recursively creates intermediate directories if needed. Only available in a Node.JS environment.
@@ -413,6 +421,7 @@ export declare class FS {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.source
@@ -420,36 +429,49 @@ export declare class FS {
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<CloudItem>}
      */
-    upload({ path, source, overwriteDirectory, abortSignal, pauseSignal, onProgress }: {
+    upload({ path, source, overwriteDirectory, abortSignal, pauseSignal, onProgress, onProgressId }: {
         path: string;
         source: string;
         overwriteDirectory?: boolean;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<CloudItem>;
     /**
      * Copy a file or directory structure. Recursively creates intermediate directories if needed.
      * Warning: Can be really inefficient when copying large directory structures.
      * All files need to be downloaded first and then reuploaded due to our end to end encryption.
      * Plain copying unfortunately does not work. Only available in a Node.JS environment.
-     * @date 2/14/2024 - 5:06:04 AM
      *
      * @public
      * @async
-     * @param {{ from: string; to: string }} param0
+     * @param {{
+     * 		from: string
+     * 		to: string
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
+     * 	}} param0
      * @param {string} param0.from
      * @param {string} param0.to
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    cp({ from, to, abortSignal, pauseSignal, onProgress }: {
+    cp({ from, to, abortSignal, pauseSignal, onProgress, onProgressId }: {
         from: string;
         to: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<void>;
     /**
      * Alias of cp.

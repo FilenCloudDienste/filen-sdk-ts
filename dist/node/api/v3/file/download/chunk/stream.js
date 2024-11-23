@@ -24,7 +24,6 @@ class FileDownloadChunkStream {
     }
     /**
      * Download a file chunk.
-     * @date 2/17/2024 - 6:39:39 AM
      *
      * @public
      * @async
@@ -36,6 +35,7 @@ class FileDownloadChunkStream {
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -44,10 +44,20 @@ class FileDownloadChunkStream {
      * @param {number} param0.timeout
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<ReadableStream | fs.ReadStream>}
      */
-    async fetch({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress }) {
-        return await this.apiClient.downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress });
+    async fetch({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress, onProgressId }) {
+        return await this.apiClient.downloadChunkToStream({
+            uuid,
+            bucket,
+            region,
+            chunk,
+            timeout,
+            abortSignal,
+            onProgress,
+            onProgressId
+        });
     }
 }
 exports.FileDownloadChunkStream = FileDownloadChunkStream;

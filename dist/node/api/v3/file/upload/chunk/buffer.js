@@ -24,7 +24,6 @@ class FileUploadChunkBuffer {
     }
     /**
      * Upload a file chunk buffer.
-     * @date 2/20/2024 - 9:14:45 PM
      *
      * @public
      * @async
@@ -39,6 +38,7 @@ class FileUploadChunkBuffer {
      * 		timeout?: number
      * 		buffer: Buffer
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {number} param0.index
@@ -50,9 +50,10 @@ class FileUploadChunkBuffer {
      * @param {number} param0.timeout
      * @param {Buffer} param0.buffer
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<UploadChunkResponse>}
      */
-    async fetch({ uuid, index, parent, uploadKey, abortSignal, maxRetries, retryTimeout, timeout, buffer, onProgress }) {
+    async fetch({ uuid, index, parent, uploadKey, abortSignal, maxRetries, retryTimeout, timeout, buffer, onProgress, onProgressId }) {
         return await this.apiClient.uploadChunkBuffer({
             uuid,
             index,
@@ -63,7 +64,8 @@ class FileUploadChunkBuffer {
             retryTimeout,
             timeout,
             buffer,
-            onProgress
+            onProgress,
+            onProgressId
         });
     }
 }

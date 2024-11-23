@@ -1983,7 +1983,6 @@ export class Cloud {
     }
     /**
      * Download a file to a local path. Only works in a Node.JS environment.
-     * @date 2/15/2024 - 7:39:34 AM
      *
      * @public
      * @async
@@ -1996,14 +1995,16 @@ export class Cloud {
      * 		key: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		chunksStart?: number
-     * 		chunksEnd?: number
+     * 		end?: number
+     * 		start?: number
      * 		to?: string
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
+     * 		size: number
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -2013,17 +2014,19 @@ export class Cloud {
      * @param {string} param0.key
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
-     * @param {number} param0.chunksStart
-     * @param {number} param0.chunksEnd
+     * @param {number} param0.start
+     * @param {number} param0.end
      * @param {string} param0.to
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
+     * @param {number} param0.size
      * @returns {Promise<string>}
      */
-    async downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onQueued, onStarted, onError, onFinished, size }) {
+    async downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, size }) {
         if (key.length === 0) {
             throw new Error("Invalid key.");
         }
@@ -2055,6 +2058,7 @@ export class Cloud {
                 abortSignal,
                 pauseSignal,
                 onProgress,
+                onProgressId,
                 onError,
                 onStarted,
                 start,
@@ -2073,10 +2077,8 @@ export class Cloud {
     }
     /**
      * Download a file to a ReadableStream.
-     * @date 3/17/2024 - 11:52:17 PM
      *
      * @public
-     * @async
      * @param {{
      * 		uuid: string
      * 		bucket: string
@@ -2090,6 +2092,7 @@ export class Cloud {
      * 		start?: number
      * 		end?: number
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -2107,13 +2110,14 @@ export class Cloud {
      * @param {number} param0.start
      * @param {number} param0.end
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
-     * @returns {Promise<ReadableStream<Uint8Array>>}
+     * @returns {ReadableStream<Buffer>}
      */
-    downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }) {
+    downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onProgressId, onQueued, onStarted, onError, onFinished }) {
         if (key.length === 0) {
             throw new Error("Invalid key.");
         }
@@ -2269,7 +2273,7 @@ export class Cloud {
                                 if (!writerStopped) {
                                     controller.enqueue(bufferToEnqueue);
                                     if (onProgress) {
-                                        onProgress(bufferToEnqueue.byteLength);
+                                        onProgress(bufferToEnqueue.byteLength, onProgressId);
                                     }
                                 }
                             }
@@ -2523,7 +2527,6 @@ export class Cloud {
     }
     /**
      * Download a directory to path. Only available in a Node.JS environment.
-     * @date 2/16/2024 - 1:30:09 AM
      *
      * @public
      * @async
@@ -2534,10 +2537,12 @@ export class Cloud {
      * 		linkHasPassword?: boolean
      * 		linkPassword?: string
      * 		linkSalt?: string
+     * 		linkKey?: string
      * 		to?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -2556,9 +2561,12 @@ export class Cloud {
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
+     * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
+     * @param {string} param0.linkKey
      * @returns {Promise<string>}
      */
-    async downloadDirectoryToLocal({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress, linkKey }) {
+    async downloadDirectoryToLocal({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress, onProgressId, linkKey }) {
         if (environment !== "node") {
             throw new Error(`cloud.downloadDirectoryToLocal is not implemented for ${environment}`);
         }
@@ -2610,6 +2618,7 @@ export class Cloud {
                         pauseSignal,
                         to: filePath,
                         onProgress,
+                        onProgressId,
                         size: item.size
                     })
                         .then(() => resolve())
@@ -2642,7 +2651,6 @@ export class Cloud {
     }
     /**
      * Upload a local file. Only available in a Node.JS environment.
-     * @date 2/27/2024 - 6:41:06 AM
      *
      * @public
      * @async
@@ -2653,6 +2661,7 @@ export class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -2665,6 +2674,7 @@ export class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -2672,7 +2682,7 @@ export class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    async uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded }) {
         if (environment !== "node") {
             throw new Error(`cloud.uploadFileFromLocal is not implemented for ${environment}`);
         }
@@ -2792,7 +2802,8 @@ export class Cloud {
                                 uploadKey,
                                 abortSignal,
                                 buffer: encryptedChunkBuffer,
-                                onProgress
+                                onProgress,
+                                onProgressId
                             });
                             bucket = uploadResponse.bucket;
                             region = uploadResponse.region;
@@ -2877,8 +2888,7 @@ export class Cloud {
     }
     /**
      * Upload a file using Node.JS streams. It's not as fast as the normal uploadFile function since it's not completely multithreaded.
-     * Only available in a Node.JS environemnt.
-     *
+     * Only available in a Node.JS environment.
      * @public
      * @async
      * @param {{
@@ -2888,11 +2898,12 @@ export class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
-     * 		onUploaded?: (item: CloudItem) => Promise<void>,
+     * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		lastModified?: number
      * 		creation?: number
      * 	}} param0
@@ -2902,6 +2913,7 @@ export class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -2911,7 +2923,7 @@ export class Cloud {
      * @param {number} param0.creation
      * @returns {Promise<CloudItem>}
      */
-    async uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }) {
+    async uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }) {
         if (environment !== "node") {
             throw new Error(`cloud.uploadLocalFileStream is not implemented for ${environment}`);
         }
@@ -2969,6 +2981,7 @@ export class Cloud {
                     name,
                     parent,
                     onProgress,
+                    onProgressId,
                     lastModified,
                     creation
                 });
@@ -3060,10 +3073,11 @@ export class Cloud {
      * 		file: File
      * 		parent: string
      * 		name?: string
-     * 		uuid?: string,
+     * 		uuid?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -3077,6 +3091,7 @@ export class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -3084,7 +3099,7 @@ export class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    async uploadWebFile({ file, parent, name, uuid, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }) {
+    async uploadWebFile({ file, parent, name, uuid, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded }) {
         if (environment !== "browser") {
             throw new Error(`cloud.uploadWebFile is not implemented for ${environment}`);
         }
@@ -3186,7 +3201,8 @@ export class Cloud {
                                 uploadKey,
                                 abortSignal,
                                 buffer: encryptedChunkBuffer,
-                                onProgress
+                                onProgress,
+                                onProgressId
                             });
                             bucket = uploadResponse.bucket;
                             region = uploadResponse.region;
@@ -3268,8 +3284,7 @@ export class Cloud {
         }
     }
     /**
-     *
-     * @date 2/27/2024 - 6:42:26 AM
+     * Upload a local file at path. Only works in a Node.JS environment.
      *
      * @public
      * @async
@@ -3280,11 +3295,13 @@ export class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
@@ -3292,14 +3309,16 @@ export class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @param {(item: CloudItem) => void} param0.onDirectoryCreated
      * @returns {Promise<void>}
      */
-    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
+    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
         if (environment !== "node") {
             throw new Error(`cloud.uploadDirectoryFromLocal is not implemented for ${environment}`);
         }
@@ -3409,6 +3428,7 @@ export class Cloud {
                     abortSignal,
                     pauseSignal,
                     onProgress,
+                    onProgressId,
                     onUploaded
                 }));
             }
@@ -3429,7 +3449,6 @@ export class Cloud {
     }
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
-     * @date 3/20/2024 - 7:30:07 AM
      *
      * @public
      * @async
@@ -3440,6 +3459,7 @@ export class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -3447,12 +3467,13 @@ export class Cloud {
      * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
-     * @param {{ file: File; path: string }[]} param0.files
+     * @param {{}} param0.files
      * @param {string} param0.parent
      * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -3461,7 +3482,7 @@ export class Cloud {
      * @param {(item: CloudItem) => void} param0.onDirectoryCreated
      * @returns {Promise<void>}
      */
-    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
+    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
         if (environment !== "browser") {
             throw new Error(`cloud.uploadDirectoryFromWeb is not implemented for ${environment}`);
         }
@@ -3551,6 +3572,7 @@ export class Cloud {
                     abortSignal,
                     pauseSignal,
                     onProgress,
+                    onProgressId,
                     onUploaded
                 }));
             }

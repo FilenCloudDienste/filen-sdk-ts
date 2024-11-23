@@ -27,7 +27,6 @@ export class FileDownloadChunkBuffer {
 
 	/**
 	 * Download a file chunk.
-	 * @date 2/17/2024 - 6:39:08 AM
 	 *
 	 * @public
 	 * @async
@@ -37,8 +36,9 @@ export class FileDownloadChunkBuffer {
 	 * 		region: string
 	 * 		chunk: number
 	 * 		timeout?: number
-	 * 		abortSignal?: AbortSignal,
+	 * 		abortSignal?: AbortSignal
 	 * 		onProgress?: ProgressCallback
+	 * 		onProgressId?: string
 	 * 	}} param0
 	 * @param {string} param0.uuid
 	 * @param {string} param0.bucket
@@ -47,6 +47,7 @@ export class FileDownloadChunkBuffer {
 	 * @param {number} param0.timeout
 	 * @param {AbortSignal} param0.abortSignal
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {string} param0.onProgressId
 	 * @returns {Promise<Buffer>}
 	 */
 	public async fetch({
@@ -56,7 +57,8 @@ export class FileDownloadChunkBuffer {
 		chunk,
 		timeout,
 		abortSignal,
-		onProgress
+		onProgress,
+		onProgressId
 	}: {
 		uuid: string
 		bucket: string
@@ -65,8 +67,18 @@ export class FileDownloadChunkBuffer {
 		timeout?: number
 		abortSignal?: AbortSignal
 		onProgress?: ProgressCallback
+		onProgressId?: string
 	}): Promise<Buffer> {
-		return await this.apiClient.downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress })
+		return await this.apiClient.downloadChunkToBuffer({
+			uuid,
+			bucket,
+			region,
+			chunk,
+			timeout,
+			abortSignal,
+			onProgress,
+			onProgressId
+		})
 	}
 }
 

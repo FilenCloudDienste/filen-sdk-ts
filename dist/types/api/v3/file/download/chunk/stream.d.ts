@@ -26,7 +26,6 @@ export declare class FileDownloadChunkStream {
     });
     /**
      * Download a file chunk.
-     * @date 2/17/2024 - 6:39:39 AM
      *
      * @public
      * @async
@@ -38,6 +37,7 @@ export declare class FileDownloadChunkStream {
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -46,9 +46,10 @@ export declare class FileDownloadChunkStream {
      * @param {number} param0.timeout
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<ReadableStream | fs.ReadStream>}
      */
-    fetch({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress }: {
+    fetch({ uuid, bucket, region, chunk, timeout, abortSignal, onProgress, onProgressId }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -56,6 +57,7 @@ export declare class FileDownloadChunkStream {
         timeout?: number;
         abortSignal?: AbortSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
     }): Promise<ReadableStream | fs.ReadStream>;
 }
 export default FileDownloadChunkStream;

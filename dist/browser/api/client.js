@@ -216,7 +216,7 @@ export class APIClient {
                             bytes = Math.floor(info.transferred - lastBytesUploaded);
                             lastBytesUploaded = info.transferred;
                         }
-                        params.onUploadProgress?.(bytes);
+                        params.onUploadProgress?.(bytes, params.onUploadProgressId);
                     });
                     Readable.from([readableBuffer]).pipe(progressStreamInstance).pipe(request);
                 }
@@ -246,7 +246,7 @@ export class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesUploaded);
                     lastBytesUploaded = event.loaded;
                 }
-                params.onUploadProgress?.(bytes);
+                params.onUploadProgress?.(bytes, params.onUploadProgressId);
             }
         });
     }
@@ -286,12 +286,12 @@ export class APIClient {
                         bytes = Math.floor(transferred - lastBytesDownloaded);
                         lastBytesDownloaded = transferred;
                     }
-                    params.onDownloadProgress?.(bytes);
+                    params.onDownloadProgress?.(bytes, params.onDownloadProgressId);
                 };
                 const calculateProgressTransform = new Transform({
                     transform(chunk, _, callback) {
                         if (params.onDownloadProgress && chunk instanceof Buffer) {
-                            params.onDownloadProgress(chunk.byteLength);
+                            params.onDownloadProgress(chunk.byteLength, params.onDownloadProgressId);
                         }
                         this.push(chunk);
                         callback();
@@ -397,7 +397,7 @@ export class APIClient {
                     bytes = Math.floor(event.loaded - lastBytesDownloaded);
                     lastBytesDownloaded = event.loaded;
                 }
-                params.onDownloadProgress?.(bytes);
+                params.onDownloadProgress?.(bytes, params.onDownloadProgressId);
             }
         });
     }
@@ -471,7 +471,6 @@ export class APIClient {
     }
     /**
      * Downloads a file chunk to a local path.
-     * @date 2/17/2024 - 6:40:58 AM
      *
      * @public
      * @async
@@ -485,7 +484,8 @@ export class APIClient {
      * 		abortSignal?: AbortSignal
      * 		maxRetries?: number
      * 		retryTimeout?: number
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressCallback,
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -497,9 +497,10 @@ export class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    async downloadChunkToLocal({ uuid, bucket, region, chunk, to, timeout, abortSignal, maxRetries, retryTimeout, onProgress }) {
+    async downloadChunkToLocal({ uuid, bucket, region, chunk, to, timeout, abortSignal, maxRetries, retryTimeout, onProgress, onProgressId }) {
         if (environment !== "node") {
             throw new Error("cloud.downloadChunkToLocal is only available in a Node.JS environment");
         }
@@ -513,13 +514,13 @@ export class APIClient {
             responseType: "stream",
             maxRetries,
             retryTimeout,
-            onDownloadProgress: onProgress
+            onDownloadProgress: onProgress,
+            onDownloadProgressId: onProgressId
         });
         await pipelineAsync(response, fs.createWriteStream(to));
     }
     /**
      * Downloads a file chunk and returns a readable stream.
-     * @date 2/17/2024 - 6:40:44 AM
      *
      * @public
      * @async
@@ -533,6 +534,7 @@ export class APIClient {
      * 		maxRetries?: number
      * 		retryTimeout?: number
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -543,9 +545,10 @@ export class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<ReadableStream | fs.ReadStream>}
      */
-    async downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress }) {
+    async downloadChunkToStream({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress, onProgressId }) {
         const response = await this.request({
             method: "GET",
             url: `${APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]}`,
@@ -555,13 +558,13 @@ export class APIClient {
             responseType: "stream",
             maxRetries,
             retryTimeout,
-            onDownloadProgress: onProgress
+            onDownloadProgress: onProgress,
+            onDownloadProgressId: onProgressId
         });
         return response;
     }
     /**
      * Download a chunk buffer.
-     * @date 2/17/2024 - 6:40:21 AM
      *
      * @public
      * @async
@@ -573,8 +576,9 @@ export class APIClient {
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
      * 		maxRetries?: number
-     * 		retryTimeout?: number,
-     * 		onProgress: ProgressCallback
+     * 		retryTimeout?: number
+     * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -585,9 +589,10 @@ export class APIClient {
      * @param {number} param0.maxRetries
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<Buffer>}
      */
-    async downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress }) {
+    async downloadChunkToBuffer({ uuid, bucket, region, chunk, timeout, abortSignal, maxRetries, retryTimeout, onProgress, onProgressId }) {
         const response = await this.request({
             method: "GET",
             url: `${APIClientDefaults.egestURLs[getRandomArbitrary(0, APIClientDefaults.egestURLs.length - 1)]}`,
@@ -597,13 +602,13 @@ export class APIClient {
             responseType: "arraybuffer",
             maxRetries,
             retryTimeout,
-            onDownloadProgress: onProgress
+            onDownloadProgress: onProgress,
+            onDownloadProgressId: onProgressId
         });
         return Buffer.from(response);
     }
     /**
      * Upload a chunk buffer.
-     * @date 2/17/2024 - 5:08:04 AM
      *
      * @public
      * @async
@@ -616,8 +621,9 @@ export class APIClient {
      * 		timeout?: number
      * 		abortSignal?: AbortSignal
      * 		maxRetries?: number
-     * 		retryTimeout?: number,
+     * 		retryTimeout?: number
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.uuid
      * @param {number} param0.index
@@ -629,9 +635,10 @@ export class APIClient {
      * @param {number} param0.timeout
      * @param {number} param0.retryTimeout
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<UploadChunkResponse>}
      */
-    async uploadChunkBuffer({ uuid, index, parent, uploadKey, buffer, abortSignal, maxRetries, timeout, retryTimeout, onProgress }) {
+    async uploadChunkBuffer({ uuid, index, parent, uploadKey, buffer, abortSignal, maxRetries, timeout, retryTimeout, onProgress, onProgressId }) {
         const urlParams = new URLSearchParams({
             uuid,
             index,
@@ -662,7 +669,8 @@ export class APIClient {
                 ...builtHeaders,
                 Checksum: urlParamsHash
             },
-            onUploadProgress: onProgress
+            onUploadProgress: onProgress,
+            onUploadProgressId: onProgressId
         });
         return response;
     }

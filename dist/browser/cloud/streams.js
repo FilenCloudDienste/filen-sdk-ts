@@ -32,6 +32,7 @@ export class ChunkedUploadWriter extends Writable {
     chunksUploaded = 0;
     sdk;
     onProgress;
+    onProgressId;
     creation;
     /**
      * Creates an instance of ChunkedUploadWriter.
@@ -46,7 +47,8 @@ export class ChunkedUploadWriter extends Writable {
      * 		name: string
      * 		uploadKey: string
      * 		parent: string
-     * 		onProgress?: ProgressCallback,
+     * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		lastModified?: number
      * 		creation?: number
      * 	}} param0
@@ -58,12 +60,14 @@ export class ChunkedUploadWriter extends Writable {
      * @param {string} param0.parent
      * @param {FilenSDK} param0.sdk
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {number} param0.lastModified
      * @param {number} param0.creation
      */
-    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress, lastModified, creation }) {
+    constructor({ options = undefined, uuid, key, name, uploadKey, parent, sdk, onProgress, onProgressId, lastModified, creation }) {
         super(options);
         this.onProgress = onProgress;
+        this.onProgressId = onProgressId;
         this.sdk = sdk;
         this.chunkBuffer = Buffer.from([]);
         this.uuid = uuid;
@@ -194,7 +198,7 @@ export class ChunkedUploadWriter extends Writable {
         this.region = response.region;
         this.chunksUploaded += 1;
         if (this.onProgress) {
-            this.onProgress(chunk.byteLength);
+            this.onProgress(chunk.byteLength, this.onProgressId);
         }
     }
     /**

@@ -34,6 +34,7 @@ export class ChunkedUploadWriter extends Writable {
 	private chunksUploaded = 0
 	private readonly sdk: FilenSDK
 	private readonly onProgress?: ProgressCallback
+	private readonly onProgressId?: string
 	private readonly creation: number
 
 	/**
@@ -49,7 +50,8 @@ export class ChunkedUploadWriter extends Writable {
 	 * 		name: string
 	 * 		uploadKey: string
 	 * 		parent: string
-	 * 		onProgress?: ProgressCallback,
+	 * 		onProgress?: ProgressCallback
+	 * 		onProgressId?: string
 	 * 		lastModified?: number
 	 * 		creation?: number
 	 * 	}} param0
@@ -61,6 +63,7 @@ export class ChunkedUploadWriter extends Writable {
 	 * @param {string} param0.parent
 	 * @param {FilenSDK} param0.sdk
 	 * @param {ProgressCallback} param0.onProgress
+	 * @param {string} param0.onProgressId
 	 * @param {number} param0.lastModified
 	 * @param {number} param0.creation
 	 */
@@ -73,6 +76,7 @@ export class ChunkedUploadWriter extends Writable {
 		parent,
 		sdk,
 		onProgress,
+		onProgressId,
 		lastModified,
 		creation
 	}: {
@@ -84,12 +88,14 @@ export class ChunkedUploadWriter extends Writable {
 		uploadKey: string
 		parent: string
 		onProgress?: ProgressCallback
+		onProgressId?: string
 		lastModified?: number
 		creation?: number
 	}) {
 		super(options)
 
 		this.onProgress = onProgress
+		this.onProgressId = onProgressId
 		this.sdk = sdk
 		this.chunkBuffer = Buffer.from([])
 		this.uuid = uuid
@@ -240,7 +246,7 @@ export class ChunkedUploadWriter extends Writable {
 		this.chunksUploaded += 1
 
 		if (this.onProgress) {
-			this.onProgress(chunk.byteLength)
+			this.onProgress(chunk.byteLength, this.onProgressId)
 		}
 	}
 

@@ -963,7 +963,6 @@ class FS {
     }
     /**
      * Read a file. Returns buffer of given length, at position and offset. Memory efficient to read only a small part of a file.
-     * @date 3/18/2024 - 12:07:38 AM
      *
      * @public
      * @async
@@ -975,6 +974,7 @@ class FS {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {number} param0.offset
@@ -983,9 +983,10 @@ class FS {
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<Buffer>}
      */
-    async read({ path, offset, length, position, abortSignal, pauseSignal, onProgress }) {
+    async read({ path, offset, length, position, abortSignal, pauseSignal, onProgress, onProgressId }) {
         path = this.normalizePath({ path });
         const uuid = await this.pathToItemUUID({ path });
         const item = this._items[path];
@@ -1009,6 +1010,7 @@ class FS {
             abortSignal,
             pauseSignal,
             onProgress,
+            onProgressId,
             start: position,
             end: position + length
         });
@@ -1044,7 +1046,6 @@ class FS {
     }
     /**
      * Read a file at path. Warning: This reads the whole file into memory and can be pretty inefficient.
-     * @date 2/16/2024 - 5:32:31 AM
      *
      * @public
      * @async
@@ -1053,24 +1054,26 @@ class FS {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<Buffer>}
      */
-    async readFile({ path, abortSignal, pauseSignal, onProgress }) {
+    async readFile({ path, abortSignal, pauseSignal, onProgress, onProgressId }) {
         return await this.read({
             path,
             abortSignal,
             pauseSignal,
-            onProgress
+            onProgress,
+            onProgressId
         });
     }
     /**
      * Write to a file. Warning: This reads the whole file into memory and can be very inefficient. Only available in a Node.JS environment.
-     * @date 2/16/2024 - 5:36:19 AM
      *
      * @public
      * @async
@@ -1079,16 +1082,18 @@ class FS {
      * 		content: Buffer
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		onProgress?: ProgressCallback
+     * 		onProgress?: ProgressCallback,
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {Buffer} param0.content
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
-     * @returns {Promise<void>}
+     * @param {string} param0.onProgressId
+     * @returns {Promise<CloudItem>}
      */
-    async writeFile({ path, content, abortSignal, pauseSignal, onProgress }) {
+    async writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId }) {
         if (constants_1.environment !== "node") {
             throw new Error(`fs.writeFile is not implemented for a ${constants_1.environment} environment`);
         }
@@ -1130,7 +1135,8 @@ class FS {
                 name: fileName,
                 abortSignal,
                 pauseSignal,
-                onProgress
+                onProgress,
+                onProgressId
             });
             if (item.type === "file") {
                 await this.itemsMutex.acquire();
@@ -1164,7 +1170,6 @@ class FS {
     }
     /**
      * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
-     * @date 2/15/2024 - 5:59:23 AM
      *
      * @public
      * @async
@@ -1172,17 +1177,19 @@ class FS {
      * 		path: string
      * 		destination: string
      * 		abortSignal?: AbortSignal
-     * 		pauseSignal?: PauseSignal,
+     * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.destination
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    async download({ path, destination, abortSignal, pauseSignal, onProgress }) {
+    async download({ path, destination, abortSignal, pauseSignal, onProgress, onProgressId }) {
         if (constants_1.environment !== "node") {
             throw new Error(`fs.download is not implemented for a ${constants_1.environment} environment`);
         }
@@ -1194,7 +1201,14 @@ class FS {
             throw new errors_1.ENOENT({ path });
         }
         if (item.type === "directory") {
-            await this.cloud.downloadDirectoryToLocal({ uuid, to: destination, abortSignal, pauseSignal, onProgress });
+            await this.cloud.downloadDirectoryToLocal({
+                uuid,
+                to: destination,
+                abortSignal,
+                pauseSignal,
+                onProgress,
+                onProgressId
+            });
             return;
         }
         await this.cloud.downloadFileToLocal({
@@ -1208,6 +1222,7 @@ class FS {
             abortSignal,
             pauseSignal,
             onProgress,
+            onProgressId,
             size: item.metadata.size
         });
     }
@@ -1223,6 +1238,7 @@ class FS {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 	}} param0
      * @param {string} param0.path
      * @param {string} param0.source
@@ -1230,9 +1246,10 @@ class FS {
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<CloudItem>}
      */
-    async upload({ path, source, overwriteDirectory = false, abortSignal, pauseSignal, onProgress }) {
+    async upload({ path, source, overwriteDirectory = false, abortSignal, pauseSignal, onProgress, onProgressId }) {
         if (constants_1.environment !== "node") {
             throw new Error(`fs.upload is not implemented for a ${constants_1.environment} environment`);
         }
@@ -1271,7 +1288,8 @@ class FS {
                 name,
                 abortSignal,
                 pauseSignal,
-                onProgress
+                onProgress,
+                onProgressId
             });
             const dir = await this.readdir({
                 path: parentPath
@@ -1300,7 +1318,8 @@ class FS {
                 name,
                 abortSignal,
                 pauseSignal,
-                onProgress
+                onProgress,
+                onProgressId
             });
             if (item.type === "file") {
                 await this.itemsMutex.acquire();
@@ -1345,16 +1364,26 @@ class FS {
      * Warning: Can be really inefficient when copying large directory structures.
      * All files need to be downloaded first and then reuploaded due to our end to end encryption.
      * Plain copying unfortunately does not work. Only available in a Node.JS environment.
-     * @date 2/14/2024 - 5:06:04 AM
      *
      * @public
      * @async
-     * @param {{ from: string; to: string }} param0
+     * @param {{
+     * 		from: string
+     * 		to: string
+     * 		abortSignal?: AbortSignal
+     * 		pauseSignal?: PauseSignal
+     * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
+     * 	}} param0
      * @param {string} param0.from
      * @param {string} param0.to
+     * @param {AbortSignal} param0.abortSignal
+     * @param {PauseSignal} param0.pauseSignal
+     * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @returns {Promise<void>}
      */
-    async cp({ from, to, abortSignal, pauseSignal, onProgress }) {
+    async cp({ from, to, abortSignal, pauseSignal, onProgress, onProgressId }) {
         if (constants_1.environment !== "node") {
             throw new Error(`fs.cp is not implemented for a ${constants_1.environment} environment`);
         }
@@ -1375,7 +1404,10 @@ class FS {
         }
         else {
             await this.mkdir({ path: parentPath });
-            const parentItemUUID = await this.pathToItemUUID({ path: parentPath, type: "directory" });
+            const parentItemUUID = await this.pathToItemUUID({
+                path: parentPath,
+                type: "directory"
+            });
             const parentItem = this._items[parentPath];
             if (!parentItemUUID || !parentItem) {
                 throw new Error(`Could not find parent for path ${to}`);
@@ -1404,6 +1436,7 @@ class FS {
                     abortSignal,
                     pauseSignal,
                     onProgress,
+                    onProgressId,
                     name: newDirectoryName
                 });
                 await this.readdir({ path: to, recursive: true });
@@ -1432,6 +1465,7 @@ class FS {
                 abortSignal,
                 pauseSignal,
                 onProgress,
+                onProgressId,
                 size: item.metadata.size
             });
             try {
@@ -1441,6 +1475,7 @@ class FS {
                     abortSignal,
                     pauseSignal,
                     onProgress,
+                    onProgressId,
                     name: newFileName
                 });
                 if (uploadedItem.type === "file") {

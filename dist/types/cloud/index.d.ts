@@ -871,7 +871,6 @@ export declare class Cloud {
     }>;
     /**
      * Download a file to a local path. Only works in a Node.JS environment.
-     * @date 2/15/2024 - 7:39:34 AM
      *
      * @public
      * @async
@@ -884,14 +883,16 @@ export declare class Cloud {
      * 		key: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
-     * 		chunksStart?: number
-     * 		chunksEnd?: number
+     * 		end?: number
+     * 		start?: number
      * 		to?: string
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
+     * 		size: number
      * 	}} param0
      * @param {string} param0.uuid
      * @param {string} param0.bucket
@@ -901,17 +902,19 @@ export declare class Cloud {
      * @param {string} param0.key
      * @param {AbortSignal} param0.abortSignal
      * @param {PauseSignal} param0.pauseSignal
-     * @param {number} param0.chunksStart
-     * @param {number} param0.chunksEnd
+     * @param {number} param0.start
+     * @param {number} param0.end
      * @param {string} param0.to
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
+     * @param {number} param0.size
      * @returns {Promise<string>}
      */
-    downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onQueued, onStarted, onError, onFinished, size }: {
+    downloadFileToLocal({ uuid, bucket, region, chunks, version, key, abortSignal, pauseSignal, start, end, to, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, size }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -924,6 +927,7 @@ export declare class Cloud {
         start?: number;
         to?: string;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -932,10 +936,8 @@ export declare class Cloud {
     }): Promise<string>;
     /**
      * Download a file to a ReadableStream.
-     * @date 3/17/2024 - 11:52:17 PM
      *
      * @public
-     * @async
      * @param {{
      * 		uuid: string
      * 		bucket: string
@@ -949,6 +951,7 @@ export declare class Cloud {
      * 		start?: number
      * 		end?: number
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -966,13 +969,14 @@ export declare class Cloud {
      * @param {number} param0.start
      * @param {number} param0.end
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
-     * @returns {Promise<ReadableStream<Uint8Array>>}
+     * @returns {ReadableStream<Buffer>}
      */
-    downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onQueued, onStarted, onError, onFinished }: {
+    downloadFileToReadableStream({ uuid, bucket, region, version, key, size, chunks, abortSignal, pauseSignal, start, end, onProgress, onProgressId, onQueued, onStarted, onError, onFinished }: {
         uuid: string;
         bucket: string;
         region: string;
@@ -985,6 +989,7 @@ export declare class Cloud {
         start?: number;
         end?: number;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -1026,7 +1031,6 @@ export declare class Cloud {
     }): Promise<Record<string, CloudItemTree>>;
     /**
      * Download a directory to path. Only available in a Node.JS environment.
-     * @date 2/16/2024 - 1:30:09 AM
      *
      * @public
      * @async
@@ -1037,10 +1041,12 @@ export declare class Cloud {
      * 		linkHasPassword?: boolean
      * 		linkPassword?: string
      * 		linkSalt?: string
+     * 		linkKey?: string
      * 		to?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -1059,9 +1065,12 @@ export declare class Cloud {
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
+     * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
+     * @param {string} param0.linkKey
      * @returns {Promise<string>}
      */
-    downloadDirectoryToLocal({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress, linkKey }: {
+    downloadDirectoryToLocal({ uuid, type, linkUUID, linkHasPassword, linkPassword, linkSalt, to, abortSignal, pauseSignal, onQueued, onStarted, onError, onFinished, onProgress, onProgressId, linkKey }: {
         uuid: string;
         type?: DirDownloadType;
         linkUUID?: string;
@@ -1073,6 +1082,7 @@ export declare class Cloud {
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -1080,7 +1090,6 @@ export declare class Cloud {
     }): Promise<string>;
     /**
      * Upload a local file. Only available in a Node.JS environment.
-     * @date 2/27/2024 - 6:41:06 AM
      *
      * @public
      * @async
@@ -1091,6 +1100,7 @@ export declare class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -1103,6 +1113,7 @@ export declare class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -1110,13 +1121,14 @@ export declare class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded }: {
         source: string;
         parent: string;
         name?: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -1125,8 +1137,7 @@ export declare class Cloud {
     }): Promise<CloudItem>;
     /**
      * Upload a file using Node.JS streams. It's not as fast as the normal uploadFile function since it's not completely multithreaded.
-     * Only available in a Node.JS environemnt.
-     *
+     * Only available in a Node.JS environment.
      * @public
      * @async
      * @param {{
@@ -1136,11 +1147,12 @@ export declare class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
-     * 		onUploaded?: (item: CloudItem) => Promise<void>,
+     * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		lastModified?: number
      * 		creation?: number
      * 	}} param0
@@ -1150,6 +1162,7 @@ export declare class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -1159,13 +1172,14 @@ export declare class Cloud {
      * @param {number} param0.creation
      * @returns {Promise<CloudItem>}
      */
-    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }: {
+    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }: {
         source: NodeJS.ReadableStream;
         parent: string;
         name: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -1183,10 +1197,11 @@ export declare class Cloud {
      * 		file: File
      * 		parent: string
      * 		name?: string
-     * 		uuid?: string,
+     * 		uuid?: string
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -1200,6 +1215,7 @@ export declare class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -1207,7 +1223,7 @@ export declare class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    uploadWebFile({ file, parent, name, uuid, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadWebFile({ file, parent, name, uuid, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded }: {
         file: File;
         parent: string;
         name?: string;
@@ -1215,6 +1231,7 @@ export declare class Cloud {
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -1222,8 +1239,7 @@ export declare class Cloud {
         onUploaded?: (item: CloudItem) => Promise<void>;
     }): Promise<CloudItem>;
     /**
-     *
-     * @date 2/27/2024 - 6:42:26 AM
+     * Upload a local file at path. Only works in a Node.JS environment.
      *
      * @public
      * @async
@@ -1234,11 +1250,13 @@ export declare class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
@@ -1246,20 +1264,23 @@ export declare class Cloud {
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
+     * @param {(item: CloudItem) => void} param0.onDirectoryCreated
      * @returns {Promise<void>}
      */
-    uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
+    uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
         source: string;
         parent: string;
         name?: string;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
@@ -1269,7 +1290,6 @@ export declare class Cloud {
     }): Promise<void>;
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
-     * @date 3/20/2024 - 7:30:07 AM
      *
      * @public
      * @async
@@ -1280,6 +1300,7 @@ export declare class Cloud {
      * 		abortSignal?: AbortSignal
      * 		pauseSignal?: PauseSignal
      * 		onProgress?: ProgressCallback
+     * 		onProgressId?: string
      * 		onQueued?: () => void
      * 		onStarted?: () => void
      * 		onError?: (err: Error) => void
@@ -1287,12 +1308,13 @@ export declare class Cloud {
      * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		onDirectoryCreated?: (item: CloudItem) => void
      * 	}} param0
-     * @param {{ file: File; path: string }[]} param0.files
+     * @param {{}} param0.files
      * @param {string} param0.parent
      * @param {string} param0.name
      * @param {PauseSignal} param0.pauseSignal
      * @param {AbortSignal} param0.abortSignal
      * @param {ProgressCallback} param0.onProgress
+     * @param {string} param0.onProgressId
      * @param {() => void} param0.onQueued
      * @param {() => void} param0.onStarted
      * @param {(err: Error) => void} param0.onError
@@ -1301,7 +1323,7 @@ export declare class Cloud {
      * @param {(item: CloudItem) => void} param0.onDirectoryCreated
      * @returns {Promise<void>}
      */
-    uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
+    uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
         files: {
             file: File;
             path: string;
@@ -1311,6 +1333,7 @@ export declare class Cloud {
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
+        onProgressId?: string;
         onQueued?: () => void;
         onStarted?: () => void;
         onError?: (err: Error) => void;
