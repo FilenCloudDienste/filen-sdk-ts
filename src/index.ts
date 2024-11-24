@@ -700,9 +700,9 @@ export class FilenSDK {
 	}
 
 	public api(version: number) {
-		if (!this.isLoggedIn()) {
-			throw new Error("Not authenticated, please call login() first")
-		}
+		// if (!this.isLoggedIn()) {
+		// 	throw new Error("Not authenticated, please call login() first")
+		// }
 
 		if (version === 3) {
 			return this._api.v3()
@@ -719,9 +719,9 @@ export class FilenSDK {
 	 * @returns {Crypto}
 	 */
 	public crypto(): Crypto {
-		if (!this.isLoggedIn()) {
-			throw new Error("Not authenticated, please call login() first")
-		}
+		// if (!this.isLoggedIn()) {
+		// 	throw new Error("Not authenticated, please call login() first")
+		// }
 
 		return this._crypto
 	}
