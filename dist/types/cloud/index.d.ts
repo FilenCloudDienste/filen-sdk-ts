@@ -1256,7 +1256,8 @@ export declare class Cloud {
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
-     * 		onDirectoryCreated?: (item: CloudItem) => void
+     * 		onDirectoryCreated?: (item: CloudItem) => void,
+     * 		throwOnSingleFileUploadError?: boolean
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
@@ -1271,9 +1272,10 @@ export declare class Cloud {
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @param {(item: CloudItem) => void} param0.onDirectoryCreated
+     * @param {boolean} param0.throwOnSingleFileUploadError
      * @returns {Promise<void>}
      */
-    uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
+    uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated, throwOnSingleFileUploadError }: {
         source: string;
         parent: string;
         name?: string;
@@ -1287,6 +1289,7 @@ export declare class Cloud {
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
         onDirectoryCreated?: (item: CloudItem) => void;
+        throwOnSingleFileUploadError?: boolean;
     }): Promise<void>;
     /**
      * Upload a web-based directory, such as from an <input /> field. Only works in a browser environment.
@@ -1307,6 +1310,7 @@ export declare class Cloud {
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		onDirectoryCreated?: (item: CloudItem) => void
+     * 		throwOnSingleFileUploadError?: boolean
      * 	}} param0
      * @param {{}} param0.files
      * @param {string} param0.parent
@@ -1321,9 +1325,10 @@ export declare class Cloud {
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @param {(item: CloudItem) => void} param0.onDirectoryCreated
+     * @param {boolean} param0.throwOnSingleFileUploadError
      * @returns {Promise<void>}
      */
-    uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }: {
+    uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated, throwOnSingleFileUploadError }: {
         files: {
             file: File;
             path: string;
@@ -1340,6 +1345,7 @@ export declare class Cloud {
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
         onDirectoryCreated?: (item: CloudItem) => void;
+        throwOnSingleFileUploadError?: boolean;
     }): Promise<void>;
     /**
      * Empty the trash.

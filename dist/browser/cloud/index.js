@@ -1,5 +1,5 @@
 import { APIError } from "..";
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize } from "../utils";
+import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize, promiseAllSettledChunked } from "../utils";
 import { environment, MAX_DOWNLOAD_THREADS, MAX_DOWNLOAD_WRITERS, MAX_UPLOAD_THREADS, CURRENT_FILE_ENCRYPTION_VERSION, DEFAULT_UPLOAD_BUCKET, DEFAULT_UPLOAD_REGION, UPLOAD_CHUNK_SIZE, MAX_CONCURRENT_DOWNLOADS, MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DIRECTORY_DOWNLOADS, MAX_CONCURRENT_DIRECTORY_UPLOADS, MAX_CONCURRENT_SHARES, BUFFER_SIZE } from "../constants";
 import { PauseSignal } from "./signals";
 import pathModule from "path";
@@ -3301,7 +3301,8 @@ export class Cloud {
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
-     * 		onDirectoryCreated?: (item: CloudItem) => void
+     * 		onDirectoryCreated?: (item: CloudItem) => void,
+     * 		throwOnSingleFileUploadError?: boolean
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
@@ -3316,9 +3317,10 @@ export class Cloud {
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @param {(item: CloudItem) => void} param0.onDirectoryCreated
+     * @param {boolean} param0.throwOnSingleFileUploadError
      * @returns {Promise<void>}
      */
-    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
+    async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated, throwOnSingleFileUploadError }) {
         if (environment !== "node") {
             throw new Error(`cloud.uploadLocalDirectory is not implemented for ${environment}`);
         }
@@ -3432,7 +3434,12 @@ export class Cloud {
                     onUploaded
                 }));
             }
-            await promiseAllChunked(uploadPromises);
+            if (throwOnSingleFileUploadError) {
+                await promiseAllChunked(uploadPromises);
+            }
+            else {
+                await promiseAllSettledChunked(uploadPromises);
+            }
             if (onFinished) {
                 onFinished();
             }
@@ -3466,6 +3473,7 @@ export class Cloud {
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
      * 		onDirectoryCreated?: (item: CloudItem) => void
+     * 		throwOnSingleFileUploadError?: boolean
      * 	}} param0
      * @param {{}} param0.files
      * @param {string} param0.parent
@@ -3480,9 +3488,10 @@ export class Cloud {
      * @param {() => void} param0.onFinished
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @param {(item: CloudItem) => void} param0.onDirectoryCreated
+     * @param {boolean} param0.throwOnSingleFileUploadError
      * @returns {Promise<void>}
      */
-    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
+    async uploadDirectoryFromWeb({ files, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated, throwOnSingleFileUploadError }) {
         if (environment !== "browser") {
             throw new Error(`cloud.uploadDirectoryFromWeb is not implemented for ${environment}`);
         }
@@ -3576,7 +3585,12 @@ export class Cloud {
                     onUploaded
                 }));
             }
-            await promiseAllChunked(uploadPromises);
+            if (throwOnSingleFileUploadError) {
+                await promiseAllChunked(uploadPromises);
+            }
+            else {
+                await promiseAllSettledChunked(uploadPromises);
+            }
             if (onFinished) {
                 onFinished();
             }

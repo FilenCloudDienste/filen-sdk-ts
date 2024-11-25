@@ -10,7 +10,15 @@ import {
 	type GetFileResult,
 	type GetDirResult
 } from "../types"
-import { convertTimestampToMs, promiseAllChunked, uuidv4, normalizePath, getEveryPossibleDirectoryPath, realFileSize } from "../utils"
+import {
+	convertTimestampToMs,
+	promiseAllChunked,
+	uuidv4,
+	normalizePath,
+	getEveryPossibleDirectoryPath,
+	realFileSize,
+	promiseAllSettledChunked
+} from "../utils"
 import {
 	environment,
 	MAX_DOWNLOAD_THREADS,
@@ -4376,7 +4384,8 @@ export class Cloud {
 	 * 		onError?: (err: Error) => void
 	 * 		onFinished?: () => void
 	 * 		onUploaded?: (item: CloudItem) => Promise<void>
-	 * 		onDirectoryCreated?: (item: CloudItem) => void
+	 * 		onDirectoryCreated?: (item: CloudItem) => void,
+	 * 		throwOnSingleFileUploadError?: boolean
 	 * 	}} param0
 	 * @param {string} param0.source
 	 * @param {string} param0.parent
@@ -4391,6 +4400,7 @@ export class Cloud {
 	 * @param {() => void} param0.onFinished
 	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
 	 * @param {(item: CloudItem) => void} param0.onDirectoryCreated
+	 * @param {boolean} param0.throwOnSingleFileUploadError
 	 * @returns {Promise<void>}
 	 */
 	public async uploadLocalDirectory({
@@ -4406,7 +4416,8 @@ export class Cloud {
 		onError,
 		onFinished,
 		onUploaded,
-		onDirectoryCreated
+		onDirectoryCreated,
+		throwOnSingleFileUploadError
 	}: {
 		source: string
 		parent: string
@@ -4421,6 +4432,7 @@ export class Cloud {
 		onFinished?: () => void
 		onUploaded?: (item: CloudItem) => Promise<void>
 		onDirectoryCreated?: (item: CloudItem) => void
+		throwOnSingleFileUploadError?: boolean
 	}): Promise<void> {
 		if (environment !== "node") {
 			throw new Error(`cloud.uploadLocalDirectory is not implemented for ${environment}`)
@@ -4578,7 +4590,11 @@ export class Cloud {
 				)
 			}
 
-			await promiseAllChunked(uploadPromises)
+			if (throwOnSingleFileUploadError) {
+				await promiseAllChunked(uploadPromises)
+			} else {
+				await promiseAllSettledChunked(uploadPromises)
+			}
 
 			if (onFinished) {
 				onFinished()
@@ -4613,6 +4629,7 @@ export class Cloud {
 	 * 		onFinished?: () => void
 	 * 		onUploaded?: (item: CloudItem) => Promise<void>
 	 * 		onDirectoryCreated?: (item: CloudItem) => void
+	 * 		throwOnSingleFileUploadError?: boolean
 	 * 	}} param0
 	 * @param {{}} param0.files
 	 * @param {string} param0.parent
@@ -4627,6 +4644,7 @@ export class Cloud {
 	 * @param {() => void} param0.onFinished
 	 * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
 	 * @param {(item: CloudItem) => void} param0.onDirectoryCreated
+	 * @param {boolean} param0.throwOnSingleFileUploadError
 	 * @returns {Promise<void>}
 	 */
 	public async uploadDirectoryFromWeb({
@@ -4642,7 +4660,8 @@ export class Cloud {
 		onError,
 		onFinished,
 		onUploaded,
-		onDirectoryCreated
+		onDirectoryCreated,
+		throwOnSingleFileUploadError
 	}: {
 		files: { file: File; path: string }[]
 		parent: string
@@ -4657,6 +4676,7 @@ export class Cloud {
 		onFinished?: () => void
 		onUploaded?: (item: CloudItem) => Promise<void>
 		onDirectoryCreated?: (item: CloudItem) => void
+		throwOnSingleFileUploadError?: boolean
 	}): Promise<void> {
 		if (environment !== "browser") {
 			throw new Error(`cloud.uploadDirectoryFromWeb is not implemented for ${environment}`)
@@ -4784,7 +4804,11 @@ export class Cloud {
 				)
 			}
 
-			await promiseAllChunked(uploadPromises)
+			if (throwOnSingleFileUploadError) {
+				await promiseAllChunked(uploadPromises)
+			} else {
+				await promiseAllSettledChunked(uploadPromises)
+			}
 
 			if (onFinished) {
 				onFinished()
