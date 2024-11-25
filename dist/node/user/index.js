@@ -244,7 +244,7 @@ class User {
      * @param {{ currentPassword: string; newPassword: string }} param0
      * @param {string} param0.currentPassword
      * @param {string} param0.newPassword
-     * @returns {Promise<void>}
+     * @returns {Promise<string>}
      */
     async changePassword({ currentPassword, newPassword }) {
         const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email });
@@ -267,13 +267,14 @@ class User {
             metadata: newMasterKeys.join("|"),
             key: derivedNew.derivedMasterKeys
         });
-        await this.api.v3().user().settingsPassword().change({
+        const response = await this.api.v3().user().settingsPassword().change({
             password: derivedNew.derivedPassword,
             currentPassword: derivedCurrent.derivedPassword,
             authVersion: this.sdkConfig.authVersion,
             salt: newSalt,
             masterKeys: newMasterKeysEncrypted
         });
+        return response.newAPIKey;
     }
     /**
      * Mark the current master keys as exported.

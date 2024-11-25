@@ -3299,7 +3299,7 @@ class Cloud {
     async uploadLocalDirectory({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, onDirectoryCreated }) {
         var _a, _b;
         if (constants_1.environment !== "node") {
-            throw new Error(`cloud.uploadDirectoryFromLocal is not implemented for ${constants_1.environment}`);
+            throw new Error(`cloud.uploadLocalDirectory is not implemented for ${constants_1.environment}`);
         }
         if (onQueued) {
             onQueued();
@@ -3543,7 +3543,7 @@ class Cloud {
                 }
                 const parentPath = path_1.default.posix.dirname(file.path);
                 const fileParent = parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : (_b = pathsToUUIDs[parentPath]) !== null && _b !== void 0 ? _b : "";
-                if (fileParent.length <= 16) {
+                if (fileParent.length <= 16 || file.file.size <= 0) {
                     continue;
                 }
                 uploadPromises.push(this.uploadWebFile({

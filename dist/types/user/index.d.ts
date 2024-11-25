@@ -201,12 +201,12 @@ export declare class User {
      * @param {{ currentPassword: string; newPassword: string }} param0
      * @param {string} param0.currentPassword
      * @param {string} param0.newPassword
-     * @returns {Promise<void>}
+     * @returns {Promise<string>}
      */
     changePassword({ currentPassword, newPassword }: {
         currentPassword: string;
         newPassword: string;
-    }): Promise<void>;
+    }): Promise<string>;
     /**
      * Mark the current master keys as exported.
      *

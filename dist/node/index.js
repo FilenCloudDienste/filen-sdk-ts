@@ -534,9 +534,9 @@ class FilenSDK {
         this.init(Object.assign(Object.assign({}, this.config), { email: undefined, password: undefined, twoFactorCode: undefined, masterKeys: undefined, apiKey: undefined, publicKey: undefined, privateKey: undefined, authVersion: undefined, baseFolderUUID: undefined, userId: undefined }));
     }
     api(version) {
-        if (!this.isLoggedIn()) {
-            throw new Error("Not authenticated, please call login() first");
-        }
+        // if (!this.isLoggedIn()) {
+        // 	throw new Error("Not authenticated, please call login() first")
+        // }
         if (version === 3) {
             return this._api.v3();
         }
@@ -550,9 +550,9 @@ class FilenSDK {
      * @returns {Crypto}
      */
     crypto() {
-        if (!this.isLoggedIn()) {
-            throw new Error("Not authenticated, please call login() first");
-        }
+        // if (!this.isLoggedIn()) {
+        // 	throw new Error("Not authenticated, please call login() first")
+        // }
         return this._crypto;
     }
     /**

@@ -544,9 +544,9 @@ export class FilenSDK {
         });
     }
     api(version) {
-        if (!this.isLoggedIn()) {
-            throw new Error("Not authenticated, please call login() first");
-        }
+        // if (!this.isLoggedIn()) {
+        // 	throw new Error("Not authenticated, please call login() first")
+        // }
         if (version === 3) {
             return this._api.v3();
         }
@@ -560,9 +560,9 @@ export class FilenSDK {
      * @returns {Crypto}
      */
     crypto() {
-        if (!this.isLoggedIn()) {
-            throw new Error("Not authenticated, please call login() first");
-        }
+        // if (!this.isLoggedIn()) {
+        // 	throw new Error("Not authenticated, please call login() first")
+        // }
         return this._crypto;
     }
     /**
