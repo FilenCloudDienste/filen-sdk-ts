@@ -1,4 +1,3 @@
-import axios from "axios";
 import { sleep, getRandomArbitrary, normalizePath, parseURLParams } from "../utils";
 import { environment } from "../constants";
 import { promisify } from "util";
@@ -226,7 +225,7 @@ export class APIClient {
                 }
             });
         }
-        return await axios.post(url + params.endpoint, params.data, {
+        return await this.sdk.axiosInstance.post(url + params.endpoint, params.data, {
             headers,
             signal: params.abortSignal,
             timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,
@@ -377,7 +376,7 @@ export class APIClient {
                 request.end();
             });
         }
-        return await axios.get(url + params.endpoint, {
+        return await this.sdk.axiosInstance.get(url + params.endpoint, {
             headers,
             signal: params.abortSignal,
             timeout: params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout,

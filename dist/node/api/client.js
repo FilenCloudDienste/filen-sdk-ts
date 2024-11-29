@@ -4,7 +4,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.APIClient = exports.APIClientDefaults = void 0;
-const axios_1 = __importDefault(require("axios"));
 const utils_1 = require("../utils");
 const constants_1 = require("../constants");
 const util_1 = require("util");
@@ -222,7 +221,7 @@ class APIClient {
                 }
             });
         }
-        return await axios_1.default.post(url + params.endpoint, params.data, {
+        return await this.sdk.axiosInstance.post(url + params.endpoint, params.data, {
             headers,
             signal: params.abortSignal,
             timeout: params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout,
@@ -376,7 +375,7 @@ class APIClient {
                 request.end();
             });
         }
-        return await axios_1.default.get(url + params.endpoint, {
+        return await this.sdk.axiosInstance.get(url + params.endpoint, {
             headers,
             signal: params.abortSignal,
             timeout: params.timeout ? params.timeout : exports.APIClientDefaults.gatewayTimeout,

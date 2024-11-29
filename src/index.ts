@@ -20,6 +20,7 @@ import type Decrypt from "./crypto/decrypt"
 import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer"
 import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer"
 import TypedEventEmitter, { type Events } from "./events"
+import axios, { type AxiosInstance } from "axios"
 
 export type SDKWorker = {
 	crypto: {
@@ -84,6 +85,7 @@ export class FilenSDK {
 	public workers: SDKWorker[] | null
 	private currentWorkerWorkIndex: number = 0
 	public readonly events: TypedEventEmitter<Events>
+	public readonly axiosInstance: AxiosInstance
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -92,8 +94,9 @@ export class FilenSDK {
 	 * @public
 	 * @param {?FilenSDKConfig} [params]
 	 * @param {?SDKWorker[]} [workers]
+	 * @param {?AxiosInstance} [axiosInstance]
 	 */
-	public constructor(params?: FilenSDKConfig, workers?: SDKWorker[]) {
+	public constructor(params?: FilenSDKConfig, workers?: SDKWorker[], axiosInstance?: AxiosInstance) {
 		if (!params) {
 			params = {}
 		}
@@ -101,6 +104,7 @@ export class FilenSDK {
 		this.config = params
 		this.workers = workers ? workers : null
 		this.events = new TypedEventEmitter<Events>()
+		this.axiosInstance = axiosInstance ? axiosInstance : axios.create()
 
 		this._crypto =
 			params.masterKeys && params.publicKey && params.privateKey

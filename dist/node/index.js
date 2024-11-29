@@ -35,6 +35,7 @@ const contacts_1 = __importDefault(require("./contacts"));
 const user_1 = __importDefault(require("./user"));
 const socket_1 = __importDefault(require("./socket"));
 const events_1 = __importDefault(require("./events"));
+const axios_1 = __importDefault(require("axios"));
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -51,8 +52,9 @@ class FilenSDK {
      * @public
      * @param {?FilenSDKConfig} [params]
      * @param {?SDKWorker[]} [workers]
+     * @param {?AxiosInstance} [axiosInstance]
      */
-    constructor(params, workers) {
+    constructor(params, workers, axiosInstance) {
         this.socket = new socket_1.default();
         this._updateKeyPairTries = 0;
         this.currentWorkerWorkIndex = 0;
@@ -67,6 +69,7 @@ class FilenSDK {
         this.config = params;
         this.workers = workers ? workers : null;
         this.events = new events_1.default();
+        this.axiosInstance = axiosInstance ? axiosInstance : axios_1.default.create();
         this._crypto =
             params.masterKeys && params.publicKey && params.privateKey
                 ? new crypto_1.default({

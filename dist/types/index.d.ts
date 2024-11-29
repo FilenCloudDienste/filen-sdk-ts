@@ -17,6 +17,7 @@ import type Decrypt from "./crypto/decrypt";
 import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer";
 import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer";
 import TypedEventEmitter, { type Events } from "./events";
+import { type AxiosInstance } from "axios";
 export type SDKWorker = {
     crypto: {
         encrypt: ClassMethods<Encrypt>;
@@ -78,6 +79,7 @@ export declare class FilenSDK {
     workers: SDKWorker[] | null;
     private currentWorkerWorkIndex;
     readonly events: TypedEventEmitter<Events>;
+    readonly axiosInstance: AxiosInstance;
     /**
      * Creates an instance of FilenSDK.
      *
@@ -85,8 +87,9 @@ export declare class FilenSDK {
      * @public
      * @param {?FilenSDKConfig} [params]
      * @param {?SDKWorker[]} [workers]
+     * @param {?AxiosInstance} [axiosInstance]
      */
-    constructor(params?: FilenSDKConfig, workers?: SDKWorker[]);
+    constructor(params?: FilenSDKConfig, workers?: SDKWorker[], axiosInstance?: AxiosInstance);
     /**
      * Update the SDK Worker pool.
      *
@@ -177,14 +180,6 @@ export declare class FilenSDK {
         dir: () => {
             content: (params_0: {
                 uuid: string;
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 dirsOnly?: boolean | undefined;
             }) => Promise<import("./api/v3/dir/content").DirContentResponse>;
             download: (params_0: {
@@ -471,14 +466,6 @@ export declare class FilenSDK {
                 uuid: string;
                 name: string;
                 nameHashed: string;
-                /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
                 size: string;
                 chunks: number;
                 mime: string;

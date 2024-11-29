@@ -15,6 +15,7 @@ import Contacts from "./contacts";
 import User from "./user";
 import Socket from "./socket";
 import TypedEventEmitter from "./events";
+import axios from "axios";
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -38,6 +39,7 @@ export class FilenSDK {
     workers;
     currentWorkerWorkIndex = 0;
     events;
+    axiosInstance;
     /**
      * Creates an instance of FilenSDK.
      *
@@ -45,14 +47,16 @@ export class FilenSDK {
      * @public
      * @param {?FilenSDKConfig} [params]
      * @param {?SDKWorker[]} [workers]
+     * @param {?AxiosInstance} [axiosInstance]
      */
-    constructor(params, workers) {
+    constructor(params, workers, axiosInstance) {
         if (!params) {
             params = {};
         }
         this.config = params;
         this.workers = workers ? workers : null;
         this.events = new TypedEventEmitter();
+        this.axiosInstance = axiosInstance ? axiosInstance : axios.create();
         this._crypto =
             params.masterKeys && params.publicKey && params.privateKey
                 ? new Crypto({
