@@ -44,7 +44,7 @@ export declare const APIClientDefaults: {
     readonly gatewayTimeout: 300000;
     readonly egestTimeout: 1800000;
     readonly ingestTimeout: 3600000;
-    readonly maxRetries: 64;
+    readonly maxRetries: number;
     readonly retryTimeout: 1000;
 };
 /**

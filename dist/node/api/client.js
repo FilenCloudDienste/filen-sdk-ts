@@ -51,7 +51,7 @@ exports.APIClientDefaults = {
     gatewayTimeout: 300000,
     egestTimeout: 1800000,
     ingestTimeout: 3600000,
-    maxRetries: 64,
+    maxRetries: 3600 * 3,
     retryTimeout: 1000
 };
 /**
