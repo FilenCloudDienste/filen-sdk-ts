@@ -1031,14 +1031,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async restoreFileVersion({ uuid, currentUUID }) {
-        const currentFile = await this.getFile({ uuid: currentUUID });
         await this.api.v3().file().version().restore({
             uuid,
             currentUUID
-        });
-        await this.editFileMetadata({
-            uuid,
-            metadata: Object.assign(Object.assign({}, currentFile.metadataDecrypted), { lastModified: Date.now() })
         });
     }
     /**
