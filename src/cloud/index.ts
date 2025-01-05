@@ -1385,6 +1385,16 @@ export class Cloud {
 			uuid,
 			currentUUID
 		})
+
+		const restoredFile = await this.getFile({ uuid })
+
+		await this.editFileMetadata({
+			uuid,
+			metadata: {
+				...restoredFile.metadataDecrypted,
+				lastModified: Date.now()
+			}
+		})
 	}
 
 	/**
@@ -2854,12 +2864,17 @@ export class Cloud {
 			})
 		}
 
-		const [firstChunkIndex, lastChunkIndex] = utils.calculateChunkIndices({ start, end, chunks })
+		const [firstChunkIndex, lastChunkIndex] = utils.calculateChunkIndices({
+			start,
+			end,
+			chunks
+		})
+
 		const threadsSemaphore = new Semaphore(MAX_DOWNLOAD_THREADS)
 		const writersSemaphore = new Semaphore(MAX_DOWNLOAD_WRITERS)
 		const downloadsSemaphore = this._semaphores.downloadStream
-		const api = this.sdk.getWorker().api
-		const crypto = this.sdk.getWorker().crypto
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const self = this
 		let currentWriteIndex = firstChunkIndex
 		let writerStopped = false
 		let currentPullIndex = firstChunkIndex
@@ -2867,13 +2882,16 @@ export class Cloud {
 		const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex >= chunks ? chunks : lastChunkIndex
 		let downloadsSemaphoreAcquired = false
 		let downloadsSemaphoreReleased = false
+		let chunksWritten = 0
+		const chunksNeeded = lastChunkIndex - firstChunkIndex <= 0 ? 1 : lastChunkIndex - firstChunkIndex
 
 		if (
 			chunksToDownload === 0 ||
 			firstChunkIndex > lastChunkIndex ||
 			firstChunkIndex < 0 ||
 			lastChunkIndex < 0 ||
-			lastChunkIndex > chunks
+			lastChunkIndex > chunks ||
+			chunksNeeded <= 0
 		) {
 			return new ReadableStream({
 				start(controller) {
@@ -2883,13 +2901,13 @@ export class Cloud {
 		}
 
 		const waitForPause = async (): Promise<void> => {
-			if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
+			if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || abortSignal?.aborted || chunksWritten >= chunksNeeded) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
+					if (!pauseSignal.isPaused() || writerStopped || abortSignal?.aborted || chunksWritten >= chunksNeeded) {
 						clearInterval(wait)
 
 						resolve()
@@ -2899,13 +2917,13 @@ export class Cloud {
 		}
 
 		const waitForPull = async (index: number) => {
-			if (chunksPulled[index] || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
+			if (chunksPulled[index] || writerStopped || abortSignal?.aborted || chunksWritten >= chunksNeeded) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (chunksPulled[index] || writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
+					if (chunksPulled[index] || writerStopped || abortSignal?.aborted || chunksWritten >= chunksNeeded) {
 						clearInterval(wait)
 
 						resolve()
@@ -2915,13 +2933,13 @@ export class Cloud {
 		}
 
 		const waitForWritesToBeDone = async () => {
-			if (currentWriteIndex >= chunksToDownload || writerStopped || abortSignal?.aborted) {
+			if (chunksWritten >= chunksNeeded || writerStopped || abortSignal?.aborted) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (currentWriteIndex >= chunksToDownload || writerStopped || abortSignal?.aborted) {
+					if (chunksWritten >= chunksNeeded || writerStopped || abortSignal?.aborted) {
 						clearInterval(wait)
 
 						resolve()
@@ -2931,7 +2949,7 @@ export class Cloud {
 		}
 
 		const applyBackpressure = async (controller: ReadableStreamDefaultController) => {
-			if (writerStopped || abortSignal?.aborted || currentWriteIndex >= chunksToDownload) {
+			if (writerStopped || abortSignal?.aborted || chunksWritten >= chunksNeeded) {
 				return
 			}
 
@@ -2942,7 +2960,7 @@ export class Cloud {
 							(controller.desiredSize && controller.desiredSize > 0) ||
 							writerStopped ||
 							abortSignal?.aborted ||
-							currentWriteIndex >= chunksToDownload
+							chunksWritten >= chunksNeeded
 						) {
 							clearInterval(wait)
 
@@ -2954,25 +2972,13 @@ export class Cloud {
 		}
 
 		const waitForWriteSlot = async (index: number) => {
-			if (
-				currentWriteIndex >= chunksToDownload ||
-				writerStopped ||
-				abortSignal?.aborted ||
-				index === currentWriteIndex ||
-				index >= chunksToDownload
-			) {
+			if (writerStopped || abortSignal?.aborted || index === currentWriteIndex) {
 				return
 			}
 
 			await new Promise<void>(resolve => {
 				const wait = setInterval(() => {
-					if (
-						currentWriteIndex >= chunksToDownload ||
-						writerStopped ||
-						abortSignal?.aborted ||
-						index === currentWriteIndex ||
-						index >= chunksToDownload
-					) {
+					if (writerStopped || abortSignal?.aborted || index === currentWriteIndex) {
 						clearInterval(wait)
 
 						resolve()
@@ -3020,7 +3026,7 @@ export class Cloud {
 
 									await applyBackpressure(controller)
 
-									if (!writerStopped) {
+									if (!writerStopped && !(abortSignal && abortSignal.aborted)) {
 										controller.enqueue(bufferToEnqueue)
 
 										if (onProgress) {
@@ -3030,6 +3036,7 @@ export class Cloud {
 								}
 
 								currentWriteIndex += 1
+								chunksWritten += 1
 
 								writersSemaphore.release()
 							} catch (e) {
@@ -3079,7 +3086,7 @@ export class Cloud {
 												await waitForPause()
 											}
 
-											const encryptedBuffer = await api.v3.file.download.chunk.buffer.fetch({
+											const encryptedBuffer = await self.sdk.getWorker().api.v3.file.download.chunk.buffer.fetch({
 												uuid,
 												bucket,
 												region,
@@ -3095,7 +3102,7 @@ export class Cloud {
 												await waitForPause()
 											}
 
-											const decryptedBuffer = await crypto.decrypt.data({
+											const decryptedBuffer = await self.sdk.getWorker().crypto.decrypt.data({
 												data: encryptedBuffer,
 												key,
 												version

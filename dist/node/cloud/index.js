@@ -1035,6 +1035,11 @@ class Cloud {
             uuid,
             currentUUID
         });
+        const restoredFile = await this.getFile({ uuid });
+        await this.editFileMetadata({
+            uuid,
+            metadata: Object.assign(Object.assign({}, restoredFile.metadataDecrypted), { lastModified: Date.now() })
+        });
     }
     /**
      * Retrieve all versions of a file.
@@ -2111,12 +2116,16 @@ class Cloud {
                 }
             });
         }
-        const [firstChunkIndex, lastChunkIndex] = utils_2.default.calculateChunkIndices({ start, end, chunks });
+        const [firstChunkIndex, lastChunkIndex] = utils_2.default.calculateChunkIndices({
+            start,
+            end,
+            chunks
+        });
         const threadsSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_THREADS);
         const writersSemaphore = new semaphore_1.Semaphore(constants_1.MAX_DOWNLOAD_WRITERS);
         const downloadsSemaphore = this._semaphores.downloadStream;
-        const api = this.sdk.getWorker().api;
-        const crypto = this.sdk.getWorker().crypto;
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        const self = this;
         let currentWriteIndex = firstChunkIndex;
         let writerStopped = false;
         let currentPullIndex = firstChunkIndex;
@@ -2124,11 +2133,14 @@ class Cloud {
         const chunksToDownload = lastChunkIndex <= 0 ? 1 : lastChunkIndex >= chunks ? chunks : lastChunkIndex;
         let downloadsSemaphoreAcquired = false;
         let downloadsSemaphoreReleased = false;
+        let chunksWritten = 0;
+        const chunksNeeded = lastChunkIndex - firstChunkIndex <= 0 ? 1 : lastChunkIndex - firstChunkIndex;
         if (chunksToDownload === 0 ||
             firstChunkIndex > lastChunkIndex ||
             firstChunkIndex < 0 ||
             lastChunkIndex < 0 ||
-            lastChunkIndex > chunks) {
+            lastChunkIndex > chunks ||
+            chunksNeeded <= 0) {
             return new ReadableStream({
                 start(controller) {
                     controller.close();
@@ -2136,12 +2148,12 @@ class Cloud {
             });
         }
         const waitForPause = async () => {
-            if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || currentWriteIndex >= chunksToDownload) {
+            if (!pauseSignal || !pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || chunksWritten >= chunksNeeded) {
                 return;
             }
             await new Promise(resolve => {
                 const wait = setInterval(() => {
-                    if (!pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || currentWriteIndex >= chunksToDownload) {
+                    if (!pauseSignal.isPaused() || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || chunksWritten >= chunksNeeded) {
                         clearInterval(wait);
                         resolve();
                     }
@@ -2149,12 +2161,12 @@ class Cloud {
             });
         };
         const waitForPull = async (index) => {
-            if (chunksPulled[index] || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || currentWriteIndex >= chunksToDownload) {
+            if (chunksPulled[index] || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || chunksWritten >= chunksNeeded) {
                 return;
             }
             await new Promise(resolve => {
                 const wait = setInterval(() => {
-                    if (chunksPulled[index] || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || currentWriteIndex >= chunksToDownload) {
+                    if (chunksPulled[index] || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || chunksWritten >= chunksNeeded) {
                         clearInterval(wait);
                         resolve();
                     }
@@ -2162,12 +2174,12 @@ class Cloud {
             });
         };
         const waitForWritesToBeDone = async () => {
-            if (currentWriteIndex >= chunksToDownload || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
+            if (chunksWritten >= chunksNeeded || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                 return;
             }
             await new Promise(resolve => {
                 const wait = setInterval(() => {
-                    if (currentWriteIndex >= chunksToDownload || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
+                    if (chunksWritten >= chunksNeeded || writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted)) {
                         clearInterval(wait);
                         resolve();
                     }
@@ -2176,7 +2188,7 @@ class Cloud {
         };
         const applyBackpressure = async (controller) => {
             var _a;
-            if (writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || currentWriteIndex >= chunksToDownload) {
+            if (writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || chunksWritten >= chunksNeeded) {
                 return;
             }
             if (((_a = controller.desiredSize) !== null && _a !== void 0 ? _a : 1) <= 0) {
@@ -2185,7 +2197,7 @@ class Cloud {
                         if ((controller.desiredSize && controller.desiredSize > 0) ||
                             writerStopped ||
                             (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) ||
-                            currentWriteIndex >= chunksToDownload) {
+                            chunksWritten >= chunksNeeded) {
                             clearInterval(wait);
                             resolve();
                         }
@@ -2194,20 +2206,12 @@ class Cloud {
             }
         };
         const waitForWriteSlot = async (index) => {
-            if (currentWriteIndex >= chunksToDownload ||
-                writerStopped ||
-                (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) ||
-                index === currentWriteIndex ||
-                index >= chunksToDownload) {
+            if (writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || index === currentWriteIndex) {
                 return;
             }
             await new Promise(resolve => {
                 const wait = setInterval(() => {
-                    if (currentWriteIndex >= chunksToDownload ||
-                        writerStopped ||
-                        (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) ||
-                        index === currentWriteIndex ||
-                        index >= chunksToDownload) {
+                    if (writerStopped || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || index === currentWriteIndex) {
                         clearInterval(wait);
                         resolve();
                     }
@@ -2243,7 +2247,7 @@ class Cloud {
                                     bufferToEnqueue = bufferToEnqueue.subarray(startInChunk, endInChunk);
                                 }
                                 await applyBackpressure(controller);
-                                if (!writerStopped) {
+                                if (!writerStopped && !(abortSignal && abortSignal.aborted)) {
                                     controller.enqueue(bufferToEnqueue);
                                     if (onProgress) {
                                         onProgress(bufferToEnqueue.byteLength, onProgressId);
@@ -2251,6 +2255,7 @@ class Cloud {
                                 }
                             }
                             currentWriteIndex += 1;
+                            chunksWritten += 1;
                             writersSemaphore.release();
                         }
                         catch (e) {
@@ -2288,7 +2293,7 @@ class Cloud {
                                         if (pauseSignal && pauseSignal.isPaused()) {
                                             await waitForPause();
                                         }
-                                        const encryptedBuffer = await api.v3.file.download.chunk.buffer.fetch({
+                                        const encryptedBuffer = await self.sdk.getWorker().api.v3.file.download.chunk.buffer.fetch({
                                             uuid,
                                             bucket,
                                             region,
@@ -2301,7 +2306,7 @@ class Cloud {
                                         if (pauseSignal && pauseSignal.isPaused()) {
                                             await waitForPause();
                                         }
-                                        const decryptedBuffer = await crypto.decrypt.data({
+                                        const decryptedBuffer = await self.sdk.getWorker().crypto.decrypt.data({
                                             data: encryptedBuffer,
                                             key,
                                             version
