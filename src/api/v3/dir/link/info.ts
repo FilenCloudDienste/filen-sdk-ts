@@ -7,6 +7,7 @@ export type DirLinkInfoResponse = {
 	hasPassword: boolean
 	salt: string
 	timestamp: number
+	downloadBtn: boolean
 }
 
 export type DirLinkInfoDecryptedResponse = {
@@ -15,6 +16,7 @@ export type DirLinkInfoDecryptedResponse = {
 	hasPassword: boolean
 	salt: string
 	timestamp: number
+	downloadBtn: boolean
 }
 
 /**
