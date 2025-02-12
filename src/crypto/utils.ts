@@ -18,16 +18,14 @@ const textEncoder = new TextEncoder()
  * @returns {string}
  */
 export async function generateRandomString({ length }: { length: number }): Promise<string> {
-	const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 
 	if (environment === "node") {
-		const randomBytes = nodeCrypto.randomBytes(length + 2)
+		const randomBytes = nodeCrypto.randomBytes(length)
 		const result = new Array(length)
-		let cursor = 0
 
 		for (let i = 0; i < length; i++) {
-			cursor += randomBytes[i]!
-			result[i] = chars[cursor % chars.length]
+			result[i] = chars[randomBytes[i]! % chars.length]
 		}
 
 		return result.join("")
@@ -36,9 +34,9 @@ export async function generateRandomString({ length }: { length: number }): Prom
 
 		globalThis.crypto.getRandomValues(array)
 
-		const randomNumbers = Array.from(array).map(x => x % chars.length)
-
-		return randomNumbers.map(x => chars[x]).join("")
+		return Array.from(array)
+			.map(x => chars[x % chars.length])
+			.join("")
 	}
 
 	throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`)
