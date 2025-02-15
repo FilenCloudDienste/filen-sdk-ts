@@ -32,14 +32,6 @@ const filen = new FilenSDK(
 const main = async () => {
 	console.log("starting")
 
-	console.log(
-		Buffer.from(
-			await filen.fs().readFile({
-				path: "/test.txt"
-			})
-		).toString("utf-8")
-	)
-
 	console.log("done")
 }
 
