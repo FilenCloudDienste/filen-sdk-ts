@@ -94,12 +94,46 @@ export class Decrypt {
 					)
 
 					return Buffer.from(decrypted).toString("utf-8")
+				} else {
+					throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
 				}
+			} else if (version === "003") {
+				const keyBuffer = await deriveKeyFromPassword({
+					password: key,
+					salt: key,
+					iterations: 1,
+					hash: "sha512",
+					bitLength: 256,
+					returnHex: false
+				})
+				const ivBuffer = Buffer.from(metadata.slice(3, 27), "hex")
+				const encrypted = Buffer.from(metadata.slice(27), "base64")
 
-				throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
+				if (environment === "node") {
+					const authTag = encrypted.subarray(-16)
+					const cipherText = encrypted.subarray(0, encrypted.byteLength - 16)
+					const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer)
+
+					decipher.setAuthTag(authTag)
+
+					return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8")
+				} else if (environment === "browser") {
+					const decrypted = await globalThis.crypto.subtle.decrypt(
+						{
+							name: "AES-GCM",
+							iv: ivBuffer
+						},
+						await importRawKey({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }),
+						encrypted
+					)
+
+					return Buffer.from(decrypted).toString("utf-8")
+				} else {
+					throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
+				}
+			} else {
+				throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`)
 			}
-
-			throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`)
 		}
 	}
 
@@ -941,6 +975,23 @@ export class Decrypt {
 				decipher.setAuthTag(authTag)
 
 				return Buffer.concat([decipher.update(ciphertext), decipher.final()])
+			} else if (version === 3) {
+				// Version 3 requires the key to be a 32 bytes hex string (64 characters)
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const iv = data.subarray(0, 12)
+				const encData = data.subarray(12)
+				const authTag = encData.subarray(-16)
+				const ciphertext = encData.subarray(0, encData.byteLength - 16)
+				const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "hex"), iv)
+
+				decipher.setAuthTag(authTag)
+
+				return Buffer.concat([decipher.update(ciphertext), decipher.final()])
+			} else {
+				throw new Error(`[crypto.decrypt.data] Invalid version ${version}`)
 			}
 		} else if (environment === "browser") {
 			if (version === 1) {
@@ -1187,6 +1238,29 @@ export class Decrypt {
 				}
 			} else if (version === 2) {
 				const keyBytes = Buffer.from(key, "utf-8")
+				const ivBytes = Buffer.alloc(12)
+				const authTagBytes = Buffer.alloc(16)
+
+				const stat = await fs.stat(input)
+
+				await Promise.all([fs.read(inputHandle, ivBytes, 0, 12, 0), fs.read(inputHandle, authTagBytes, 0, 16, stat.size - 16)])
+
+				if (ivBytes.byteLength === 0 || authTagBytes.byteLength === 0) {
+					throw new Error("Could not read input file.")
+				}
+
+				decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBytes, ivBytes).setAuthTag(authTagBytes)
+
+				bytesToSkipAtStartOfInputStream = 12
+				bytesToSkipAtEndOfInputStream = 16
+				inputFileSize = stat.size
+			} else if (version === 3) {
+				// Version 3 requires the key to be a 32 bytes hex string (64 characters)
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const keyBytes = Buffer.from(key, "hex")
 				const ivBytes = Buffer.alloc(12)
 				const authTagBytes = Buffer.alloc(16)
 

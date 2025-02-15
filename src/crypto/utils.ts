@@ -7,39 +7,72 @@ import cache from "../cache"
 import { fastStringHash } from "../utils"
 
 const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
 
-/**
- * Generate a cryptographically secure random string of given length.
- * @date 1/31/2024 - 4:01:20 PM
- *
- * @export
- * @param {{ length: number }} param0
- * @param {number} param0.length
- * @returns {string}
- */
-export async function generateRandomString({ length }: { length: number }): Promise<string> {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+export const urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+export const charset = textDecoder.decode(
+	new Uint8Array(
+		Array.from(
+			{
+				length: 128
+			},
+			(_, i) => i
+		)
+	)
+)
 
+export async function generateRandomString(length: number = 32): Promise<string> {
 	if (environment === "node") {
-		const randomBytes = nodeCrypto.randomBytes(length)
-		const result = new Array(length)
+		const array = nodeCrypto.randomBytes(length)
 
-		for (let i = 0; i < length; i++) {
-			result[i] = chars[randomBytes[i]! % chars.length]
-		}
-
-		return result.join("")
+		return Array.from(array)
+			.map(byte => charset[byte & 0x7f])
+			.join("")
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
 
 		globalThis.crypto.getRandomValues(array)
 
 		return Array.from(array)
-			.map(x => chars[x % chars.length])
+			.map(byte => charset[byte & 0x7f])
 			.join("")
 	}
 
 	throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`)
+}
+
+export async function generateRandomBytes(length: number = 32): Promise<Buffer> {
+	if (environment === "node") {
+		return nodeCrypto.randomBytes(length)
+	} else if (environment === "browser") {
+		const array = new Uint8Array(length)
+
+		globalThis.crypto.getRandomValues(array)
+
+		return Buffer.from(array)
+	}
+
+	throw new Error(`crypto.utils.generateRandomBytes not implemented for ${environment} environment`)
+}
+
+export async function generateRandomURLSafeString(length: number = 32): Promise<string> {
+	if (environment === "node") {
+		const array = nodeCrypto.randomBytes(length)
+
+		return Array.from(array)
+			.map(byte => urlSafeCharset[byte % urlSafeCharset.length])
+			.join("")
+	} else if (environment === "browser") {
+		const array = new Uint8Array(length)
+
+		globalThis.crypto.getRandomValues(array)
+
+		return Array.from(array)
+			.map(byte => urlSafeCharset[byte % urlSafeCharset.length])
+			.join("")
+	}
+
+	throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`)
 }
 
 export type DeriveKeyFromPasswordBase = {
@@ -271,7 +304,10 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 			throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${environment} environment`)
 		}
 
-		return { derivedMasterKeys, derivedPassword }
+		return {
+			derivedMasterKeys,
+			derivedPassword
+		}
 	} else {
 		throw new Error(`Invalid authVersion: ${authVersion}`)
 	}
@@ -661,7 +697,9 @@ export const utils = {
 	bufferToHash,
 	generateKeyPair,
 	importRawKey,
-	importPBKDF2Key
+	importPBKDF2Key,
+	generateRandomBytes,
+	generateRandomURLSafeString
 }
 
 export default utils

@@ -53,7 +53,9 @@ export class User {
 	 * @returns {Promise<UserInfoResponse>}
 	 */
 	public async info(): Promise<UserInfoResponse> {
-		return await this.api.v3().user().info({ apiKey: undefined })
+		return await this.api.v3().user().info({
+			apiKey: undefined
+		})
 	}
 
 	/**
@@ -65,7 +67,11 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async baseFolder(): Promise<string> {
-		return (await this.api.v3().user().baseFolder({ apiKey: undefined })).uuid
+		return (
+			await this.api.v3().user().baseFolder({
+				apiKey: undefined
+			})
+		).uuid
 	}
 
 	/**
@@ -79,7 +85,11 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async publicKey({ email }: { email: string }): Promise<string> {
-		return (await this.api.v3().user().publicKey({ email })).publicKey
+		return (
+			await this.api.v3().user().publicKey({
+				email
+			})
+		).publicKey
 	}
 
 	/**
@@ -153,18 +163,21 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async changeEmail({ email, password }: { email: string; password: string }): Promise<void> {
-		const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email! })
+		const authInfo = await this.api.v3().auth().info({
+			email: this.sdkConfig.email!
+		})
+
 		const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: password,
 			authVersion: this.sdkConfig.authVersion!,
 			salt: authInfo.salt
 		})
 
-		await this.api
-			.v3()
-			.user()
-			.settingsEmail()
-			.change({ email, password: derived.derivedPassword, authVersion: this.sdkConfig.authVersion! })
+		await this.api.v3().user().settingsEmail().change({
+			email,
+			password: derived.derivedPassword,
+			authVersion: this.sdkConfig.authVersion!
+		})
 	}
 
 	/**
@@ -252,11 +265,17 @@ export class User {
 			vatId = "__NONE__"
 		}
 
-		await this.api
-			.v3()
-			.user()
-			.personal()
-			.change({ city, companyName, country, firstName, lastName, postalCode, street, streetNumber, vatId })
+		await this.api.v3().user().personal().change({
+			city,
+			companyName,
+			country,
+			firstName,
+			lastName,
+			postalCode,
+			street,
+			streetNumber,
+			vatId
+		})
 	}
 
 	/**
@@ -270,7 +289,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async delete({ twoFactorCode = "XXXXXX" }: { twoFactorCode?: string }): Promise<void> {
-		await this.api.v3().user().delete({ twoFactorCode })
+		await this.api.v3().user().delete({
+			twoFactorCode
+		})
 	}
 
 	/**
@@ -309,34 +330,65 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async changePassword({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }): Promise<string> {
-		const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email! })
-		const derivedCurrent = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-			rawPassword: currentPassword,
-			authVersion: this.sdkConfig.authVersion!,
-			salt: authInfo.salt
-		})
-		const newSalt = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 256 })
-		const derivedNew = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-			rawPassword: newPassword,
-			authVersion: this.sdkConfig.authVersion!,
-			salt: newSalt
-		})
+		if (
+			!this.sdkConfig.privateKey ||
+			!this.sdkConfig.publicKey ||
+			!this.sdkConfig.masterKeys ||
+			!this.sdkConfig.authVersion ||
+			!this.sdkConfig.email
+		) {
+			throw new Error("Invalid SDK config.")
+		}
+
+		const [authInfo, newSalt] = await Promise.all([
+			this.api.v3().auth().info({
+				email: this.sdkConfig.email
+			}),
+			this.sdk.getWorker().crypto.utils.generateRandomString(256)
+		])
+
+		const [derivedCurrent, derivedNew] = await Promise.all([
+			this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+				rawPassword: currentPassword,
+				authVersion: this.sdkConfig.authVersion,
+				salt: authInfo.salt
+			}),
+			this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+				rawPassword: newPassword,
+				authVersion: this.sdkConfig.authVersion,
+				salt: newSalt
+			})
+		])
+
 		const newMasterKeys: string[] = [
-			...this.sdkConfig.masterKeys!.filter(key => key !== derivedNew.derivedMasterKeys),
+			...this.sdkConfig.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
 			derivedNew.derivedMasterKeys
 		]
-		const newMasterKeysEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
-			metadata: newMasterKeys.join("|"),
-			key: derivedNew.derivedMasterKeys
-		})
 
-		const response = await this.api.v3().user().settingsPassword().change({
-			password: derivedNew.derivedPassword,
-			currentPassword: derivedCurrent.derivedPassword,
-			authVersion: this.sdkConfig.authVersion!,
-			salt: newSalt,
-			masterKeys: newMasterKeysEncrypted
-		})
+		const [newMasterKeysEncrypted, privateKeyReEncrypted] = await Promise.all([
+			this.sdk.getWorker().crypto.encrypt.metadata({
+				metadata: newMasterKeys.join("|"),
+				key: derivedNew.derivedMasterKeys
+			}),
+			this.sdk.getWorker().crypto.encrypt.metadata({
+				metadata: this.sdkConfig.privateKey,
+				key: derivedNew.derivedMasterKeys
+			})
+		])
+
+		const [response] = await Promise.all([
+			this.api.v3().user().settingsPassword().change({
+				password: derivedNew.derivedPassword,
+				currentPassword: derivedCurrent.derivedPassword,
+				authVersion: this.sdkConfig.authVersion!,
+				salt: newSalt,
+				masterKeys: newMasterKeysEncrypted
+			}),
+			this.api.v3().user().keyPair().update({
+				publicKey: this.sdkConfig.publicKey,
+				encryptedPrivateKey: privateKeyReEncrypted
+			})
+		])
 
 		return response.newAPIKey
 	}
@@ -402,7 +454,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async disableTwoFactorAuthentication({ twoFactorCode }: { twoFactorCode: string }): Promise<void> {
-		return await this.api.v3().user().twoFactorAuthentication().disable({ code: twoFactorCode })
+		return await this.api.v3().user().twoFactorAuthentication().disable({
+			code: twoFactorCode
+		})
 	}
 
 	/**
@@ -422,7 +476,13 @@ export class User {
 				filter: params && params.filter ? params.filter : "all"
 			})
 
-		return await Promise.all(result.map(event => this.sdk.getWorker().crypto.decrypt.event({ event })))
+		return await Promise.all(
+			result.map(event =>
+				this.sdk.getWorker().crypto.decrypt.event({
+					event
+				})
+			)
+		)
 	}
 
 	/**
@@ -436,7 +496,11 @@ export class User {
 	 * @returns {Promise<UserEventResponse>}
 	 */
 	public async event({ uuid }: { uuid: string }): Promise<UserEventResponse> {
-		return await this.sdk.getWorker().crypto.decrypt.event({ event: await this.api.v3().user().event({ uuid }) })
+		return await this.sdk.getWorker().crypto.decrypt.event({
+			event: await this.api.v3().user().event({
+				uuid
+			})
+		})
 	}
 
 	/**
@@ -450,7 +514,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async cancelSubscription({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().user().sub().cancel({ uuid })
+		await this.api.v3().user().sub().cancel({
+			uuid
+		})
 	}
 
 	/**
@@ -465,7 +531,12 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async createSubscription({ planId, paymentMethod }: { planId: number; paymentMethod: PaymentMethods }): Promise<string> {
-		return (await this.api.v3().user().sub().create({ planId, method: paymentMethod })).url
+		return (
+			await this.api.v3().user().sub().create({
+				planId,
+				method: paymentMethod
+			})
+		).url
 	}
 
 	/**
@@ -479,7 +550,9 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async generateInvoice({ uuid }: { uuid: string }): Promise<string> {
-		return await this.api.v3().user().invoice({ uuid })
+		return await this.api.v3().user().invoice({
+			uuid
+		})
 	}
 
 	/**
@@ -494,7 +567,10 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async requestAffiliatePayout({ method, address }: { method: string; address: string }): Promise<void> {
-		await this.api.v3().user().affiliate().payout({ address, method })
+		await this.api.v3().user().affiliate().payout({
+			address,
+			method
+		})
 	}
 
 	/**
@@ -508,7 +584,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async versioning({ enabled }: { enabled: boolean }): Promise<void> {
-		await this.api.v3().user().versioning({ enable: enabled })
+		await this.api.v3().user().versioning({
+			enable: enabled
+		})
 	}
 
 	/**
@@ -522,7 +600,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async loginAlerts({ enabled }: { enabled: boolean }): Promise<void> {
-		await this.api.v3().user().loginAlerts({ enable: enabled })
+		await this.api.v3().user().loginAlerts({
+			enable: enabled
+		})
 	}
 
 	/**
@@ -536,7 +616,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async updateNickname({ nickname }: { nickname: string }): Promise<void> {
-		await this.api.v3().user().nickname({ nickname })
+		await this.api.v3().user().nickname({
+			nickname
+		})
 	}
 
 	/**
@@ -550,7 +632,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async appearOffline({ enabled }: { enabled: boolean }): Promise<void> {
-		await this.api.v3().user().appearOffline({ appearOffline: enabled })
+		await this.api.v3().user().appearOffline({
+			appearOffline: enabled
+		})
 	}
 
 	/**
@@ -564,7 +648,9 @@ export class User {
 	 * @returns {Promise<UserProfileResponse>}
 	 */
 	public async profile({ id }: { id: number }): Promise<UserProfileResponse> {
-		return await this.api.v3().user().profile({ id })
+		return await this.api.v3().user().profile({
+			id
+		})
 	}
 
 	/**
@@ -578,7 +664,9 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async updateDesktopLastActive({ timestamp }: { timestamp: number }): Promise<void> {
-		await this.api.v3().user().lastActive().desktop({ timestamp })
+		await this.api.v3().user().lastActive().desktop({
+			timestamp
+		})
 	}
 
 	/**
