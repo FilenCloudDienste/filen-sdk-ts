@@ -98,14 +98,11 @@ export class Decrypt {
 					throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
 				}
 			} else if (version === "003") {
-				const keyBuffer = await deriveKeyFromPassword({
-					password: key,
-					salt: key,
-					iterations: 1,
-					hash: "sha512",
-					bitLength: 256,
-					returnHex: false
-				})
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.metadata] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const keyBuffer = Buffer.from(key, "hex")
 				const ivBuffer = Buffer.from(metadata.slice(3, 27), "hex")
 				const encrypted = Buffer.from(metadata.slice(27), "base64")
 

@@ -867,7 +867,9 @@ export class Cloud {
 	 */
 	public async editFileMetadata({ uuid, metadata }: { uuid: string; metadata: FileMetadata }): Promise<void> {
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFn({ input: metadata.name.toLowerCase() }),
+			this.sdk.getWorker().crypto.utils.hashFn({
+				input: metadata.name.toLowerCase()
+			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify(metadata)
 			}),
@@ -4979,7 +4981,9 @@ export class Cloud {
 	 * @returns {Promise<GetDirResult>}
 	 */
 	public async getDirectory({ uuid }: { uuid: string }): Promise<GetDirResult> {
-		const dir = await this.api.v3().dir().get({ uuid })
+		const dir = await this.api.v3().dir().get({
+			uuid
+		})
 		const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
 			metadata: dir.nameEncrypted
 		})

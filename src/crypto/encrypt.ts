@@ -103,36 +103,21 @@ export class Encrypt {
 				throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`)
 			}
 		} else if (version === 3) {
+			if (derive) {
+				throw new Error("Derivation not supported for version 3. Hex encoded key must be provided.")
+			}
+
 			const ivBuffer = await generateRandomBytes(12)
+			const keyBuffer = Buffer.from(keyToUse, "hex")
 
 			if (environment === "node") {
-				const derivedKey = derive
-					? await deriveKeyFromPassword({
-							password: keyToUse,
-							salt: keyToUse,
-							iterations: 1,
-							hash: "sha512",
-							bitLength: 256,
-							returnHex: false
-					  })
-					: this.textEncoder.encode(keyToUse)
 				const dataBuffer = this.textEncoder.encode(metadata)
-				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", derivedKey, ivBuffer)
+				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer)
 				const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()])
 				const authTag = cipher.getAuthTag()
 
 				return `003${ivBuffer.toString("hex")}${Buffer.concat([encrypted, authTag]).toString("base64")}`
 			} else if (environment === "browser") {
-				const derivedKey = derive
-					? await deriveKeyFromPassword({
-							password: keyToUse,
-							salt: keyToUse,
-							iterations: 1,
-							hash: "sha512",
-							bitLength: 256,
-							returnHex: false
-					  })
-					: Buffer.from(keyToUse, "utf-8")
 				const dataBuffer = this.textEncoder.encode(metadata)
 				const encrypted = await globalThis.crypto.subtle.encrypt(
 					{
@@ -140,7 +125,7 @@ export class Encrypt {
 						iv: ivBuffer
 					},
 					await importRawKey({
-						key: derivedKey as Buffer,
+						key: keyBuffer,
 						algorithm: "AES-GCM",
 						mode: ["encrypt"],
 						keyCache: false
