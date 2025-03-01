@@ -36,16 +36,7 @@ export class Encrypt {
 		return 2
 	}
 
-	public async metadata({
-		metadata,
-		key,
-		derive = true
-	}: {
-		metadata: string
-		key?: string
-		derive?: boolean
-		version?: number
-	}): Promise<string> {
+	public async metadata({ metadata, key, derive = true }: { metadata: string; key?: string; derive?: boolean }): Promise<string> {
 		const keyToUse = key ? key : this.sdk.config.masterKeys ? this.sdk.config.masterKeys.at(-1) : undefined
 
 		if (!keyToUse) {
