@@ -106,32 +106,7 @@ export class FilenSDK {
 		this.events = new TypedEventEmitter<Events>()
 		this.axiosInstance = axiosInstance ? axiosInstance : axios.create()
 
-		this._crypto =
-			params.masterKeys && params.publicKey && params.privateKey
-				? new Crypto({
-						masterKeys: params.masterKeys,
-						publicKey: params.publicKey,
-						privateKey: params.privateKey,
-						metadataCache: params.metadataCache ? params.metadataCache : false,
-						tmpPath:
-							environment === "browser"
-								? "/dev/null"
-								: params.tmpPath
-								? utils.normalizePath(params.tmpPath)
-								: utils.normalizePath(os.tmpdir())
-				  })
-				: new Crypto({
-						masterKeys: [],
-						publicKey: "",
-						privateKey: "",
-						metadataCache: params.metadataCache ? params.metadataCache : false,
-						tmpPath:
-							environment === "browser"
-								? "/dev/null"
-								: params.tmpPath
-								? utils.normalizePath(params.tmpPath)
-								: utils.normalizePath(os.tmpdir())
-				  })
+		this._crypto = new Crypto(this)
 
 		this._api = params.apiKey
 			? new API({
@@ -294,32 +269,7 @@ export class FilenSDK {
 	public init(params: FilenSDKConfig): void {
 		this.config = params
 
-		this._crypto =
-			params.masterKeys && params.publicKey && params.privateKey
-				? new Crypto({
-						masterKeys: params.masterKeys,
-						publicKey: params.publicKey,
-						privateKey: params.privateKey,
-						metadataCache: params.metadataCache ? params.metadataCache : false,
-						tmpPath:
-							environment === "browser"
-								? "/dev/null"
-								: params.tmpPath
-								? utils.normalizePath(params.tmpPath)
-								: utils.normalizePath(os.tmpdir())
-				  })
-				: new Crypto({
-						masterKeys: [],
-						publicKey: "",
-						privateKey: "",
-						metadataCache: params.metadataCache ? params.metadataCache : false,
-						tmpPath:
-							environment === "browser"
-								? "/dev/null"
-								: params.tmpPath
-								? utils.normalizePath(params.tmpPath)
-								: utils.normalizePath(os.tmpdir())
-				  })
+		this._crypto = new Crypto(this)
 
 		this._api = params.apiKey
 			? new API({
@@ -420,7 +370,7 @@ export class FilenSDK {
 	}): Promise<void> {
 		const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
 			metadata: privateKey,
-			key: masterKeys[masterKeys.length - 1]
+			key: masterKeys.at(-1)
 		})
 
 		await this._api.v3().user().keyPair().update({
@@ -456,7 +406,7 @@ export class FilenSDK {
 	}): Promise<void> {
 		const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
 			metadata: privateKey,
-			key: masterKeys[masterKeys.length - 1]
+			key: masterKeys.at(-1)
 		})
 
 		await this._api.v3().user().keyPair().set({
@@ -564,7 +514,7 @@ export class FilenSDK {
 		apiKey: string
 		masterKeys: string[]
 	}): Promise<{ masterKeys: string[]; publicKey: string; privateKey: string }> {
-		const currentLastMasterKey = masterKeys[masterKeys.length - 1]
+		const currentLastMasterKey = masterKeys.at(-1)
 
 		if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
 			throw new Error("Invalid current master key.")
@@ -854,7 +804,6 @@ export default FilenSDK
 export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree, CloudConfig } from "./cloud"
 export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs"
 export * from "./types"
-export { CryptoConfig } from "./crypto"
 export * from "./constants"
 export * from "./api/errors"
 export * from "./cloud/signals"

@@ -24,7 +24,7 @@ import {
 	MAX_DOWNLOAD_THREADS,
 	MAX_DOWNLOAD_WRITERS,
 	MAX_UPLOAD_THREADS,
-	CURRENT_FILE_ENCRYPTION_VERSION,
+	DATA_ENCRYPTION_VERSION,
 	DEFAULT_UPLOAD_BUCKET,
 	DEFAULT_UPLOAD_REGION,
 	UPLOAD_CHUNK_SIZE,
@@ -3812,7 +3812,7 @@ export class Cloud {
 				mime: mimeEncrypted,
 				rm,
 				metadata,
-				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				version: DATA_ENCRYPTION_VERSION,
 				uploadKey
 			})
 
@@ -3828,7 +3828,7 @@ export class Cloud {
 				timestamp: Date.now(),
 				parent,
 				rm,
-				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				version: DATA_ENCRYPTION_VERSION,
 				chunks: fileChunks,
 				favorited: false,
 				key,
@@ -4036,7 +4036,7 @@ export class Cloud {
 						timestamp: Date.now(),
 						parent,
 						rm: "",
-						version: CURRENT_FILE_ENCRYPTION_VERSION,
+						version: DATA_ENCRYPTION_VERSION,
 						chunks: item.type === "directory" ? 0 : item.metadata.chunks,
 						favorited: false,
 						key,
@@ -4343,7 +4343,7 @@ export class Cloud {
 				mime: mimeEncrypted,
 				rm,
 				metadata,
-				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				version: DATA_ENCRYPTION_VERSION,
 				uploadKey
 			})
 
@@ -4359,7 +4359,7 @@ export class Cloud {
 				timestamp: Date.now(),
 				parent,
 				rm,
-				version: CURRENT_FILE_ENCRYPTION_VERSION,
+				version: DATA_ENCRYPTION_VERSION,
 				chunks: fileChunks,
 				favorited: false,
 				key,

@@ -1,5 +1,5 @@
-import { environment, BUFFER_SIZE, METADATA_ENCRYPTION_VERSION, DATA_ENCRYPTION_VERSION } from "../constants"
-import type { CryptoConfig } from "."
+import { environment, BUFFER_SIZE, DATA_ENCRYPTION_VERSION } from "../constants"
+import os from "os"
 import nodeCrypto from "crypto"
 import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawKey, generateRandomBytes } from "./utils"
 import { uuidv4, normalizePath } from "../utils"
@@ -7,6 +7,7 @@ import pathModule from "path"
 import fs from "fs-extra"
 import { pipeline } from "stream"
 import { promisify } from "util"
+import type FilenSDK from ".."
 
 const pipelineAsync = promisify(pipeline)
 
@@ -19,37 +20,39 @@ const pipelineAsync = promisify(pipeline)
  * @typedef {Encrypt}
  */
 export class Encrypt {
-	private readonly config: CryptoConfig
+	private readonly sdk: FilenSDK
 	private readonly textEncoder = new TextEncoder()
 
-	/**
-	 * Creates an instance of Encrypt.
-	 * @date 1/31/2024 - 3:59:21 PM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {CryptoConfig} params
-	 */
-	public constructor(params: CryptoConfig) {
-		this.config = params
+	public constructor(sdk: FilenSDK) {
+		this.sdk = sdk
+	}
+
+	public keyLengthToVersionMetdata(key: string): number {
+		// V3 keys are 64 hex chars (32 random bytes)
+		if (key.length === 64) {
+			return 3
+		}
+
+		return 2
 	}
 
 	public async metadata({
 		metadata,
 		key,
-		derive = true,
-		version = METADATA_ENCRYPTION_VERSION
+		derive = true
 	}: {
 		metadata: string
 		key?: string
 		derive?: boolean
 		version?: number
 	}): Promise<string> {
-		const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1]
+		const keyToUse = key ? key : this.sdk.config.masterKeys ? this.sdk.config.masterKeys.at(-1) : undefined
 
 		if (!keyToUse) {
-			throw new Error("No key to use.")
+			throw new Error("crypto.encrypt.metadata no key to use.")
 		}
+
+		const version = this.keyLengthToVersionMetdata(keyToUse)
 
 		if (version === 2) {
 			const iv = await generateRandomString(12)
@@ -103,10 +106,6 @@ export class Encrypt {
 				throw new Error(`crypto.encrypt.metadata not implemented for ${environment} environment`)
 			}
 		} else if (version === 3) {
-			if (derive) {
-				throw new Error("Derivation not supported for version 3. Hex encoded key must be provided.")
-			}
-
 			const ivBuffer = await generateRandomBytes(12)
 			const keyBuffer = Buffer.from(keyToUse, "hex")
 
@@ -155,7 +154,9 @@ export class Encrypt {
 	 */
 	public async metadataPublic({ metadata, publicKey }: { metadata: string; publicKey: string }): Promise<string> {
 		if (environment === "node") {
-			const pemKey = await derKeyToPem({ key: publicKey })
+			const pemKey = await derKeyToPem({
+				key: publicKey
+			})
 			const encrypted = nodeCrypto.publicEncrypt(
 				{
 					key: pemKey,
@@ -167,7 +168,10 @@ export class Encrypt {
 
 			return Buffer.from(encrypted).toString("base64")
 		} else if (environment === "browser") {
-			const importedPublicKey = await importPublicKey({ publicKey, mode: ["encrypt"] })
+			const importedPublicKey = await importPublicKey({
+				publicKey,
+				mode: ["encrypt"]
+			})
 			const encrypted = await globalThis.crypto.subtle.encrypt(
 				{
 					name: "RSA-OAEP"
@@ -198,7 +202,10 @@ export class Encrypt {
 			throw new Error("Invalid key.")
 		}
 
-		return await this.metadata({ metadata: JSON.stringify({ message }), key })
+		return await this.metadata({
+			metadata: JSON.stringify({ message }),
+			key
+		})
 	}
 
 	/**
@@ -217,7 +224,10 @@ export class Encrypt {
 			throw new Error("Invalid key.")
 		}
 
-		return await this.metadata({ metadata: JSON.stringify({ content }), key })
+		return await this.metadata({
+			metadata: JSON.stringify({ content }),
+			key
+		})
 	}
 
 	/**
@@ -236,7 +246,10 @@ export class Encrypt {
 			throw new Error("Invalid key.")
 		}
 
-		return await this.metadata({ metadata: JSON.stringify({ title }), key })
+		return await this.metadata({
+			metadata: JSON.stringify({ title }),
+			key
+		})
 	}
 
 	/**
@@ -255,7 +268,10 @@ export class Encrypt {
 			throw new Error("Invalid key.")
 		}
 
-		return await this.metadata({ metadata: JSON.stringify({ preview }), key })
+		return await this.metadata({
+			metadata: JSON.stringify({ preview }),
+			key
+		})
 	}
 
 	/**
@@ -270,13 +286,16 @@ export class Encrypt {
 	 * @returns {Promise<string>}
 	 */
 	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
-		const keyToUse = key ? key : this.config.masterKeys[this.config.masterKeys.length - 1]
+		const keyToUse = key ? key : this.sdk.config.masterKeys ? this.sdk.config.masterKeys.at(-1) : undefined
 
 		if (keyToUse!.length === 0) {
 			throw new Error("Invalid key.")
 		}
 
-		return await this.metadata({ metadata: JSON.stringify({ name }), key: keyToUse! })
+		return await this.metadata({
+			metadata: JSON.stringify({ name }),
+			key: keyToUse!
+		})
 	}
 
 	/**
@@ -296,7 +315,9 @@ export class Encrypt {
 		}
 
 		return await this.metadata({
-			metadata: JSON.stringify({ name }),
+			metadata: JSON.stringify({
+				name
+			}),
 			key
 		})
 	}
@@ -396,7 +417,7 @@ export class Encrypt {
 		}
 
 		const input = normalizePath(inputFile)
-		const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()))
+		const output = normalizePath(outputFile ? outputFile : pathModule.join(this.sdk.config.tmpPath ?? os.tmpdir(), await uuidv4()))
 
 		if (!(await fs.exists(input))) {
 			throw new Error("Input file does not exist.")
