@@ -8,7 +8,6 @@ export declare const MAX_CONCURRENT_DOWNLOADS = 16;
 export declare const MAX_DOWNLOAD_THREADS = 32;
 export declare const MAX_DOWNLOAD_WRITERS = 64;
 export declare const MAX_UPLOAD_THREADS = 16;
-export declare const CURRENT_FILE_ENCRYPTION_VERSION = 2;
 export declare const DEFAULT_UPLOAD_REGION = "de-1";
 export declare const DEFAULT_UPLOAD_BUCKET = "filen-1";
 export declare const UPLOAD_CHUNK_SIZE: number;

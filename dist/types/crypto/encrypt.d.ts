@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import type { CryptoConfig } from ".";
+import { type FilenSDK, type FileEncryptionVersion } from "..";
 /**
  * Encrypt
  * @date 2/1/2024 - 2:44:28 AM
@@ -9,27 +9,10 @@ import type { CryptoConfig } from ".";
  * @typedef {Encrypt}
  */
 export declare class Encrypt {
-    private readonly config;
+    private readonly sdk;
     private readonly textEncoder;
-    /**
-     * Creates an instance of Encrypt.
-     * @date 1/31/2024 - 3:59:21 PM
-     *
-     * @constructor
-     * @public
-     * @param {CryptoConfig} params
-     */
-    constructor(params: CryptoConfig);
-    /**
-     * Encrypt a string using the user's last master key.
-     * @date 1/31/2024 - 3:59:29 PM
-     *
-     * @public
-     * @async
-     * @param {{ data: string }} param0
-     * @param {string} param0.data
-     * @returns {Promise<string>}
-     */
+    constructor(sdk: FilenSDK);
+    keyLengthToVersionMetdata(key: string): number;
     metadata({ metadata, key, derive }: {
         metadata: string;
         key?: string;
@@ -140,33 +123,11 @@ export declare class Encrypt {
         name: string;
         key: string;
     }): Promise<string>;
-    /**
-     * Encrypt data.
-     * @date 2/7/2024 - 1:50:47 AM
-     *
-     * @public
-     * @async
-     * @param {{ data: Buffer; key: string }} param0
-     * @param {Buffer} param0.data
-     * @param {string} param0.key
-     * @returns {Promise<Buffer>}
-     */
+    keyLengthToVersionData(key: string): FileEncryptionVersion;
     data({ data, key }: {
         data: Buffer;
         key: string;
     }): Promise<Buffer>;
-    /**
-     * Encrypt a file/chunk using streams. Only available in a Node.JS environment.
-     * @date 2/7/2024 - 1:51:28 AM
-     *
-     * @public
-     * @async
-     * @param {{ inputFile: string; key: string; outputFile?: string }} param0
-     * @param {string} param0.inputFile
-     * @param {string} param0.key
-     * @param {string} param0.outputFile
-     * @returns {Promise<string>}
-     */
     dataStream({ inputFile, key, outputFile }: {
         inputFile: string;
         key: string;

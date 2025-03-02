@@ -3,44 +3,66 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.EVP_BytesToKey = exports.generateKeyPair = exports.bufferToHash = exports.importPBKDF2Key = exports.importRawKey = exports.importPrivateKey = exports.importPublicKey = exports.derKeyToPem = exports.generatePasswordAndMasterKeyBasedOnAuthVersion = exports.hashPassword = exports.normalizeHash = exports.hashFn = exports.deriveKeyFromPassword = exports.generateRandomString = void 0;
+exports.utils = exports.EVP_BytesToKey = exports.generateKeyPair = exports.bufferToHash = exports.importPBKDF2Key = exports.importRawKey = exports.importPrivateKey = exports.importPublicKey = exports.derKeyToPem = exports.generatePasswordAndMasterKeyBasedOnAuthVersion = exports.hashPassword = exports.normalizeHash = exports.hashFn = exports.deriveKeyFromPassword = exports.generateRandomURLSafeString = exports.generateRandomBytes = exports.generateRandomString = exports.charset = exports.urlSafeCharset = void 0;
 const constants_1 = require("../constants");
 const crypto_1 = __importDefault(require("crypto"));
 const crypto_api_v1_1 = __importDefault(require("crypto-api-v1"));
 const js_crypto_key_utils_1 = __importDefault(require("js-crypto-key-utils"));
 const cache_1 = __importDefault(require("../cache"));
 const utils_1 = require("../utils");
+const argon2_1 = require("@noble/hashes/argon2");
 const textEncoder = new TextEncoder();
-/**
- * Generate a cryptographically secure random string of given length.
- * @date 1/31/2024 - 4:01:20 PM
- *
- * @export
- * @param {{ length: number }} param0
- * @param {number} param0.length
- * @returns {string}
- */
-async function generateRandomString({ length }) {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const textDecoder = new TextDecoder();
+exports.urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+exports.charset = textDecoder.decode(new Uint8Array(Array.from({
+    length: 128
+}, (_, i) => i)));
+async function generateRandomString(length = 32) {
     if (constants_1.environment === "node") {
-        const randomBytes = crypto_1.default.randomBytes(length + 2);
-        const result = new Array(length);
-        let cursor = 0;
-        for (let i = 0; i < length; i++) {
-            cursor += randomBytes[i];
-            result[i] = chars[cursor % chars.length];
-        }
-        return result.join("");
+        const array = crypto_1.default.randomBytes(length);
+        return Array.from(array)
+            .map(byte => exports.charset[byte & 0x7f])
+            .join("");
     }
     else if (constants_1.environment === "browser") {
         const array = new Uint8Array(length);
         globalThis.crypto.getRandomValues(array);
-        const randomNumbers = Array.from(array).map(x => x % chars.length);
-        return randomNumbers.map(x => chars[x]).join("");
+        return Array.from(array)
+            .map(byte => exports.charset[byte & 0x7f])
+            .join("");
     }
     throw new Error(`crypto.utils.generateRandomString not implemented for ${constants_1.environment} environment`);
 }
 exports.generateRandomString = generateRandomString;
+async function generateRandomBytes(length = 32) {
+    if (constants_1.environment === "node") {
+        return crypto_1.default.randomBytes(length);
+    }
+    else if (constants_1.environment === "browser") {
+        const array = new Uint8Array(length);
+        globalThis.crypto.getRandomValues(array);
+        return Buffer.from(array);
+    }
+    throw new Error(`crypto.utils.generateRandomBytes not implemented for ${constants_1.environment} environment`);
+}
+exports.generateRandomBytes = generateRandomBytes;
+async function generateRandomURLSafeString(length = 32) {
+    if (constants_1.environment === "node") {
+        const array = crypto_1.default.randomBytes(length);
+        return Array.from(array)
+            .map(byte => exports.urlSafeCharset[byte % exports.urlSafeCharset.length])
+            .join("");
+    }
+    else if (constants_1.environment === "browser") {
+        const array = new Uint8Array(length);
+        globalThis.crypto.getRandomValues(array);
+        return Array.from(array)
+            .map(byte => exports.urlSafeCharset[byte % exports.urlSafeCharset.length])
+            .join("");
+    }
+    throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${constants_1.environment} environment`);
+}
+exports.generateRandomURLSafeString = generateRandomURLSafeString;
 /**
  * Derive a key from given inputs using PBKDF2.
  * @date 2/1/2024 - 6:14:25 PM
@@ -166,8 +188,7 @@ async function hashPassword({ password }) {
 }
 exports.hashPassword = hashPassword;
 /**
- * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
- * @date 2/2/2024 - 6:16:04 PM
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use. V2 uses PBKDF2, while V3 uses Argon2id.
  *
  * @export
  * @async
@@ -182,7 +203,10 @@ async function generatePasswordAndMasterKeyBasedOnAuthVersion({ rawPassword, aut
         // DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
         const derivedPassword = await hashPassword({ password: rawPassword });
         const derivedMasterKeys = await hashFn({ input: rawPassword });
-        return { derivedMasterKeys, derivedPassword };
+        return {
+            derivedMasterKeys,
+            derivedPassword
+        };
     }
     else if (authVersion === 2) {
         const derivedKey = await deriveKeyFromPassword({
@@ -204,7 +228,25 @@ async function generatePasswordAndMasterKeyBasedOnAuthVersion({ rawPassword, aut
         else {
             throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${constants_1.environment} environment`);
         }
-        return { derivedMasterKeys, derivedPassword };
+        return {
+            derivedMasterKeys,
+            derivedPassword
+        };
+    }
+    else if (authVersion === 3) {
+        const derived = Buffer.from(await (0, argon2_1.argon2idAsync)(rawPassword, salt, {
+            t: 3,
+            m: 65536,
+            p: 4,
+            version: 0x13,
+            dkLen: 64
+        })).toString("hex");
+        const derivedMasterKeys = derived.substring(0, derived.length / 2);
+        const derivedPassword = derived.substring(derived.length / 2, derived.length);
+        return {
+            derivedMasterKeys,
+            derivedPassword
+        };
     }
     else {
         throw new Error(`Invalid authVersion: ${authVersion}`);
@@ -485,7 +527,9 @@ exports.utils = {
     bufferToHash,
     generateKeyPair,
     importRawKey,
-    importPBKDF2Key
+    importPBKDF2Key,
+    generateRandomBytes,
+    generateRandomURLSafeString
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map

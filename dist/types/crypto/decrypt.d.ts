@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import type { CryptoConfig } from ".";
+import type FilenSDK from "..";
 import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types";
 import { type UserEvent } from "../api/v3/user/events";
 /**
@@ -11,17 +11,9 @@ import { type UserEvent } from "../api/v3/user/events";
  * @typedef {Decrypt}
  */
 export declare class Decrypt {
-    private readonly config;
+    private readonly sdk;
     private readonly textDecoder;
-    /**
-     * Creates an instance of Decrypt.
-     * @date 1/31/2024 - 3:59:10 PM
-     *
-     * @constructor
-     * @public
-     * @param {CryptoConfig} params
-     */
-    constructor(params: CryptoConfig);
+    constructor(sdk: FilenSDK);
     /**
      * Decrypt a string with the given key.
      * @date 1/31/2024 - 3:58:27 PM

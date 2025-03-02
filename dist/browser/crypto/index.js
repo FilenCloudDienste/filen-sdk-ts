@@ -10,21 +10,13 @@ import utils from "./utils";
  * @typedef {Crypto}
  */
 export class Crypto {
-    config;
+    sdk;
     _encrypt;
     _decrypt;
-    /**
-     * Creates an instance of Crypto.
-     * @date 1/31/2024 - 4:30:23 PM
-     *
-     * @constructor
-     * @public
-     * @param {CryptoConfig} params
-     */
-    constructor(params) {
-        this.config = params;
-        this._encrypt = new Encrypt(this.config);
-        this._decrypt = new Decrypt(this.config);
+    constructor(sdk) {
+        this.sdk = sdk;
+        this._encrypt = new Encrypt(this.sdk);
+        this._decrypt = new Decrypt(this.sdk);
     }
     /**
      * Returns an Encrypt instance.

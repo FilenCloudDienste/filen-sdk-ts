@@ -605,7 +605,9 @@ class Cloud {
      */
     async editFileMetadata({ uuid, metadata }) {
         const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-            this.sdk.getWorker().crypto.utils.hashFn({ input: metadata.name.toLowerCase() }),
+            this.sdk.getWorker().crypto.utils.hashFn({
+                input: metadata.name.toLowerCase()
+            }),
             this.sdk.getWorker().crypto.encrypt.metadata({
                 metadata: JSON.stringify(metadata)
             }),
@@ -615,7 +617,7 @@ class Cloud {
             })
         ]);
         try {
-            await this.api.v3().file().rename({
+            await this.api.v3().file().metadata({
                 uuid,
                 metadataEncrypted,
                 nameEncrypted,
@@ -906,10 +908,21 @@ class Cloud {
             }
             else {
                 const [metadataEncrypted, nameHashed] = await Promise.all([
-                    this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ name }) }),
-                    this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() })
+                    this.sdk.getWorker().crypto.encrypt.metadata({
+                        metadata: JSON.stringify({
+                            name
+                        })
+                    }),
+                    this.sdk.getWorker().crypto.utils.hashFn({
+                        input: name.toLowerCase()
+                    })
                 ]);
-                await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent });
+                await this.api.v3().dir().create({
+                    uuid: uuidToUse,
+                    metadataEncrypted,
+                    nameHashed,
+                    parent
+                });
                 await this.checkIfItemParentIsShared({
                     type: "directory",
                     parent,
@@ -1165,9 +1178,11 @@ class Cloud {
         if (type === "directory") {
             const [tree, key] = await Promise.all([
                 this.getDirectoryTree({ uuid }),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+                this.sdk.getWorker().crypto.utils.generateRandomString(32)
             ]);
-            const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({ metadata: key });
+            const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
+                metadata: key
+            });
             let done = 0;
             const promises = [];
             const total = Object.keys(tree).length;
@@ -1185,7 +1200,9 @@ class Cloud {
                         expiration: "never",
                         linkKeyEncrypted,
                         metadata: item.type === "directory"
-                            ? ({ name: item.name })
+                            ? ({
+                                name: item.name
+                            })
                             : ({
                                 name: item.name,
                                 size: item.size,
@@ -1218,10 +1235,12 @@ class Cloud {
             fileUUID: uuid,
             expiration: "never",
             password: "empty",
-            passwordHashed: await this.sdk.getWorker().crypto.utils.hashFn({ input: "empty" }),
+            passwordHashed: await this.sdk.getWorker().crypto.utils.hashFn({
+                input: "empty"
+            }),
             downloadBtn: true,
             type: "enable",
-            salt: await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+            salt: await this.sdk.getWorker().crypto.utils.generateRandomString(32)
         });
         return linkUUID;
     }
@@ -1248,7 +1267,7 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async editPublicLink({ type, itemUUID, linkUUID, password, enableDownload = true, expiration = "never" }) {
-        const salt = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 });
+        const salt = await this.sdk.getWorker().crypto.utils.generateRandomString(32);
         const pass = password && password.length > 0 ? "notempty" : "empty";
         const passHashed = password && password.length > 0
             ? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
@@ -1261,11 +1280,14 @@ class Cloud {
             })
             : "empty";
         if (type === "directory") {
-            await this.api
-                .v3()
-                .dir()
-                .link()
-                .edit({ uuid: itemUUID, expiration, password: pass, passwordHashed: passHashed, salt, downloadBtn: enableDownload });
+            await this.api.v3().dir().link().edit({
+                uuid: itemUUID,
+                expiration,
+                password: pass,
+                passwordHashed: passHashed,
+                salt,
+                downloadBtn: enableDownload
+            });
             return;
         }
         if (!linkUUID) {
@@ -1315,8 +1337,10 @@ class Cloud {
             fileUUID: itemUUID,
             expiration: "never",
             password: "empty",
-            passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({ password: "empty" }),
-            salt: await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
+            passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({
+                password: "empty"
+            }),
+            salt: await this.sdk.getWorker().crypto.utils.generateRandomString(32),
             downloadBtn: true,
             type: "disable"
         });
@@ -1837,10 +1861,15 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async renameSharedItem({ uuid, receiverId, metadata, publicKey }) {
-        const metadataEncrypted = await this.sdk
-            .getWorker()
-            .crypto.encrypt.metadataPublic({ metadata: JSON.stringify(metadata), publicKey });
-        await this.api.v3().item().sharedRename({ uuid, receiverId, metadata: metadataEncrypted });
+        const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+            metadata: JSON.stringify(metadata),
+            publicKey
+        });
+        await this.api.v3().item().sharedRename({
+            uuid,
+            receiverId,
+            metadata: metadataEncrypted
+        });
     }
     /**
      * Rename a publicly linked item.
@@ -1889,8 +1918,12 @@ class Cloud {
      */
     async checkIfItemIsSharedForRename({ uuid, itemMetadata }) {
         const [isSharingItem, isLinkingItem] = await Promise.all([
-            this.api.v3().item().shared({ uuid }),
-            this.api.v3().item().linked({ uuid })
+            this.api.v3().item().shared({
+                uuid
+            }),
+            this.api.v3().item().linked({
+                uuid
+            })
         ]);
         if (!isSharingItem.sharing && !isLinkingItem.link) {
             return;
@@ -2703,14 +2736,24 @@ class Cloud {
             let aborted = false;
             const [uuid, key, rm, uploadKey] = await Promise.all([
                 (0, utils_1.uuidv4)(),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+                this.sdk.getWorker().crypto.utils.generateRandomString(32),
+                this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
+                this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
             ]);
+            const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key);
             const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
-                this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileName, key }),
-                this.sdk.getWorker().crypto.encrypt.metadata({ metadata: mimeType, key }),
-                this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileSize.toString(), key }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: fileName,
+                    key
+                }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: mimeType,
+                    key
+                }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: fileSize.toString(),
+                    key
+                }),
                 this.sdk.getWorker().crypto.encrypt.metadata({
                     metadata: JSON.stringify({
                         name: fileName,
@@ -2721,7 +2764,9 @@ class Cloud {
                         creation
                     })
                 }),
-                this.sdk.getWorker().crypto.utils.hashFn({ input: fileName.toLowerCase() })
+                this.sdk.getWorker().crypto.utils.hashFn({
+                    input: fileName.toLowerCase()
+                })
             ]);
             const waitForPause = async () => {
                 if (!pauseSignal || !pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || aborted) {
@@ -2811,7 +2856,7 @@ class Cloud {
                 mime: mimeEncrypted,
                 rm,
                 metadata,
-                version: constants_1.CURRENT_FILE_ENCRYPTION_VERSION,
+                version,
                 uploadKey
             });
             fileChunks = done.chunks;
@@ -2825,7 +2870,7 @@ class Cloud {
                 timestamp: Date.now(),
                 parent,
                 rm,
-                version: constants_1.CURRENT_FILE_ENCRYPTION_VERSION,
+                version,
                 chunks: fileChunks,
                 favorited: false,
                 key,
@@ -2920,9 +2965,10 @@ class Cloud {
             let closed = false;
             const [uuid, key, uploadKey] = await Promise.all([
                 (0, utils_1.uuidv4)(),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+                this.sdk.getWorker().crypto.utils.generateRandomString(32),
+                this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
             ]);
+            const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key);
             const waitForPause = async () => {
                 if (!pauseSignal || !pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || aborted || closed) {
                     return;
@@ -2987,7 +3033,7 @@ class Cloud {
                         timestamp: Date.now(),
                         parent,
                         rm: "",
-                        version: constants_1.CURRENT_FILE_ENCRYPTION_VERSION,
+                        version,
                         chunks: item.type === "directory" ? 0 : item.metadata.chunks,
                         favorited: false,
                         key,
@@ -3103,14 +3149,24 @@ class Cloud {
             let aborted = false;
             const [fileUUID, key, rm, uploadKey] = await Promise.all([
                 uuid ? Promise.resolve(uuid) : (0, utils_1.uuidv4)(),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 }),
-                this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+                this.sdk.getWorker().crypto.utils.generateRandomString(32),
+                this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
+                this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
             ]);
+            const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key);
             const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
-                this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileName, key }),
-                this.sdk.getWorker().crypto.encrypt.metadata({ metadata: mimeType, key }),
-                this.sdk.getWorker().crypto.encrypt.metadata({ metadata: fileSize.toString(), key }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: fileName,
+                    key
+                }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: mimeType,
+                    key
+                }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: fileSize.toString(),
+                    key
+                }),
                 this.sdk.getWorker().crypto.encrypt.metadata({
                     metadata: JSON.stringify({
                         name: fileName,
@@ -3120,7 +3176,9 @@ class Cloud {
                         lastModified
                     })
                 }),
-                this.sdk.getWorker().crypto.utils.hashFn({ input: fileName.toLowerCase() })
+                this.sdk.getWorker().crypto.utils.hashFn({
+                    input: fileName.toLowerCase()
+                })
             ]);
             const waitForPause = async () => {
                 if (!pauseSignal || !pauseSignal.isPaused() || (abortSignal === null || abortSignal === void 0 ? void 0 : abortSignal.aborted) || aborted) {
@@ -3210,7 +3268,7 @@ class Cloud {
                 mime: mimeEncrypted,
                 rm,
                 metadata,
-                version: constants_1.CURRENT_FILE_ENCRYPTION_VERSION,
+                version,
                 uploadKey
             });
             fileChunks = done.chunks;
@@ -3224,7 +3282,7 @@ class Cloud {
                 timestamp: Date.now(),
                 parent,
                 rm,
-                version: constants_1.CURRENT_FILE_ENCRYPTION_VERSION,
+                version,
                 chunks: fileChunks,
                 favorited: false,
                 key,
@@ -3608,11 +3666,17 @@ class Cloud {
         const pathParts = [];
         const file = await this.api.v3().file().get({ uuid });
         let nextParent = file.parent;
-        const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({ metadata: file.metadata });
+        const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
+            metadata: file.metadata
+        });
         pathParts.push(fileMetadataDecrypted.name.length > 0 ? fileMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`);
         while (nextParent !== this.sdkConfig.baseFolderUUID) {
-            const dir = await this.api.v3().dir().get({ uuid: nextParent });
-            const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: dir.nameEncrypted });
+            const dir = await this.api.v3().dir().get({
+                uuid: nextParent
+            });
+            const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+                metadata: dir.nameEncrypted
+            });
             pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`);
             nextParent = dir.parent;
         }
@@ -3629,13 +3693,21 @@ class Cloud {
      */
     async directoryUUIDToPath({ uuid }) {
         const pathParts = [];
-        const firstDir = await this.api.v3().dir().get({ uuid });
+        const firstDir = await this.api.v3().dir().get({
+            uuid
+        });
         let nextParent = firstDir.parent;
-        const firstDirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: firstDir.nameEncrypted });
+        const firstDirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+            metadata: firstDir.nameEncrypted
+        });
         pathParts.push(firstDirMetadataDecrypted.name.length > 0 ? firstDirMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`);
         while (nextParent !== this.sdkConfig.baseFolderUUID) {
-            const dir = await this.api.v3().dir().get({ uuid: nextParent });
-            const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: dir.nameEncrypted });
+            const dir = await this.api.v3().dir().get({
+                uuid: nextParent
+            });
+            const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+                metadata: dir.nameEncrypted
+            });
             pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`);
             nextParent = dir.parent;
         }
@@ -3652,7 +3724,9 @@ class Cloud {
      */
     async getFile({ uuid }) {
         const file = await this.api.v3().file().get({ uuid });
-        const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({ metadata: file.metadata });
+        const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
+            metadata: file.metadata
+        });
         return Object.assign(Object.assign({}, file), { metadataDecrypted: fileMetadataDecrypted, chunks: Math.ceil(file.size / constants_1.UPLOAD_CHUNK_SIZE) });
     }
     /**
@@ -3665,8 +3739,12 @@ class Cloud {
      * @returns {Promise<GetDirResult>}
      */
     async getDirectory({ uuid }) {
-        const dir = await this.api.v3().dir().get({ uuid });
-        const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: dir.nameEncrypted });
+        const dir = await this.api.v3().dir().get({
+            uuid
+        });
+        const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+            metadata: dir.nameEncrypted
+        });
         return Object.assign(Object.assign({}, dir), { metadataDecrypted: dirMetadataDecrypted });
     }
 }

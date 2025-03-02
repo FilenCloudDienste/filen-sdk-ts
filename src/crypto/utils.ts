@@ -5,6 +5,7 @@ import type { AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
 import { fastStringHash } from "../utils"
+import { argon2idAsync } from "@noble/hashes/argon2"
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -256,8 +257,7 @@ export async function hashPassword({ password }: { password: string }): Promise<
 }
 
 /**
- * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
- * @date 2/2/2024 - 6:16:04 PM
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use. V2 uses PBKDF2, while V3 uses Argon2id.
  *
  * @export
  * @async
@@ -281,7 +281,10 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 		const derivedPassword = await hashPassword({ password: rawPassword })
 		const derivedMasterKeys = await hashFn({ input: rawPassword })
 
-		return { derivedMasterKeys, derivedPassword }
+		return {
+			derivedMasterKeys,
+			derivedPassword
+		}
 	} else if (authVersion === 2) {
 		const derivedKey = await deriveKeyFromPassword({
 			password: rawPassword,
@@ -303,6 +306,24 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 		} else {
 			throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${environment} environment`)
 		}
+
+		return {
+			derivedMasterKeys,
+			derivedPassword
+		}
+	} else if (authVersion === 3) {
+		const derived = Buffer.from(
+			await argon2idAsync(rawPassword, salt, {
+				t: 3,
+				m: 65536,
+				p: 4,
+				version: 0x13,
+				dkLen: 64
+			})
+		).toString("hex")
+
+		const derivedMasterKeys = derived.substring(0, derived.length / 2)
+		const derivedPassword = derived.substring(derived.length / 2, derived.length)
 
 		return {
 			derivedMasterKeys,

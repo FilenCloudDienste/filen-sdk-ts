@@ -1,7 +1,7 @@
 import type APIClient from "../../../client";
 export type UserKeyPairInfoResponse = {
-    publicKey: string;
-    privateKey: string;
+    publicKey: string | null;
+    privateKey: string | null;
 };
 /**
  * UserKeyPairInfo

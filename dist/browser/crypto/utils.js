@@ -4,35 +4,55 @@ import CryptoAPI from "crypto-api-v1";
 import keyutil from "js-crypto-key-utils";
 import cache from "../cache";
 import { fastStringHash } from "../utils";
+import { argon2idAsync } from "@noble/hashes/argon2";
 const textEncoder = new TextEncoder();
-/**
- * Generate a cryptographically secure random string of given length.
- * @date 1/31/2024 - 4:01:20 PM
- *
- * @export
- * @param {{ length: number }} param0
- * @param {number} param0.length
- * @returns {string}
- */
-export async function generateRandomString({ length }) {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const textDecoder = new TextDecoder();
+export const urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+export const charset = textDecoder.decode(new Uint8Array(Array.from({
+    length: 128
+}, (_, i) => i)));
+export async function generateRandomString(length = 32) {
     if (environment === "node") {
-        const randomBytes = nodeCrypto.randomBytes(length + 2);
-        const result = new Array(length);
-        let cursor = 0;
-        for (let i = 0; i < length; i++) {
-            cursor += randomBytes[i];
-            result[i] = chars[cursor % chars.length];
-        }
-        return result.join("");
+        const array = nodeCrypto.randomBytes(length);
+        return Array.from(array)
+            .map(byte => charset[byte & 0x7f])
+            .join("");
     }
     else if (environment === "browser") {
         const array = new Uint8Array(length);
         globalThis.crypto.getRandomValues(array);
-        const randomNumbers = Array.from(array).map(x => x % chars.length);
-        return randomNumbers.map(x => chars[x]).join("");
+        return Array.from(array)
+            .map(byte => charset[byte & 0x7f])
+            .join("");
     }
     throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`);
+}
+export async function generateRandomBytes(length = 32) {
+    if (environment === "node") {
+        return nodeCrypto.randomBytes(length);
+    }
+    else if (environment === "browser") {
+        const array = new Uint8Array(length);
+        globalThis.crypto.getRandomValues(array);
+        return Buffer.from(array);
+    }
+    throw new Error(`crypto.utils.generateRandomBytes not implemented for ${environment} environment`);
+}
+export async function generateRandomURLSafeString(length = 32) {
+    if (environment === "node") {
+        const array = nodeCrypto.randomBytes(length);
+        return Array.from(array)
+            .map(byte => urlSafeCharset[byte % urlSafeCharset.length])
+            .join("");
+    }
+    else if (environment === "browser") {
+        const array = new Uint8Array(length);
+        globalThis.crypto.getRandomValues(array);
+        return Array.from(array)
+            .map(byte => urlSafeCharset[byte % urlSafeCharset.length])
+            .join("");
+    }
+    throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`);
 }
 /**
  * Derive a key from given inputs using PBKDF2.
@@ -155,8 +175,7 @@ export async function hashPassword({ password }) {
     throw new Error(`crypto.utils.hashPassword not implemented for ${environment} environment`);
 }
 /**
- * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
- * @date 2/2/2024 - 6:16:04 PM
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use. V2 uses PBKDF2, while V3 uses Argon2id.
  *
  * @export
  * @async
@@ -171,7 +190,10 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({ rawPasswo
         // DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
         const derivedPassword = await hashPassword({ password: rawPassword });
         const derivedMasterKeys = await hashFn({ input: rawPassword });
-        return { derivedMasterKeys, derivedPassword };
+        return {
+            derivedMasterKeys,
+            derivedPassword
+        };
     }
     else if (authVersion === 2) {
         const derivedKey = await deriveKeyFromPassword({
@@ -193,7 +215,25 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({ rawPasswo
         else {
             throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${environment} environment`);
         }
-        return { derivedMasterKeys, derivedPassword };
+        return {
+            derivedMasterKeys,
+            derivedPassword
+        };
+    }
+    else if (authVersion === 3) {
+        const derived = Buffer.from(await argon2idAsync(rawPassword, salt, {
+            t: 3,
+            m: 65536,
+            p: 4,
+            version: 0x13,
+            dkLen: 64
+        })).toString("hex");
+        const derivedMasterKeys = derived.substring(0, derived.length / 2);
+        const derivedPassword = derived.substring(derived.length / 2, derived.length);
+        return {
+            derivedMasterKeys,
+            derivedPassword
+        };
     }
     else {
         throw new Error(`Invalid authVersion: ${authVersion}`);
@@ -465,7 +505,9 @@ export const utils = {
     bufferToHash,
     generateKeyPair,
     importRawKey,
-    importPBKDF2Key
+    importPBKDF2Key,
+    generateRandomBytes,
+    generateRandomURLSafeString
 };
 export default utils;
 //# sourceMappingURL=utils.js.map

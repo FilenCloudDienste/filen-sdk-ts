@@ -250,14 +250,25 @@ export class ChunkedUploadWriter extends Writable {
             .upload()
             .done({
             uuid: this.uuid,
-            name: await this.sdk.crypto().encrypt().metadata({ metadata: this.name, key: this.key }),
-            nameHashed: await this.sdk.crypto().utils.hashFn({ input: this.name.toLowerCase() }),
-            size: await this.sdk.crypto().encrypt().metadata({ metadata: this.size.toString(), key: this.key }),
+            name: await this.sdk.crypto().encrypt().metadata({
+                metadata: this.name,
+                key: this.key
+            }),
+            nameHashed: await this.sdk.crypto().utils.hashFn({
+                input: this.name.toLowerCase()
+            }),
+            size: await this.sdk.crypto().encrypt().metadata({
+                metadata: this.size.toString(),
+                key: this.key
+            }),
             chunks: fileChunks,
-            mime: await this.sdk.crypto().encrypt().metadata({ metadata: this.mime, key: this.key }),
+            mime: await this.sdk.crypto().encrypt().metadata({
+                metadata: this.mime,
+                key: this.key
+            }),
             version: this.version,
             uploadKey: this.uploadKey,
-            rm: await this.sdk.crypto().utils.generateRandomString({ length: 32 }),
+            rm: await this.sdk.crypto().utils.generateRandomURLSafeString(32),
             metadata: await this.sdk
                 .crypto()
                 .encrypt()

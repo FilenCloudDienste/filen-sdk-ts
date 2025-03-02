@@ -432,6 +432,13 @@ export declare class FilenSDK {
                 encryptedMasterKeys: string;
                 apiKey?: string | undefined;
             }) => Promise<import("./api/v3/user/masterKeys").UserMasterKeysResponse>;
+            setDEK: (params_0: {
+                encryptedDEK: string;
+                apiKey?: string | undefined;
+            }) => Promise<void>;
+            getDEK: (params?: {
+                apiKey?: string | undefined;
+            } | undefined) => Promise<import("./api/v3/user/getDEK").UserGetDEKResponse>;
             password: () => {
                 forgot: (params_0: {
                     email: string;
@@ -454,7 +461,14 @@ export declare class FilenSDK {
         };
         shared: () => {
             in: (params?: {
-                uuid?: string | undefined;
+                uuid?: string | undefined; /**
+                 * FilenSDK
+                 * @date 2/1/2024 - 2:45:02 AM
+                 *
+                 * @export
+                 * @class FilenSDK
+                 * @typedef {FilenSDK}
+                 */
             } | undefined) => Promise<import("./api/v3/shared/in").SharedInResponse>;
             out: (params?: {
                 uuid?: string | undefined;
@@ -529,6 +543,12 @@ export declare class FilenSDK {
                 to: string;
             }) => Promise<void>;
             rename: (params_0: {
+                uuid: string;
+                metadataEncrypted: string;
+                nameEncrypted: string;
+                nameHashed: string;
+            }) => Promise<void>;
+            metadata: (params_0: {
                 uuid: string;
                 metadataEncrypted: string;
                 nameEncrypted: string;
@@ -898,7 +918,13 @@ export declare class FilenSDK {
     readonly utils: {
         crypto: {
             generateRandomString: typeof import("./crypto/utils").generateRandomString;
-            deriveKeyFromPassword: typeof import("./crypto/utils").deriveKeyFromPassword;
+            deriveKeyFromPassword: typeof import("./crypto/utils").deriveKeyFromPassword; /**
+             * Return an instance of User.
+             * @date 2/20/2024 - 6:27:17 AM
+             *
+             * @public
+             * @returns {User}
+             */
             hashFn: typeof import("./crypto/utils").hashFn;
             generatePasswordAndMasterKeyBasedOnAuthVersion: typeof import("./crypto/utils").generatePasswordAndMasterKeyBasedOnAuthVersion;
             hashPassword: typeof import("./crypto/utils").hashPassword;
@@ -909,6 +935,8 @@ export declare class FilenSDK {
             generateKeyPair: typeof import("./crypto/utils").generateKeyPair;
             importRawKey: typeof import("./crypto/utils").importRawKey;
             importPBKDF2Key: typeof import("./crypto/utils").importPBKDF2Key;
+            generateRandomBytes: typeof import("./crypto/utils").generateRandomBytes;
+            generateRandomURLSafeString: typeof import("./crypto/utils").generateRandomURLSafeString;
         };
         streams: {
             append: typeof appendStream;
@@ -935,7 +963,6 @@ export default FilenSDK;
 export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree, CloudConfig } from "./cloud";
 export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs";
 export * from "./types";
-export { CryptoConfig } from "./crypto";
 export * from "./constants";
 export * from "./api/errors";
 export * from "./cloud/signals";

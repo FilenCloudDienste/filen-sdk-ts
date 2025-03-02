@@ -153,6 +153,9 @@ const lock_1 = __importDefault(require("./v3/user/lock"));
 const get_1 = __importDefault(require("./v3/dir/get"));
 const get_2 = __importDefault(require("./v3/file/get"));
 const present_2 = __importDefault(require("./v3/file/present"));
+const metadata_1 = __importDefault(require("./v3/file/metadata"));
+const getDEK_1 = __importDefault(require("./v3/user/getDEK"));
+const setDEK_1 = __importDefault(require("./v3/user/setDEK"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -264,6 +267,8 @@ class API {
                     info: new info_5.default({ apiClient: this.apiClient })
                 },
                 masterKeys: new masterKeys_1.default({ apiClient: this.apiClient }),
+                setDEK: new setDEK_1.default({ apiClient: this.apiClient }),
+                getDEK: new getDEK_1.default({ apiClient: this.apiClient }),
                 password: {
                     forgot: new forgot_1.default({ apiClient: this.apiClient }),
                     forgotReset: new forgotReset_1.default({ apiClient: this.apiClient })
@@ -297,6 +302,7 @@ class API {
                 trash: new trash_2.default({ apiClient: this.apiClient }),
                 move: new move_1.default({ apiClient: this.apiClient }),
                 rename: new rename_3.default({ apiClient: this.apiClient }),
+                metadata: new metadata_1.default({ apiClient: this.apiClient }),
                 delete: {
                     permanent: new permanent_1.default({ apiClient: this.apiClient })
                 },
@@ -511,6 +517,8 @@ class API {
                         };
                     },
                     masterKeys: (...params) => this._v3.user.masterKeys.fetch(...params),
+                    setDEK: (...params) => this._v3.user.setDEK.fetch(...params),
+                    getDEK: (...params) => this._v3.user.getDEK.fetch(...params),
                     password: () => {
                         return {
                             forgot: (...params) => this._v3.user.password.forgot.fetch(...params),
@@ -558,6 +566,7 @@ class API {
                     trash: (...params) => this._v3.file.trash.fetch(...params),
                     move: (...params) => this._v3.file.move.fetch(...params),
                     rename: (...params) => this._v3.file.rename.fetch(...params),
+                    metadata: (...params) => this._v3.file.metadata.fetch(...params),
                     delete: () => {
                         return {
                             permanent: (...params) => this._v3.file.delete.permanent.fetch(...params)

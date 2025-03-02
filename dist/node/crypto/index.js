@@ -16,19 +16,11 @@ const utils_1 = __importDefault(require("./utils"));
  * @typedef {Crypto}
  */
 class Crypto {
-    /**
-     * Creates an instance of Crypto.
-     * @date 1/31/2024 - 4:30:23 PM
-     *
-     * @constructor
-     * @public
-     * @param {CryptoConfig} params
-     */
-    constructor(params) {
+    constructor(sdk) {
         this.utils = utils_1.default;
-        this.config = params;
-        this._encrypt = new encrypt_1.default(this.config);
-        this._decrypt = new decrypt_1.default(this.config);
+        this.sdk = sdk;
+        this._encrypt = new encrypt_1.default(this.sdk);
+        this._decrypt = new decrypt_1.default(this.sdk);
     }
     /**
      * Returns an Encrypt instance.

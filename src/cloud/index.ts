@@ -24,7 +24,6 @@ import {
 	MAX_DOWNLOAD_THREADS,
 	MAX_DOWNLOAD_WRITERS,
 	MAX_UPLOAD_THREADS,
-	DATA_ENCRYPTION_VERSION,
 	DEFAULT_UPLOAD_BUCKET,
 	DEFAULT_UPLOAD_REGION,
 	UPLOAD_CHUNK_SIZE,
@@ -880,7 +879,7 @@ export class Cloud {
 		])
 
 		try {
-			await this.api.v3().file().rename({
+			await this.api.v3().file().metadata({
 				uuid,
 				metadataEncrypted,
 				nameEncrypted,
@@ -1248,11 +1247,22 @@ export class Cloud {
 				}
 			} else {
 				const [metadataEncrypted, nameHashed] = await Promise.all([
-					this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ name }) }),
-					this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() })
+					this.sdk.getWorker().crypto.encrypt.metadata({
+						metadata: JSON.stringify({
+							name
+						})
+					}),
+					this.sdk.getWorker().crypto.utils.hashFn({
+						input: name.toLowerCase()
+					})
 				])
 
-				await this.api.v3().dir().create({ uuid: uuidToUse, metadataEncrypted, nameHashed, parent })
+				await this.api.v3().dir().create({
+					uuid: uuidToUse,
+					metadataEncrypted,
+					nameHashed,
+					parent
+				})
 
 				await this.checkIfItemParentIsShared({
 					type: "directory",
@@ -2460,11 +2470,16 @@ export class Cloud {
 		metadata: FileMetadata | FolderMetadata
 		publicKey: string
 	}): Promise<void> {
-		const metadataEncrypted = await this.sdk
-			.getWorker()
-			.crypto.encrypt.metadataPublic({ metadata: JSON.stringify(metadata), publicKey })
+		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
+			metadata: JSON.stringify(metadata),
+			publicKey
+		})
 
-		await this.api.v3().item().sharedRename({ uuid, receiverId, metadata: metadataEncrypted })
+		await this.api.v3().item().sharedRename({
+			uuid,
+			receiverId,
+			metadata: metadataEncrypted
+		})
 	}
 
 	/**
@@ -2534,8 +2549,12 @@ export class Cloud {
 		itemMetadata: FileMetadata | FolderMetadata
 	}): Promise<void> {
 		const [isSharingItem, isLinkingItem] = await Promise.all([
-			this.api.v3().item().shared({ uuid }),
-			this.api.v3().item().linked({ uuid })
+			this.api.v3().item().shared({
+				uuid
+			}),
+			this.api.v3().item().linked({
+				uuid
+			})
 		])
 
 		if (!isSharingItem.sharing && !isLinkingItem.link) {
@@ -3672,6 +3691,8 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
+			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
+
 			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
 				this.sdk.getWorker().crypto.encrypt.metadata({
 					metadata: fileName,
@@ -3812,7 +3833,7 @@ export class Cloud {
 				mime: mimeEncrypted,
 				rm,
 				metadata,
-				version: DATA_ENCRYPTION_VERSION,
+				version,
 				uploadKey
 			})
 
@@ -3828,7 +3849,7 @@ export class Cloud {
 				timestamp: Date.now(),
 				parent,
 				rm,
-				version: DATA_ENCRYPTION_VERSION,
+				version,
 				chunks: fileChunks,
 				favorited: false,
 				key,
@@ -3965,6 +3986,7 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
+			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
 
 			const waitForPause = async (): Promise<void> => {
 				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted || closed) {
@@ -4036,7 +4058,7 @@ export class Cloud {
 						timestamp: Date.now(),
 						parent,
 						rm: "",
-						version: DATA_ENCRYPTION_VERSION,
+						version,
 						chunks: item.type === "directory" ? 0 : item.metadata.chunks,
 						favorited: false,
 						key,
@@ -4204,6 +4226,8 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
+			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
+
 			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
 				this.sdk.getWorker().crypto.encrypt.metadata({
 					metadata: fileName,
@@ -4343,7 +4367,7 @@ export class Cloud {
 				mime: mimeEncrypted,
 				rm,
 				metadata,
-				version: DATA_ENCRYPTION_VERSION,
+				version,
 				uploadKey
 			})
 
@@ -4359,7 +4383,7 @@ export class Cloud {
 				timestamp: Date.now(),
 				parent,
 				rm,
-				version: DATA_ENCRYPTION_VERSION,
+				version,
 				chunks: fileChunks,
 				favorited: false,
 				key,

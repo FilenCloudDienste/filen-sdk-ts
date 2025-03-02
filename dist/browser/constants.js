@@ -11,7 +11,6 @@ export const MAX_CONCURRENT_DOWNLOADS = 16;
 export const MAX_DOWNLOAD_THREADS = 32;
 export const MAX_DOWNLOAD_WRITERS = 64;
 export const MAX_UPLOAD_THREADS = 16;
-export const CURRENT_FILE_ENCRYPTION_VERSION = 2;
 export const DEFAULT_UPLOAD_REGION = "de-1";
 export const DEFAULT_UPLOAD_BUCKET = "filen-1";
 export const UPLOAD_CHUNK_SIZE = 1024 * 1024;

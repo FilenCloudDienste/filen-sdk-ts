@@ -147,6 +147,9 @@ import V3UserLock from "./v3/user/lock";
 import V3DirGet from "./v3/dir/get";
 import V3FileGet from "./v3/file/get";
 import V3FilePresent from "./v3/file/present";
+import V3FileMetadata from "./v3/file/metadata";
+import V3UserGetDEK from "./v3/user/getDEK";
+import V3UserSetDEK from "./v3/user/setDEK";
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -261,6 +264,8 @@ export class API {
                     info: new V3UserKeyPairInfo({ apiClient: this.apiClient })
                 },
                 masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient }),
+                setDEK: new V3UserSetDEK({ apiClient: this.apiClient }),
+                getDEK: new V3UserGetDEK({ apiClient: this.apiClient }),
                 password: {
                     forgot: new V3UserPasswordForgot({ apiClient: this.apiClient }),
                     forgotReset: new V3UserPasswordForgotReset({ apiClient: this.apiClient })
@@ -294,6 +299,7 @@ export class API {
                 trash: new V3FileTrash({ apiClient: this.apiClient }),
                 move: new V3FileMove({ apiClient: this.apiClient }),
                 rename: new V3FileRename({ apiClient: this.apiClient }),
+                metadata: new V3FileMetadata({ apiClient: this.apiClient }),
                 delete: {
                     permanent: new V3FileDeletePermanent({ apiClient: this.apiClient })
                 },
@@ -508,6 +514,8 @@ export class API {
                         };
                     },
                     masterKeys: (...params) => this._v3.user.masterKeys.fetch(...params),
+                    setDEK: (...params) => this._v3.user.setDEK.fetch(...params),
+                    getDEK: (...params) => this._v3.user.getDEK.fetch(...params),
                     password: () => {
                         return {
                             forgot: (...params) => this._v3.user.password.forgot.fetch(...params),
@@ -555,6 +563,7 @@ export class API {
                     trash: (...params) => this._v3.file.trash.fetch(...params),
                     move: (...params) => this._v3.file.move.fetch(...params),
                     rename: (...params) => this._v3.file.rename.fetch(...params),
+                    metadata: (...params) => this._v3.file.metadata.fetch(...params),
                     delete: () => {
                         return {
                             permanent: (...params) => this._v3.file.delete.permanent.fetch(...params)

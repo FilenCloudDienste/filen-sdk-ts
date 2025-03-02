@@ -2,9 +2,10 @@ import type APIClient from "../client";
 import type { AuthVersion } from "../../types";
 export type LoginResponse = {
     apiKey: string;
-    masterKeys: string;
-    publicKey: string;
-    privateKey: string;
+    masterKeys: string | null;
+    publicKey: string | null;
+    privateKey: string | null;
+    dek: string | null;
 };
 /**
  * Login

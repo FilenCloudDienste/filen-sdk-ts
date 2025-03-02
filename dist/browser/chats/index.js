@@ -160,15 +160,21 @@ export class Chats {
      */
     async create({ uuid, contacts }) {
         const [uuidToUse, key] = await Promise.all([
-            uuid ? Promise.resolve(uuid) : await uuidv4(),
-            this.sdk.getWorker().crypto.utils.generateRandomString({ length: 32 })
+            uuid ? Promise.resolve(uuid) : uuidv4(),
+            this.sdk.getWorker().crypto.utils.generateRandomString(32)
         ]);
         const [metadata, ownerMetadata] = await Promise.all([
             this.sdk.getWorker().crypto.encrypt.metadataPublic({
-                metadata: JSON.stringify({ key }),
+                metadata: JSON.stringify({
+                    key
+                }),
                 publicKey: this.sdkConfig.publicKey
             }),
-            this.sdk.getWorker().crypto.encrypt.metadata({ metadata: JSON.stringify({ key }) })
+            this.sdk.getWorker().crypto.encrypt.metadata({
+                metadata: JSON.stringify({
+                    key
+                })
+            })
         ]);
         await this.api.v3().chat().conversationsCreate({
             uuid: uuidToUse,

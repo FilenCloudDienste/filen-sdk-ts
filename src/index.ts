@@ -423,7 +423,9 @@ export class FilenSDK {
 		apiKey: string
 		masterKeys: string[]
 	}): Promise<{ publicKey: string; privateKey: string }> {
-		const keyPairInfo = await this._api.v3().user().keyPair().info({ apiKey })
+		const keyPairInfo = await this._api.v3().user().keyPair().info({
+			apiKey
+		})
 
 		if (
 			typeof keyPairInfo.publicKey === "string" &&
@@ -509,63 +511,116 @@ export class FilenSDK {
 
 	private async _updateKeys({
 		apiKey,
-		masterKeys
+		masterKeys,
+		authVersion
 	}: {
 		apiKey: string
 		masterKeys: string[]
+		authVersion: AuthVersion
 	}): Promise<{ masterKeys: string[]; publicKey: string; privateKey: string }> {
-		const currentLastMasterKey = masterKeys.at(-1)
+		if (authVersion === 1 || authVersion === 2) {
+			const currentLastMasterKey = masterKeys.at(-1)
 
-		if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
-			throw new Error("Invalid current master key.")
-		}
-
-		const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
-			metadata: masterKeys.join("|"),
-			key: currentLastMasterKey
-		})
-
-		const masterKeysResponse = await this._api.v3().user().masterKeys({
-			encryptedMasterKeys,
-			apiKey
-		})
-
-		const newMasterKeys: string[] = [...masterKeys]
-
-		for (const masterKey of masterKeys) {
-			try {
-				const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
-					metadata: masterKeysResponse.keys,
-					key: masterKey
-				})
-
-				if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
-					for (const key of decryptedMasterKeys.split("|")) {
-						if (key.length > 0 && !newMasterKeys.includes(key)) {
-							newMasterKeys.push(key)
-						}
-					}
-
-					break
-				}
-			} catch {
-				continue
+			if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
+				throw new Error("Invalid current master key.")
 			}
-		}
 
-		if (newMasterKeys.length === 0) {
-			throw new Error("Could not decrypt master keys.")
-		}
+			const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
+				metadata: masterKeys.join("|"),
+				key: currentLastMasterKey
+			})
 
-		const { publicKey, privateKey } = await this.__updateKeyPair({
-			apiKey,
-			masterKeys: newMasterKeys
-		})
+			const masterKeysResponse = await this._api.v3().user().masterKeys({
+				encryptedMasterKeys,
+				apiKey
+			})
 
-		return {
-			masterKeys: newMasterKeys,
-			publicKey,
-			privateKey
+			const newMasterKeys: string[] = [...masterKeys]
+
+			for (const masterKey of masterKeys) {
+				try {
+					const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
+						metadata: masterKeysResponse.keys,
+						key: masterKey
+					})
+
+					if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
+						for (const key of decryptedMasterKeys.split("|")) {
+							if (key.length > 0 && !newMasterKeys.includes(key)) {
+								newMasterKeys.push(key)
+							}
+						}
+
+						break
+					}
+				} catch {
+					continue
+				}
+			}
+
+			if (newMasterKeys.length === 0) {
+				throw new Error("Could not decrypt master keys.")
+			}
+
+			const { publicKey, privateKey } = await this.__updateKeyPair({
+				apiKey,
+				masterKeys: newMasterKeys
+			})
+
+			return {
+				masterKeys: newMasterKeys,
+				publicKey,
+				privateKey
+			}
+		} else if (authVersion === 3) {
+			if (masterKeys.length !== 1 || !masterKeys[0]) {
+				throw new Error("Invalid master keys array.")
+			}
+
+			const dekEncryptionKey = masterKeys[0]
+
+			if (!dekEncryptionKey || dekEncryptionKey.length !== 64) {
+				throw new Error("Invalid DEK encryption key.")
+			}
+
+			let dek = (
+				await this._api.v3().user().getDEK({
+					apiKey
+				})
+			).dek
+
+			if (!dek) {
+				dek = (await this.getWorker().crypto.utils.generateRandomBytes(32)).toString("hex")
+
+				await this._api
+					.v3()
+					.user()
+					.setDEK({
+						apiKey,
+						encryptedDEK: await this.getWorker().crypto.encrypt.metadata({
+							metadata: dek,
+							key: dekEncryptionKey
+						})
+					})
+			} else {
+				dek = await this.getWorker().crypto.decrypt.metadata({
+					metadata: dek,
+					key: dekEncryptionKey
+				})
+			}
+
+			const { publicKey, privateKey } = await this.__updateKeyPair({
+				apiKey,
+				masterKeys: [dek]
+			})
+
+			return {
+				masterKeys: [dek],
+				publicKey,
+				privateKey
+			}
+		} else {
+			throw new Error("Invalid authVersion.")
 		}
 	}
 
@@ -590,12 +645,14 @@ export class FilenSDK {
 			throw new Error("Empty email, password or twoFactorCode")
 		}
 
-		const authInfo = await this._api.v3().auth().info({ email: emailToUse })
+		const authInfo = await this._api.v3().auth().info({
+			email: emailToUse
+		})
 		const authVersion = authInfo.authVersion
 
 		const derived = await this.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: passwordToUse,
-			authVersion: authInfo.authVersion,
+			authVersion,
 			salt: authInfo.salt
 		})
 
@@ -606,15 +663,19 @@ export class FilenSDK {
 			authVersion
 		})
 
-		const [infoResponse, baseFolderResponse] = await Promise.all([
-			this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
-			this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
+		const [infoResponse, baseFolderResponse, updateKeys] = await Promise.all([
+			this._api.v3().user().info({
+				apiKey: loginResponse.apiKey
+			}),
+			this._api.v3().user().baseFolder({
+				apiKey: loginResponse.apiKey
+			}),
+			this._updateKeys({
+				apiKey: loginResponse.apiKey,
+				masterKeys: [derived.derivedMasterKeys],
+				authVersion
+			})
 		])
-
-		const updateKeys = await this._updateKeys({
-			apiKey: loginResponse.apiKey,
-			masterKeys: [derived.derivedMasterKeys]
-		})
 
 		this.init({
 			...this.config,

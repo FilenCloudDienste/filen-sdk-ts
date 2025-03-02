@@ -283,6 +283,13 @@ export declare class API {
                 encryptedMasterKeys: string;
                 apiKey?: string | undefined;
             }) => Promise<import("./v3/user/masterKeys").UserMasterKeysResponse>;
+            setDEK: (params_0: {
+                encryptedDEK: string;
+                apiKey?: string | undefined;
+            }) => Promise<void>;
+            getDEK: (params?: {
+                apiKey?: string | undefined;
+            } | undefined) => Promise<import("./v3/user/getDEK").UserGetDEKResponse>;
             password: () => {
                 forgot: (params_0: {
                     email: string;
@@ -380,6 +387,12 @@ export declare class API {
                 to: string;
             }) => Promise<void>;
             rename: (params_0: {
+                uuid: string;
+                metadataEncrypted: string;
+                nameEncrypted: string;
+                nameHashed: string;
+            }) => Promise<void>;
+            metadata: (params_0: {
                 uuid: string;
                 metadataEncrypted: string;
                 nameEncrypted: string;

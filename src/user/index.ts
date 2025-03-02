@@ -169,14 +169,14 @@ export class User {
 
 		const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 			rawPassword: password,
-			authVersion: this.sdkConfig.authVersion!,
+			authVersion: authInfo.authVersion,
 			salt: authInfo.salt
 		})
 
 		await this.api.v3().user().settingsEmail().change({
 			email,
 			password: derived.derivedPassword,
-			authVersion: this.sdkConfig.authVersion!
+			authVersion: authInfo.authVersion
 		})
 	}
 
@@ -330,13 +330,7 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async changePassword({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }): Promise<string> {
-		if (
-			!this.sdkConfig.privateKey ||
-			!this.sdkConfig.publicKey ||
-			!this.sdkConfig.masterKeys ||
-			!this.sdkConfig.authVersion ||
-			!this.sdkConfig.email
-		) {
+		if (!this.sdkConfig.privateKey || !this.sdkConfig.publicKey || !this.sdkConfig.masterKeys || !this.sdkConfig.email) {
 			throw new Error("Invalid SDK config.")
 		}
 
@@ -350,47 +344,91 @@ export class User {
 		const [derivedCurrent, derivedNew] = await Promise.all([
 			this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 				rawPassword: currentPassword,
-				authVersion: this.sdkConfig.authVersion,
+				authVersion: authInfo.authVersion,
 				salt: authInfo.salt
 			}),
 			this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
 				rawPassword: newPassword,
-				authVersion: this.sdkConfig.authVersion,
+				authVersion: authInfo.authVersion,
 				salt: newSalt
 			})
 		])
 
-		const newMasterKeys: string[] = [
-			...this.sdkConfig.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
-			derivedNew.derivedMasterKeys
-		]
+		if (authInfo.authVersion === 1 || authInfo.authVersion === 2) {
+			const newMasterKeys: string[] = [
+				...this.sdkConfig.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
+				derivedNew.derivedMasterKeys
+			]
 
-		const [newMasterKeysEncrypted, privateKeyReEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: newMasterKeys.join("|"),
-				key: derivedNew.derivedMasterKeys
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: this.sdkConfig.privateKey,
-				key: derivedNew.derivedMasterKeys
+			const [newMasterKeysEncrypted, privateKeyReEncrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: newMasterKeys.join("|"),
+					key: derivedNew.derivedMasterKeys
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: this.sdkConfig.privateKey,
+					key: derivedNew.derivedMasterKeys
+				})
+			])
+
+			const [response] = await Promise.all([
+				this.api.v3().user().settingsPassword().change({
+					password: derivedNew.derivedPassword,
+					currentPassword: derivedCurrent.derivedPassword,
+					authVersion: authInfo.authVersion,
+					salt: newSalt,
+					masterKeys: newMasterKeysEncrypted
+				}),
+				this.api.v3().user().keyPair().update({
+					publicKey: this.sdkConfig.publicKey,
+					encryptedPrivateKey: privateKeyReEncrypted
+				})
+			])
+
+			return response.newAPIKey
+		} else if (authInfo.authVersion === 3) {
+			const newDekEncryptionKey = derivedNew.derivedMasterKeys
+
+			let dek = (await this.api.v3().user().getDEK()).dek
+
+			if (!dek) {
+				throw new Error("DEK not found.")
+			}
+
+			dek = await this.sdk.getWorker().crypto.decrypt.metadata({
+				metadata: dek,
+				key: newDekEncryptionKey
 			})
-		])
 
-		const [response] = await Promise.all([
-			this.api.v3().user().settingsPassword().change({
-				password: derivedNew.derivedPassword,
-				currentPassword: derivedCurrent.derivedPassword,
-				authVersion: this.sdkConfig.authVersion!,
-				salt: newSalt,
-				masterKeys: newMasterKeysEncrypted
-			}),
-			this.api.v3().user().keyPair().update({
-				publicKey: this.sdkConfig.publicKey,
-				encryptedPrivateKey: privateKeyReEncrypted
-			})
-		])
+			const [dekReEncrypted, privateKeyReEncrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: dek,
+					key: newDekEncryptionKey
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: this.sdkConfig.privateKey,
+					key: derivedNew.derivedMasterKeys
+				})
+			])
 
-		return response.newAPIKey
+			const [response] = await Promise.all([
+				this.api.v3().user().settingsPassword().change({
+					password: derivedNew.derivedPassword,
+					currentPassword: derivedCurrent.derivedPassword,
+					authVersion: authInfo.authVersion,
+					salt: newSalt,
+					masterKeys: dekReEncrypted
+				}),
+				this.api.v3().user().keyPair().update({
+					publicKey: this.sdkConfig.publicKey,
+					encryptedPrivateKey: privateKeyReEncrypted
+				})
+			])
+
+			return response.newAPIKey
+		} else {
+			throw new Error("Invalid auth version.")
+		}
 	}
 
 	/**

@@ -1,4 +1,4 @@
-import { environment, BUFFER_SIZE, DATA_ENCRYPTION_VERSION } from "../constants"
+import { environment, BUFFER_SIZE } from "../constants"
 import os from "os"
 import nodeCrypto from "crypto"
 import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawKey, generateRandomBytes } from "./utils"
@@ -7,7 +7,7 @@ import pathModule from "path"
 import fs from "fs-extra"
 import { pipeline } from "stream"
 import { promisify } from "util"
-import type FilenSDK from ".."
+import { type FilenSDK, type FileEncryptionVersion } from ".."
 
 const pipelineAsync = promisify(pipeline)
 
@@ -313,10 +313,21 @@ export class Encrypt {
 		})
 	}
 
-	public async data({ data, key, version = DATA_ENCRYPTION_VERSION }: { data: Buffer; key: string; version?: number }): Promise<Buffer> {
+	public keyLengthToVersionData(key: string): FileEncryptionVersion {
+		// V3 keys are 64 hex chars (32 random bytes)
+		if (key.length === 64) {
+			return 3
+		}
+
+		return 2
+	}
+
+	public async data({ data, key }: { data: Buffer; key: string }): Promise<Buffer> {
 		if (key.length === 0) {
 			throw new Error("Invalid key.")
 		}
+
+		const version = this.keyLengthToVersionData(key)
 
 		if (version === 2) {
 			const iv = await generateRandomString(12)
@@ -349,11 +360,6 @@ export class Encrypt {
 				throw new Error(`crypto.decrypt.data not implemented for ${environment} environment`)
 			}
 		} else if (version === 3) {
-			// Version 3 requires the key to be a 32 bytes hex string (64 characters)
-			if (key.length !== 64) {
-				throw new Error(`crypto.encrypt.data invalid key length ${key.length}. Expected 64 (hex).`)
-			}
-
 			const ivBuffer = await generateRandomBytes(12)
 			const keyBuffer = Buffer.from(key, "hex")
 
@@ -388,17 +394,7 @@ export class Encrypt {
 		}
 	}
 
-	public async dataStream({
-		inputFile,
-		key,
-		outputFile,
-		version = DATA_ENCRYPTION_VERSION
-	}: {
-		inputFile: string
-		key: string
-		outputFile?: string
-		version?: number
-	}): Promise<string> {
+	public async dataStream({ inputFile, key, outputFile }: { inputFile: string; key: string; outputFile?: string }): Promise<string> {
 		if (key.length === 0) {
 			throw new Error("Invalid key.")
 		}
@@ -421,14 +417,10 @@ export class Encrypt {
 			retryDelay: 100
 		})
 
-		if (version === 3 && key.length !== 64) {
-			throw new Error(`crypto.encrypt.dataStream invalid key length ${key.length}. Expected 64 (hex).`)
-		}
-
+		const version = this.keyLengthToVersionData(key)
 		const keyBuffer = version === 2 ? Buffer.from(key, "utf-8") : Buffer.from(key, "hex")
 		const ivBuffer = version === 2 ? Buffer.from(await generateRandomString(12), "utf-8") : await generateRandomBytes(12)
 		const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer)
-
 		const readStream = fs.createReadStream(normalizePath(input), {
 			highWaterMark: BUFFER_SIZE
 		})

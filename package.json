@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.1.193",
+	"version": "0.1.194",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -91,6 +91,7 @@
 		"webpack-cli": "^5.1.4"
 	},
 	"dependencies": {
+		"@noble/hashes": "^1.7.1",
 		"agentkeepalive": "^4.5.0",
 		"axios": "^0.28.1",
 		"crypto-api-v1": "^1.0.0",

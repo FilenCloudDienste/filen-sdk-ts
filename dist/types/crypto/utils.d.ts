@@ -1,17 +1,10 @@
 /// <reference types="node" />
 import type { AuthVersion } from "../types";
-/**
- * Generate a cryptographically secure random string of given length.
- * @date 1/31/2024 - 4:01:20 PM
- *
- * @export
- * @param {{ length: number }} param0
- * @param {number} param0.length
- * @returns {string}
- */
-export declare function generateRandomString({ length }: {
-    length: number;
-}): Promise<string>;
+export declare const urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+export declare const charset: string;
+export declare function generateRandomString(length?: number): Promise<string>;
+export declare function generateRandomBytes(length?: number): Promise<Buffer>;
+export declare function generateRandomURLSafeString(length?: number): Promise<string>;
 export type DeriveKeyFromPasswordBase = {
     password: string;
     salt: string;
@@ -64,8 +57,7 @@ export declare function hashPassword({ password }: {
     password: string;
 }): Promise<string>;
 /**
- * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
- * @date 2/2/2024 - 6:16:04 PM
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use. V2 uses PBKDF2, while V3 uses Argon2id.
  *
  * @export
  * @async
@@ -237,5 +229,7 @@ export declare const utils: {
     generateKeyPair: typeof generateKeyPair;
     importRawKey: typeof importRawKey;
     importPBKDF2Key: typeof importPBKDF2Key;
+    generateRandomBytes: typeof generateRandomBytes;
+    generateRandomURLSafeString: typeof generateRandomURLSafeString;
 };
 export default utils;

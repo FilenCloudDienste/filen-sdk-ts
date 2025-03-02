@@ -148,6 +148,9 @@ import V3DirGet from "./v3/dir/get"
 import V3FileGet from "./v3/file/get"
 import V3FilePresent from "./v3/file/present"
 import type FilenSDK from ".."
+import V3FileMetadata from "./v3/file/metadata"
+import V3UserGetDEK from "./v3/user/getDEK"
+import V3UserSetDEK from "./v3/user/setDEK"
 
 export type APIConfig = {
 	apiKey: string
@@ -251,6 +254,8 @@ export class API {
 				info: V3UserKeyPairInfo
 			}
 			masterKeys: V3UserMasterKeys
+			setDEK: V3UserSetDEK
+			getDEK: V3UserGetDEK
 			password: {
 				forgot: V3UserPasswordForgot
 				forgotReset: V3UserPasswordForgotReset
@@ -284,6 +289,7 @@ export class API {
 			trash: V3FileTrash
 			move: V3FileMove
 			rename: V3FileRename
+			metadata: V3FileMetadata
 			delete: {
 				permanent: V3FileDeletePermanent
 			}
@@ -492,6 +498,8 @@ export class API {
 					info: new V3UserKeyPairInfo({ apiClient: this.apiClient })
 				},
 				masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient }),
+				setDEK: new V3UserSetDEK({ apiClient: this.apiClient }),
+				getDEK: new V3UserGetDEK({ apiClient: this.apiClient }),
 				password: {
 					forgot: new V3UserPasswordForgot({ apiClient: this.apiClient }),
 					forgotReset: new V3UserPasswordForgotReset({ apiClient: this.apiClient })
@@ -525,6 +533,7 @@ export class API {
 				trash: new V3FileTrash({ apiClient: this.apiClient }),
 				move: new V3FileMove({ apiClient: this.apiClient }),
 				rename: new V3FileRename({ apiClient: this.apiClient }),
+				metadata: new V3FileMetadata({ apiClient: this.apiClient }),
 				delete: {
 					permanent: new V3FileDeletePermanent({ apiClient: this.apiClient })
 				},
@@ -759,6 +768,8 @@ export class API {
 						}
 					},
 					masterKeys: (...params: Parameters<typeof this._v3.user.masterKeys.fetch>) => this._v3.user.masterKeys.fetch(...params),
+					setDEK: (...params: Parameters<typeof this._v3.user.setDEK.fetch>) => this._v3.user.setDEK.fetch(...params),
+					getDEK: (...params: Parameters<typeof this._v3.user.getDEK.fetch>) => this._v3.user.getDEK.fetch(...params),
 					password: () => {
 						return {
 							forgot: (...params: Parameters<typeof this._v3.user.password.forgot.fetch>) =>
@@ -813,6 +824,7 @@ export class API {
 					trash: (...params: Parameters<typeof this._v3.file.trash.fetch>) => this._v3.file.trash.fetch(...params),
 					move: (...params: Parameters<typeof this._v3.file.move.fetch>) => this._v3.file.move.fetch(...params),
 					rename: (...params: Parameters<typeof this._v3.file.rename.fetch>) => this._v3.file.rename.fetch(...params),
+					metadata: (...params: Parameters<typeof this._v3.file.metadata.fetch>) => this._v3.file.metadata.fetch(...params),
 					delete: () => {
 						return {
 							permanent: (...params: Parameters<typeof this._v3.file.delete.permanent.fetch>) =>
