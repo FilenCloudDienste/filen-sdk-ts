@@ -1,4 +1,4 @@
-import type { Environment } from "./types"
+import { type Environment } from "./types"
 
 export const isBrowser =
 	(typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.navigator !== "undefined") ||

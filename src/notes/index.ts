@@ -1,9 +1,9 @@
 import type FilenSDK from ".."
 import { uuidv4, simpleDate, promiseAllChunked } from "../utils"
-import type { NoteType, Note, NoteTag } from "../api/v3/notes"
+import { type NoteType, type Note, type NoteTag } from "../api/v3/notes"
 import { createNotePreviewFromContentText } from "./utils"
 import { MAX_NOTE_SIZE } from "../constants"
-import type { NoteHistory } from "../api/v3/notes/history"
+import { type NoteHistory } from "../api/v3/notes/history"
 import striptags from "striptags"
 
 /**

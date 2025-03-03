@@ -1,5 +1,5 @@
 import API from "./api"
-import type { AuthVersion, ClassMethods } from "./types"
+import { type AuthVersion, type ClassMethods } from "./types"
 import Crypto from "./crypto"
 import utils from "./utils"
 import { environment } from "./constants"

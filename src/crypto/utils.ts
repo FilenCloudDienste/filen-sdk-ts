@@ -1,7 +1,7 @@
 import { environment, METADATA_CRYPTO_VERSION, DATA_CRYPTO_VERSION } from "../constants"
 import nodeCrypto from "crypto"
 import CryptoAPI from "crypto-api-v1"
-import type { AuthVersion } from "../types"
+import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
 import { fastStringHash } from "../utils"

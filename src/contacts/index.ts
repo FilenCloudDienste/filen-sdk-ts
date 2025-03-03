@@ -1,6 +1,6 @@
-import type { Contact } from "../api/v3/contacts"
-import type { BlockedContact } from "../api/v3/contacts/blocked"
-import type { ContactRequest } from "../api/v3/contacts/requests/in"
+import { type Contact } from "../api/v3/contacts"
+import { type BlockedContact } from "../api/v3/contacts/blocked"
+import { type ContactRequest } from "../api/v3/contacts/requests/in"
 import type FilenSDK from ".."
 
 /**

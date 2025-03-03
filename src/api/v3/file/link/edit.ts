@@ -1,5 +1,5 @@
 import type APIClient from "../../../client"
-import type { PublicLinkExpiration } from "../../../../types"
+import { type PublicLinkExpiration } from "../../../../types"
 
 /**
  * FileLinkEdit

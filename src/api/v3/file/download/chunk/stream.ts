@@ -1,6 +1,6 @@
 import type APIClient from "../../../../client"
 import type fs from "fs-extra"
-import type { ProgressCallback } from "../../../../../types"
+import { type ProgressCallback } from "../../../../../types"
 
 /**
  * FileDownloadChunkStream

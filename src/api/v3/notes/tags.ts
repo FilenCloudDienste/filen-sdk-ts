@@ -1,5 +1,5 @@
 import type APIClient from "../../client"
-import type { NoteTag } from "../notes"
+import { type NoteTag } from "../notes"
 
 export type NotesTagsResponse = NoteTag[]
 

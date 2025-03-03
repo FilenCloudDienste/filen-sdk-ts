@@ -1,5 +1,5 @@
 import type APIClient from "../../client"
-import type { FileEncryptionVersion } from "../../../types"
+import { type FileEncryptionVersion } from "../../../types"
 
 export type DirTreeFile = [string, string, string, number, string, string, FileEncryptionVersion, number]
 export type DirTreeFolder = [string, string, string]

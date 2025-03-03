@@ -1,4 +1,4 @@
-import type { NoteType } from "../api/v3/notes"
+import { type NoteType } from "../api/v3/notes"
 import striptags from "striptags"
 
 export function createNotePreviewFromContentText({ content, type }: { content: string; type: NoteType }) {
