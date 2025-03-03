@@ -45,6 +45,7 @@ export declare class Crypto {
         importPBKDF2Key: typeof import("./utils").importPBKDF2Key;
         generateRandomBytes: typeof import("./utils").generateRandomBytes;
         generateRandomURLSafeString: typeof import("./utils").generateRandomURLSafeString;
+        generateEncryptionKey: typeof import("./utils").generateEncryptionKey;
     };
 }
 export default Crypto;

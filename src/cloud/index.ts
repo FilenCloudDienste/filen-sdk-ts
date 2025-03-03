@@ -1660,7 +1660,7 @@ export class Cloud {
 				this.getDirectoryTree({
 					uuid
 				}),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32)
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("metadata")
 			])
 
 			const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
@@ -3811,7 +3811,7 @@ export class Cloud {
 
 			const [uuid, key, rm, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("data"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
@@ -4108,7 +4108,7 @@ export class Cloud {
 			let closed = false
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("data"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
@@ -4348,7 +4348,7 @@ export class Cloud {
 
 			const [fileUUID, key, rm, uploadKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("data"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])

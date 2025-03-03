@@ -5,6 +5,7 @@ export declare const charset: string;
 export declare function generateRandomString(length?: number): Promise<string>;
 export declare function generateRandomBytes(length?: number): Promise<Buffer>;
 export declare function generateRandomURLSafeString(length?: number): Promise<string>;
+export declare function generateEncryptionKey(use: "metadata" | "data"): Promise<string>;
 export type DeriveKeyFromPasswordBase = {
     password: string;
     salt: string;
@@ -231,5 +232,6 @@ export declare const utils: {
     importPBKDF2Key: typeof importPBKDF2Key;
     generateRandomBytes: typeof generateRandomBytes;
     generateRandomURLSafeString: typeof generateRandomURLSafeString;
+    generateEncryptionKey: typeof generateEncryptionKey;
 };
 export default utils;

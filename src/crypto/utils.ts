@@ -1,4 +1,4 @@
-import { environment } from "../constants"
+import { environment, METADATA_CRYPTO_VERSION, DATA_CRYPTO_VERSION } from "../constants"
 import nodeCrypto from "crypto"
 import CryptoAPI from "crypto-api-v1"
 import type { AuthVersion } from "../types"
@@ -74,6 +74,46 @@ export async function generateRandomURLSafeString(length: number = 32): Promise<
 	}
 
 	throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`)
+}
+
+export async function generateEncryptionKey(use: "metadata" | "data"): Promise<string> {
+	if (use === "metadata") {
+		switch (METADATA_CRYPTO_VERSION) {
+			case 1: {
+				return await generateRandomURLSafeString(32)
+			}
+
+			case 2: {
+				return await generateRandomString(32)
+			}
+
+			case 3: {
+				return (await generateRandomBytes(32)).toString("hex")
+			}
+
+			default: {
+				return await generateRandomURLSafeString(32)
+			}
+		}
+	} else {
+		switch (DATA_CRYPTO_VERSION) {
+			case 1: {
+				return await generateRandomURLSafeString(32)
+			}
+
+			case 2: {
+				return await generateRandomString(32)
+			}
+
+			case 3: {
+				return (await generateRandomBytes(32)).toString("hex")
+			}
+
+			default: {
+				return await generateRandomURLSafeString(32)
+			}
+		}
+	}
 }
 
 export type DeriveKeyFromPasswordBase = {
@@ -720,7 +760,8 @@ export const utils = {
 	importRawKey,
 	importPBKDF2Key,
 	generateRandomBytes,
-	generateRandomURLSafeString
+	generateRandomURLSafeString,
+	generateEncryptionKey
 }
 
 export default utils

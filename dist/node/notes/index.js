@@ -305,7 +305,7 @@ class Notes {
     async create({ uuid, title }) {
         const uuidToUse = uuid ? uuid : await (0, utils_1.uuidv4)();
         const titleToUse = title ? title : (0, utils_1.simpleDate)(Date.now());
-        const key = await this.sdk.getWorker().crypto.utils.generateRandomString(32);
+        const key = await this.sdk.getWorker().crypto.utils.generateEncryptionKey("metadata");
         const [metadataEncrypted, titleEncrypted] = await Promise.all([
             this.sdk.getWorker().crypto.encrypt.metadata({
                 metadata: JSON.stringify({

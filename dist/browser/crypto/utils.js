@@ -1,4 +1,4 @@
-import { environment } from "../constants";
+import { environment, METADATA_CRYPTO_VERSION, DATA_CRYPTO_VERSION } from "../constants";
 import nodeCrypto from "crypto";
 import CryptoAPI from "crypto-api-v1";
 import keyutil from "js-crypto-key-utils";
@@ -53,6 +53,40 @@ export async function generateRandomURLSafeString(length = 32) {
             .join("");
     }
     throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`);
+}
+export async function generateEncryptionKey(use) {
+    if (use === "metadata") {
+        switch (METADATA_CRYPTO_VERSION) {
+            case 1: {
+                return await generateRandomURLSafeString(32);
+            }
+            case 2: {
+                return await generateRandomString(32);
+            }
+            case 3: {
+                return (await generateRandomBytes(32)).toString("hex");
+            }
+            default: {
+                return await generateRandomURLSafeString(32);
+            }
+        }
+    }
+    else {
+        switch (DATA_CRYPTO_VERSION) {
+            case 1: {
+                return await generateRandomURLSafeString(32);
+            }
+            case 2: {
+                return await generateRandomString(32);
+            }
+            case 3: {
+                return (await generateRandomBytes(32)).toString("hex");
+            }
+            default: {
+                return await generateRandomURLSafeString(32);
+            }
+        }
+    }
 }
 /**
  * Derive a key from given inputs using PBKDF2.
@@ -507,7 +541,8 @@ export const utils = {
     importRawKey,
     importPBKDF2Key,
     generateRandomBytes,
-    generateRandomURLSafeString
+    generateRandomURLSafeString,
+    generateEncryptionKey
 };
 export default utils;
 //# sourceMappingURL=utils.js.map

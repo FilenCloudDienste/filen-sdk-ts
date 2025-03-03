@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.EVP_BytesToKey = exports.generateKeyPair = exports.bufferToHash = exports.importPBKDF2Key = exports.importRawKey = exports.importPrivateKey = exports.importPublicKey = exports.derKeyToPem = exports.generatePasswordAndMasterKeyBasedOnAuthVersion = exports.hashPassword = exports.normalizeHash = exports.hashFn = exports.deriveKeyFromPassword = exports.generateRandomURLSafeString = exports.generateRandomBytes = exports.generateRandomString = exports.charset = exports.urlSafeCharset = void 0;
+exports.utils = exports.EVP_BytesToKey = exports.generateKeyPair = exports.bufferToHash = exports.importPBKDF2Key = exports.importRawKey = exports.importPrivateKey = exports.importPublicKey = exports.derKeyToPem = exports.generatePasswordAndMasterKeyBasedOnAuthVersion = exports.hashPassword = exports.normalizeHash = exports.hashFn = exports.deriveKeyFromPassword = exports.generateEncryptionKey = exports.generateRandomURLSafeString = exports.generateRandomBytes = exports.generateRandomString = exports.charset = exports.urlSafeCharset = void 0;
 const constants_1 = require("../constants");
 const crypto_1 = __importDefault(require("crypto"));
 const crypto_api_v1_1 = __importDefault(require("crypto-api-v1"));
@@ -63,6 +63,41 @@ async function generateRandomURLSafeString(length = 32) {
     throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${constants_1.environment} environment`);
 }
 exports.generateRandomURLSafeString = generateRandomURLSafeString;
+async function generateEncryptionKey(use) {
+    if (use === "metadata") {
+        switch (constants_1.METADATA_CRYPTO_VERSION) {
+            case 1: {
+                return await generateRandomURLSafeString(32);
+            }
+            case 2: {
+                return await generateRandomString(32);
+            }
+            case 3: {
+                return (await generateRandomBytes(32)).toString("hex");
+            }
+            default: {
+                return await generateRandomURLSafeString(32);
+            }
+        }
+    }
+    else {
+        switch (constants_1.DATA_CRYPTO_VERSION) {
+            case 1: {
+                return await generateRandomURLSafeString(32);
+            }
+            case 2: {
+                return await generateRandomString(32);
+            }
+            case 3: {
+                return (await generateRandomBytes(32)).toString("hex");
+            }
+            default: {
+                return await generateRandomURLSafeString(32);
+            }
+        }
+    }
+}
+exports.generateEncryptionKey = generateEncryptionKey;
 /**
  * Derive a key from given inputs using PBKDF2.
  * @date 2/1/2024 - 6:14:25 PM
@@ -529,7 +564,8 @@ exports.utils = {
     importRawKey,
     importPBKDF2Key,
     generateRandomBytes,
-    generateRandomURLSafeString
+    generateRandomURLSafeString,
+    generateEncryptionKey
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map

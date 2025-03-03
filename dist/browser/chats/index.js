@@ -154,7 +154,7 @@ export class Chats {
     async create({ uuid, contacts }) {
         const [uuidToUse, key] = await Promise.all([
             uuid ? Promise.resolve(uuid) : uuidv4(),
-            this.sdk.getWorker().crypto.utils.generateRandomString(32)
+            this.sdk.getWorker().crypto.utils.generateEncryptionKey("metadata")
         ]);
         const [metadata, ownerMetadata] = await Promise.all([
             this.sdk.getWorker().crypto.encrypt.metadataPublic({

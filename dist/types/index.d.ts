@@ -931,6 +931,7 @@ export declare class FilenSDK {
             importPBKDF2Key: typeof import("./crypto/utils").importPBKDF2Key;
             generateRandomBytes: typeof import("./crypto/utils").generateRandomBytes;
             generateRandomURLSafeString: typeof import("./crypto/utils").generateRandomURLSafeString;
+            generateEncryptionKey: typeof import("./crypto/utils").generateEncryptionKey;
         };
         streams: {
             append: typeof appendStream;
