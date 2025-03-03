@@ -27,15 +27,7 @@ const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
  * @typedef {Cloud}
  */
 class Cloud {
-    /**
-     * Creates an instance of Cloud.
-     * @date 2/14/2024 - 11:30:03 PM
-     *
-     * @constructor
-     * @public
-     * @param {CloudConfig} params
-     */
-    constructor(params) {
+    constructor(sdk) {
         this._semaphores = {
             downloadStream: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
             downloadToLocal: new semaphore_1.Semaphore(constants_1.MAX_CONCURRENT_DOWNLOADS),
@@ -51,9 +43,7 @@ class Cloud {
             },
             utils: utils_2.default
         };
-        this.api = params.api;
-        this.sdkConfig = params.sdkConfig;
-        this.sdk = params.sdk;
+        this.sdk = sdk;
     }
     /**
      * Lists all files and directories in a directory.
@@ -67,13 +57,18 @@ class Cloud {
      * @returns {Promise<CloudItem[]>}
      */
     async listDirectory({ uuid, onlyDirectories }) {
-        const content = await this.api.v3().dir().content({ uuid, dirsOnly: onlyDirectories });
+        const content = await this.sdk.api(3).dir().content({
+            uuid,
+            dirsOnly: onlyDirectories
+        });
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.folderMetadata({ metadata: folder.name })
+                .crypto.decrypt.folderMetadata({
+                metadata: folder.name
+            })
                 .then(decrypted => {
                 const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
                 items.push({
@@ -94,7 +89,9 @@ class Cloud {
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadata({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadata({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 items.push({
                     type: "file",
@@ -136,13 +133,17 @@ class Cloud {
      * @returns {Promise<CloudItemShared[]>}
      */
     async listDirectorySharedIn({ uuid }) {
-        const content = await this.api.v3().shared().in({ uuid });
+        const content = await this.sdk.api(3).shared().in({
+            uuid
+        });
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.folderMetadataPrivate({ metadata: folder.metadata })
+                .crypto.decrypt.folderMetadataPrivate({
+                metadata: folder.metadata
+            })
                 .then(decrypted => {
                 var _a, _b, _c, _d, _e;
                 const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
@@ -168,7 +169,9 @@ class Cloud {
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadataPrivate({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadataPrivate({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 var _a, _b, _c, _d;
                 items.push({
@@ -215,13 +218,18 @@ class Cloud {
      * @returns {Promise<CloudItemShared[]>}
      */
     async listDirectorySharedOut({ uuid, receiverId }) {
-        const content = await this.api.v3().shared().out({ uuid, receiverId });
+        const content = await this.sdk.api(3).shared().out({
+            uuid,
+            receiverId
+        });
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.folderMetadata({ metadata: folder.metadata })
+                .crypto.decrypt.folderMetadata({
+                metadata: folder.metadata
+            })
                 .then(decrypted => {
                 var _a, _b, _c, _d, _e;
                 const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
@@ -247,7 +255,9 @@ class Cloud {
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadata({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadata({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 var _a, _b, _c, _d;
                 items.push({
@@ -319,13 +329,17 @@ class Cloud {
      * @returns {Promise<CloudItem[]>}
      */
     async listRecents() {
-        const content = await this.api.v3().dir().content({ uuid: "recents" });
+        const content = await this.sdk.api(3).dir().content({
+            uuid: "recents"
+        });
         const items = [];
         const promises = [];
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadata({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadata({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 items.push({
                     type: "file",
@@ -365,13 +379,17 @@ class Cloud {
      * @returns {Promise<CloudItem[]>}
      */
     async listTrash() {
-        const content = await this.api.v3().dir().content({ uuid: "trash" });
+        const content = await this.sdk.api(3).dir().content({
+            uuid: "trash"
+        });
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.folderMetadata({ metadata: folder.name })
+                .crypto.decrypt.folderMetadata({
+                metadata: folder.name
+            })
                 .then(decrypted => {
                 const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
                 items.push({
@@ -392,7 +410,9 @@ class Cloud {
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadata({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadata({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 items.push({
                     type: "file",
@@ -432,13 +452,17 @@ class Cloud {
      * @returns {Promise<CloudItem[]>}
      */
     async listFavorites() {
-        const content = await this.api.v3().dir().content({ uuid: "favorites" });
+        const content = await this.sdk.api(3).dir().content({
+            uuid: "favorites"
+        });
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.folderMetadata({ metadata: folder.name })
+                .crypto.decrypt.folderMetadata({
+                metadata: folder.name
+            })
                 .then(decrypted => {
                 const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
                 items.push({
@@ -459,7 +483,9 @@ class Cloud {
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadata({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadata({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 items.push({
                     type: "file",
@@ -499,13 +525,17 @@ class Cloud {
      * @returns {Promise<CloudItem[]>}
      */
     async listPublicLinks() {
-        const content = await this.api.v3().dir().content({ uuid: "links" });
+        const content = await this.sdk.api(3).dir().content({
+            uuid: "links"
+        });
         const items = [];
         const promises = [];
         for (const folder of content.folders) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.folderMetadata({ metadata: folder.name })
+                .crypto.decrypt.folderMetadata({
+                metadata: folder.name
+            })
                 .then(decrypted => {
                 const timestamp = (0, utils_1.convertTimestampToMs)(folder.timestamp);
                 items.push({
@@ -526,7 +556,9 @@ class Cloud {
         for (const file of content.uploads) {
             promises.push(new Promise((resolve, reject) => this.sdk
                 .getWorker()
-                .crypto.decrypt.fileMetadata({ metadata: file.metadata })
+                .crypto.decrypt.fileMetadata({
+                metadata: file.metadata
+            })
                 .then(decrypted => {
                 items.push({
                     type: "file",
@@ -568,8 +600,10 @@ class Cloud {
      * @returns {Promise<FileExistsResponse>}
      */
     async fileExists({ name, parent }) {
-        const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() });
-        const exists = await this.api.v3().file().exists({
+        const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({
+            input: name.toLowerCase()
+        });
+        const exists = await this.sdk.api(3).file().exists({
             nameHashed,
             parent
         });
@@ -586,8 +620,10 @@ class Cloud {
      * @returns {Promise<DirExistsResponse>}
      */
     async directoryExists({ name, parent }) {
-        const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() });
-        const exists = await this.api.v3().dir().exists({
+        const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({
+            input: name.toLowerCase()
+        });
+        const exists = await this.sdk.api(3).dir().exists({
             nameHashed,
             parent
         });
@@ -617,7 +653,7 @@ class Cloud {
             })
         ]);
         try {
-            await this.api.v3().file().metadata({
+            await this.sdk.api(3).file().metadata({
                 uuid,
                 metadataEncrypted,
                 nameEncrypted,
@@ -657,25 +693,33 @@ class Cloud {
         if (metadata.key.length === 0) {
             throw new Error("Invalid metadata key.");
         }
-        const isPresent = await this.api.v3().file().present({ uuid });
+        const isPresent = await this.sdk.api(3).file().present({
+            uuid
+        });
         if (!isPresent.present) {
             return;
         }
-        const get = await this.api.v3().file().get({ uuid });
+        const get = await this.sdk.api(3).file().get({
+            uuid
+        });
         const exists = await this.fileExists({
             name,
             parent: get.parent
         });
         if (exists.exists && exists.uuid !== uuid) {
             if (overwriteIfExists) {
-                await this.trashFile({ uuid: exists.uuid });
+                await this.trashFile({
+                    uuid: exists.uuid
+                });
             }
             else {
                 throw new Error("A file with the same name already exists in this directory.");
             }
         }
         const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-            this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() }),
+            this.sdk.getWorker().crypto.utils.hashFn({
+                input: name.toLowerCase()
+            }),
             this.sdk.getWorker().crypto.encrypt.metadata({
                 metadata: JSON.stringify(Object.assign(Object.assign({}, metadata), { name }))
             }),
@@ -685,7 +729,7 @@ class Cloud {
             })
         ]);
         try {
-            await this.api.v3().file().rename({
+            await this.sdk.api(3).file().rename({
                 uuid,
                 metadataEncrypted,
                 nameEncrypted,
@@ -720,25 +764,33 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async renameDirectory({ uuid, name, overwriteIfExists = false }) {
-        const isPresent = await this.api.v3().dir().present({ uuid });
+        const isPresent = await this.sdk.api(3).dir().present({
+            uuid
+        });
         if (!isPresent.present) {
             return;
         }
-        const get = await this.api.v3().dir().get({ uuid });
+        const get = await this.sdk.api(3).dir().get({
+            uuid
+        });
         const exists = await this.directoryExists({
             name,
             parent: get.parent
         });
         if (exists.exists && exists.uuid !== uuid) {
             if (overwriteIfExists) {
-                await this.trashDirectory({ uuid: exists.uuid });
+                await this.trashDirectory({
+                    uuid: exists.uuid
+                });
             }
             else {
                 throw new Error("A directory with the same name already exists in this directory.");
             }
         }
         const [nameHashed, metadataEncrypted] = await Promise.all([
-            this.sdk.getWorker().crypto.utils.hashFn({ input: name.toLowerCase() }),
+            this.sdk.getWorker().crypto.utils.hashFn({
+                input: name.toLowerCase()
+            }),
             this.sdk.getWorker().crypto.encrypt.metadata({
                 metadata: JSON.stringify({
                     name
@@ -746,7 +798,7 @@ class Cloud {
             })
         ]);
         try {
-            await this.api.v3().dir().rename({
+            await this.sdk.api(3).dir().rename({
                 uuid,
                 metadataEncrypted,
                 nameHashed
@@ -793,10 +845,12 @@ class Cloud {
                 return;
             }
             if (overwriteIfExists) {
-                await this.trashFile({ uuid: exists.uuid });
+                await this.trashFile({
+                    uuid: exists.uuid
+                });
             }
         }
-        await this.api.v3().file().move({
+        await this.sdk.api(3).file().move({
             uuid,
             to
         });
@@ -834,10 +888,12 @@ class Cloud {
                 return;
             }
             if (overwriteIfExists) {
-                await this.trashDirectory({ uuid: exists.uuid });
+                await this.trashDirectory({
+                    uuid: exists.uuid
+                });
             }
         }
-        await this.api.v3().dir().move({
+        await this.sdk.api(3).dir().move({
             uuid,
             to
         });
@@ -859,7 +915,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async trashFile({ uuid }) {
-        await this.api.v3().file().trash({ uuid });
+        await this.sdk.api(3).file().trash({
+            uuid
+        });
     }
     /**
      * Send a directory to the trash bin.
@@ -872,7 +930,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async trashDirectory({ uuid }) {
-        await this.api.v3().dir().trash({ uuid });
+        await this.sdk.api(3).dir().trash({
+            uuid
+        });
     }
     /**
      * Create a directory under parent.
@@ -895,7 +955,10 @@ class Cloud {
         await this._semaphores.createDirectory.acquire();
         try {
             let uuidToUse = uuid ? uuid : await (0, utils_1.uuidv4)();
-            const exists = await this.directoryExists({ name, parent });
+            const exists = await this.directoryExists({
+                name,
+                parent
+            });
             if (exists.exists) {
                 uuidToUse = exists.uuid;
                 if (renameIfExists) {
@@ -917,7 +980,7 @@ class Cloud {
                         input: name.toLowerCase()
                     })
                 ]);
-                await this.api.v3().dir().create({
+                await this.sdk.api(3).dir().create({
                     uuid: uuidToUse,
                     metadataEncrypted,
                     nameHashed,
@@ -950,7 +1013,10 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async changeDirectoryColor({ uuid, color }) {
-        await this.api.v3().dir().color({ uuid, color });
+        await this.sdk.api(3).dir().color({
+            uuid,
+            color
+        });
     }
     /**
      * Toggle the favorite status of a directory.
@@ -964,7 +1030,11 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async favoriteDirectory({ uuid, favorite }) {
-        await this.api.v3().item().favorite({ uuid, type: "folder", favorite });
+        await this.sdk.api(3).item().favorite({
+            uuid,
+            type: "folder",
+            favorite
+        });
     }
     /**
      * Toggle the favorite status of a file.
@@ -978,7 +1048,11 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async favoriteFile({ uuid, favorite }) {
-        await this.api.v3().item().favorite({ uuid, type: "file", favorite });
+        await this.sdk.api(3).item().favorite({
+            uuid,
+            type: "file",
+            favorite
+        });
     }
     /**
      * Permanently delete a file.
@@ -991,7 +1065,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async deleteFile({ uuid }) {
-        await this.api.v3().file().delete().permanent({ uuid });
+        await this.sdk.api(3).file().delete().permanent({
+            uuid
+        });
     }
     /**
      * Permanently delete a directory.
@@ -1004,7 +1080,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async deleteDirectory({ uuid }) {
-        await this.api.v3().dir().delete().permanent({ uuid });
+        await this.sdk.api(3).dir().delete().permanent({
+            uuid
+        });
     }
     /**
      * Restore a file from the trash.
@@ -1017,7 +1095,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async restoreFile({ uuid }) {
-        await this.api.v3().file().restore({ uuid });
+        await this.sdk.api(3).file().restore({
+            uuid
+        });
     }
     /**
      * Restore a directory from the trash.
@@ -1030,7 +1110,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async restoreDirectory({ uuid }) {
-        await this.api.v3().dir().restore({ uuid });
+        await this.sdk.api(3).dir().restore({
+            uuid
+        });
     }
     /**
      * Restore a file version.
@@ -1044,11 +1126,13 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async restoreFileVersion({ uuid, currentUUID }) {
-        await this.api.v3().file().version().restore({
+        await this.sdk.api(3).file().version().restore({
             uuid,
             currentUUID
         });
-        const restoredFile = await this.getFile({ uuid });
+        const restoredFile = await this.getFile({
+            uuid
+        });
         await this.editFileMetadata({
             uuid,
             metadata: Object.assign(Object.assign({}, restoredFile.metadataDecrypted), { lastModified: Date.now() })
@@ -1065,7 +1149,9 @@ class Cloud {
      * @returns {Promise<FileVersionsResponse>}
      */
     async fileVersions({ uuid }) {
-        return await this.api.v3().file().versions({ uuid });
+        return await this.sdk.api(3).file().versions({
+            uuid
+        });
     }
     /**
      * Share an item to another Filen user.
@@ -1096,7 +1182,7 @@ class Cloud {
                 metadata: JSON.stringify(metadata),
                 publicKey
             });
-            await this.api.v3().item().share({
+            await this.sdk.api(3).item().share({
                 uuid,
                 parent,
                 email,
@@ -1135,7 +1221,9 @@ class Cloud {
     async addItemToDirectoryPublicLink({ uuid, parent, linkUUID, type, metadata, linkKeyEncrypted, expiration }) {
         await this._semaphores.share.acquire();
         try {
-            const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({ metadata: linkKeyEncrypted });
+            const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({
+                metadata: linkKeyEncrypted
+            });
             if (key.length === 0) {
                 throw new Error("Invalid key.");
             }
@@ -1143,7 +1231,7 @@ class Cloud {
                 metadata: JSON.stringify(metadata),
                 key
             });
-            await this.api.v3().dir().link().add({
+            await this.sdk.api(3).dir().link().add({
                 uuid,
                 parent,
                 linkUUID,
@@ -1177,7 +1265,9 @@ class Cloud {
         const linkUUID = await (0, utils_1.uuidv4)();
         if (type === "directory") {
             const [tree, key] = await Promise.all([
-                this.getDirectoryTree({ uuid }),
+                this.getDirectoryTree({
+                    uuid
+                }),
                 this.sdk.getWorker().crypto.utils.generateRandomString(32)
             ]);
             const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
@@ -1226,8 +1316,8 @@ class Cloud {
             await (0, utils_1.promiseAllChunked)(promises);
             return linkUUID;
         }
-        await this.api
-            .v3()
+        await this.sdk
+            .api(3)
             .file()
             .link()
             .edit({
@@ -1280,7 +1370,7 @@ class Cloud {
             })
             : "empty";
         if (type === "directory") {
-            await this.api.v3().dir().link().edit({
+            await this.sdk.api(3).dir().link().edit({
                 uuid: itemUUID,
                 expiration,
                 password: pass,
@@ -1293,7 +1383,7 @@ class Cloud {
         if (!linkUUID) {
             throw new Error("[cloud.disablePublicLink] linkUUID undefined, expected: UUIDv4 string");
         }
-        await this.api.v3().file().link().edit({
+        await this.sdk.api(3).file().link().edit({
             uuid: linkUUID,
             fileUUID: itemUUID,
             expiration,
@@ -1322,14 +1412,16 @@ class Cloud {
      */
     async disablePublicLink({ type, linkUUID, itemUUID }) {
         if (type === "directory") {
-            await this.api.v3().dir().link().remove({ uuid: itemUUID });
+            await this.sdk.api(3).dir().link().remove({
+                uuid: itemUUID
+            });
             return;
         }
         if (!linkUUID) {
             throw new Error("[cloud.disablePublicLink] linkUUID undefined, expected: UUIDv4 string");
         }
-        await this.api
-            .v3()
+        await this.sdk
+            .api(3)
             .file()
             .link()
             .edit({
@@ -1357,9 +1449,13 @@ class Cloud {
      */
     async publicLinkStatus({ type, uuid }) {
         if (type === "directory") {
-            return await this.api.v3().dir().link().status({ uuid });
+            return await this.sdk.api(3).dir().link().status({
+                uuid
+            });
         }
-        return await this.api.v3().file().link().status({ uuid });
+        return await this.sdk.api(3).file().link().status({
+            uuid
+        });
     }
     /**
      * Fetch password info of a public link.
@@ -1371,7 +1467,9 @@ class Cloud {
      * @returns {Promise<FileLinkPasswordResponse>}
      */
     async filePublicLinkHasPassword({ uuid }) {
-        return await this.api.v3().file().link().password({ uuid });
+        return await this.sdk.api(3).file().link().password({
+            uuid
+        });
     }
     /**
      * Fetch info of a file public link.
@@ -1407,8 +1505,10 @@ class Cloud {
                 : await this.sdk.getWorker().crypto.utils.hashFn({
                     input: !password ? "empty" : password
                 })
-            : await this.sdk.getWorker().crypto.utils.hashFn({ input: "empty" });
-        const info = await this.api.v3().file().link().info({
+            : await this.sdk.getWorker().crypto.utils.hashFn({
+                input: "empty"
+            });
+        const info = await this.sdk.api(3).file().link().info({
             uuid,
             password: derivedPassword
         });
@@ -1442,7 +1542,9 @@ class Cloud {
         if (key.length === 0) {
             throw new Error("Invalid key.");
         }
-        const info = await this.api.v3().dir().link().info({ uuid });
+        const info = await this.sdk.api(3).dir().link().info({
+            uuid
+        });
         const metadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
             metadata: info.metadata,
             key
@@ -1487,8 +1589,10 @@ class Cloud {
                 : await this.sdk.getWorker().crypto.utils.hashFn({
                     input: !password ? "empty" : password
                 })
-            : await this.sdk.getWorker().crypto.utils.hashFn({ input: "empty" });
-        const content = await this.api.v3().dir().link().content({
+            : await this.sdk.getWorker().crypto.utils.hashFn({
+                input: "empty"
+            });
+        const content = await this.sdk.api(3).dir().link().content({
             uuid,
             parent,
             password: derivedPassword
@@ -1522,7 +1626,10 @@ class Cloud {
             folders: await (0, utils_1.promiseAllChunked)(content.folders.map(folder => new Promise((resolve, reject) => {
                 this.sdk
                     .getWorker()
-                    .crypto.decrypt.folderMetadata({ metadata: folder.metadata, key })
+                    .crypto.decrypt.folderMetadata({
+                    metadata: folder.metadata,
+                    key
+                })
                     .then(decryptedFolderMetadata => {
                     resolve(Object.assign(Object.assign({}, folder), { metadata: decryptedFolderMetadata.name.length > 0
                             ? decryptedFolderMetadata
@@ -1546,7 +1653,10 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async stopSharingItem({ uuid, receiverId }) {
-        await this.api.v3().item().sharedOut().remove({ uuid, receiverId });
+        await this.sdk.api(3).item().sharedOut().remove({
+            uuid,
+            receiverId
+        });
     }
     /**
      * Stop receiving a shared item.
@@ -1559,7 +1669,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async removeSharedItem({ uuid }) {
-        await this.api.v3().item().sharedIn().remove({ uuid });
+        await this.sdk.api(3).item().sharedIn().remove({
+            uuid
+        });
     }
     /**
      * Share a file or a directory (and all it's children) to a user.
@@ -1580,7 +1692,9 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async shareItemsToUser({ files, directories, email, onProgress }) {
-        const publicKey = (await this.api.v3().user().publicKey({ email })).publicKey;
+        const publicKey = (await this.sdk.api(3).user().publicKey({
+            email
+        })).publicKey;
         const itemsToShare = [];
         for (const file of files) {
             itemsToShare.push(Object.assign(Object.assign({}, file), { metadata: file.metadata, parent: "none", type: "file" }));
@@ -1589,7 +1703,9 @@ class Cloud {
         for (const directory of directories) {
             itemsToShare.push(Object.assign(Object.assign({}, directory), { metadata: directory.metadata, parent: "none", type: "folder" }));
             directoryPromises.push(new Promise((resolve, reject) => {
-                this.getDirectoryTree({ uuid: directory.uuid })
+                this.getDirectoryTree({
+                    uuid: directory.uuid
+                })
                     .then(tree => {
                     for (const entry in tree) {
                         const item = tree[entry];
@@ -1677,8 +1793,12 @@ class Cloud {
      */
     async checkIfItemParentIsShared({ type, parent, uuid, itemMetadata }) {
         const [isSharingParent, isLinkingParent] = await Promise.all([
-            this.api.v3().dir().shared({ uuid: parent }),
-            this.api.v3().dir().linked({ uuid: parent })
+            this.sdk.api(3).dir().shared({
+                uuid: parent
+            }),
+            this.sdk.api(3).dir().linked({
+                uuid: parent
+            })
         ]);
         if (!isSharingParent.sharing && !isLinkingParent.link) {
             return;
@@ -1702,7 +1822,9 @@ class Cloud {
                     metadata: itemMetadata
                 });
                 if (!tree) {
-                    tree = await this.getDirectoryTree({ uuid });
+                    tree = await this.getDirectoryTree({
+                        uuid
+                    });
                 }
                 for (const entry in tree) {
                     const item = tree[entry];
@@ -1780,7 +1902,9 @@ class Cloud {
                     metadata: itemMetadata
                 });
                 if (!tree) {
-                    tree = await this.getDirectoryTree({ uuid });
+                    tree = await this.getDirectoryTree({
+                        uuid
+                    });
                 }
                 for (const entry in tree) {
                     const item = tree[entry];
@@ -1865,7 +1989,7 @@ class Cloud {
             metadata: JSON.stringify(metadata),
             publicKey
         });
-        await this.api.v3().item().sharedRename({
+        await this.sdk.api(3).item().sharedRename({
             uuid,
             receiverId,
             metadata: metadataEncrypted
@@ -1895,7 +2019,7 @@ class Cloud {
             metadata: JSON.stringify(metadata),
             key
         });
-        await this.api.v3().item().linkedRename({
+        await this.sdk.api(3).item().linkedRename({
             uuid,
             linkUUID,
             metadata: metadataEncrypted
@@ -1918,10 +2042,10 @@ class Cloud {
      */
     async checkIfItemIsSharedForRename({ uuid, itemMetadata }) {
         const [isSharingItem, isLinkingItem] = await Promise.all([
-            this.api.v3().item().shared({
+            this.sdk.api(3).item().shared({
                 uuid
             }),
-            this.api.v3().item().linked({
+            this.sdk.api(3).item().linked({
                 uuid
             })
         ]);
@@ -1967,7 +2091,7 @@ class Cloud {
      * @returns {Promise<{ size: number; folders: number; files: number }>}
      */
     async directorySize({ uuid, sharerId, receiverId, trash }) {
-        return await this.api.v3().dir().size({
+        return await this.sdk.api(3).dir().size({
             uuid,
             sharerId,
             receiverId,
@@ -1986,7 +2110,7 @@ class Cloud {
      * @returns {Promise<{ size: number, folders: number, files: number }>}
      */
     async directorySizePublicLink({ uuid, linkUUID }) {
-        return await this.api.v3().dir().sizeLink({
+        return await this.sdk.api(3).dir().sizeLink({
             uuid,
             linkUUID
         });
@@ -2048,7 +2172,7 @@ class Cloud {
         }
         await this._semaphores.downloadToLocal.acquire();
         try {
-            const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
+            const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os_1.default.tmpdir();
             const destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
             await fs_extra_1.default.ensureDir(destinationPath);
             await fs_extra_1.default.rm(destinationPath, {
@@ -2442,7 +2566,7 @@ class Cloud {
      * @returns {Promise<Record<string, CloudItemTree>>}
      */
     async getDirectoryTree({ uuid, type = "normal", linkUUID, linkHasPassword, linkPassword, linkSalt, skipCache, linkKey }) {
-        const contents = await this.api.v3().dir().download({
+        const contents = await this.sdk.api(3).dir().download({
             uuid,
             type,
             linkUUID,
@@ -2456,13 +2580,17 @@ class Cloud {
         for (const folder of contents.folders) {
             try {
                 const decrypted = type === "shared"
-                    ? await this.sdk.getWorker().crypto.decrypt.folderMetadataPrivate({ metadata: folder.name })
+                    ? await this.sdk.getWorker().crypto.decrypt.folderMetadataPrivate({
+                        metadata: folder.name
+                    })
                     : type === "linked" && linkKey
                         ? await this.sdk.getWorker().crypto.decrypt.folderMetadataLink({
                             metadata: folder.name,
                             linkKey
                         })
-                        : await this.sdk.getWorker().crypto.decrypt.folderMetadata({ metadata: folder.name });
+                        : await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+                            metadata: folder.name
+                        });
                 const parentPath = folder.parent === "base" ? "" : `${folderNames[folder.parent]}`;
                 const folderPath = folder.parent === "base"
                     ? "/"
@@ -2489,13 +2617,17 @@ class Cloud {
         for (const file of contents.files) {
             promises.push(new Promise((resolve, reject) => {
                 const decryptPromise = type === "shared"
-                    ? this.sdk.getWorker().crypto.decrypt.fileMetadataPrivate({ metadata: file.metadata })
+                    ? this.sdk.getWorker().crypto.decrypt.fileMetadataPrivate({
+                        metadata: file.metadata
+                    })
                     : type === "linked" && linkKey
                         ? this.sdk.getWorker().crypto.decrypt.fileMetadataLink({
                             metadata: file.metadata,
                             linkKey
                         })
-                        : this.sdk.getWorker().crypto.decrypt.fileMetadata({ metadata: file.metadata });
+                        : this.sdk.getWorker().crypto.decrypt.fileMetadata({
+                            metadata: file.metadata
+                        });
                 decryptPromise
                     .then(decrypted => {
                     const parentPath = folderNames[file.parent];
@@ -2590,7 +2722,7 @@ class Cloud {
             if (onStarted) {
                 onStarted();
             }
-            const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os_1.default.tmpdir();
+            const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os_1.default.tmpdir();
             destinationPath = (0, utils_1.normalizePath)(to ? to : path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)()));
             await fs_extra_1.default.rm(destinationPath, {
                 force: true,
@@ -2847,7 +2979,7 @@ class Cloud {
                     });
                 }
             });
-            const done = await this.api.v3().upload().done({
+            const done = await this.sdk.api(3).upload().done({
                 uuid,
                 name: nameEncrypted,
                 nameHashed,
@@ -3060,7 +3192,9 @@ class Cloud {
                 source.once("finish", () => {
                     closed = true;
                 });
-                pipelineAsync(source, transformer, writeStream, { signal: abortSignal })
+                pipelineAsync(source, transformer, writeStream, {
+                    signal: abortSignal
+                })
                     .then(() => {
                     closed = true;
                 })
@@ -3259,7 +3393,7 @@ class Cloud {
                     });
                 }
             });
-            const done = await this.api.v3().upload().done({
+            const done = await this.sdk.api(3).upload().done({
                 uuid: fileUUID,
                 name: nameEncrypted,
                 nameHashed,
@@ -3651,7 +3785,7 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async emptyTrash() {
-        return await this.api.v3().trash().empty();
+        return await this.sdk.api(3).trash().empty();
     }
     /**
      * Recursively find the full path of a file using it's UUID.
@@ -3664,14 +3798,16 @@ class Cloud {
      */
     async fileUUIDToPath({ uuid }) {
         const pathParts = [];
-        const file = await this.api.v3().file().get({ uuid });
+        const file = await this.sdk.api(3).file().get({
+            uuid
+        });
         let nextParent = file.parent;
         const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
             metadata: file.metadata
         });
         pathParts.push(fileMetadataDecrypted.name.length > 0 ? fileMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`);
-        while (nextParent !== this.sdkConfig.baseFolderUUID) {
-            const dir = await this.api.v3().dir().get({
+        while (nextParent !== this.sdk.config.baseFolderUUID) {
+            const dir = await this.sdk.api(3).dir().get({
                 uuid: nextParent
             });
             const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
@@ -3693,7 +3829,7 @@ class Cloud {
      */
     async directoryUUIDToPath({ uuid }) {
         const pathParts = [];
-        const firstDir = await this.api.v3().dir().get({
+        const firstDir = await this.sdk.api(3).dir().get({
             uuid
         });
         let nextParent = firstDir.parent;
@@ -3701,8 +3837,8 @@ class Cloud {
             metadata: firstDir.nameEncrypted
         });
         pathParts.push(firstDirMetadataDecrypted.name.length > 0 ? firstDirMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`);
-        while (nextParent !== this.sdkConfig.baseFolderUUID) {
-            const dir = await this.api.v3().dir().get({
+        while (nextParent !== this.sdk.config.baseFolderUUID) {
+            const dir = await this.sdk.api(3).dir().get({
                 uuid: nextParent
             });
             const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
@@ -3723,7 +3859,9 @@ class Cloud {
      * @returns {Promise<GetFileResult>}
      */
     async getFile({ uuid }) {
-        const file = await this.api.v3().file().get({ uuid });
+        const file = await this.sdk.api(3).file().get({
+            uuid
+        });
         const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
             metadata: file.metadata
         });
@@ -3739,7 +3877,7 @@ class Cloud {
      * @returns {Promise<GetDirResult>}
      */
     async getDirectory({ uuid }) {
-        const dir = await this.api.v3().dir().get({
+        const dir = await this.sdk.api(3).dir().get({
             uuid
         });
         const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({

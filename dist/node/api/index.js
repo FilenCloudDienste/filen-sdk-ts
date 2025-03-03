@@ -165,244 +165,535 @@ const setDEK_1 = __importDefault(require("./v3/user/setDEK"));
  * @typedef {API}
  */
 class API {
-    /**
-     * Creates an instance of API.
-     * @date 2/1/2024 - 4:46:38 PM
-     *
-     * @constructor
-     * @public
-     * @param {APIConfig} params
-     */
-    constructor(params) {
-        this.config = params;
-        if (this.config.apiKey.length === 0) {
+    constructor(sdk) {
+        this.sdk = sdk;
+        if (!this.sdk.config.apiKey || this.sdk.config.apiKey.length === 0) {
             throw new Error("Invalid apiKey");
         }
-        this.apiClient = new client_1.default({
-            apiKey: this.config.apiKey,
-            sdk: this.config.sdk
-        });
+        this.apiClient = new client_1.default(this.sdk);
         this._v3 = {
-            health: new health_1.default({ apiClient: this.apiClient }),
+            health: new health_1.default({
+                apiClient: this.apiClient
+            }),
             dir: {
-                content: new content_1.default({ apiClient: this.apiClient }),
-                download: new download_1.default({ apiClient: this.apiClient }),
-                shared: new shared_1.default({ apiClient: this.apiClient }),
-                linked: new linked_1.default({ apiClient: this.apiClient }),
+                content: new content_1.default({
+                    apiClient: this.apiClient
+                }),
+                download: new download_1.default({
+                    apiClient: this.apiClient
+                }),
+                shared: new shared_1.default({
+                    apiClient: this.apiClient
+                }),
+                linked: new linked_1.default({
+                    apiClient: this.apiClient
+                }),
                 link: {
-                    add: new add_1.default({ apiClient: this.apiClient }),
-                    status: new status_1.default({ apiClient: this.apiClient }),
-                    remove: new remove_3.default({ apiClient: this.apiClient }),
-                    edit: new edit_2.default({ apiClient: this.apiClient }),
-                    info: new info_4.default({ apiClient: this.apiClient }),
-                    content: new content_2.default({ apiClient: this.apiClient })
+                    add: new add_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    status: new status_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    remove: new remove_3.default({
+                        apiClient: this.apiClient
+                    }),
+                    edit: new edit_2.default({
+                        apiClient: this.apiClient
+                    }),
+                    info: new info_4.default({
+                        apiClient: this.apiClient
+                    }),
+                    content: new content_2.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                exists: new exists_1.default({ apiClient: this.apiClient }),
-                create: new create_1.default({ apiClient: this.apiClient }),
-                present: new present_1.default({ apiClient: this.apiClient }),
-                trash: new trash_1.default({ apiClient: this.apiClient }),
-                move: new move_2.default({ apiClient: this.apiClient }),
-                rename: new rename_4.default({ apiClient: this.apiClient }),
-                size: new size_1.default({ apiClient: this.apiClient }),
-                sizeLink: new sizeLink_1.default({ apiClient: this.apiClient }),
+                exists: new exists_1.default({
+                    apiClient: this.apiClient
+                }),
+                create: new create_1.default({
+                    apiClient: this.apiClient
+                }),
+                present: new present_1.default({
+                    apiClient: this.apiClient
+                }),
+                trash: new trash_1.default({
+                    apiClient: this.apiClient
+                }),
+                move: new move_2.default({
+                    apiClient: this.apiClient
+                }),
+                rename: new rename_4.default({
+                    apiClient: this.apiClient
+                }),
+                size: new size_1.default({
+                    apiClient: this.apiClient
+                }),
+                sizeLink: new sizeLink_1.default({
+                    apiClient: this.apiClient
+                }),
                 delete: {
-                    permanent: new permanent_2.default({ apiClient: this.apiClient })
+                    permanent: new permanent_2.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                restore: new restore_2.default({ apiClient: this.apiClient }),
-                color: new color_1.default({ apiClient: this.apiClient }),
-                tree: new tree_1.default({ apiClient: this.apiClient }),
-                get: new get_1.default({ apiClient: this.apiClient })
+                restore: new restore_2.default({
+                    apiClient: this.apiClient
+                }),
+                color: new color_1.default({
+                    apiClient: this.apiClient
+                }),
+                tree: new tree_1.default({
+                    apiClient: this.apiClient
+                }),
+                get: new get_1.default({
+                    apiClient: this.apiClient
+                })
             },
             auth: {
-                info: new info_1.default({ apiClient: this.apiClient })
+                info: new info_1.default({
+                    apiClient: this.apiClient
+                })
             },
-            login: new login_1.default({ apiClient: this.apiClient }),
-            register: new register_1.default({ apiClient: this.apiClient }),
-            confirmationSend: new confirmationSend_1.default({ apiClient: this.apiClient }),
+            login: new login_1.default({
+                apiClient: this.apiClient
+            }),
+            register: new register_1.default({
+                apiClient: this.apiClient
+            }),
+            confirmationSend: new confirmationSend_1.default({
+                apiClient: this.apiClient
+            }),
             user: {
-                info: new info_2.default({ apiClient: this.apiClient }),
-                baseFolder: new baseFolder_1.default({ apiClient: this.apiClient }),
-                publicKey: new publicKey_1.default({ apiClient: this.apiClient }),
-                settings: new settings_1.default({ apiClient: this.apiClient }),
-                account: new account_1.default({ apiClient: this.apiClient }),
-                gdpr: new gdpr_1.default({ apiClient: this.apiClient }),
-                avatar: new avatar_1.default({ apiClient: this.apiClient }),
+                info: new info_2.default({
+                    apiClient: this.apiClient
+                }),
+                baseFolder: new baseFolder_1.default({
+                    apiClient: this.apiClient
+                }),
+                publicKey: new publicKey_1.default({
+                    apiClient: this.apiClient
+                }),
+                settings: new settings_1.default({
+                    apiClient: this.apiClient
+                }),
+                account: new account_1.default({
+                    apiClient: this.apiClient
+                }),
+                gdpr: new gdpr_1.default({
+                    apiClient: this.apiClient
+                }),
+                avatar: new avatar_1.default({
+                    apiClient: this.apiClient
+                }),
                 settingsEmail: {
-                    change: new change_1.default({ apiClient: this.apiClient })
+                    change: new change_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
                 personal: {
-                    update: new update_1.default({ apiClient: this.apiClient })
+                    update: new update_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                delete: new delete_1.default({ apiClient: this.apiClient }),
-                deleteVersions: new versions_2.default({ apiClient: this.apiClient }),
-                deleteAll: new all_1.default({ apiClient: this.apiClient }),
+                delete: new delete_1.default({
+                    apiClient: this.apiClient
+                }),
+                deleteVersions: new versions_2.default({
+                    apiClient: this.apiClient
+                }),
+                deleteAll: new all_1.default({
+                    apiClient: this.apiClient
+                }),
                 settingsPassword: {
-                    change: new change_2.default({ apiClient: this.apiClient })
+                    change: new change_2.default({
+                        apiClient: this.apiClient
+                    })
                 },
                 twoFactorAuthentication: {
-                    enable: new enable_1.default({ apiClient: this.apiClient }),
-                    disable: new disable_1.default({ apiClient: this.apiClient })
+                    enable: new enable_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    disable: new disable_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                events: new events_1.default({ apiClient: this.apiClient }),
-                event: new event_1.default({ apiClient: this.apiClient }),
+                events: new events_1.default({
+                    apiClient: this.apiClient
+                }),
+                event: new event_1.default({
+                    apiClient: this.apiClient
+                }),
                 sub: {
-                    cancel: new cancel_1.default({ apiClient: this.apiClient }),
-                    create: new create_2.default({ apiClient: this.apiClient })
+                    cancel: new cancel_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    create: new create_2.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                invoice: new invoice_1.default({ apiClient: this.apiClient }),
+                invoice: new invoice_1.default({
+                    apiClient: this.apiClient
+                }),
                 affiliate: {
-                    payout: new payout_1.default({ apiClient: this.apiClient })
+                    payout: new payout_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                versioning: new versioning_1.default({ apiClient: this.apiClient }),
-                loginAlerts: new loginAlerts_1.default({ apiClient: this.apiClient }),
-                nickname: new nickname_1.default({ apiClient: this.apiClient }),
-                appearOffline: new appearOffline_1.default({ apiClient: this.apiClient }),
-                profile: new profile_1.default({ apiClient: this.apiClient }),
+                versioning: new versioning_1.default({
+                    apiClient: this.apiClient
+                }),
+                loginAlerts: new loginAlerts_1.default({
+                    apiClient: this.apiClient
+                }),
+                nickname: new nickname_1.default({
+                    apiClient: this.apiClient
+                }),
+                appearOffline: new appearOffline_1.default({
+                    apiClient: this.apiClient
+                }),
+                profile: new profile_1.default({
+                    apiClient: this.apiClient
+                }),
                 lastActive: {
-                    desktop: new desktop_1.default({ apiClient: this.apiClient })
+                    desktop: new desktop_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
                 keyPair: {
-                    update: new update_2.default({ apiClient: this.apiClient }),
-                    set: new set_1.default({ apiClient: this.apiClient }),
-                    info: new info_5.default({ apiClient: this.apiClient })
+                    update: new update_2.default({
+                        apiClient: this.apiClient
+                    }),
+                    set: new set_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    info: new info_5.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                masterKeys: new masterKeys_1.default({ apiClient: this.apiClient }),
-                setDEK: new setDEK_1.default({ apiClient: this.apiClient }),
-                getDEK: new getDEK_1.default({ apiClient: this.apiClient }),
+                masterKeys: new masterKeys_1.default({
+                    apiClient: this.apiClient
+                }),
+                setDEK: new setDEK_1.default({
+                    apiClient: this.apiClient
+                }),
+                getDEK: new getDEK_1.default({
+                    apiClient: this.apiClient
+                }),
                 password: {
-                    forgot: new forgot_1.default({ apiClient: this.apiClient }),
-                    forgotReset: new forgotReset_1.default({ apiClient: this.apiClient })
+                    forgot: new forgot_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    forgotReset: new forgotReset_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                didExportMasterKeys: new didExportMasterKeys_1.default({ apiClient: this.apiClient }),
-                lock: new lock_1.default({ apiClient: this.apiClient })
+                didExportMasterKeys: new didExportMasterKeys_1.default({
+                    apiClient: this.apiClient
+                }),
+                lock: new lock_1.default({
+                    apiClient: this.apiClient
+                })
             },
             shared: {
-                in: new in_1.default({ apiClient: this.apiClient }),
-                out: new out_1.default({ apiClient: this.apiClient })
+                in: new in_1.default({
+                    apiClient: this.apiClient
+                }),
+                out: new out_1.default({
+                    apiClient: this.apiClient
+                })
             },
             upload: {
-                done: new done_1.default({ apiClient: this.apiClient })
+                done: new done_1.default({
+                    apiClient: this.apiClient
+                })
             },
             item: {
-                share: new share_1.default({ apiClient: this.apiClient }),
-                shared: new shared_2.default({ apiClient: this.apiClient }),
-                linked: new linked_2.default({ apiClient: this.apiClient }),
-                linkedRename: new rename_1.default({ apiClient: this.apiClient }),
-                sharedRename: new rename_2.default({ apiClient: this.apiClient }),
-                favorite: new favorite_1.default({ apiClient: this.apiClient }),
+                share: new share_1.default({
+                    apiClient: this.apiClient
+                }),
+                shared: new shared_2.default({
+                    apiClient: this.apiClient
+                }),
+                linked: new linked_2.default({
+                    apiClient: this.apiClient
+                }),
+                linkedRename: new rename_1.default({
+                    apiClient: this.apiClient
+                }),
+                sharedRename: new rename_2.default({
+                    apiClient: this.apiClient
+                }),
+                favorite: new favorite_1.default({
+                    apiClient: this.apiClient
+                }),
                 sharedOut: {
-                    remove: new remove_1.default({ apiClient: this.apiClient })
+                    remove: new remove_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
                 sharedIn: {
-                    remove: new remove_2.default({ apiClient: this.apiClient })
+                    remove: new remove_2.default({
+                        apiClient: this.apiClient
+                    })
                 }
             },
             file: {
-                exists: new exists_2.default({ apiClient: this.apiClient }),
-                trash: new trash_2.default({ apiClient: this.apiClient }),
-                move: new move_1.default({ apiClient: this.apiClient }),
-                rename: new rename_3.default({ apiClient: this.apiClient }),
-                metadata: new metadata_1.default({ apiClient: this.apiClient }),
+                exists: new exists_2.default({
+                    apiClient: this.apiClient
+                }),
+                trash: new trash_2.default({
+                    apiClient: this.apiClient
+                }),
+                move: new move_1.default({
+                    apiClient: this.apiClient
+                }),
+                rename: new rename_3.default({
+                    apiClient: this.apiClient
+                }),
+                metadata: new metadata_1.default({
+                    apiClient: this.apiClient
+                }),
                 delete: {
-                    permanent: new permanent_1.default({ apiClient: this.apiClient })
+                    permanent: new permanent_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                restore: new restore_1.default({ apiClient: this.apiClient }),
+                restore: new restore_1.default({
+                    apiClient: this.apiClient
+                }),
                 version: {
-                    restore: new restore_3.default({ apiClient: this.apiClient })
+                    restore: new restore_3.default({
+                        apiClient: this.apiClient
+                    })
                 },
                 link: {
-                    status: new status_2.default({ apiClient: this.apiClient }),
-                    edit: new edit_1.default({ apiClient: this.apiClient }),
-                    info: new info_3.default({ apiClient: this.apiClient }),
-                    password: new password_1.default({ apiClient: this.apiClient })
+                    status: new status_2.default({
+                        apiClient: this.apiClient
+                    }),
+                    edit: new edit_1.default({
+                        apiClient: this.apiClient
+                    }),
+                    info: new info_3.default({
+                        apiClient: this.apiClient
+                    }),
+                    password: new password_1.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                versions: new versions_1.default({ apiClient: this.apiClient }),
+                versions: new versions_1.default({
+                    apiClient: this.apiClient
+                }),
                 download: {
                     chunk: {
-                        buffer: new buffer_1.default({ apiClient: this.apiClient }),
-                        stream: new stream_1.default({ apiClient: this.apiClient }),
-                        local: new local_1.default({ apiClient: this.apiClient })
+                        buffer: new buffer_1.default({
+                            apiClient: this.apiClient
+                        }),
+                        stream: new stream_1.default({
+                            apiClient: this.apiClient
+                        }),
+                        local: new local_1.default({
+                            apiClient: this.apiClient
+                        })
                     }
                 },
                 upload: {
                     chunk: {
-                        buffer: new buffer_2.default({ apiClient: this.apiClient })
+                        buffer: new buffer_2.default({
+                            apiClient: this.apiClient
+                        })
                     }
                 },
-                get: new get_2.default({ apiClient: this.apiClient }),
-                present: new present_2.default({ apiClient: this.apiClient })
+                get: new get_2.default({
+                    apiClient: this.apiClient
+                }),
+                present: new present_2.default({
+                    apiClient: this.apiClient
+                })
             },
             trash: {
-                empty: new empty_1.default({ apiClient: this.apiClient })
+                empty: new empty_1.default({
+                    apiClient: this.apiClient
+                })
             },
             chat: {
-                conversations: new conversations_1.default({ apiClient: this.apiClient }),
-                messages: new messages_1.default({ apiClient: this.apiClient }),
+                conversations: new conversations_1.default({
+                    apiClient: this.apiClient
+                }),
+                messages: new messages_1.default({
+                    apiClient: this.apiClient
+                }),
                 conversationsName: {
-                    edit: new edit_3.default({ apiClient: this.apiClient })
+                    edit: new edit_3.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                send: new send_1.default({ apiClient: this.apiClient }),
-                edit: new edit_4.default({ apiClient: this.apiClient }),
-                conversationsCreate: new create_3.default({ apiClient: this.apiClient }),
+                send: new send_1.default({
+                    apiClient: this.apiClient
+                }),
+                edit: new edit_4.default({
+                    apiClient: this.apiClient
+                }),
+                conversationsCreate: new create_3.default({
+                    apiClient: this.apiClient
+                }),
                 conversationsParticipants: {
-                    add: new add_2.default({ apiClient: this.apiClient }),
-                    remove: new remove_5.default({ apiClient: this.apiClient })
+                    add: new add_2.default({
+                        apiClient: this.apiClient
+                    }),
+                    remove: new remove_5.default({
+                        apiClient: this.apiClient
+                    })
                 },
-                typing: new typing_1.default({ apiClient: this.apiClient }),
-                conversationsRead: new read_1.default({ apiClient: this.apiClient }),
-                conversationsUnread: new unread_1.default({ apiClient: this.apiClient }),
-                unread: new unread_2.default({ apiClient: this.apiClient }),
-                conversationsOnline: new online_1.default({ apiClient: this.apiClient }),
-                delete: new delete_2.default({ apiClient: this.apiClient }),
+                typing: new typing_1.default({
+                    apiClient: this.apiClient
+                }),
+                conversationsRead: new read_1.default({
+                    apiClient: this.apiClient
+                }),
+                conversationsUnread: new unread_1.default({
+                    apiClient: this.apiClient
+                }),
+                unread: new unread_2.default({
+                    apiClient: this.apiClient
+                }),
+                conversationsOnline: new online_1.default({
+                    apiClient: this.apiClient
+                }),
+                delete: new delete_2.default({
+                    apiClient: this.apiClient
+                }),
                 message: {
                     embed: {
-                        disable: new disable_2.default({ apiClient: this.apiClient })
+                        disable: new disable_2.default({
+                            apiClient: this.apiClient
+                        })
                     }
                 },
-                conversationsLeave: new leave_1.default({ apiClient: this.apiClient }),
-                conversationsDelete: new delete_8.default({ apiClient: this.apiClient }),
-                lastFocusUpdate: new lastFocusUpdate_1.default({ apiClient: this.apiClient }),
-                lastFocus: new lastFocus_1.default({ apiClient: this.apiClient })
+                conversationsLeave: new leave_1.default({
+                    apiClient: this.apiClient
+                }),
+                conversationsDelete: new delete_8.default({
+                    apiClient: this.apiClient
+                }),
+                lastFocusUpdate: new lastFocusUpdate_1.default({
+                    apiClient: this.apiClient
+                }),
+                lastFocus: new lastFocus_1.default({
+                    apiClient: this.apiClient
+                })
             },
             notes: {
-                all: new notes_1.default({ apiClient: this.apiClient }),
-                content: new content_3.default({ apiClient: this.apiClient }),
-                create: new create_4.default({ apiClient: this.apiClient }),
-                contentEdit: new edit_5.default({ apiClient: this.apiClient }),
-                titleEdit: new edit_6.default({ apiClient: this.apiClient }),
-                delete: new delete_3.default({ apiClient: this.apiClient }),
-                trash: new trash_3.default({ apiClient: this.apiClient }),
-                archive: new archive_1.default({ apiClient: this.apiClient }),
-                restore: new restore_4.default({ apiClient: this.apiClient }),
-                typeChange: new change_3.default({ apiClient: this.apiClient }),
-                pinned: new pinned_1.default({ apiClient: this.apiClient }),
-                favorite: new favorite_2.default({ apiClient: this.apiClient }),
-                history: new history_1.default({ apiClient: this.apiClient }),
-                historyRestore: new restore_5.default({ apiClient: this.apiClient }),
-                participantsRemove: new remove_4.default({ apiClient: this.apiClient }),
-                participantsPermissions: new permissions_1.default({ apiClient: this.apiClient }),
-                participantsAdd: new add_4.default({ apiClient: this.apiClient }),
-                tags: new tags_1.default({ apiClient: this.apiClient }),
-                tagsCreate: new create_5.default({ apiClient: this.apiClient }),
-                tagsRename: new rename_5.default({ apiClient: this.apiClient }),
-                tagsDelete: new delete_7.default({ apiClient: this.apiClient }),
-                tagsFavorite: new favorite_3.default({ apiClient: this.apiClient }),
-                tag: new tag_1.default({ apiClient: this.apiClient }),
-                untag: new untag_1.default({ apiClient: this.apiClient })
+                all: new notes_1.default({
+                    apiClient: this.apiClient
+                }),
+                content: new content_3.default({
+                    apiClient: this.apiClient
+                }),
+                create: new create_4.default({
+                    apiClient: this.apiClient
+                }),
+                contentEdit: new edit_5.default({
+                    apiClient: this.apiClient
+                }),
+                titleEdit: new edit_6.default({
+                    apiClient: this.apiClient
+                }),
+                delete: new delete_3.default({
+                    apiClient: this.apiClient
+                }),
+                trash: new trash_3.default({
+                    apiClient: this.apiClient
+                }),
+                archive: new archive_1.default({
+                    apiClient: this.apiClient
+                }),
+                restore: new restore_4.default({
+                    apiClient: this.apiClient
+                }),
+                typeChange: new change_3.default({
+                    apiClient: this.apiClient
+                }),
+                pinned: new pinned_1.default({
+                    apiClient: this.apiClient
+                }),
+                favorite: new favorite_2.default({
+                    apiClient: this.apiClient
+                }),
+                history: new history_1.default({
+                    apiClient: this.apiClient
+                }),
+                historyRestore: new restore_5.default({
+                    apiClient: this.apiClient
+                }),
+                participantsRemove: new remove_4.default({
+                    apiClient: this.apiClient
+                }),
+                participantsPermissions: new permissions_1.default({
+                    apiClient: this.apiClient
+                }),
+                participantsAdd: new add_4.default({
+                    apiClient: this.apiClient
+                }),
+                tags: new tags_1.default({
+                    apiClient: this.apiClient
+                }),
+                tagsCreate: new create_5.default({
+                    apiClient: this.apiClient
+                }),
+                tagsRename: new rename_5.default({
+                    apiClient: this.apiClient
+                }),
+                tagsDelete: new delete_7.default({
+                    apiClient: this.apiClient
+                }),
+                tagsFavorite: new favorite_3.default({
+                    apiClient: this.apiClient
+                }),
+                tag: new tag_1.default({
+                    apiClient: this.apiClient
+                }),
+                untag: new untag_1.default({
+                    apiClient: this.apiClient
+                })
             },
             contacts: {
-                all: new contacts_1.default({ apiClient: this.apiClient }),
-                requestsIn: new in_2.default({ apiClient: this.apiClient }),
-                requestsInCount: new count_1.default({ apiClient: this.apiClient }),
-                requestsOut: new out_2.default({ apiClient: this.apiClient }),
-                requestsOutDelete: new delete_4.default({ apiClient: this.apiClient }),
-                requestsSend: new send_2.default({ apiClient: this.apiClient }),
-                requestsAccept: new accept_1.default({ apiClient: this.apiClient }),
-                requestsDeny: new deny_1.default({ apiClient: this.apiClient }),
-                delete: new delete_5.default({ apiClient: this.apiClient }),
-                blocked: new blocked_1.default({ apiClient: this.apiClient }),
-                blockedAdd: new add_3.default({ apiClient: this.apiClient }),
-                blockedDelete: new delete_6.default({ apiClient: this.apiClient })
+                all: new contacts_1.default({
+                    apiClient: this.apiClient
+                }),
+                requestsIn: new in_2.default({
+                    apiClient: this.apiClient
+                }),
+                requestsInCount: new count_1.default({
+                    apiClient: this.apiClient
+                }),
+                requestsOut: new out_2.default({
+                    apiClient: this.apiClient
+                }),
+                requestsOutDelete: new delete_4.default({
+                    apiClient: this.apiClient
+                }),
+                requestsSend: new send_2.default({
+                    apiClient: this.apiClient
+                }),
+                requestsAccept: new accept_1.default({
+                    apiClient: this.apiClient
+                }),
+                requestsDeny: new deny_1.default({
+                    apiClient: this.apiClient
+                }),
+                delete: new delete_5.default({
+                    apiClient: this.apiClient
+                }),
+                blocked: new blocked_1.default({
+                    apiClient: this.apiClient
+                }),
+                blockedAdd: new add_3.default({
+                    apiClient: this.apiClient
+                }),
+                blockedDelete: new delete_6.default({
+                    apiClient: this.apiClient
+                })
             }
         };
     }

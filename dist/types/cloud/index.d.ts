@@ -1,7 +1,6 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import type API from "../api";
-import { type FilenSDKConfig, type FilenSDK } from "..";
+import { type FilenSDK } from "..";
 import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback, type GetFileResult, type GetDirResult } from "../types";
 import { PauseSignal } from "./signals";
 import { type DirColors } from "../api/v3/dir/color";
@@ -15,11 +14,6 @@ import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
 import { type FileExistsResponse } from "../api/v3/file/exists";
 import { type DirExistsResponse } from "../api/v3/dir/exists";
-export type CloudConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-    sdk: FilenSDK;
-};
 export type CloudItemReceiver = {
     id: number;
     email: string;
@@ -95,19 +89,9 @@ export type DirectoryToShare = {
  * @typedef {Cloud}
  */
 export declare class Cloud {
-    private readonly api;
-    private readonly sdkConfig;
     private readonly sdk;
     private readonly _semaphores;
-    /**
-     * Creates an instance of Cloud.
-     * @date 2/14/2024 - 11:30:03 PM
-     *
-     * @constructor
-     * @public
-     * @param {CloudConfig} params
-     */
-    constructor(params: CloudConfig);
+    constructor(sdk: FilenSDK);
     readonly utils: {
         signals: {
             PauseSignal: typeof PauseSignal;

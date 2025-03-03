@@ -1,5 +1,4 @@
-import type API from "../api"
-import { type FilenSDKConfig, MAX_CHAT_SIZE, FilenSDK } from ".."
+import { MAX_CHAT_SIZE, type FilenSDK } from ".."
 import { type ChatConversation } from "../api/v3/chat/conversations"
 import { promiseAllChunked, uuidv4 } from "../utils"
 import { type Contact } from "../api/v3/contacts"
@@ -7,12 +6,6 @@ import { ChatTypingType } from "../api/v3/chat/typing"
 import { type ChatMessage } from "../api/v3/chat/messages"
 import { type ChatConversationsOnlineUser } from "../api/v3/chat/conversations/online"
 import { type ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate"
-
-export type ChatsConfig = {
-	sdkConfig: FilenSDKConfig
-	api: API
-	sdk: FilenSDK
-}
 
 /**
  * Chats
@@ -23,23 +16,11 @@ export type ChatsConfig = {
  * @typedef {Chats}
  */
 export class Chats {
-	private readonly api: API
-	private readonly sdkConfig: FilenSDKConfig
 	private readonly _chatKeyCache = new Map<string, string>()
 	private readonly sdk: FilenSDK
 
-	/**
-	 * Creates an instance of Chats.
-	 * @date 2/9/2024 - 5:54:11 AM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {ChatsConfig} params
-	 */
-	public constructor(params: ChatsConfig) {
-		this.api = params.api
-		this.sdkConfig = params.sdkConfig
-		this.sdk = params.sdk
+	public constructor(sdk: FilenSDK) {
+		this.sdk = sdk
 	}
 
 	/**
@@ -57,30 +38,33 @@ export class Chats {
 			return this._chatKeyCache.get(conversation)!
 		}
 
-		const all = await this.api.v3().chat().conversations()
+		const all = await this.sdk.api(3).chat().conversations()
 		const chat = all.filter(chat => chat.uuid === conversation)
 
 		if (chat.length === 0 || !chat[0]) {
 			throw new Error(`Could not find chat ${conversation}.`)
 		}
 
-		if (chat[0].ownerId === this.sdkConfig.userId && chat[0].ownerMetadata) {
-			const decryptedChatKey = await this.sdk.getWorker().crypto.decrypt.chatKeyOwner({ metadata: chat[0].ownerMetadata })
+		if (chat[0].ownerId === this.sdk.config.userId && chat[0].ownerMetadata) {
+			const decryptedChatKey = await this.sdk.getWorker().crypto.decrypt.chatKeyOwner({
+				metadata: chat[0].ownerMetadata
+			})
 
 			this._chatKeyCache.set(conversation, decryptedChatKey)
 
 			return decryptedChatKey
 		}
 
-		const participant = chat[0].participants.filter(participant => participant.userId === this.sdkConfig.userId!)
+		const participant = chat[0].participants.filter(participant => participant.userId === this.sdk.config.userId!)
 
 		if (participant.length === 0 || !participant[0]) {
 			throw new Error(`Could not find participant metadata for chat ${conversation}.`)
 		}
 
-		const decryptedChatKey = await this.sdk
-			.getWorker()
-			.crypto.decrypt.chatKeyParticipant({ metadata: participant[0].metadata, privateKey: this.sdkConfig.privateKey! })
+		const decryptedChatKey = await this.sdk.getWorker().crypto.decrypt.chatKeyParticipant({
+			metadata: participant[0].metadata,
+			privateKey: this.sdk.config.privateKey!
+		})
 
 		this._chatKeyCache.set(conversation, decryptedChatKey)
 
@@ -96,14 +80,14 @@ export class Chats {
 	 * @returns {Promise<ChatConversation[]>}
 	 */
 	public async conversations(): Promise<ChatConversation[]> {
-		const convos = await this.api.v3().chat().conversations()
+		const convos = await this.sdk.api(3).chat().conversations()
 		const chatConversations: ChatConversation[] = []
 		const promises: Promise<void>[] = []
 
 		for (const convo of convos) {
 			promises.push(
 				new Promise<void>((resolve, reject) => {
-					const metadata = convo.participants.filter(p => p.userId === this.sdkConfig.userId!)
+					const metadata = convo.participants.filter(p => p.userId === this.sdk.config.userId!)
 
 					if (metadata.length === 0 || !metadata[0]) {
 						reject(new Error("Conversation metadata not found."))
@@ -113,7 +97,9 @@ export class Chats {
 
 					const keyPromise = this._chatKeyCache.has(convo.uuid)
 						? Promise.resolve(this._chatKeyCache.get(convo.uuid)!)
-						: this.chatKey({ conversation: convo.uuid })
+						: this.chatKey({
+								conversation: convo.uuid
+						  })
 
 					keyPromise
 						.then(decryptedChatKey => {
@@ -217,7 +203,7 @@ export class Chats {
 				metadata: JSON.stringify({
 					key
 				}),
-				publicKey: this.sdkConfig.publicKey!
+				publicKey: this.sdk.config.publicKey!
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -226,7 +212,7 @@ export class Chats {
 			})
 		])
 
-		await this.api.v3().chat().conversationsCreate({
+		await this.sdk.api(3).chat().conversationsCreate({
 			uuid: uuidToUse,
 			metadata,
 			ownerMetadata
@@ -259,7 +245,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async deleteMessage({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().chat().delete({ uuid })
+		await this.sdk.api(3).chat().delete({
+			uuid
+		})
 	}
 
 	/**
@@ -273,7 +261,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async delete({ conversation }: { conversation: string }): Promise<void> {
-		await this.api.v3().chat().conversationsDelete({ uuid: conversation })
+		await this.sdk.api(3).chat().conversationsDelete({
+			uuid: conversation
+		})
 	}
 
 	/**
@@ -288,13 +278,15 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async editConversationName({ conversation, name }: { conversation: string; name: string }): Promise<void> {
-		const key = await this.chatKey({ conversation })
+		const key = await this.chatKey({
+			conversation
+		})
 		const nameEncrypted = await this.sdk.getWorker().crypto.encrypt.chatConversationName({
 			name,
 			key
 		})
 
-		await this.api.v3().chat().conversationsName().edit({
+		await this.sdk.api(3).chat().conversationsName().edit({
 			uuid: conversation,
 			name: nameEncrypted
 		})
@@ -313,7 +305,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async editMessage({ uuid, conversation, message }: { uuid: string; conversation: string; message: string }): Promise<void> {
-		const key = await this.chatKey({ conversation })
+		const key = await this.chatKey({
+			conversation
+		})
 		const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
 			message,
 			key
@@ -323,7 +317,7 @@ export class Chats {
 			throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`)
 		}
 
-		await this.api.v3().chat().edit({
+		await this.sdk.api(3).chat().edit({
 			uuid,
 			conversation,
 			message: messageEncrypted
@@ -354,7 +348,12 @@ export class Chats {
 		message: string
 		replyTo: string
 	}): Promise<string> {
-		const [key, uuidToUse] = await Promise.all([this.chatKey({ conversation }), uuid ? Promise.resolve(uuid) : uuidv4()])
+		const [key, uuidToUse] = await Promise.all([
+			this.chatKey({
+				conversation
+			}),
+			uuid ? Promise.resolve(uuid) : uuidv4()
+		])
 		const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
 			message,
 			key
@@ -364,7 +363,7 @@ export class Chats {
 			throw new Error(`Maximum encrypted message size is ${MAX_CHAT_SIZE} characters.`)
 		}
 
-		await this.api.v3().chat().send({
+		await this.sdk.api(3).chat().send({
 			uuid: uuidToUse,
 			conversation,
 			message: messageEncrypted,
@@ -386,7 +385,7 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async sendTyping({ conversation, type }: { conversation: string; type: ChatTypingType }): Promise<void> {
-		await this.api.v3().chat().typing({
+		await this.sdk.api(3).chat().typing({
 			conversation,
 			type
 		})
@@ -405,9 +404,11 @@ export class Chats {
 	 */
 	public async messages({ conversation, timestamp }: { conversation: string; timestamp?: number }): Promise<ChatMessage[]> {
 		const [key, _messages] = await Promise.all([
-			this.chatKey({ conversation }),
-			this.api
-				.v3()
+			this.chatKey({
+				conversation
+			}),
+			this.sdk
+				.api(3)
 				.chat()
 				.messages({
 					conversation,
@@ -473,13 +474,19 @@ export class Chats {
 	 */
 	public async addParticipant({ conversation, contact }: { conversation: string; contact: Contact }): Promise<void> {
 		const key = await this.chatKey({ conversation })
-		const publicKey = (await this.api.v3().user().publicKey({ email: contact.email })).publicKey
+		const publicKey = (
+			await this.sdk.api(3).user().publicKey({
+				email: contact.email
+			})
+		).publicKey
 		const metadata = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
-			metadata: JSON.stringify({ key }),
+			metadata: JSON.stringify({
+				key
+			}),
 			publicKey
 		})
 
-		await this.api.v3().chat().conversationsParticipants().add({
+		await this.sdk.api(3).chat().conversationsParticipants().add({
 			uuid: conversation,
 			contactUUID: contact.uuid,
 			metadata
@@ -498,7 +505,7 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async removeParticipant({ conversation, userId }: { conversation: string; userId: number }): Promise<void> {
-		await this.api.v3().chat().conversationsParticipants().remove({
+		await this.sdk.api(3).chat().conversationsParticipants().remove({
 			uuid: conversation,
 			userId
 		})
@@ -515,7 +522,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async markConversationAsRead({ conversation }: { conversation: string }): Promise<void> {
-		await this.api.v3().chat().conversationsRead({ uuid: conversation })
+		await this.sdk.api(3).chat().conversationsRead({
+			uuid: conversation
+		})
 	}
 
 	/**
@@ -529,7 +538,11 @@ export class Chats {
 	 * @returns {Promise<number>}
 	 */
 	public async conversationUnreadCount({ conversation }: { conversation: string }): Promise<number> {
-		return (await this.api.v3().chat().conversationsUnread({ uuid: conversation })).unread
+		return (
+			await this.sdk.api(3).chat().conversationsUnread({
+				uuid: conversation
+			})
+		).unread
 	}
 
 	/**
@@ -541,7 +554,7 @@ export class Chats {
 	 * @returns {Promise<number>}
 	 */
 	public async unread(): Promise<number> {
-		return (await this.api.v3().chat().unread()).unread
+		return (await this.sdk.api(3).chat().unread()).unread
 	}
 
 	/**
@@ -555,7 +568,9 @@ export class Chats {
 	 * @returns {Promise<ChatConversationsOnlineUser[]>}
 	 */
 	public async conversationOnline({ conversation }: { conversation: string }): Promise<ChatConversationsOnlineUser[]> {
-		return await this.api.v3().chat().conversationsOnline({ conversation })
+		return await this.sdk.api(3).chat().conversationsOnline({
+			conversation
+		})
 	}
 
 	/**
@@ -569,7 +584,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async disableMessageEmbed({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().chat().message().embed().disable({ uuid })
+		await this.sdk.api(3).chat().message().embed().disable({
+			uuid
+		})
 	}
 
 	/**
@@ -583,7 +600,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async leave({ conversation }: { conversation: string }): Promise<void> {
-		await this.api.v3().chat().conversationsLeave({ uuid: conversation })
+		await this.sdk.api(3).chat().conversationsLeave({
+			uuid: conversation
+		})
 	}
 
 	/**
@@ -595,7 +614,7 @@ export class Chats {
 	 * @returns {Promise<ChatLastFocusValues[]>}
 	 */
 	public async lastFocus(): Promise<ChatLastFocusValues[]> {
-		return await this.api.v3().chat().lastFocus()
+		return await this.sdk.api(3).chat().lastFocus()
 	}
 
 	/**
@@ -609,7 +628,9 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async updateLastFocus({ values }: { values: ChatLastFocusValues[] }): Promise<void> {
-		await this.api.v3().chat().lastFocusUpdate({ conversations: values })
+		await this.sdk.api(3).chat().lastFocusUpdate({
+			conversations: values
+		})
 	}
 }
 

@@ -71,45 +71,40 @@ class FilenSDK {
         this.events = new events_1.default();
         this.axiosInstance = axiosInstance ? axiosInstance : axios_1.default.create();
         this._crypto = new crypto_1.default(this);
-        this._api = params.apiKey
-            ? new api_1.default({
-                apiKey: params.apiKey,
-                sdk: this
-            })
-            : new api_1.default({
-                apiKey: "anonymous",
-                sdk: this
-            });
-        this._cloud = new cloud_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
+        this._api = new api_1.default(this);
+        this._cloud = new cloud_1.default(this);
         this._fs = new fs_1.default({
-            sdkConfig: params,
-            api: this._api,
-            cloud: this._cloud,
+            sdk: this,
             connectToSocket: params.connectToSocket
         });
-        this._notes = new notes_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
+        this._notes = new notes_1.default(this);
+        this._chats = new chats_1.default(this);
+        this._contacts = new contacts_1.default(this);
+        this._user = new user_1.default(this);
+    }
+    /**
+     * Initialize the SDK again (after logging in for example).
+     * @date 2/1/2024 - 3:23:58 PM
+     *
+     * @public
+     * @param {FilenSDKConfig} params
+     */
+    init(params) {
+        if (!params) {
+            params = {};
+        }
+        this.config = params;
+        this._crypto = new crypto_1.default(this);
+        this._api = new api_1.default(this);
+        this._cloud = new cloud_1.default(this);
+        this._fs = new fs_1.default({
+            sdk: this,
+            connectToSocket: params.connectToSocket
         });
-        this._chats = new chats_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._contacts = new contacts_1.default({
-            sdkConfig: params,
-            api: this._api
-        });
-        this._user = new user_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
+        this._notes = new notes_1.default(this);
+        this._chats = new chats_1.default(this);
+        this._contacts = new contacts_1.default(this);
+        this._user = new user_1.default(this);
     }
     /**
      * Update the SDK Worker pool.
@@ -205,56 +200,6 @@ class FilenSDK {
         return workerToUse || baseWorker;
     }
     /**
-     * Initialize the SDK again (after logging in for example).
-     * @date 2/1/2024 - 3:23:58 PM
-     *
-     * @public
-     * @param {FilenSDKConfig} params
-     */
-    init(params) {
-        this.config = params;
-        this._crypto = new crypto_1.default(this);
-        this._api = params.apiKey
-            ? new api_1.default({
-                apiKey: params.apiKey,
-                sdk: this
-            })
-            : new api_1.default({
-                apiKey: "anonymous",
-                sdk: this
-            });
-        this._cloud = new cloud_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._fs = new fs_1.default({
-            sdkConfig: params,
-            api: this._api,
-            cloud: this._cloud,
-            connectToSocket: params.connectToSocket
-        });
-        this._notes = new notes_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._chats = new chats_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._contacts = new contacts_1.default({
-            sdkConfig: params,
-            api: this._api
-        });
-        this._user = new user_1.default({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-    }
-    /**
      * Check if the SDK user is authenticated.
      * @date 1/31/2024 - 4:08:17 PM
      *
@@ -275,7 +220,7 @@ class FilenSDK {
             this.config.privateKey.length > 0 &&
             this.config.baseFolderUUID.length > 0 &&
             this.config.userId > 0 &&
-            [1, 2].includes(this.config.authVersion));
+            [1, 2, 3].includes(this.config.authVersion));
     }
     /**
      * Update keypair.
@@ -545,9 +490,6 @@ class FilenSDK {
         this.init(Object.assign(Object.assign({}, this.config), { email: undefined, password: undefined, twoFactorCode: undefined, masterKeys: undefined, apiKey: undefined, publicKey: undefined, privateKey: undefined, authVersion: undefined, baseFolderUUID: undefined, userId: undefined }));
     }
     api(version) {
-        // if (!this.isLoggedIn()) {
-        // 	throw new Error("Not authenticated, please call login() first")
-        // }
         if (version === 3) {
             return this._api.v3();
         }
@@ -561,9 +503,6 @@ class FilenSDK {
      * @returns {Crypto}
      */
     crypto() {
-        // if (!this.isLoggedIn()) {
-        // 	throw new Error("Not authenticated, please call login() first")
-        // }
         return this._crypto;
     }
     /**

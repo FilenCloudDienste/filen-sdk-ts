@@ -33,21 +33,7 @@ const filen = new FilenSDK(
 const main = async () => {
 	console.log("starting")
 
-	const derived = Buffer.from(
-		await argon2idAsync(await filen.crypto().utils.generateRandomString(256), await filen.crypto().utils.generateRandomString(256), {
-			t: 3, // Time cost: 3 iterations
-			m: 65536, // Memory cost: 64 MB
-			p: 4, // Parallelism: 4
-			version: 0x13, // Version 19 (0x13)
-			dkLen: 64 // Output length: 64 bytes (512 bits)
-		})
-	).toString("hex")
-
-	const derivedMasterKeys = derived.substring(0, derived.length / 2)
-	const derivedPassword = derived.substring(derived.length / 2, derived.length)
-
-	console.log({ derived, l: derived.length })
-	console.log({ derivedMasterKeys, derivedPassword })
+	console.log(await filen.fs().readdir({ path: "/" }))
 
 	console.log("done")
 }

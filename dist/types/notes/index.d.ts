@@ -1,12 +1,6 @@
-import type API from "../api";
-import type { FilenSDKConfig, FilenSDK } from "..";
+import type FilenSDK from "..";
 import type { NoteType, Note, NoteTag } from "../api/v3/notes";
 import type { NoteHistory } from "../api/v3/notes/history";
-export type NotesConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-    sdk: FilenSDK;
-};
 /**
  * Notes
  * @date 2/1/2024 - 2:44:47 AM
@@ -16,19 +10,9 @@ export type NotesConfig = {
  * @typedef {Notes}
  */
 export declare class Notes {
-    private readonly api;
-    private readonly sdkConfig;
     private readonly _noteKeyCache;
     private readonly sdk;
-    /**
-     * Creates an instance of Notes.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {NotesConfig} params
-     */
-    constructor(params: NotesConfig);
+    constructor(sdk: FilenSDK);
     /**
      * Decrypt all tags of a note.
      * @date 2/20/2024 - 12:26:37 AM

@@ -1,6 +1,5 @@
 /// <reference types="node" />
-import type API from "../api";
-import { type FilenSDKConfig, FilenSDK } from "..";
+import { type FilenSDK } from "..";
 import { type UserInfoResponse } from "../api/v3/user/info";
 import { type UserSettingsResponse } from "../api/v3/user/settings";
 import { type UserAccountResponse } from "../api/v3/user/account";
@@ -10,11 +9,6 @@ import { type UserEventResponse } from "../api/v3/user/event";
 import { type PaymentMethods } from "../api/v3/user/sub/create";
 import { type UserProfileResponse } from "../api/v3/user/profile";
 import { type UserLockStatus } from "../api/v3/user/lock";
-export type UserConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-    sdk: FilenSDK;
-};
 /**
  * User
  * @date 2/1/2024 - 2:44:47 AM
@@ -24,18 +18,8 @@ export type UserConfig = {
  * @typedef {User}
  */
 export declare class User {
-    private readonly api;
-    private readonly sdkConfig;
     private readonly sdk;
-    /**
-     * Creates an instance of User.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {UserConfig} params
-     */
-    constructor(params: UserConfig);
+    constructor(sdk: FilenSDK);
     /**
      * Fetch the user's info.
      * @date 2/20/2024 - 6:39:47 AM

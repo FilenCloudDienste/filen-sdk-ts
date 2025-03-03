@@ -91,6 +91,14 @@ export declare class FilenSDK {
      */
     constructor(params?: FilenSDKConfig, workers?: SDKWorker[], axiosInstance?: AxiosInstance);
     /**
+     * Initialize the SDK again (after logging in for example).
+     * @date 2/1/2024 - 3:23:58 PM
+     *
+     * @public
+     * @param {FilenSDKConfig} params
+     */
+    init(params?: FilenSDKConfig): void;
+    /**
      * Update the SDK Worker pool.
      *
      * @public
@@ -105,14 +113,6 @@ export declare class FilenSDK {
      * @returns {SDKWorker}
      */
     getWorker(): SDKWorker;
-    /**
-     * Initialize the SDK again (after logging in for example).
-     * @date 2/1/2024 - 3:23:58 PM
-     *
-     * @public
-     * @param {FilenSDKConfig} params
-     */
-    init(params: FilenSDKConfig): void;
     /**
      * Check if the SDK user is authenticated.
      * @date 1/31/2024 - 4:08:17 PM
@@ -918,13 +918,7 @@ export declare class FilenSDK {
     readonly utils: {
         crypto: {
             generateRandomString: typeof import("./crypto/utils").generateRandomString;
-            deriveKeyFromPassword: typeof import("./crypto/utils").deriveKeyFromPassword; /**
-             * Return an instance of User.
-             * @date 2/20/2024 - 6:27:17 AM
-             *
-             * @public
-             * @returns {User}
-             */
+            deriveKeyFromPassword: typeof import("./crypto/utils").deriveKeyFromPassword;
             hashFn: typeof import("./crypto/utils").hashFn;
             generatePasswordAndMasterKeyBasedOnAuthVersion: typeof import("./crypto/utils").generatePasswordAndMasterKeyBasedOnAuthVersion;
             hashPassword: typeof import("./crypto/utils").hashPassword;
@@ -960,7 +954,7 @@ export declare class FilenSDK {
     };
 }
 export default FilenSDK;
-export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree, CloudConfig } from "./cloud";
+export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree } from "./cloud";
 export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs";
 export * from "./types";
 export * from "./constants";

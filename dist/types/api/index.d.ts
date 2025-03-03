@@ -1,10 +1,6 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import type FilenSDK from "..";
-export type APIConfig = {
-    apiKey: string;
-    sdk: FilenSDK;
-};
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -14,18 +10,10 @@ export type APIConfig = {
  * @typedef {API}
  */
 export declare class API {
-    private readonly config;
+    private readonly sdk;
     private readonly apiClient;
     private readonly _v3;
-    /**
-     * Creates an instance of API.
-     * @date 2/1/2024 - 4:46:38 PM
-     *
-     * @constructor
-     * @public
-     * @param {APIConfig} params
-     */
-    constructor(params: APIConfig);
+    constructor(sdk: FilenSDK);
     v3(): {
         health: () => Promise<"OK">;
         dir: () => {

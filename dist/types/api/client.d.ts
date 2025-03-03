@@ -56,17 +56,8 @@ export declare const APIClientDefaults: {
  * @typedef {APIClient}
  */
 export declare class APIClient {
-    readonly apiKey: string;
     readonly sdk: FilenSDK;
-    /**
-     * Creates an instance of APIClient.
-     * @date 1/31/2024 - 4:09:17 PM
-     *
-     * @constructor
-     * @public
-     * @param {APIClientConfig} params
-     */
-    constructor(params: APIClientConfig);
+    constructor(sdk: FilenSDK);
     /**
      * Build API request headers.
      * @date 2/21/2024 - 8:42:27 AM

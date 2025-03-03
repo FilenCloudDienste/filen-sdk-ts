@@ -62,17 +62,8 @@ exports.APIClientDefaults = {
  * @typedef {APIClient}
  */
 class APIClient {
-    /**
-     * Creates an instance of APIClient.
-     * @date 1/31/2024 - 4:09:17 PM
-     *
-     * @constructor
-     * @public
-     * @param {APIClientConfig} params
-     */
-    constructor(params) {
-        this.apiKey = params.apiKey;
-        this.sdk = params.sdk;
+    constructor(sdk) {
+        this.sdk = sdk;
     }
     /**
      * Build API request headers.
@@ -83,7 +74,11 @@ class APIClient {
      * @returns {Record<string, string>}
      */
     buildHeaders(params) {
-        return Object.assign({ Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.apiKey), Accept: "application/json, text/plain, */*" }, (constants_1.environment === "node" ? { "User-Agent": "filen-sdk" } : {}));
+        return Object.assign({ Authorization: "Bearer " + (params && params.apiKey ? params.apiKey : this.sdk.config.apiKey ? this.sdk.config.apiKey : "anonymous"), Accept: "application/json, text/plain, */*" }, (constants_1.environment === "node"
+            ? {
+                "User-Agent": "filen-sdk"
+            }
+            : {}));
     }
     /**
      * Send a POST request.
@@ -95,7 +90,11 @@ class APIClient {
      * @returns {Promise<AxiosResponse<any, any>>}
      */
     async post(params) {
-        let headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey });
+        let headers = params.headers
+            ? params.headers
+            : this.buildHeaders({
+                apiKey: params.apiKey
+            });
         if (params.apiKey && !headers["Authorization"]) {
             headers["Authorization"] = `Bearer ${params.apiKey}`;
         }
@@ -122,7 +121,11 @@ class APIClient {
                     port: 443,
                     timeout,
                     agent: keepAliveAgent,
-                    headers: Object.assign(Object.assign({}, headers), (postDataIsBuffer ? {} : { "Content-Type": "application/json" }))
+                    headers: Object.assign(Object.assign({}, headers), (postDataIsBuffer
+                        ? {}
+                        : {
+                            "Content-Type": "application/json"
+                        }))
                 }, response => {
                     var _a, _b;
                     if ((_a = params.abortSignal) === null || _a === void 0 ? void 0 : _a.aborted) {
@@ -256,7 +259,11 @@ class APIClient {
      * @returns {Promise<AxiosResponse<any, any>>}
      */
     async get(params) {
-        const headers = params.headers ? params.headers : this.buildHeaders({ apiKey: params.apiKey });
+        const headers = params.headers
+            ? params.headers
+            : this.buildHeaders({
+                apiKey: params.apiKey
+            });
         if (params.apiKey && !headers["Authorization"]) {
             headers["Authorization"] = `Bearer ${params.apiKey}`;
         }
@@ -646,12 +653,16 @@ class APIClient {
             algorithm: "sha512"
         });
         const fullURL = `${exports.APIClientDefaults.ingestURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.ingestURLs.length - 1)]}/v3/upload?${urlParams}&hash=${bufferHash}`;
-        const parsedURLParams = (0, utils_1.parseURLParams)({ url: fullURL });
+        const parsedURLParams = (0, utils_1.parseURLParams)({
+            url: fullURL
+        });
         const urlParamsHash = await this.sdk.getWorker().crypto.utils.bufferToHash({
             buffer: Buffer.from(JSON.stringify(parsedURLParams), "utf-8"),
             algorithm: "sha512"
         });
-        const builtHeaders = this.buildHeaders({ apiKey: undefined });
+        const builtHeaders = this.buildHeaders({
+            apiKey: undefined
+        });
         const response = await this.request({
             method: "POST",
             url: `${exports.APIClientDefaults.ingestURLs[(0, utils_1.getRandomArbitrary)(0, exports.APIClientDefaults.ingestURLs.length - 1)]}`,

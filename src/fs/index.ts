@@ -1,5 +1,4 @@
-import type API from "../api"
-import { type FilenSDKConfig } from ".."
+import type FilenSDK from ".."
 import { type FolderMetadata, type FileMetadata, type FileEncryptionVersion, type ProgressCallback, type Prettify } from "../types"
 import pathModule from "path"
 import { ENOENT } from "./errors"
@@ -8,15 +7,13 @@ import { type PauseSignal } from "../cloud/signals"
 import fs from "fs-extra"
 import { uuidv4, normalizePath, replacePathStartWithFromAndTo } from "../utils"
 import os from "os"
-import { type CloudItem, type Cloud } from "../cloud"
+import { type CloudItem } from "../cloud"
 import { Socket, type SocketEvent } from "../socket"
 import { Semaphore } from "../semaphore"
 import writeFileAtomic from "write-file-atomic"
 
 export type FSConfig = {
-	sdkConfig: FilenSDKConfig
-	api: API
-	cloud: Cloud
+	sdk: FilenSDK
 	connectToSocket?: boolean
 }
 
@@ -93,9 +90,8 @@ export type FSItemUUID = FSItem & { path: string }
  * @typedef {FS}
  */
 export class FS {
-	private readonly api: API
-	private readonly sdkConfig: FilenSDKConfig
-	private readonly cloud: Cloud
+	private readonly sdk: FilenSDK
+	private readonly connectToSocket: boolean
 	public _items: FSItems
 	public _uuidToItem: Record<string, FSItemUUID>
 	private readonly socket = new Socket()
@@ -103,22 +99,13 @@ export class FS {
 	private readonly mkdirMutex = new Semaphore(1)
 	private readonly itemsMutex = new Semaphore(1)
 
-	/**
-	 * Creates an instance of FS.
-	 * @date 2/9/2024 - 5:54:11 AM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {FSConfig} params
-	 */
 	public constructor(params: FSConfig) {
-		this.api = params.api
-		this.sdkConfig = params.sdkConfig
-		this.cloud = params.cloud
+		this.sdk = params.sdk
+		this.connectToSocket = params.connectToSocket ?? false
 
 		this._items = {
 			"/": {
-				uuid: this.sdkConfig.baseFolderUUID!,
+				uuid: this.sdk.config.baseFolderUUID!,
 				type: "directory",
 				metadata: {
 					name: "Cloud Drive",
@@ -128,8 +115,8 @@ export class FS {
 		}
 
 		this._uuidToItem = {
-			[this.sdkConfig.baseFolderUUID!]: {
-				uuid: this.sdkConfig.baseFolderUUID!,
+			[this.sdk.config.baseFolderUUID!]: {
+				uuid: this.sdk.config.baseFolderUUID!,
 				type: "directory",
 				path: "/",
 				metadata: {
@@ -150,16 +137,16 @@ export class FS {
 	 * @returns {Promise<string>}
 	 */
 	private async waitForValidAPIKey(): Promise<string> {
-		if (this.sdkConfig.apiKey && this.sdkConfig.apiKey.length >= 16) {
-			return this.sdkConfig.apiKey
+		if (this.sdk.config.apiKey && this.sdk.config.apiKey.length >= 16 && this.sdk.config.apiKey !== "anonymous") {
+			return this.sdk.config.apiKey
 		}
 
 		return await new Promise<string>(resolve => {
 			const interval = setInterval(() => {
-				if (this.sdkConfig.apiKey && this.sdkConfig.apiKey.length >= 16) {
+				if (this.sdk.config.apiKey && this.sdk.config.apiKey.length >= 16 && this.sdk.config.apiKey !== "anonymous") {
 					clearInterval(interval)
 
-					resolve(this.sdkConfig.apiKey)
+					resolve(this.sdk.config.apiKey)
 				}
 			}, 250)
 		})
@@ -180,7 +167,9 @@ export class FS {
 
 		const apiKey = await this.waitForValidAPIKey()
 
-		this.socket.connect({ apiKey })
+		this.socket.connect({
+			apiKey
+		})
 
 		this.socket.addListener("socketEvent", async (event: SocketEvent) => {
 			await this.itemsMutex.acquire()
@@ -376,12 +365,14 @@ export class FS {
 	}
 
 	public async pathToItemUUID({ path, type }: { path: string; type?: FSItemType }): Promise<string | null> {
-		path = this.normalizePath({ path })
+		path = this.normalizePath({
+			path
+		})
 
 		const acceptedTypes: FSItemType[] = !type ? ["directory", "file"] : type === "directory" ? ["directory"] : ["file"]
 
 		if (path === "/") {
-			return this.sdkConfig.baseFolderUUID!
+			return this.sdk.config.baseFolderUUID!
 		}
 
 		const item = this._items[path]
@@ -407,7 +398,9 @@ export class FS {
 				return null
 			}
 
-			const content = await this.cloud.listDirectory({ uuid: parentItem.uuid })
+			const content = await this.sdk.cloud().listDirectory({
+				uuid: parentItem.uuid
+			})
 			let foundUUID = ""
 			let foundType: FSItemType | null = null
 
@@ -519,7 +512,9 @@ export class FS {
 		const existingPaths: Record<string, boolean> = {}
 
 		if (recursive) {
-			const tree = await this.cloud.getDirectoryTree({ uuid })
+			const tree = await this.sdk.cloud().getDirectoryTree({
+				uuid
+			})
 
 			for (const entry in tree) {
 				const item = tree[entry]
@@ -595,10 +590,22 @@ export class FS {
 				this.itemsMutex.release()
 			}
 
-			return names.sort((a, b) => a.localeCompare(b, "en", { numeric: true }))
+			return names.sort((a, b) =>
+				a.toLowerCase().localeCompare(b.toLowerCase(), "en", {
+					numeric: true
+				})
+			)
 		}
 
-		const items = (await this.cloud.listDirectory({ uuid })).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }))
+		const items = (
+			await this.sdk.cloud().listDirectory({
+				uuid
+			})
+		).sort((a, b) =>
+			a.name.toLowerCase().localeCompare(b.name.toLowerCase(), "en", {
+				numeric: true
+			})
+		)
 
 		for (const item of items) {
 			const itemPath = pathModule.posix.join(path, item.name)
@@ -688,13 +695,19 @@ export class FS {
 	}
 
 	public async stat({ path }: { path: string }): Promise<FSStats> {
-		path = this.normalizePath({ path })
+		path = this.normalizePath({
+			path
+		})
 
-		const uuid = await this.pathToItemUUID({ path })
+		const uuid = await this.pathToItemUUID({
+			path
+		})
 		const item = this._items[path]
 
 		if (!uuid || !item) {
-			throw new ENOENT({ path })
+			throw new ENOENT({
+				path
+			})
 		}
 
 		const now = Date.now()
@@ -759,13 +772,17 @@ export class FS {
 		await this.mkdirMutex.acquire()
 
 		try {
-			path = this.normalizePath({ path })
+			path = this.normalizePath({
+				path
+			})
 
 			if (path === "/") {
-				return this.sdkConfig.baseFolderUUID!
+				return this.sdk.config.baseFolderUUID!
 			}
 
-			const exists = await this.pathToItemUUID({ path })
+			const exists = await this.pathToItemUUID({
+				path
+			})
 
 			if (exists) {
 				return exists
@@ -775,7 +792,10 @@ export class FS {
 			const basename = pathModule.posix.basename(path)
 
 			if (parentPath === "/" || parentPath === "." || parentPath === "") {
-				const uuid = await this.cloud.createDirectory({ name: basename, parent: this.sdkConfig.baseFolderUUID! })
+				const uuid = await this.sdk.cloud().createDirectory({
+					name: basename,
+					parent: this.sdk.config.baseFolderUUID!
+				})
 
 				await this.itemsMutex.acquire()
 
@@ -823,9 +843,9 @@ export class FS {
 					}
 
 					const parentIsBase = partParentPath === "/" || partParentPath === "." || partParentPath === ""
-					const parentUUID = parentIsBase ? this.sdkConfig.baseFolderUUID! : parentItem.uuid
+					const parentUUID = parentIsBase ? this.sdk.config.baseFolderUUID! : parentItem.uuid
 
-					const uuid = await this.cloud.createDirectory({
+					const uuid = await this.sdk.cloud().createDirectory({
 						name: partBasename,
 						parent: parentUUID
 					})
@@ -858,7 +878,9 @@ export class FS {
 			const item = this._items[path]
 
 			if (!item || !this._items[path]) {
-				throw new ENOENT({ path })
+				throw new ENOENT({
+					path
+				})
 			}
 
 			return item.uuid
@@ -882,14 +904,20 @@ export class FS {
 		await this.mutex.acquire()
 
 		try {
-			from = this.normalizePath({ path: from })
-			to = this.normalizePath({ path: to })
+			from = this.normalizePath({
+				path: from
+			})
+			to = this.normalizePath({
+				path: to
+			})
 
 			if (from === "/" || from === to) {
 				return
 			}
 
-			const uuid = await this.pathToItemUUID({ path: from })
+			const uuid = await this.pathToItemUUID({
+				path: from
+			})
 			const item = this._items[from]
 
 			if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
@@ -926,12 +954,12 @@ export class FS {
 				}
 
 				if (item.type === "directory") {
-					await this.cloud.renameDirectory({
+					await this.sdk.cloud().renameDirectory({
 						uuid,
 						name: newBasename
 					})
 				} else {
-					await this.cloud.renameFile({
+					await this.sdk.cloud().renameFile({
 						uuid,
 						metadata: itemMetadata as FileMetadata,
 						name: newBasename
@@ -944,12 +972,12 @@ export class FS {
 
 				if (oldBasename !== newBasename) {
 					if (item.type === "directory") {
-						await this.cloud.renameDirectory({
+						await this.sdk.cloud().renameDirectory({
 							uuid,
 							name: newBasename
 						})
 					} else {
-						await this.cloud.renameFile({
+						await this.sdk.cloud().renameFile({
 							uuid,
 							metadata: itemMetadata as FileMetadata,
 							name: newBasename
@@ -959,35 +987,39 @@ export class FS {
 
 				if (newParentPath === "/" || newParentPath === "." || newParentPath === "") {
 					if (item.type === "directory") {
-						await this.cloud.moveDirectory({
+						await this.sdk.cloud().moveDirectory({
 							uuid,
-							to: this.sdkConfig.baseFolderUUID!,
+							to: this.sdk.config.baseFolderUUID!,
 							metadata: itemMetadata as FolderMetadata
 						})
 					} else {
-						await this.cloud.moveFile({
+						await this.sdk.cloud().moveFile({
 							uuid,
-							to: this.sdkConfig.baseFolderUUID!,
+							to: this.sdk.config.baseFolderUUID!,
 							metadata: itemMetadata as FileMetadata
 						})
 					}
 				} else {
-					await this.mkdir({ path: newParentPath })
+					await this.mkdir({
+						path: newParentPath
+					})
 
 					const newParentItem = this._items[newParentPath]
 
 					if (!newParentItem) {
-						throw new ENOENT({ path: newParentPath })
+						throw new ENOENT({
+							path: newParentPath
+						})
 					}
 
 					if (item.type === "directory") {
-						await this.cloud.moveDirectory({
+						await this.sdk.cloud().moveDirectory({
 							uuid,
 							to: newParentItem.uuid!,
 							metadata: itemMetadata as FolderMetadata
 						})
 					} else {
-						await this.cloud.moveFile({
+						await this.sdk.cloud().moveFile({
 							uuid,
 							to: newParentItem.uuid,
 							metadata: itemMetadata as FileMetadata
@@ -1050,7 +1082,7 @@ export class FS {
 	 * @returns {Promise<StatFS>}
 	 */
 	public async statfs(): Promise<StatFS> {
-		const account = await this.api.v3().user().account()
+		const account = await this.sdk.api(3).user().account()
 
 		return {
 			type: -1,
@@ -1081,9 +1113,13 @@ export class FS {
 		await this.mutex.acquire()
 
 		try {
-			path = this.normalizePath({ path })
+			path = this.normalizePath({
+				path
+			})
 
-			const uuid = await this.pathToItemUUID({ path })
+			const uuid = await this.pathToItemUUID({
+				path
+			})
 			const item = this._items[path]
 
 			if (!uuid || !item) {
@@ -1098,15 +1134,23 @@ export class FS {
 
 			if (item.type === "directory") {
 				if (permanent) {
-					await this.cloud.deleteDirectory({ uuid })
+					await this.sdk.cloud().deleteDirectory({
+						uuid
+					})
 				} else {
-					await this.cloud.trashDirectory({ uuid })
+					await this.sdk.cloud().trashDirectory({
+						uuid
+					})
 				}
 			} else {
 				if (permanent) {
-					await this.cloud.deleteFile({ uuid })
+					await this.sdk.cloud().deleteFile({
+						uuid
+					})
 				} else {
-					await this.cloud.trashFile({ uuid })
+					await this.sdk.cloud().trashFile({
+						uuid
+					})
 				}
 			}
 
@@ -1246,13 +1290,19 @@ export class FS {
 		onProgress?: ProgressCallback
 		onProgressId?: string
 	}): Promise<Buffer> {
-		path = this.normalizePath({ path })
+		path = this.normalizePath({
+			path
+		})
 
-		const uuid = await this.pathToItemUUID({ path })
+		const uuid = await this.pathToItemUUID({
+			path
+		})
 		const item = this._items[path]
 
 		if (!uuid || !item || item.type === "directory" || (item.type === "file" && item.metadata.key.length === 0)) {
-			throw new ENOENT({ path })
+			throw new ENOENT({
+				path
+			})
 		}
 
 		if (!position) {
@@ -1263,7 +1313,7 @@ export class FS {
 			length = item.metadata.size - 1
 		}
 
-		const stream = this.cloud.downloadFileToReadableStream({
+		const stream = this.sdk.cloud().downloadFileToReadableStream({
 			uuid,
 			bucket: item.metadata.bucket,
 			region: item.metadata.region,
@@ -1398,7 +1448,9 @@ export class FS {
 			throw new Error(`fs.writeFile is not implemented for a ${environment} environment`)
 		}
 
-		path = this.normalizePath({ path })
+		path = this.normalizePath({
+			path
+		})
 
 		const parentPath = pathModule.posix.dirname(path)
 		let parentUUID = ""
@@ -1409,11 +1461,14 @@ export class FS {
 		}
 
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
-			parentUUID = this.sdkConfig.baseFolderUUID!
+			parentUUID = this.sdk.config.baseFolderUUID!
 		} else {
 			await this.mkdir({ path: parentPath })
 
-			const parentItemUUID = await this.pathToItemUUID({ path: parentPath, type: "directory" })
+			const parentItemUUID = await this.pathToItemUUID({
+				path: parentPath,
+				type: "directory"
+			})
 			const parentItem = this._items[parentPath]
 
 			if (!parentItemUUID || !parentItem) {
@@ -1423,7 +1478,7 @@ export class FS {
 			parentUUID = parentItem.uuid
 		}
 
-		const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+		const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os.tmpdir()
 		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4())
 
 		await fs.rm(tmpFilePath, {
@@ -1440,7 +1495,7 @@ export class FS {
 		await writeFileAtomic(tmpFilePath, content)
 
 		try {
-			const item = await this.cloud.uploadLocalFile({
+			const item = await this.sdk.cloud().uploadLocalFile({
 				source: tmpFilePath,
 				parent: parentUUID,
 				name: fileName,
@@ -1523,10 +1578,14 @@ export class FS {
 			throw new Error(`fs.download is not implemented for a ${environment} environment`)
 		}
 
-		path = this.normalizePath({ path })
+		path = this.normalizePath({
+			path
+		})
 		destination = normalizePath(destination)
 
-		const uuid = await this.pathToItemUUID({ path })
+		const uuid = await this.pathToItemUUID({
+			path
+		})
 		const item = this._items[path]
 
 		if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
@@ -1534,7 +1593,7 @@ export class FS {
 		}
 
 		if (item.type === "directory") {
-			await this.cloud.downloadDirectoryToLocal({
+			await this.sdk.cloud().downloadDirectoryToLocal({
 				uuid,
 				to: destination,
 				abortSignal,
@@ -1546,7 +1605,7 @@ export class FS {
 			return
 		}
 
-		await this.cloud.downloadFileToLocal({
+		await this.sdk.cloud().downloadFileToLocal({
 			uuid,
 			bucket: item.metadata.bucket,
 			region: item.metadata.region,
@@ -1619,11 +1678,16 @@ export class FS {
 		}
 
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
-			parentUUID = this.sdkConfig.baseFolderUUID!
+			parentUUID = this.sdk.config.baseFolderUUID!
 		} else {
-			await this.mkdir({ path: parentPath })
+			await this.mkdir({
+				path: parentPath
+			})
 
-			const parentItemUUID = await this.pathToItemUUID({ path: parentPath, type: "directory" })
+			const parentItemUUID = await this.pathToItemUUID({
+				path: parentPath,
+				type: "directory"
+			})
 			const parentItem = this._items[parentPath]
 
 			if (!parentItemUUID || !parentItem) {
@@ -1642,7 +1706,7 @@ export class FS {
 				})
 			}
 
-			await this.cloud.uploadLocalDirectory({
+			await this.sdk.cloud().uploadLocalDirectory({
 				source,
 				parent: parentUUID,
 				name,
@@ -1662,7 +1726,9 @@ export class FS {
 				throw new Error("Could not find uploaded directory.")
 			}
 
-			const foundUploadedDirStat = await this.stat({ path: pathModule.posix.join(parentPath, foundUploadedDir[0]) })
+			const foundUploadedDirStat = await this.stat({
+				path: pathModule.posix.join(parentPath, foundUploadedDir[0])
+			})
 
 			return {
 				type: "directory",
@@ -1676,7 +1742,7 @@ export class FS {
 				color: null
 			} satisfies CloudItem
 		} else {
-			const item = await this.cloud.uploadLocalFile({
+			const item = await this.sdk.cloud().uploadLocalFile({
 				source,
 				parent: parentUUID,
 				name,
@@ -1772,14 +1838,20 @@ export class FS {
 			throw new Error(`fs.cp is not implemented for a ${environment} environment`)
 		}
 
-		from = this.normalizePath({ path: from })
-		to = this.normalizePath({ path: to })
+		from = this.normalizePath({
+			path: from
+		})
+		to = this.normalizePath({
+			path: to
+		})
 
 		if (from === "/" || from === to || to.startsWith(from + "/")) {
 			return
 		}
 
-		const uuid = await this.pathToItemUUID({ path: from })
+		const uuid = await this.pathToItemUUID({
+			path: from
+		})
 		const item = this._items[from]
 
 		if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
@@ -1790,9 +1862,11 @@ export class FS {
 		let parentUUID = ""
 
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
-			parentUUID = this.sdkConfig.baseFolderUUID!
+			parentUUID = this.sdk.config.baseFolderUUID!
 		} else {
-			await this.mkdir({ path: parentPath })
+			await this.mkdir({
+				path: parentPath
+			})
 
 			const parentItemUUID = await this.pathToItemUUID({
 				path: parentPath,
@@ -1808,7 +1882,7 @@ export class FS {
 		}
 
 		if (item.type === "directory") {
-			const tmpDir = this.sdkConfig.tmpPath ? this.sdkConfig.tmpPath : os.tmpdir()
+			const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os.tmpdir()
 			const baseDirectoryName = pathModule.posix.basename(from)
 
 			if (!baseDirectoryName || baseDirectoryName.length === 0 || baseDirectoryName === ".") {
@@ -1823,13 +1897,13 @@ export class FS {
 
 			const tmpDirectoryPath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4(), newDirectoryName))
 
-			await this.cloud.downloadDirectoryToLocal({
+			await this.sdk.cloud().downloadDirectoryToLocal({
 				uuid,
 				to: tmpDirectoryPath
 			})
 
 			try {
-				await this.cloud.uploadLocalDirectory({
+				await this.sdk.cloud().uploadLocalDirectory({
 					source: tmpDirectoryPath,
 					parent: parentUUID,
 					abortSignal,
@@ -1839,7 +1913,10 @@ export class FS {
 					name: newDirectoryName
 				})
 
-				await this.readdir({ path: to, recursive: true })
+				await this.readdir({
+					path: to,
+					recursive: true
+				})
 			} finally {
 				await fs.rm(pathModule.join(tmpDirectoryPath, ".."), {
 					force: true,
@@ -1855,7 +1932,7 @@ export class FS {
 				throw new Error("Could not parse newFileName.")
 			}
 
-			const tmpFilePath = await this.cloud.downloadFileToLocal({
+			const tmpFilePath = await this.sdk.cloud().downloadFileToLocal({
 				uuid,
 				bucket: item.metadata.bucket,
 				region: item.metadata.region,
@@ -1870,7 +1947,7 @@ export class FS {
 			})
 
 			try {
-				const uploadedItem = await this.cloud.uploadLocalFile({
+				const uploadedItem = await this.sdk.cloud().uploadLocalFile({
 					source: tmpFilePath,
 					parent: parentUUID,
 					abortSignal,

@@ -152,11 +152,6 @@ import V3FileMetadata from "./v3/file/metadata"
 import V3UserGetDEK from "./v3/user/getDEK"
 import V3UserSetDEK from "./v3/user/setDEK"
 
-export type APIConfig = {
-	apiKey: string
-	sdk: FilenSDK
-}
-
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -166,7 +161,7 @@ export type APIConfig = {
  * @typedef {API}
  */
 export class API {
-	private readonly config: APIConfig
+	private readonly sdk: FilenSDK
 	private readonly apiClient: APIClient
 
 	private readonly _v3: {
@@ -393,247 +388,538 @@ export class API {
 		}
 	}
 
-	/**
-	 * Creates an instance of API.
-	 * @date 2/1/2024 - 4:46:38 PM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {APIConfig} params
-	 */
-	public constructor(params: APIConfig) {
-		this.config = params
+	public constructor(sdk: FilenSDK) {
+		this.sdk = sdk
 
-		if (this.config.apiKey.length === 0) {
+		if (!this.sdk.config.apiKey || this.sdk.config.apiKey.length === 0) {
 			throw new Error("Invalid apiKey")
 		}
 
-		this.apiClient = new APIClient({
-			apiKey: this.config.apiKey,
-			sdk: this.config.sdk
-		})
+		this.apiClient = new APIClient(this.sdk)
 
 		this._v3 = {
-			health: new V3Health({ apiClient: this.apiClient }),
+			health: new V3Health({
+				apiClient: this.apiClient
+			}),
 			dir: {
-				content: new V3DirContent({ apiClient: this.apiClient }),
-				download: new V3DirDownload({ apiClient: this.apiClient }),
-				shared: new V3DirShared({ apiClient: this.apiClient }),
-				linked: new V3DirLinked({ apiClient: this.apiClient }),
+				content: new V3DirContent({
+					apiClient: this.apiClient
+				}),
+				download: new V3DirDownload({
+					apiClient: this.apiClient
+				}),
+				shared: new V3DirShared({
+					apiClient: this.apiClient
+				}),
+				linked: new V3DirLinked({
+					apiClient: this.apiClient
+				}),
 				link: {
-					add: new V3DirLinkAdd({ apiClient: this.apiClient }),
-					status: new V3DirLinkStatus({ apiClient: this.apiClient }),
-					remove: new V3DirLinkRemove({ apiClient: this.apiClient }),
-					edit: new V3DirLinkEdit({ apiClient: this.apiClient }),
-					info: new V3DirLinkInfo({ apiClient: this.apiClient }),
-					content: new V3DirLinkContent({ apiClient: this.apiClient })
+					add: new V3DirLinkAdd({
+						apiClient: this.apiClient
+					}),
+					status: new V3DirLinkStatus({
+						apiClient: this.apiClient
+					}),
+					remove: new V3DirLinkRemove({
+						apiClient: this.apiClient
+					}),
+					edit: new V3DirLinkEdit({
+						apiClient: this.apiClient
+					}),
+					info: new V3DirLinkInfo({
+						apiClient: this.apiClient
+					}),
+					content: new V3DirLinkContent({
+						apiClient: this.apiClient
+					})
 				},
-				exists: new V3DirExists({ apiClient: this.apiClient }),
-				create: new V3DirCreate({ apiClient: this.apiClient }),
-				present: new V3DirPresent({ apiClient: this.apiClient }),
-				trash: new V3DirTrash({ apiClient: this.apiClient }),
-				move: new V3DirMove({ apiClient: this.apiClient }),
-				rename: new V3DirRename({ apiClient: this.apiClient }),
-				size: new V3DirSize({ apiClient: this.apiClient }),
-				sizeLink: new V3DirSizeLink({ apiClient: this.apiClient }),
+				exists: new V3DirExists({
+					apiClient: this.apiClient
+				}),
+				create: new V3DirCreate({
+					apiClient: this.apiClient
+				}),
+				present: new V3DirPresent({
+					apiClient: this.apiClient
+				}),
+				trash: new V3DirTrash({
+					apiClient: this.apiClient
+				}),
+				move: new V3DirMove({
+					apiClient: this.apiClient
+				}),
+				rename: new V3DirRename({
+					apiClient: this.apiClient
+				}),
+				size: new V3DirSize({
+					apiClient: this.apiClient
+				}),
+				sizeLink: new V3DirSizeLink({
+					apiClient: this.apiClient
+				}),
 				delete: {
-					permanent: new V3DirDeletePermanent({ apiClient: this.apiClient })
+					permanent: new V3DirDeletePermanent({
+						apiClient: this.apiClient
+					})
 				},
-				restore: new V3DirRestore({ apiClient: this.apiClient }),
-				color: new V3DirColor({ apiClient: this.apiClient }),
-				tree: new V3DirTree({ apiClient: this.apiClient }),
-				get: new V3DirGet({ apiClient: this.apiClient })
+				restore: new V3DirRestore({
+					apiClient: this.apiClient
+				}),
+				color: new V3DirColor({
+					apiClient: this.apiClient
+				}),
+				tree: new V3DirTree({
+					apiClient: this.apiClient
+				}),
+				get: new V3DirGet({
+					apiClient: this.apiClient
+				})
 			},
 			auth: {
-				info: new V3AuthInfo({ apiClient: this.apiClient })
+				info: new V3AuthInfo({
+					apiClient: this.apiClient
+				})
 			},
-			login: new V3Login({ apiClient: this.apiClient }),
-			register: new V3Register({ apiClient: this.apiClient }),
-			confirmationSend: new V3ConfirmationSend({ apiClient: this.apiClient }),
+			login: new V3Login({
+				apiClient: this.apiClient
+			}),
+			register: new V3Register({
+				apiClient: this.apiClient
+			}),
+			confirmationSend: new V3ConfirmationSend({
+				apiClient: this.apiClient
+			}),
 			user: {
-				info: new V3UserInfo({ apiClient: this.apiClient }),
-				baseFolder: new V3UserBaseFolder({ apiClient: this.apiClient }),
-				publicKey: new V3UserPublicKey({ apiClient: this.apiClient }),
-				settings: new V3UserSettings({ apiClient: this.apiClient }),
-				account: new V3UserAccount({ apiClient: this.apiClient }),
-				gdpr: new V3UserGDPR({ apiClient: this.apiClient }),
-				avatar: new V3UserAvatar({ apiClient: this.apiClient }),
+				info: new V3UserInfo({
+					apiClient: this.apiClient
+				}),
+				baseFolder: new V3UserBaseFolder({
+					apiClient: this.apiClient
+				}),
+				publicKey: new V3UserPublicKey({
+					apiClient: this.apiClient
+				}),
+				settings: new V3UserSettings({
+					apiClient: this.apiClient
+				}),
+				account: new V3UserAccount({
+					apiClient: this.apiClient
+				}),
+				gdpr: new V3UserGDPR({
+					apiClient: this.apiClient
+				}),
+				avatar: new V3UserAvatar({
+					apiClient: this.apiClient
+				}),
 				settingsEmail: {
-					change: new V3UserSettingsEmailChange({ apiClient: this.apiClient })
+					change: new V3UserSettingsEmailChange({
+						apiClient: this.apiClient
+					})
 				},
 				personal: {
-					update: new V3UserPersonalUpdate({ apiClient: this.apiClient })
+					update: new V3UserPersonalUpdate({
+						apiClient: this.apiClient
+					})
 				},
-				delete: new V3UserDelete({ apiClient: this.apiClient }),
-				deleteVersions: new V3UserDeleteVersions({ apiClient: this.apiClient }),
-				deleteAll: new V3UserDeleteAll({ apiClient: this.apiClient }),
+				delete: new V3UserDelete({
+					apiClient: this.apiClient
+				}),
+				deleteVersions: new V3UserDeleteVersions({
+					apiClient: this.apiClient
+				}),
+				deleteAll: new V3UserDeleteAll({
+					apiClient: this.apiClient
+				}),
 				settingsPassword: {
-					change: new V3UserSettingsPasswordChange({ apiClient: this.apiClient })
+					change: new V3UserSettingsPasswordChange({
+						apiClient: this.apiClient
+					})
 				},
 				twoFactorAuthentication: {
-					enable: new V3User2FAEnable({ apiClient: this.apiClient }),
-					disable: new V3User2FADisable({ apiClient: this.apiClient })
+					enable: new V3User2FAEnable({
+						apiClient: this.apiClient
+					}),
+					disable: new V3User2FADisable({
+						apiClient: this.apiClient
+					})
 				},
-				events: new V3UserEvents({ apiClient: this.apiClient }),
-				event: new V3UserEvent({ apiClient: this.apiClient }),
+				events: new V3UserEvents({
+					apiClient: this.apiClient
+				}),
+				event: new V3UserEvent({
+					apiClient: this.apiClient
+				}),
 				sub: {
-					cancel: new V3UserSubCancel({ apiClient: this.apiClient }),
-					create: new V3UserSubCreate({ apiClient: this.apiClient })
+					cancel: new V3UserSubCancel({
+						apiClient: this.apiClient
+					}),
+					create: new V3UserSubCreate({
+						apiClient: this.apiClient
+					})
 				},
-				invoice: new V3UserInvoice({ apiClient: this.apiClient }),
+				invoice: new V3UserInvoice({
+					apiClient: this.apiClient
+				}),
 				affiliate: {
-					payout: new V3UserAffiliatePayout({ apiClient: this.apiClient })
+					payout: new V3UserAffiliatePayout({
+						apiClient: this.apiClient
+					})
 				},
-				versioning: new V3UserVersioning({ apiClient: this.apiClient }),
-				loginAlerts: new V3UserLoginAlerts({ apiClient: this.apiClient }),
-				nickname: new V3UserNickname({ apiClient: this.apiClient }),
-				appearOffline: new V3UserAppearOffline({ apiClient: this.apiClient }),
-				profile: new V3UserProfile({ apiClient: this.apiClient }),
+				versioning: new V3UserVersioning({
+					apiClient: this.apiClient
+				}),
+				loginAlerts: new V3UserLoginAlerts({
+					apiClient: this.apiClient
+				}),
+				nickname: new V3UserNickname({
+					apiClient: this.apiClient
+				}),
+				appearOffline: new V3UserAppearOffline({
+					apiClient: this.apiClient
+				}),
+				profile: new V3UserProfile({
+					apiClient: this.apiClient
+				}),
 				lastActive: {
-					desktop: new V3UserLastActiveDesktop({ apiClient: this.apiClient })
+					desktop: new V3UserLastActiveDesktop({
+						apiClient: this.apiClient
+					})
 				},
 				keyPair: {
-					update: new V3UserKeyPairUpdate({ apiClient: this.apiClient }),
-					set: new V3UserKeyPairSet({ apiClient: this.apiClient }),
-					info: new V3UserKeyPairInfo({ apiClient: this.apiClient })
+					update: new V3UserKeyPairUpdate({
+						apiClient: this.apiClient
+					}),
+					set: new V3UserKeyPairSet({
+						apiClient: this.apiClient
+					}),
+					info: new V3UserKeyPairInfo({
+						apiClient: this.apiClient
+					})
 				},
-				masterKeys: new V3UserMasterKeys({ apiClient: this.apiClient }),
-				setDEK: new V3UserSetDEK({ apiClient: this.apiClient }),
-				getDEK: new V3UserGetDEK({ apiClient: this.apiClient }),
+				masterKeys: new V3UserMasterKeys({
+					apiClient: this.apiClient
+				}),
+				setDEK: new V3UserSetDEK({
+					apiClient: this.apiClient
+				}),
+				getDEK: new V3UserGetDEK({
+					apiClient: this.apiClient
+				}),
 				password: {
-					forgot: new V3UserPasswordForgot({ apiClient: this.apiClient }),
-					forgotReset: new V3UserPasswordForgotReset({ apiClient: this.apiClient })
+					forgot: new V3UserPasswordForgot({
+						apiClient: this.apiClient
+					}),
+					forgotReset: new V3UserPasswordForgotReset({
+						apiClient: this.apiClient
+					})
 				},
-				didExportMasterKeys: new V3UserDidExportMasterKeys({ apiClient: this.apiClient }),
-				lock: new V3UserLock({ apiClient: this.apiClient })
+				didExportMasterKeys: new V3UserDidExportMasterKeys({
+					apiClient: this.apiClient
+				}),
+				lock: new V3UserLock({
+					apiClient: this.apiClient
+				})
 			},
 			shared: {
-				in: new V3SharedIn({ apiClient: this.apiClient }),
-				out: new V3SharedOut({ apiClient: this.apiClient })
+				in: new V3SharedIn({
+					apiClient: this.apiClient
+				}),
+				out: new V3SharedOut({
+					apiClient: this.apiClient
+				})
 			},
 			upload: {
-				done: new V3UploadDone({ apiClient: this.apiClient })
+				done: new V3UploadDone({
+					apiClient: this.apiClient
+				})
 			},
 			item: {
-				share: new V3ItemShare({ apiClient: this.apiClient }),
-				shared: new V3ItemShared({ apiClient: this.apiClient }),
-				linked: new V3ItemLinked({ apiClient: this.apiClient }),
-				linkedRename: new V3ItemLinkedRename({ apiClient: this.apiClient }),
-				sharedRename: new V3ItemSharedRename({ apiClient: this.apiClient }),
-				favorite: new V3ItemFavorite({ apiClient: this.apiClient }),
+				share: new V3ItemShare({
+					apiClient: this.apiClient
+				}),
+				shared: new V3ItemShared({
+					apiClient: this.apiClient
+				}),
+				linked: new V3ItemLinked({
+					apiClient: this.apiClient
+				}),
+				linkedRename: new V3ItemLinkedRename({
+					apiClient: this.apiClient
+				}),
+				sharedRename: new V3ItemSharedRename({
+					apiClient: this.apiClient
+				}),
+				favorite: new V3ItemFavorite({
+					apiClient: this.apiClient
+				}),
 				sharedOut: {
-					remove: new V3ItemSharedOutRemove({ apiClient: this.apiClient })
+					remove: new V3ItemSharedOutRemove({
+						apiClient: this.apiClient
+					})
 				},
 				sharedIn: {
-					remove: new V3ItemSharedInRemove({ apiClient: this.apiClient })
+					remove: new V3ItemSharedInRemove({
+						apiClient: this.apiClient
+					})
 				}
 			},
 			file: {
-				exists: new V3FileExists({ apiClient: this.apiClient }),
-				trash: new V3FileTrash({ apiClient: this.apiClient }),
-				move: new V3FileMove({ apiClient: this.apiClient }),
-				rename: new V3FileRename({ apiClient: this.apiClient }),
-				metadata: new V3FileMetadata({ apiClient: this.apiClient }),
+				exists: new V3FileExists({
+					apiClient: this.apiClient
+				}),
+				trash: new V3FileTrash({
+					apiClient: this.apiClient
+				}),
+				move: new V3FileMove({
+					apiClient: this.apiClient
+				}),
+				rename: new V3FileRename({
+					apiClient: this.apiClient
+				}),
+				metadata: new V3FileMetadata({
+					apiClient: this.apiClient
+				}),
 				delete: {
-					permanent: new V3FileDeletePermanent({ apiClient: this.apiClient })
+					permanent: new V3FileDeletePermanent({
+						apiClient: this.apiClient
+					})
 				},
-				restore: new V3FileRestore({ apiClient: this.apiClient }),
+				restore: new V3FileRestore({
+					apiClient: this.apiClient
+				}),
 				version: {
-					restore: new V3FileVersionRestore({ apiClient: this.apiClient })
+					restore: new V3FileVersionRestore({
+						apiClient: this.apiClient
+					})
 				},
 				link: {
-					status: new V3FileLinkStatus({ apiClient: this.apiClient }),
-					edit: new V3FileLinkEdit({ apiClient: this.apiClient }),
-					info: new V3FileLinkInfo({ apiClient: this.apiClient }),
-					password: new V3FileLinkPassword({ apiClient: this.apiClient })
+					status: new V3FileLinkStatus({
+						apiClient: this.apiClient
+					}),
+					edit: new V3FileLinkEdit({
+						apiClient: this.apiClient
+					}),
+					info: new V3FileLinkInfo({
+						apiClient: this.apiClient
+					}),
+					password: new V3FileLinkPassword({
+						apiClient: this.apiClient
+					})
 				},
-				versions: new V3FileVersions({ apiClient: this.apiClient }),
+				versions: new V3FileVersions({
+					apiClient: this.apiClient
+				}),
 				download: {
 					chunk: {
-						buffer: new V3FileDownloadChunkBuffer({ apiClient: this.apiClient }),
-						stream: new V3FileDownloadChunkStream({ apiClient: this.apiClient }),
-						local: new V3FileDownloadChunkLocal({ apiClient: this.apiClient })
+						buffer: new V3FileDownloadChunkBuffer({
+							apiClient: this.apiClient
+						}),
+						stream: new V3FileDownloadChunkStream({
+							apiClient: this.apiClient
+						}),
+						local: new V3FileDownloadChunkLocal({
+							apiClient: this.apiClient
+						})
 					}
 				},
 				upload: {
 					chunk: {
-						buffer: new V3FileUploadChunkBuffer({ apiClient: this.apiClient })
+						buffer: new V3FileUploadChunkBuffer({
+							apiClient: this.apiClient
+						})
 					}
 				},
-				get: new V3FileGet({ apiClient: this.apiClient }),
-				present: new V3FilePresent({ apiClient: this.apiClient })
+				get: new V3FileGet({
+					apiClient: this.apiClient
+				}),
+				present: new V3FilePresent({
+					apiClient: this.apiClient
+				})
 			},
 			trash: {
-				empty: new V3TrashEmpty({ apiClient: this.apiClient })
+				empty: new V3TrashEmpty({
+					apiClient: this.apiClient
+				})
 			},
 			chat: {
-				conversations: new V3ChatConversations({ apiClient: this.apiClient }),
-				messages: new V3ChatMessages({ apiClient: this.apiClient }),
+				conversations: new V3ChatConversations({
+					apiClient: this.apiClient
+				}),
+				messages: new V3ChatMessages({
+					apiClient: this.apiClient
+				}),
 				conversationsName: {
-					edit: new V3ChatConversationsNameEdit({ apiClient: this.apiClient })
+					edit: new V3ChatConversationsNameEdit({
+						apiClient: this.apiClient
+					})
 				},
-				send: new V3ChatSend({ apiClient: this.apiClient }),
-				edit: new V3ChatEdit({ apiClient: this.apiClient }),
-				conversationsCreate: new V3ChatConversationsCreate({ apiClient: this.apiClient }),
+				send: new V3ChatSend({
+					apiClient: this.apiClient
+				}),
+				edit: new V3ChatEdit({
+					apiClient: this.apiClient
+				}),
+				conversationsCreate: new V3ChatConversationsCreate({
+					apiClient: this.apiClient
+				}),
 				conversationsParticipants: {
-					add: new V3ChatConversationsParticipantAdd({ apiClient: this.apiClient }),
-					remove: new V3ChatConversationsParticipantsRemove({ apiClient: this.apiClient })
+					add: new V3ChatConversationsParticipantAdd({
+						apiClient: this.apiClient
+					}),
+					remove: new V3ChatConversationsParticipantsRemove({
+						apiClient: this.apiClient
+					})
 				},
-				typing: new V3ChatTyping({ apiClient: this.apiClient }),
-				conversationsRead: new V3ChatConversationsRead({ apiClient: this.apiClient }),
-				conversationsUnread: new V3ChatConversationsUnread({ apiClient: this.apiClient }),
-				unread: new V3ChatUnread({ apiClient: this.apiClient }),
-				conversationsOnline: new V3ChatConversationsOnline({ apiClient: this.apiClient }),
-				delete: new V3ChatDelete({ apiClient: this.apiClient }),
+				typing: new V3ChatTyping({
+					apiClient: this.apiClient
+				}),
+				conversationsRead: new V3ChatConversationsRead({
+					apiClient: this.apiClient
+				}),
+				conversationsUnread: new V3ChatConversationsUnread({
+					apiClient: this.apiClient
+				}),
+				unread: new V3ChatUnread({
+					apiClient: this.apiClient
+				}),
+				conversationsOnline: new V3ChatConversationsOnline({
+					apiClient: this.apiClient
+				}),
+				delete: new V3ChatDelete({
+					apiClient: this.apiClient
+				}),
 				message: {
 					embed: {
-						disable: new V3ChatMessageEmbedDisable({ apiClient: this.apiClient })
+						disable: new V3ChatMessageEmbedDisable({
+							apiClient: this.apiClient
+						})
 					}
 				},
-				conversationsLeave: new V3ChatConversationsLeave({ apiClient: this.apiClient }),
-				conversationsDelete: new V3ChatConversationsDelete({ apiClient: this.apiClient }),
-				lastFocusUpdate: new V3ChatLastFocusUpdate({ apiClient: this.apiClient }),
-				lastFocus: new V3ChatLastFocus({ apiClient: this.apiClient })
+				conversationsLeave: new V3ChatConversationsLeave({
+					apiClient: this.apiClient
+				}),
+				conversationsDelete: new V3ChatConversationsDelete({
+					apiClient: this.apiClient
+				}),
+				lastFocusUpdate: new V3ChatLastFocusUpdate({
+					apiClient: this.apiClient
+				}),
+				lastFocus: new V3ChatLastFocus({
+					apiClient: this.apiClient
+				})
 			},
 			notes: {
-				all: new V3Notes({ apiClient: this.apiClient }),
-				content: new V3NotesContent({ apiClient: this.apiClient }),
-				create: new V3NotesCreate({ apiClient: this.apiClient }),
-				contentEdit: new V3NotesContentEdit({ apiClient: this.apiClient }),
-				titleEdit: new V3NotesTitleEdit({ apiClient: this.apiClient }),
-				delete: new V3NotesDelete({ apiClient: this.apiClient }),
-				trash: new V3NotesTrash({ apiClient: this.apiClient }),
-				archive: new V3NotesArchive({ apiClient: this.apiClient }),
-				restore: new V3NotesRestore({ apiClient: this.apiClient }),
-				typeChange: new V3NotesTypeChange({ apiClient: this.apiClient }),
-				pinned: new V3NotesPinned({ apiClient: this.apiClient }),
-				favorite: new V3NotesFavorite({ apiClient: this.apiClient }),
-				history: new V3NotesHistory({ apiClient: this.apiClient }),
-				historyRestore: new V3NotesHistoryRestore({ apiClient: this.apiClient }),
-				participantsRemove: new V3NotesParticipantsRemove({ apiClient: this.apiClient }),
-				participantsPermissions: new V3NotesParticipantsPermissions({ apiClient: this.apiClient }),
-				participantsAdd: new V3NotesParticipantsAdd({ apiClient: this.apiClient }),
-				tags: new V3NotesTags({ apiClient: this.apiClient }),
-				tagsCreate: new V3NotesTagsCreate({ apiClient: this.apiClient }),
-				tagsRename: new V3NotesTagsRename({ apiClient: this.apiClient }),
-				tagsDelete: new V3NotesTagsDelete({ apiClient: this.apiClient }),
-				tagsFavorite: new V3NotesTagsFavorite({ apiClient: this.apiClient }),
-				tag: new V3NotesTag({ apiClient: this.apiClient }),
-				untag: new V3NotesUntag({ apiClient: this.apiClient })
+				all: new V3Notes({
+					apiClient: this.apiClient
+				}),
+				content: new V3NotesContent({
+					apiClient: this.apiClient
+				}),
+				create: new V3NotesCreate({
+					apiClient: this.apiClient
+				}),
+				contentEdit: new V3NotesContentEdit({
+					apiClient: this.apiClient
+				}),
+				titleEdit: new V3NotesTitleEdit({
+					apiClient: this.apiClient
+				}),
+				delete: new V3NotesDelete({
+					apiClient: this.apiClient
+				}),
+				trash: new V3NotesTrash({
+					apiClient: this.apiClient
+				}),
+				archive: new V3NotesArchive({
+					apiClient: this.apiClient
+				}),
+				restore: new V3NotesRestore({
+					apiClient: this.apiClient
+				}),
+				typeChange: new V3NotesTypeChange({
+					apiClient: this.apiClient
+				}),
+				pinned: new V3NotesPinned({
+					apiClient: this.apiClient
+				}),
+				favorite: new V3NotesFavorite({
+					apiClient: this.apiClient
+				}),
+				history: new V3NotesHistory({
+					apiClient: this.apiClient
+				}),
+				historyRestore: new V3NotesHistoryRestore({
+					apiClient: this.apiClient
+				}),
+				participantsRemove: new V3NotesParticipantsRemove({
+					apiClient: this.apiClient
+				}),
+				participantsPermissions: new V3NotesParticipantsPermissions({
+					apiClient: this.apiClient
+				}),
+				participantsAdd: new V3NotesParticipantsAdd({
+					apiClient: this.apiClient
+				}),
+				tags: new V3NotesTags({
+					apiClient: this.apiClient
+				}),
+				tagsCreate: new V3NotesTagsCreate({
+					apiClient: this.apiClient
+				}),
+				tagsRename: new V3NotesTagsRename({
+					apiClient: this.apiClient
+				}),
+				tagsDelete: new V3NotesTagsDelete({
+					apiClient: this.apiClient
+				}),
+				tagsFavorite: new V3NotesTagsFavorite({
+					apiClient: this.apiClient
+				}),
+				tag: new V3NotesTag({
+					apiClient: this.apiClient
+				}),
+				untag: new V3NotesUntag({
+					apiClient: this.apiClient
+				})
 			},
 			contacts: {
-				all: new V3Contacts({ apiClient: this.apiClient }),
-				requestsIn: new V3ContactsRequestsIn({ apiClient: this.apiClient }),
-				requestsInCount: new V3ContactsRequestsInCount({ apiClient: this.apiClient }),
-				requestsOut: new V3ContactsRequestsOut({ apiClient: this.apiClient }),
-				requestsOutDelete: new V3ContactsRequestsOutDelete({ apiClient: this.apiClient }),
-				requestsSend: new V3ContactsRequestsSend({ apiClient: this.apiClient }),
-				requestsAccept: new V3ContactsRequestsAccept({ apiClient: this.apiClient }),
-				requestsDeny: new V3ContactsRequestsDeny({ apiClient: this.apiClient }),
-				delete: new V3ContactsDelete({ apiClient: this.apiClient }),
-				blocked: new V3ContactsBlocked({ apiClient: this.apiClient }),
-				blockedAdd: new V3ContactsBlockedAdd({ apiClient: this.apiClient }),
-				blockedDelete: new V3ContactsBlockedDelete({ apiClient: this.apiClient })
+				all: new V3Contacts({
+					apiClient: this.apiClient
+				}),
+				requestsIn: new V3ContactsRequestsIn({
+					apiClient: this.apiClient
+				}),
+				requestsInCount: new V3ContactsRequestsInCount({
+					apiClient: this.apiClient
+				}),
+				requestsOut: new V3ContactsRequestsOut({
+					apiClient: this.apiClient
+				}),
+				requestsOutDelete: new V3ContactsRequestsOutDelete({
+					apiClient: this.apiClient
+				}),
+				requestsSend: new V3ContactsRequestsSend({
+					apiClient: this.apiClient
+				}),
+				requestsAccept: new V3ContactsRequestsAccept({
+					apiClient: this.apiClient
+				}),
+				requestsDeny: new V3ContactsRequestsDeny({
+					apiClient: this.apiClient
+				}),
+				delete: new V3ContactsDelete({
+					apiClient: this.apiClient
+				}),
+				blocked: new V3ContactsBlocked({
+					apiClient: this.apiClient
+				}),
+				blockedAdd: new V3ContactsBlockedAdd({
+					apiClient: this.apiClient
+				}),
+				blockedDelete: new V3ContactsBlockedDelete({
+					apiClient: this.apiClient
+				})
 			}
 		}
 	}

@@ -1,13 +1,10 @@
 /// <reference types="node" />
-import type API from "../api";
-import { type FilenSDKConfig } from "..";
+import type FilenSDK from "..";
 import { type FolderMetadata, type FileMetadata, type FileEncryptionVersion, type ProgressCallback, type Prettify } from "../types";
 import { type PauseSignal } from "../cloud/signals";
-import { type CloudItem, type Cloud } from "../cloud";
+import { type CloudItem } from "../cloud";
 export type FSConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-    cloud: Cloud;
+    sdk: FilenSDK;
     connectToSocket?: boolean;
 };
 export type FSItemType = "file" | "directory";
@@ -68,23 +65,14 @@ export type FSItemUUID = FSItem & {
  * @typedef {FS}
  */
 export declare class FS {
-    private readonly api;
-    private readonly sdkConfig;
-    private readonly cloud;
+    private readonly sdk;
+    private readonly connectToSocket;
     _items: FSItems;
     _uuidToItem: Record<string, FSItemUUID>;
     private readonly socket;
     private readonly mutex;
     private readonly mkdirMutex;
     private readonly itemsMutex;
-    /**
-     * Creates an instance of FS.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {FSConfig} params
-     */
     constructor(params: FSConfig);
     /**
      * Wait for an API key (login) to become available

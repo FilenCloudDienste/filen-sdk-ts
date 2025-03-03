@@ -1,12 +1,7 @@
-import type API from "../api";
-import type { FilenSDKConfig } from "..";
 import type { Contact } from "../api/v3/contacts";
 import type { BlockedContact } from "../api/v3/contacts/blocked";
 import type { ContactRequest } from "../api/v3/contacts/requests/in";
-export type ContactsConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-};
+import type FilenSDK from "..";
 /**
  * Contacts
  * @date 2/1/2024 - 2:44:47 AM
@@ -16,17 +11,8 @@ export type ContactsConfig = {
  * @typedef {Contacts}
  */
 export declare class Contacts {
-    private readonly api;
-    private readonly sdkConfig;
-    /**
-     * Creates an instance of Contacts.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {ContactsConfig} params
-     */
-    constructor(params: ContactsConfig);
+    private readonly sdk;
+    constructor(sdk: FilenSDK);
     /**
      * Fetch all contacts.
      * @date 2/20/2024 - 6:28:41 AM

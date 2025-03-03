@@ -7,19 +7,9 @@
  * @typedef {Contacts}
  */
 export class Contacts {
-    api;
-    sdkConfig;
-    /**
-     * Creates an instance of Contacts.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {ContactsConfig} params
-     */
-    constructor(params) {
-        this.api = params.api;
-        this.sdkConfig = params.sdkConfig;
+    sdk;
+    constructor(sdk) {
+        this.sdk = sdk;
     }
     /**
      * Fetch all contacts.
@@ -30,7 +20,7 @@ export class Contacts {
      * @returns {Promise<Contact[]>}
      */
     async all() {
-        return await this.api.v3().contacts().all();
+        return await this.sdk.api(3).contacts().all();
     }
     /**
      * Fetch all incoming contact requests.
@@ -41,7 +31,7 @@ export class Contacts {
      * @returns {Promise<ContactRequest[]>}
      */
     async incomingRequests() {
-        return await this.api.v3().contacts().requestsIn();
+        return await this.sdk.api(3).contacts().requestsIn();
     }
     /**
      * Fetch count of all incoming contact requests.
@@ -52,7 +42,7 @@ export class Contacts {
      * @returns {Promise<number>}
      */
     async incomingRequestsCount() {
-        return await this.api.v3().contacts().requestsInCount();
+        return await this.sdk.api(3).contacts().requestsInCount();
     }
     /**
      * Fetch all outgoing contact requests.
@@ -63,7 +53,7 @@ export class Contacts {
      * @returns {Promise<ContactRequest[]>}
      */
     async outgoingRequests() {
-        return await this.api.v3().contacts().requestsOut();
+        return await this.sdk.api(3).contacts().requestsOut();
     }
     /**
      * Delete an outgoing contact request.
@@ -76,7 +66,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async deleteOutgoingRequest({ uuid }) {
-        await this.api.v3().contacts().requestsOutDelete({ uuid });
+        await this.sdk.api(3).contacts().requestsOutDelete({
+            uuid
+        });
     }
     /**
      * Send a contact request.
@@ -89,7 +81,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async sendRequest({ email }) {
-        await this.api.v3().contacts().requestsSend({ email });
+        await this.sdk.api(3).contacts().requestsSend({
+            email
+        });
     }
     /**
      * Accept incoming contact request.
@@ -102,7 +96,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async acceptRequest({ uuid }) {
-        await this.api.v3().contacts().requestsAccept({ uuid });
+        await this.sdk.api(3).contacts().requestsAccept({
+            uuid
+        });
     }
     /**
      * Deny incoming contact request.
@@ -115,7 +111,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async denyRequest({ uuid }) {
-        await this.api.v3().contacts().requestsDeny({ uuid });
+        await this.sdk.api(3).contacts().requestsDeny({
+            uuid
+        });
     }
     /**
      * Remove a contact.
@@ -128,7 +126,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async remove({ uuid }) {
-        await this.api.v3().contacts().delete({ uuid });
+        await this.sdk.api(3).contacts().delete({
+            uuid
+        });
     }
     /**
      * Fetch all blocked contacts.
@@ -139,7 +139,7 @@ export class Contacts {
      * @returns {Promise<BlockedContact[]>}
      */
     async blocked() {
-        return await this.api.v3().contacts().blocked();
+        return await this.sdk.api(3).contacts().blocked();
     }
     /**
      * Block a user.
@@ -152,7 +152,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async block({ email }) {
-        await this.api.v3().contacts().blockedAdd({ email });
+        await this.sdk.api(3).contacts().blockedAdd({
+            email
+        });
     }
     /**
      * Unblock a contact.
@@ -165,7 +167,9 @@ export class Contacts {
      * @returns {Promise<void>}
      */
     async unblock({ uuid }) {
-        await this.api.v3().contacts().blockedDelete({ uuid });
+        await this.sdk.api(3).contacts().blockedDelete({
+            uuid
+        });
     }
 }
 export default Contacts;

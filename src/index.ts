@@ -107,52 +107,43 @@ export class FilenSDK {
 		this.axiosInstance = axiosInstance ? axiosInstance : axios.create()
 
 		this._crypto = new Crypto(this)
-
-		this._api = params.apiKey
-			? new API({
-					apiKey: params.apiKey,
-					sdk: this
-			  })
-			: new API({
-					apiKey: "anonymous",
-					sdk: this
-			  })
-
-		this._cloud = new Cloud({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
-
+		this._api = new API(this)
+		this._cloud = new Cloud(this)
 		this._fs = new FS({
-			sdkConfig: params,
-			api: this._api,
-			cloud: this._cloud,
+			sdk: this,
 			connectToSocket: params.connectToSocket
 		})
+		this._notes = new Notes(this)
+		this._chats = new Chats(this)
+		this._contacts = new Contacts(this)
+		this._user = new User(this)
+	}
 
-		this._notes = new Notes({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
+	/**
+	 * Initialize the SDK again (after logging in for example).
+	 * @date 2/1/2024 - 3:23:58 PM
+	 *
+	 * @public
+	 * @param {FilenSDKConfig} params
+	 */
+	public init(params?: FilenSDKConfig): void {
+		if (!params) {
+			params = {}
+		}
 
-		this._chats = new Chats({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
+		this.config = params
 
-		this._contacts = new Contacts({
-			sdkConfig: params,
-			api: this._api
+		this._crypto = new Crypto(this)
+		this._api = new API(this)
+		this._cloud = new Cloud(this)
+		this._fs = new FS({
+			sdk: this,
+			connectToSocket: params.connectToSocket
 		})
-
-		this._user = new User({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
+		this._notes = new Notes(this)
+		this._chats = new Chats(this)
+		this._contacts = new Contacts(this)
+		this._user = new User(this)
 	}
 
 	/**
@@ -260,65 +251,6 @@ export class FilenSDK {
 	}
 
 	/**
-	 * Initialize the SDK again (after logging in for example).
-	 * @date 2/1/2024 - 3:23:58 PM
-	 *
-	 * @public
-	 * @param {FilenSDKConfig} params
-	 */
-	public init(params: FilenSDKConfig): void {
-		this.config = params
-
-		this._crypto = new Crypto(this)
-
-		this._api = params.apiKey
-			? new API({
-					apiKey: params.apiKey,
-					sdk: this
-			  })
-			: new API({
-					apiKey: "anonymous",
-					sdk: this
-			  })
-
-		this._cloud = new Cloud({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
-
-		this._fs = new FS({
-			sdkConfig: params,
-			api: this._api,
-			cloud: this._cloud,
-			connectToSocket: params.connectToSocket
-		})
-
-		this._notes = new Notes({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
-
-		this._chats = new Chats({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
-
-		this._contacts = new Contacts({
-			sdkConfig: params,
-			api: this._api
-		})
-
-		this._user = new User({
-			sdkConfig: params,
-			api: this._api,
-			sdk: this
-		})
-	}
-
-	/**
 	 * Check if the SDK user is authenticated.
 	 * @date 1/31/2024 - 4:08:17 PM
 	 *
@@ -340,7 +272,7 @@ export class FilenSDK {
 			this.config.privateKey.length > 0 &&
 			this.config.baseFolderUUID.length > 0 &&
 			this.config.userId > 0 &&
-			[1, 2].includes(this.config.authVersion)
+			[1, 2, 3].includes(this.config.authVersion)
 		)
 	}
 
@@ -715,10 +647,6 @@ export class FilenSDK {
 	}
 
 	public api(version: number) {
-		// if (!this.isLoggedIn()) {
-		// 	throw new Error("Not authenticated, please call login() first")
-		// }
-
 		if (version === 3) {
 			return this._api.v3()
 		}
@@ -734,10 +662,6 @@ export class FilenSDK {
 	 * @returns {Crypto}
 	 */
 	public crypto(): Crypto {
-		// if (!this.isLoggedIn()) {
-		// 	throw new Error("Not authenticated, please call login() first")
-		// }
-
 		return this._crypto
 	}
 
@@ -862,7 +786,7 @@ export class FilenSDK {
 
 export default FilenSDK
 
-export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree, CloudConfig } from "./cloud"
+export { CloudItem, CloudItemShared, CloudItemFile, CloudItemDirectory, CloudItemTree } from "./cloud"
 export { FSItem, FSItemType, FSStats, StatFS, FSConfig } from "./fs"
 export * from "./types"
 export * from "./constants"

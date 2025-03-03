@@ -1,16 +1,10 @@
-import type API from "../api";
-import { type FilenSDKConfig, FilenSDK } from "..";
+import { type FilenSDK } from "..";
 import { type ChatConversation } from "../api/v3/chat/conversations";
 import { type Contact } from "../api/v3/contacts";
 import { ChatTypingType } from "../api/v3/chat/typing";
 import { type ChatMessage } from "../api/v3/chat/messages";
 import { type ChatConversationsOnlineUser } from "../api/v3/chat/conversations/online";
 import { type ChatLastFocusValues } from "../api/v3/chat/lastFocusUpdate";
-export type ChatsConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-    sdk: FilenSDK;
-};
 /**
  * Chats
  * @date 2/1/2024 - 2:44:47 AM
@@ -20,19 +14,9 @@ export type ChatsConfig = {
  * @typedef {Chats}
  */
 export declare class Chats {
-    private readonly api;
-    private readonly sdkConfig;
     private readonly _chatKeyCache;
     private readonly sdk;
-    /**
-     * Creates an instance of Chats.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {ChatsConfig} params
-     */
-    constructor(params: ChatsConfig);
+    constructor(sdk: FilenSDK);
     /**
      * Get the encryption key of a chat.
      * @date 2/20/2024 - 6:05:30 AM
