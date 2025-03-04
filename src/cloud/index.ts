@@ -1735,7 +1735,7 @@ export class Cloud {
 				}),
 				downloadBtn: true,
 				type: "enable",
-				salt: await this.sdk.getWorker().crypto.utils.generateRandomString(32)
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(32)
 			})
 
 		return linkUUID
@@ -1778,7 +1778,7 @@ export class Cloud {
 		enableDownload?: boolean
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const salt = await this.sdk.getWorker().crypto.utils.generateRandomString(32)
+		const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(32)
 		const pass = password && password.length > 0 ? "notempty" : "empty"
 		const passHashed =
 			password && password.length > 0
@@ -1873,7 +1873,7 @@ export class Cloud {
 				passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({
 					password: "empty"
 				}),
-				salt: await this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(32),
 				downloadBtn: true,
 				type: "disable"
 			})
