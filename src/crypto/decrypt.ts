@@ -26,7 +26,6 @@ const pipelineAsync = promisify(pipeline)
  */
 export class Decrypt {
 	private readonly sdk: FilenSDK
-	private readonly textDecoder = new TextDecoder()
 
 	public constructor(sdk: FilenSDK) {
 		this.sdk = sdk
@@ -178,7 +177,7 @@ export class Decrypt {
 				Buffer.from(metadata, "base64")
 			)
 
-			return this.textDecoder.decode(decrypted)
+			return Buffer.from(decrypted).toString("utf-8")
 		}
 
 		throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${environment} environment`)
@@ -999,7 +998,7 @@ export class Decrypt {
 				}
 
 				if (needsConvert && !isCBC) {
-					data = Buffer.from(this.textDecoder.decode(data), "base64")
+					data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64")
 				}
 
 				if (!isCBC) {
@@ -1080,7 +1079,7 @@ export class Decrypt {
 				}
 
 				if (needsConvert && !isCBC) {
-					data = Buffer.from(this.textDecoder.decode(data), "base64")
+					data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64")
 				}
 
 				if (!isCBC) {

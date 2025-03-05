@@ -195,7 +195,10 @@ export class Chats {
 	public async create({ uuid, contacts }: { uuid?: string; contacts?: Contact[] }): Promise<string> {
 		const [uuidToUse, key] = await Promise.all([
 			uuid ? Promise.resolve(uuid) : uuidv4(),
-			this.sdk.getWorker().crypto.utils.generateEncryptionKey("metadata")
+			this.sdk.getWorker().crypto.utils.generateEncryptionKey({
+				use: "metadata",
+				authVersion: this.sdk.config.authVersion!
+			})
 		])
 
 		const [metadata, ownerMetadata] = await Promise.all([

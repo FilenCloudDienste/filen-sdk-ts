@@ -21,7 +21,6 @@ const pipelineAsync = promisify(pipeline)
  */
 export class Encrypt {
 	private readonly sdk: FilenSDK
-	private readonly textEncoder = new TextEncoder()
 
 	public constructor(sdk: FilenSDK) {
 		this.sdk = sdk
@@ -56,7 +55,7 @@ export class Encrypt {
 
 		if (version === 2) {
 			const iv = await generateRandomString(12)
-			const ivBuffer = this.textEncoder.encode(iv)
+			const ivBuffer = Buffer.from(iv, "utf-8")
 
 			if (environment === "node") {
 				const derivedKey = derive
@@ -68,8 +67,8 @@ export class Encrypt {
 							bitLength: 256,
 							returnHex: false
 					  })
-					: this.textEncoder.encode(keyToUse)
-				const dataBuffer = this.textEncoder.encode(metadata)
+					: Buffer.from(keyToUse, "utf-8")
+				const dataBuffer = Buffer.from(metadata, "utf-8")
 				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", derivedKey, ivBuffer)
 				const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()])
 				const authTag = cipher.getAuthTag()
@@ -86,7 +85,7 @@ export class Encrypt {
 							returnHex: false
 					  })
 					: Buffer.from(keyToUse, "utf-8")
-				const dataBuffer = this.textEncoder.encode(metadata)
+				const dataBuffer = Buffer.from(metadata, "utf-8")
 				const encrypted = await globalThis.crypto.subtle.encrypt(
 					{
 						name: "AES-GCM",
@@ -110,14 +109,14 @@ export class Encrypt {
 			const keyBuffer = Buffer.from(keyToUse, "hex")
 
 			if (environment === "node") {
-				const dataBuffer = this.textEncoder.encode(metadata)
+				const dataBuffer = Buffer.from(metadata, "utf-8")
 				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer)
 				const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()])
 				const authTag = cipher.getAuthTag()
 
 				return `003${ivBuffer.toString("hex")}${Buffer.concat([encrypted, authTag]).toString("base64")}`
 			} else if (environment === "browser") {
-				const dataBuffer = this.textEncoder.encode(metadata)
+				const dataBuffer = Buffer.from(metadata, "utf-8")
 				const encrypted = await globalThis.crypto.subtle.encrypt(
 					{
 						name: "AES-GCM",
@@ -163,7 +162,7 @@ export class Encrypt {
 					padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
 					oaepHash: "sha512"
 				},
-				this.textEncoder.encode(metadata)
+				Buffer.from(metadata, "utf-8")
 			)
 
 			return Buffer.from(encrypted).toString("base64")
@@ -177,7 +176,7 @@ export class Encrypt {
 					name: "RSA-OAEP"
 				},
 				importedPublicKey,
-				this.textEncoder.encode(metadata)
+				Buffer.from(metadata, "utf-8")
 			)
 
 			return Buffer.from(encrypted).toString("base64")
@@ -203,7 +202,9 @@ export class Encrypt {
 		}
 
 		return await this.metadata({
-			metadata: JSON.stringify({ message }),
+			metadata: JSON.stringify({
+				message
+			}),
 			key
 		})
 	}
@@ -225,7 +226,9 @@ export class Encrypt {
 		}
 
 		return await this.metadata({
-			metadata: JSON.stringify({ content }),
+			metadata: JSON.stringify({
+				content
+			}),
 			key
 		})
 	}
@@ -247,7 +250,9 @@ export class Encrypt {
 		}
 
 		return await this.metadata({
-			metadata: JSON.stringify({ title }),
+			metadata: JSON.stringify({
+				title
+			}),
 			key
 		})
 	}
@@ -293,7 +298,9 @@ export class Encrypt {
 		}
 
 		return await this.metadata({
-			metadata: JSON.stringify({ name }),
+			metadata: JSON.stringify({
+				name
+			}),
 			key: keyToUse!
 		})
 	}

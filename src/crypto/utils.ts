@@ -1,4 +1,4 @@
-import { environment, METADATA_CRYPTO_VERSION, DATA_CRYPTO_VERSION } from "../constants"
+import { environment } from "../constants"
 import nodeCrypto from "crypto"
 import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
@@ -10,11 +10,8 @@ import { sha1 } from "@noble/hashes/sha1"
 import { sha512 } from "@noble/hashes/sha512"
 import CryptoAPI from "crypto-api-v1"
 
-const textEncoder = new TextEncoder()
-const textDecoder = new TextDecoder()
-
 export const urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-export const charset = textDecoder.decode(
+export const charset = Buffer.from(
 	new Uint8Array(
 		Array.from(
 			{
@@ -23,7 +20,7 @@ export const charset = textDecoder.decode(
 			(_, i) => i
 		)
 	)
-)
+).toString("utf-8")
 
 export async function generateRandomString(length: number = 32): Promise<string> {
 	if (environment === "node") {
@@ -93,42 +90,22 @@ export async function generateRandomHexString(length: number = 32): Promise<stri
 	throw new Error(`crypto.utils.generateRandomHexString not implemented for ${environment} environment`)
 }
 
-export async function generateEncryptionKey(use: "metadata" | "data"): Promise<string> {
+export async function generateEncryptionKey({ use, authVersion }: { use: "metadata" | "data"; authVersion: AuthVersion }): Promise<string> {
 	if (use === "metadata") {
-		switch (METADATA_CRYPTO_VERSION) {
-			case 1: {
-				return await generateRandomURLSafeString(32)
-			}
-
-			case 2: {
-				return await generateRandomString(32)
-			}
-
-			case 3: {
-				return (await generateRandomBytes(32)).toString("hex")
-			}
-
-			default: {
-				return await generateRandomURLSafeString(32)
-			}
+		if (authVersion === 1) {
+			return await generateRandomURLSafeString(32)
+		} else if (authVersion === 2) {
+			return await generateRandomString(32)
+		} else {
+			return (await generateRandomBytes(32)).toString("hex")
 		}
 	} else {
-		switch (DATA_CRYPTO_VERSION) {
-			case 1: {
-				return await generateRandomURLSafeString(32)
-			}
-
-			case 2: {
-				return await generateRandomString(32)
-			}
-
-			case 3: {
-				return (await generateRandomBytes(32)).toString("hex")
-			}
-
-			default: {
-				return await generateRandomURLSafeString(32)
-			}
+		if (authVersion === 1) {
+			return await generateRandomURLSafeString(32)
+		} else if (authVersion === 2) {
+			return await generateRandomString(32)
+		} else {
+			return (await generateRandomBytes(32)).toString("hex")
 		}
 	}
 }
@@ -229,7 +206,7 @@ export async function deriveKeyFromPassword({
 		const bits = await globalThis.crypto.subtle.deriveBits(
 			{
 				name: "PBKDF2",
-				salt: textEncoder.encode(salt),
+				salt: Buffer.from(salt, "utf-8"),
 				iterations: iterations,
 				hash: {
 					name: hash === "sha512" ? "SHA-512" : hash
@@ -380,9 +357,9 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 		const derivedMasterKeys = derivedKey.substring(0, derivedKey.length / 2)
 
 		if (environment === "node") {
-			derivedPassword = nodeCrypto.createHash("sha512").update(textEncoder.encode(derivedPassword)).digest("hex")
+			derivedPassword = nodeCrypto.createHash("sha512").update(Buffer.from(derivedPassword, "utf-8")).digest("hex")
 		} else if (environment === "browser") {
-			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(derivedPassword))).toString(
+			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", Buffer.from(derivedPassword, "utf-8"))).toString(
 				"hex"
 			)
 		} else {
@@ -611,7 +588,7 @@ export async function importPBKDF2Key({
 
 	const importedPBKF2Key = await globalThis.crypto.subtle.importKey(
 		"raw",
-		textEncoder.encode(key),
+		Buffer.from(key, "utf-8"),
 		{
 			name: "PBKDF2"
 		},

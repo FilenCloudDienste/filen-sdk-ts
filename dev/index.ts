@@ -5,7 +5,7 @@
 
 import FilenSDK, { UPLOAD_CHUNK_SIZE } from "../src"
 import config from "./dev.config.json"
-import type { AuthVersion } from "../src/types"
+import { type AuthVersion } from "../src/types"
 import fs from "fs-extra"
 import pathModule from "path"
 import { generateRandomString } from "../src/crypto/utils"
@@ -34,7 +34,7 @@ async function main() {
 	console.log(filen.config)
 
 	await filen.fs().writeFile({
-		path: "/test/empty3.txt",
+		path: "/test/empty6.txt",
 		content: Buffer.from([])
 	})
 
