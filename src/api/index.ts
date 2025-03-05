@@ -151,6 +151,7 @@ import type FilenSDK from ".."
 import V3FileMetadata from "./v3/file/metadata"
 import V3UserGetDEK from "./v3/user/getDEK"
 import V3UserSetDEK from "./v3/user/setDEK"
+import V3UploadEmpty from "./v3/upload/empty"
 
 /**
  * API
@@ -264,6 +265,7 @@ export class API {
 		}
 		upload: {
 			done: V3UploadDone
+			empty: V3UploadEmpty
 		}
 		item: {
 			share: V3ItemShare
@@ -631,6 +633,9 @@ export class API {
 			},
 			upload: {
 				done: new V3UploadDone({
+					apiClient: this.apiClient
+				}),
+				empty: new V3UploadEmpty({
 					apiClient: this.apiClient
 				})
 			},
@@ -1077,7 +1082,8 @@ export class API {
 			},
 			upload: () => {
 				return {
-					done: (...params: Parameters<typeof this._v3.upload.done.fetch>) => this._v3.upload.done.fetch(...params)
+					done: (...params: Parameters<typeof this._v3.upload.done.fetch>) => this._v3.upload.done.fetch(...params),
+					empty: (...params: Parameters<typeof this._v3.upload.empty.fetch>) => this._v3.upload.empty.fetch(...params)
 				}
 			},
 			item: () => {

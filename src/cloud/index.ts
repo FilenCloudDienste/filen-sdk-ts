@@ -896,6 +896,18 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async editFileMetadata({ uuid, metadata }: { uuid: string; metadata: FileMetadata }): Promise<void> {
+		const get = await this.sdk.api(3).file().get({
+			uuid
+		})
+		const exists = await this.fileExists({
+			name: metadata.name,
+			parent: get.parent
+		})
+
+		if (exists.exists && exists.uuid !== uuid) {
+			throw new Error("A file with the same name already exists in this directory.")
+		}
+
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name: metadata.name,
@@ -2889,30 +2901,34 @@ export class Cloud {
 				retryDelay: 100
 			})
 
-			const readStream = this.downloadFileToReadableStream({
-				uuid,
-				region,
-				bucket,
-				version,
-				key,
-				chunks,
-				size,
-				abortSignal,
-				pauseSignal,
-				onProgress,
-				onProgressId,
-				onError,
-				onStarted,
-				start,
-				end
-			}) as unknown as ReadableStreamWebType<Buffer>
+			if (size > 0) {
+				const readStream = this.downloadFileToReadableStream({
+					uuid,
+					region,
+					bucket,
+					version,
+					key,
+					chunks,
+					size,
+					abortSignal,
+					pauseSignal,
+					onProgress,
+					onProgressId,
+					onError,
+					onStarted,
+					start,
+					end
+				}) as unknown as ReadableStreamWebType<Buffer>
 
-			const writeStream = fs.createWriteStream(destinationPath)
+				const writeStream = fs.createWriteStream(destinationPath)
 
-			await pipelineAsync(Readable.fromWeb(readStream), writeStream)
+				await pipelineAsync(Readable.fromWeb(readStream), writeStream)
 
-			if (onFinished) {
-				onFinished()
+				if (onFinished) {
+					onFinished()
+				}
+			} else {
+				await fs.writeFile(destinationPath, Buffer.from([]))
 			}
 
 			return destinationPath
@@ -3002,6 +3018,14 @@ export class Cloud {
 	}): ReadableStream<Buffer> {
 		if (key.length === 0) {
 			throw new Error("Invalid key.")
+		}
+
+		if (size <= 0) {
+			return new ReadableStream({
+				start(controller) {
+					controller.close()
+				}
+			})
 		}
 
 		const streamEntireFile = typeof start === "undefined" && typeof end === "undefined"
@@ -3808,10 +3832,6 @@ export class Cloud {
 				throw new Error(`Invalid source file at path ${source}. Not a file.`)
 			}
 
-			if (fileStats.size <= 0) {
-				throw new Error(`Invalid source file at path ${source}. 0 bytes.`)
-			}
-
 			const fileSize = fileStats.size
 			let fileChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE)
 			const lastModified = parseInt(fileStats.mtimeMs.toString())
@@ -3860,121 +3880,135 @@ export class Cloud {
 				})
 			])
 
-			const waitForPause = async (): Promise<void> => {
-				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-					return
+			if (fileSize > 0) {
+				const waitForPause = async (): Promise<void> => {
+					if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+						return
+					}
+
+					await new Promise<void>(resolve => {
+						const wait = setInterval(() => {
+							if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+								clearInterval(wait)
+
+								resolve()
+							}
+						}, 10)
+					})
 				}
 
-				await new Promise<void>(resolve => {
-					const wait = setInterval(() => {
-						if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-							clearInterval(wait)
+				await new Promise<void>((resolve, reject) => {
+					let done = 0
 
-							resolve()
-						}
-					}, 10)
+					for (let i = 0; i < fileChunks; i++) {
+						const index = i
+
+						;(async () => {
+							await uploadThreads.acquire()
+
+							try {
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const chunkBuffer = await utils.readLocalFileChunk({
+									path: source,
+									offset: index * UPLOAD_CHUNK_SIZE,
+									length: UPLOAD_CHUNK_SIZE
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
+									data: chunkBuffer,
+									key
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
+									uuid,
+									index,
+									parent,
+									uploadKey,
+									abortSignal,
+									buffer: encryptedChunkBuffer,
+									onProgress,
+									onProgressId
+								})
+
+								bucket = uploadResponse.bucket
+								region = uploadResponse.region
+
+								done += 1
+
+								uploadThreads.release()
+
+								if (done >= fileChunks) {
+									resolve()
+								}
+							} catch (e) {
+								aborted = true
+
+								uploadThreads.release()
+
+								throw e
+							}
+						})().catch(err => {
+							aborted = true
+
+							reject(err)
+						})
+					}
 				})
 			}
 
-			await new Promise<void>((resolve, reject) => {
-				let done = 0
-
-				for (let i = 0; i < fileChunks; i++) {
-					const index = i
-
-					;(async () => {
-						await uploadThreads.acquire()
-
-						try {
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
-							const chunkBuffer = await utils.readLocalFileChunk({
-								path: source,
-								offset: index * UPLOAD_CHUNK_SIZE,
-								length: UPLOAD_CHUNK_SIZE
-							})
-
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
-							const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
-								data: chunkBuffer,
-								key
-							})
-
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
-							const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
-								uuid,
-								index,
-								parent,
-								uploadKey,
-								abortSignal,
-								buffer: encryptedChunkBuffer,
-								onProgress,
-								onProgressId
-							})
-
-							bucket = uploadResponse.bucket
-							region = uploadResponse.region
-
-							done += 1
-
-							uploadThreads.release()
-
-							if (done >= fileChunks) {
-								resolve()
-							}
-						} catch (e) {
-							aborted = true
-
-							uploadThreads.release()
-
-							throw e
-						}
-					})().catch(err => {
-						aborted = true
-
-						reject(err)
-					})
-				}
-			})
-
-			const done = await this.sdk.api(3).upload().done({
-				uuid,
-				name: nameEncrypted,
-				nameHashed,
-				size: sizeEncrypted,
-				chunks: fileChunks,
-				mime: mimeEncrypted,
-				rm,
-				metadata,
-				version,
-				uploadKey
-			})
+			const done =
+				fileSize > 0
+					? await this.sdk.api(3).upload().done({
+							uuid,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							chunks: fileChunks,
+							mime: mimeEncrypted,
+							rm,
+							metadata,
+							version,
+							uploadKey
+					  })
+					: await this.sdk.api(3).upload().empty({
+							uuid,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							mime: mimeEncrypted,
+							metadata,
+							version,
+							parent
+					  })
 
 			fileChunks = done.chunks
 
@@ -4348,11 +4382,6 @@ export class Cloud {
 			const fileName = name ? name : file.name
 			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
 			const fileSize = file.size
-
-			if (fileSize <= 0) {
-				throw new Error("Empty files are not supported.")
-			}
-
 			let fileChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE)
 			const lastModified = file.lastModified
 			let bucket = DEFAULT_UPLOAD_BUCKET
@@ -4398,121 +4427,135 @@ export class Cloud {
 				})
 			])
 
-			const waitForPause = async (): Promise<void> => {
-				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-					return
+			if (fileSize > 0) {
+				const waitForPause = async (): Promise<void> => {
+					if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+						return
+					}
+
+					await new Promise<void>(resolve => {
+						const wait = setInterval(() => {
+							if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+								clearInterval(wait)
+
+								resolve()
+							}
+						}, 10)
+					})
 				}
 
-				await new Promise<void>(resolve => {
-					const wait = setInterval(() => {
-						if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-							clearInterval(wait)
+				await new Promise<void>((resolve, reject) => {
+					let done = 0
 
-							resolve()
-						}
-					}, 10)
+					for (let i = 0; i < fileChunks; i++) {
+						const index = i
+
+						;(async () => {
+							await uploadThreads.acquire()
+
+							try {
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const chunkBuffer = await utils.readWebFileChunk({
+									file,
+									index,
+									length: UPLOAD_CHUNK_SIZE
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
+									data: chunkBuffer,
+									key
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
+									uuid: fileUUID,
+									index,
+									parent,
+									uploadKey,
+									abortSignal,
+									buffer: encryptedChunkBuffer,
+									onProgress,
+									onProgressId
+								})
+
+								bucket = uploadResponse.bucket
+								region = uploadResponse.region
+
+								done += 1
+
+								uploadThreads.release()
+
+								if (done >= fileChunks) {
+									resolve()
+								}
+							} catch (e) {
+								aborted = true
+
+								uploadThreads.release()
+
+								throw e
+							}
+						})().catch(err => {
+							aborted = true
+
+							reject(err)
+						})
+					}
 				})
 			}
 
-			await new Promise<void>((resolve, reject) => {
-				let done = 0
-
-				for (let i = 0; i < fileChunks; i++) {
-					const index = i
-
-					;(async () => {
-						await uploadThreads.acquire()
-
-						try {
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
-							const chunkBuffer = await utils.readWebFileChunk({
-								file,
-								index,
-								length: UPLOAD_CHUNK_SIZE
-							})
-
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
-							const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
-								data: chunkBuffer,
-								key
-							})
-
-							if (pauseSignal && pauseSignal.isPaused()) {
-								await waitForPause()
-							}
-
-							if (abortSignal && abortSignal.aborted) {
-								reject(new Error("Aborted"))
-
-								return
-							}
-
-							const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
-								uuid: fileUUID,
-								index,
-								parent,
-								uploadKey,
-								abortSignal,
-								buffer: encryptedChunkBuffer,
-								onProgress,
-								onProgressId
-							})
-
-							bucket = uploadResponse.bucket
-							region = uploadResponse.region
-
-							done += 1
-
-							uploadThreads.release()
-
-							if (done >= fileChunks) {
-								resolve()
-							}
-						} catch (e) {
-							aborted = true
-
-							uploadThreads.release()
-
-							throw e
-						}
-					})().catch(err => {
-						aborted = true
-
-						reject(err)
-					})
-				}
-			})
-
-			const done = await this.sdk.api(3).upload().done({
-				uuid: fileUUID,
-				name: nameEncrypted,
-				nameHashed,
-				size: sizeEncrypted,
-				chunks: fileChunks,
-				mime: mimeEncrypted,
-				rm,
-				metadata,
-				version,
-				uploadKey
-			})
+			const done =
+				fileSize > 0
+					? await this.sdk.api(3).upload().done({
+							uuid: fileUUID,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							chunks: fileChunks,
+							mime: mimeEncrypted,
+							rm,
+							metadata,
+							version,
+							uploadKey
+					  })
+					: await this.sdk.api(3).upload().empty({
+							uuid: fileUUID,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							mime: mimeEncrypted,
+							metadata,
+							version,
+							parent
+					  })
 
 			fileChunks = done.chunks
 

@@ -1305,6 +1305,10 @@ export class FS {
 			})
 		}
 
+		if (item.metadata.size <= 0) {
+			return Buffer.from([])
+		}
+
 		if (!position) {
 			position = 0
 		}
