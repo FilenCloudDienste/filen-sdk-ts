@@ -54,6 +54,17 @@ export async function generateRandomURLSafeString(length = 32) {
     }
     throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`);
 }
+export async function generateRandomHexString(length = 32) {
+    if (environment === "node") {
+        return nodeCrypto.randomBytes(Math.floor(length / 2)).toString("hex");
+    }
+    else if (environment === "browser") {
+        const array = new Uint8Array(Math.floor(length / 2));
+        globalThis.crypto.getRandomValues(array);
+        return Buffer.from(array).toString("hex");
+    }
+    throw new Error(`crypto.utils.generateRandomHexString not implemented for ${environment} environment`);
+}
 export async function generateEncryptionKey(use) {
     if (use === "metadata") {
         switch (METADATA_CRYPTO_VERSION) {
@@ -542,7 +553,8 @@ export const utils = {
     importPBKDF2Key,
     generateRandomBytes,
     generateRandomURLSafeString,
-    generateEncryptionKey
+    generateEncryptionKey,
+    generateRandomHexString
 };
 export default utils;
 //# sourceMappingURL=utils.js.map

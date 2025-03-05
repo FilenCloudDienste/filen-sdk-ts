@@ -1,6 +1,6 @@
 /// <reference types="node" />
 /// <reference types="node" />
-import type { AuthVersion, ClassMethods } from "./types";
+import { type AuthVersion, type ClassMethods } from "./types";
 import Crypto from "./crypto";
 import FS from "./fs";
 import appendStream from "./streams/append";
@@ -461,14 +461,7 @@ export declare class FilenSDK {
         };
         shared: () => {
             in: (params?: {
-                uuid?: string | undefined; /**
-                 * FilenSDK
-                 * @date 2/1/2024 - 2:45:02 AM
-                 *
-                 * @export
-                 * @class FilenSDK
-                 * @typedef {FilenSDK}
-                 */
+                uuid?: string | undefined;
             } | undefined) => Promise<import("./api/v3/shared/in").SharedInResponse>;
             out: (params?: {
                 uuid?: string | undefined;
@@ -932,6 +925,7 @@ export declare class FilenSDK {
             generateRandomBytes: typeof import("./crypto/utils").generateRandomBytes;
             generateRandomURLSafeString: typeof import("./crypto/utils").generateRandomURLSafeString;
             generateEncryptionKey: typeof import("./crypto/utils").generateEncryptionKey;
+            generateRandomHexString: typeof import("./crypto/utils").generateRandomHexString;
         };
         streams: {
             append: typeof appendStream;

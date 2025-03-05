@@ -1,5 +1,5 @@
 import type APIClient from "../client";
-import type { AuthVersion } from "../../types";
+import { type AuthVersion } from "../../types";
 export type LoginResponse = {
     apiKey: string;
     masterKeys: string | null;

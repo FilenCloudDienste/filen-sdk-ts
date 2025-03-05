@@ -1,4 +1,5 @@
-import type { Environment } from "./types";
+import { type Environment } from "./types";
+import { type FilenSDKConfig } from ".";
 export declare const isBrowser: boolean;
 export declare const environment: Environment;
 export declare const CHUNK_SIZE: number;
@@ -21,3 +22,4 @@ export declare const MAX_CHAT_SIZE: number;
 export declare const METADATA_CRYPTO_VERSION: number;
 export declare const DATA_CRYPTO_VERSION: number;
 export declare const AUTH_VERSION: number;
+export declare const ANONYMOUS_SDK_CONFIG: Partial<FilenSDKConfig>;

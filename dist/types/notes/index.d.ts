@@ -1,6 +1,6 @@
 import type FilenSDK from "..";
-import type { NoteType, Note, NoteTag } from "../api/v3/notes";
-import type { NoteHistory } from "../api/v3/notes/history";
+import { type NoteType, type Note, type NoteTag } from "../api/v3/notes";
+import { type NoteHistory } from "../api/v3/notes/history";
 /**
  * Notes
  * @date 2/1/2024 - 2:44:47 AM

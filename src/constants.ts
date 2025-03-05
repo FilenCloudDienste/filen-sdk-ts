@@ -1,4 +1,6 @@
 import { type Environment } from "./types"
+import { type FilenSDKConfig } from "."
+import os from "os"
 
 export const isBrowser =
 	(typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.navigator !== "undefined") ||
@@ -34,3 +36,19 @@ export const MAX_CHAT_SIZE = 1024 * 64
 export const METADATA_CRYPTO_VERSION: number = 2
 export const DATA_CRYPTO_VERSION: number = 2
 export const AUTH_VERSION: number = 2
+
+export const ANONYMOUS_SDK_CONFIG: Partial<FilenSDKConfig> = {
+	email: "anonymous@filen.io",
+	password: "anonymous",
+	masterKeys: ["anonymous"],
+	connectToSocket: false,
+	metadataCache: true,
+	twoFactorCode: "XXXXXX",
+	publicKey: "anonymous",
+	privateKey: "anonymous",
+	apiKey: "anonymous",
+	authVersion: 3,
+	baseFolderUUID: "anonymous",
+	userId: 1,
+	tmpPath: os.tmpdir()
+}

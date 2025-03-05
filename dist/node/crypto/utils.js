@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.EVP_BytesToKey = exports.generateKeyPair = exports.bufferToHash = exports.importPBKDF2Key = exports.importRawKey = exports.importPrivateKey = exports.importPublicKey = exports.derKeyToPem = exports.generatePasswordAndMasterKeyBasedOnAuthVersion = exports.hashPassword = exports.normalizeHash = exports.hashFn = exports.deriveKeyFromPassword = exports.generateEncryptionKey = exports.generateRandomURLSafeString = exports.generateRandomBytes = exports.generateRandomString = exports.charset = exports.urlSafeCharset = void 0;
+exports.utils = exports.EVP_BytesToKey = exports.generateKeyPair = exports.bufferToHash = exports.importPBKDF2Key = exports.importRawKey = exports.importPrivateKey = exports.importPublicKey = exports.derKeyToPem = exports.generatePasswordAndMasterKeyBasedOnAuthVersion = exports.hashPassword = exports.normalizeHash = exports.hashFn = exports.deriveKeyFromPassword = exports.generateEncryptionKey = exports.generateRandomHexString = exports.generateRandomURLSafeString = exports.generateRandomBytes = exports.generateRandomString = exports.charset = exports.urlSafeCharset = void 0;
 const constants_1 = require("../constants");
 const crypto_1 = __importDefault(require("crypto"));
 const crypto_api_v1_1 = __importDefault(require("crypto-api-v1"));
@@ -63,6 +63,18 @@ async function generateRandomURLSafeString(length = 32) {
     throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${constants_1.environment} environment`);
 }
 exports.generateRandomURLSafeString = generateRandomURLSafeString;
+async function generateRandomHexString(length = 32) {
+    if (constants_1.environment === "node") {
+        return crypto_1.default.randomBytes(Math.floor(length / 2)).toString("hex");
+    }
+    else if (constants_1.environment === "browser") {
+        const array = new Uint8Array(Math.floor(length / 2));
+        globalThis.crypto.getRandomValues(array);
+        return Buffer.from(array).toString("hex");
+    }
+    throw new Error(`crypto.utils.generateRandomHexString not implemented for ${constants_1.environment} environment`);
+}
+exports.generateRandomHexString = generateRandomHexString;
 async function generateEncryptionKey(use) {
     if (use === "metadata") {
         switch (constants_1.METADATA_CRYPTO_VERSION) {
@@ -565,7 +577,8 @@ exports.utils = {
     importPBKDF2Key,
     generateRandomBytes,
     generateRandomURLSafeString,
-    generateEncryptionKey
+    generateEncryptionKey,
+    generateRandomHexString
 };
 exports.default = exports.utils;
 //# sourceMappingURL=utils.js.map

@@ -1,10 +1,11 @@
 /// <reference types="node" />
-import type { AuthVersion } from "../types";
+import { type AuthVersion } from "../types";
 export declare const urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 export declare const charset: string;
 export declare function generateRandomString(length?: number): Promise<string>;
 export declare function generateRandomBytes(length?: number): Promise<Buffer>;
 export declare function generateRandomURLSafeString(length?: number): Promise<string>;
+export declare function generateRandomHexString(length?: number): Promise<string>;
 export declare function generateEncryptionKey(use: "metadata" | "data"): Promise<string>;
 export type DeriveKeyFromPasswordBase = {
     password: string;
@@ -233,5 +234,6 @@ export declare const utils: {
     generateRandomBytes: typeof generateRandomBytes;
     generateRandomURLSafeString: typeof generateRandomURLSafeString;
     generateEncryptionKey: typeof generateEncryptionKey;
+    generateRandomHexString: typeof generateRandomHexString;
 };
 export default utils;

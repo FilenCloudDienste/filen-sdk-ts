@@ -1,5 +1,5 @@
 import type APIClient from "../../client";
-import type { FileEncryptionVersion } from "../../../types";
+import { type FileEncryptionVersion } from "../../../types";
 export type DirDownloadFile = {
     uuid: string;
     bucket: string;

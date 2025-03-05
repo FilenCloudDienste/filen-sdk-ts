@@ -46,6 +46,7 @@ export declare class Crypto {
         generateRandomBytes: typeof import("./utils").generateRandomBytes;
         generateRandomURLSafeString: typeof import("./utils").generateRandomURLSafeString;
         generateEncryptionKey: typeof import("./utils").generateEncryptionKey;
+        generateRandomHexString: typeof import("./utils").generateRandomHexString;
     };
 }
 export default Crypto;

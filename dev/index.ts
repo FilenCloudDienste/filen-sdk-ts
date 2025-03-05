@@ -30,12 +30,6 @@ const filen = new FilenSDK(
 	axios.create()
 )
 
-const main = async () => {
-	console.log("starting")
-
-	console.log(await filen.fs().readdir({ path: "/" }))
-
-	console.log("done")
-}
+async function main() {}
 
 main()

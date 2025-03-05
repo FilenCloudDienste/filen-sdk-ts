@@ -1,5 +1,5 @@
 import type APIClient from "../client";
-import type { AuthVersion } from "../../types";
+import { type AuthVersion } from "../../types";
 /**
  * Register
  * @date 2/1/2024 - 3:10:50 PM

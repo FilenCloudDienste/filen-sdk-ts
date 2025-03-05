@@ -64,7 +64,10 @@ class FilenSDK {
                 encodeBase64: base64_1.streamEncodeBase64
             } });
         if (!params) {
-            params = {};
+            params = constants_1.ANONYMOUS_SDK_CONFIG;
+        }
+        else {
+            params = Object.assign(Object.assign({}, constants_1.ANONYMOUS_SDK_CONFIG), params);
         }
         this.config = params;
         this.workers = workers ? workers : null;
@@ -91,7 +94,10 @@ class FilenSDK {
      */
     init(params) {
         if (!params) {
-            params = {};
+            params = constants_1.ANONYMOUS_SDK_CONFIG;
+        }
+        else {
+            params = Object.assign(Object.assign({}, constants_1.ANONYMOUS_SDK_CONFIG), params);
         }
         this.config = params;
         this._crypto = new crypto_1.default(this);
@@ -220,7 +226,8 @@ class FilenSDK {
             this.config.privateKey.length > 0 &&
             this.config.baseFolderUUID.length > 0 &&
             this.config.userId > 0 &&
-            [1, 2, 3].includes(this.config.authVersion));
+            [1, 2, 3].includes(this.config.authVersion) &&
+            this.config.apiKey !== "anonymous");
     }
     /**
      * Update keypair.
@@ -487,7 +494,7 @@ class FilenSDK {
      * @public
      */
     logout() {
-        this.init(Object.assign(Object.assign({}, this.config), { email: undefined, password: undefined, twoFactorCode: undefined, masterKeys: undefined, apiKey: undefined, publicKey: undefined, privateKey: undefined, authVersion: undefined, baseFolderUUID: undefined, userId: undefined }));
+        this.init(constants_1.ANONYMOUS_SDK_CONFIG);
     }
     api(version) {
         if (version === 3) {

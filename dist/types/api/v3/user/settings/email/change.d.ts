@@ -1,5 +1,5 @@
 import type APIClient from "../../../../client";
-import type { AuthVersion } from "../../../../../types";
+import { type AuthVersion } from "../../../../../types";
 /**
  * UserSettingsEmailChange
  * @date 2/1/2024 - 8:16:35 PM

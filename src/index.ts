@@ -2,7 +2,7 @@ import API from "./api"
 import { type AuthVersion, type ClassMethods } from "./types"
 import Crypto from "./crypto"
 import utils from "./utils"
-import { environment } from "./constants"
+import { environment, ANONYMOUS_SDK_CONFIG } from "./constants"
 import os from "os"
 import FS from "./fs"
 import appendStream from "./streams/append"
@@ -98,7 +98,12 @@ export class FilenSDK {
 	 */
 	public constructor(params?: FilenSDKConfig, workers?: SDKWorker[], axiosInstance?: AxiosInstance) {
 		if (!params) {
-			params = {}
+			params = ANONYMOUS_SDK_CONFIG
+		} else {
+			params = {
+				...ANONYMOUS_SDK_CONFIG,
+				...params
+			}
 		}
 
 		this.config = params
@@ -128,7 +133,12 @@ export class FilenSDK {
 	 */
 	public init(params?: FilenSDKConfig): void {
 		if (!params) {
-			params = {}
+			params = ANONYMOUS_SDK_CONFIG
+		} else {
+			params = {
+				...ANONYMOUS_SDK_CONFIG,
+				...params
+			}
 		}
 
 		this.config = params
@@ -272,7 +282,8 @@ export class FilenSDK {
 			this.config.privateKey.length > 0 &&
 			this.config.baseFolderUUID.length > 0 &&
 			this.config.userId > 0 &&
-			[1, 2, 3].includes(this.config.authVersion)
+			[1, 2, 3].includes(this.config.authVersion) &&
+			this.config.apiKey !== "anonymous"
 		)
 	}
 
@@ -631,19 +642,7 @@ export class FilenSDK {
 	 * @public
 	 */
 	public logout(): void {
-		this.init({
-			...this.config,
-			email: undefined,
-			password: undefined,
-			twoFactorCode: undefined,
-			masterKeys: undefined,
-			apiKey: undefined,
-			publicKey: undefined,
-			privateKey: undefined,
-			authVersion: undefined,
-			baseFolderUUID: undefined,
-			userId: undefined
-		})
+		this.init(ANONYMOUS_SDK_CONFIG)
 	}
 
 	public api(version: number) {

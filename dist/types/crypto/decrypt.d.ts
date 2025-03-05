@@ -1,6 +1,6 @@
 /// <reference types="node" />
 import type FilenSDK from "..";
-import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types";
+import { type FileMetadata, type FolderMetadata, type FileEncryptionVersion } from "../types";
 import { type UserEvent } from "../api/v3/user/events";
 /**
  * Decrypt

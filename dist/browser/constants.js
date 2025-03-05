@@ -24,4 +24,19 @@ export const MAX_CHAT_SIZE = 1024 * 64;
 export const METADATA_CRYPTO_VERSION = 2;
 export const DATA_CRYPTO_VERSION = 2;
 export const AUTH_VERSION = 2;
+export const ANONYMOUS_SDK_CONFIG = {
+    email: "anonymous@filen.io",
+    password: "anonymous",
+    masterKeys: ["anonymous"],
+    connectToSocket: false,
+    metadataCache: true,
+    twoFactorCode: "XXXXXX",
+    publicKey: "anonymous",
+    privateKey: "anonymous",
+    apiKey: "anonymous",
+    authVersion: 3,
+    baseFolderUUID: "anonymous",
+    userId: 1,
+    tmpPath: undefined
+};
 //# sourceMappingURL=constants.js.map

@@ -1330,7 +1330,7 @@ class Cloud {
             }),
             downloadBtn: true,
             type: "enable",
-            salt: await this.sdk.getWorker().crypto.utils.generateRandomString(32)
+            salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(32)
         });
         return linkUUID;
     }
@@ -1357,7 +1357,7 @@ class Cloud {
      * @returns {Promise<void>}
      */
     async editPublicLink({ type, itemUUID, linkUUID, password, enableDownload = true, expiration = "never" }) {
-        const salt = await this.sdk.getWorker().crypto.utils.generateRandomString(32);
+        const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(32);
         const pass = password && password.length > 0 ? "notempty" : "empty";
         const passHashed = password && password.length > 0
             ? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
@@ -1432,7 +1432,7 @@ class Cloud {
             passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({
                 password: "empty"
             }),
-            salt: await this.sdk.getWorker().crypto.utils.generateRandomString(32),
+            salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(32),
             downloadBtn: true,
             type: "disable"
         });
