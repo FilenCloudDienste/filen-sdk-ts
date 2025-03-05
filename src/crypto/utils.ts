@@ -1,11 +1,14 @@
 import { environment, METADATA_CRYPTO_VERSION, DATA_CRYPTO_VERSION } from "../constants"
 import nodeCrypto from "crypto"
-import CryptoAPI from "crypto-api-v1"
 import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
 import { fastStringHash } from "../utils"
 import { argon2idAsync } from "@noble/hashes/argon2"
+import { sha256 } from "@noble/hashes/sha256"
+import { sha1 } from "@noble/hashes/sha1"
+import { sha512 } from "@noble/hashes/sha512"
+import CryptoAPI from "crypto-api-v1"
 
 const textEncoder = new TextEncoder()
 const textDecoder = new TextDecoder()
@@ -130,6 +133,27 @@ export async function generateEncryptionKey(use: "metadata" | "data"): Promise<s
 	}
 }
 
+export async function hashFileName({ name, authVersion, dek }: { name: string; authVersion: AuthVersion; dek?: string }): Promise<string> {
+	if (authVersion === 1 || authVersion === 2) {
+		return hashFn({
+			input: name.toLowerCase()
+		})
+	} else {
+		if (!dek || dek.length !== 64) {
+			throw new Error("DEK required for authVersion v3 salted hash.")
+		}
+
+		const dekBuffer = Buffer.from(dek, "hex")
+		const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
+
+		if (environment === "browser") {
+			return Buffer.from(sha256.create().update(dekBuffer).update(nameBuffer).digest()).toString("hex")
+		} else {
+			return nodeCrypto.createHash("sha256").update(dekBuffer).update(nameBuffer).digest("hex")
+		}
+	}
+}
+
 export type DeriveKeyFromPasswordBase = {
 	password: string
 	salt: string
@@ -237,10 +261,10 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
 	if (environment === "node") {
 		return nodeCrypto
 			.createHash("sha1")
-			.update(nodeCrypto.createHash("sha512").update(textEncoder.encode(input)).digest("hex"))
+			.update(nodeCrypto.createHash("sha512").update(Buffer.from(input, "utf-8")).digest("hex"))
 			.digest("hex")
 	} else if (environment === "browser") {
-		return CryptoAPI.hash("sha1", CryptoAPI.hash("sha512", input))
+		return Buffer.from(sha1(sha512(Buffer.from(input, "utf-8")))).toString("hex")
 	}
 
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
@@ -332,8 +356,12 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 }): Promise<{ derivedMasterKeys: string; derivedPassword: string }> {
 	if (authVersion === 1) {
 		// DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
-		const derivedPassword = await hashPassword({ password: rawPassword })
-		const derivedMasterKeys = await hashFn({ input: rawPassword })
+		const derivedPassword = await hashPassword({
+			password: rawPassword
+		})
+		const derivedMasterKeys = await hashFn({
+			input: rawPassword
+		})
 
 		return {
 			derivedMasterKeys,
@@ -776,7 +804,8 @@ export const utils = {
 	generateRandomBytes,
 	generateRandomURLSafeString,
 	generateEncryptionKey,
-	generateRandomHexString
+	generateRandomHexString,
+	hashFileName
 }
 
 export default utils

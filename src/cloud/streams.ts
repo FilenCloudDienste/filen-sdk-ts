@@ -313,8 +313,10 @@ export class ChunkedUploadWriter extends Writable {
 					metadata: this.name,
 					key: this.key
 				}),
-				nameHashed: await this.sdk.crypto().utils.hashFn({
-					input: this.name.toLowerCase()
+				nameHashed: await this.sdk.crypto().utils.hashFileName({
+					name: this.name,
+					authVersion: this.sdk.config.authVersion!,
+					dek: this.sdk.config.masterKeys!.at(-1)
 				}),
 				size: await this.sdk.crypto().encrypt().metadata({
 					metadata: this.size.toString(),

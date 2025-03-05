@@ -848,8 +848,10 @@ export class Cloud {
 	 * @returns {Promise<FileExistsResponse>}
 	 */
 	public async fileExists({ name, parent }: { name: string; parent: string }): Promise<FileExistsResponse> {
-		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({
-			input: name.toLowerCase()
+		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
+			name,
+			authVersion: this.sdk.config.authVersion!,
+			dek: this.sdk.config.masterKeys!.at(-1)
 		})
 		const exists = await this.sdk.api(3).file().exists({
 			nameHashed,
@@ -870,8 +872,10 @@ export class Cloud {
 	 * @returns {Promise<DirExistsResponse>}
 	 */
 	public async directoryExists({ name, parent }: { name: string; parent: string }): Promise<DirExistsResponse> {
-		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFn({
-			input: name.toLowerCase()
+		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
+			name,
+			authVersion: this.sdk.config.authVersion!,
+			dek: this.sdk.config.masterKeys!.at(-1)
 		})
 		const exists = await this.sdk.api(3).dir().exists({
 			nameHashed,
@@ -893,8 +897,10 @@ export class Cloud {
 	 */
 	public async editFileMetadata({ uuid, metadata }: { uuid: string; metadata: FileMetadata }): Promise<void> {
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFn({
-				input: metadata.name.toLowerCase()
+			this.sdk.getWorker().crypto.utils.hashFileName({
+				name: metadata.name,
+				authVersion: this.sdk.config.authVersion!,
+				dek: this.sdk.config.masterKeys!.at(-1)
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify(metadata)
@@ -985,8 +991,10 @@ export class Cloud {
 		}
 
 		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFn({
-				input: name.toLowerCase()
+			this.sdk.getWorker().crypto.utils.hashFileName({
+				name,
+				authVersion: this.sdk.config.authVersion!,
+				dek: this.sdk.config.masterKeys!.at(-1)
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -1072,8 +1080,10 @@ export class Cloud {
 		}
 
 		const [nameHashed, metadataEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFn({
-				input: name.toLowerCase()
+			this.sdk.getWorker().crypto.utils.hashFileName({
+				name,
+				authVersion: this.sdk.config.authVersion!,
+				dek: this.sdk.config.masterKeys!.at(-1)
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -1306,8 +1316,10 @@ export class Cloud {
 							name
 						})
 					}),
-					this.sdk.getWorker().crypto.utils.hashFn({
-						input: name.toLowerCase()
+					this.sdk.getWorker().crypto.utils.hashFileName({
+						name,
+						authVersion: this.sdk.config.authVersion!,
+						dek: this.sdk.config.masterKeys!.at(-1)
 					})
 				])
 
@@ -3841,8 +3853,10 @@ export class Cloud {
 						creation
 					})
 				}),
-				this.sdk.getWorker().crypto.utils.hashFn({
-					input: fileName.toLowerCase()
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name: fileName,
+					authVersion: this.sdk.config.authVersion!,
+					dek: this.sdk.config.masterKeys!.at(-1)
 				})
 			])
 
@@ -4377,8 +4391,10 @@ export class Cloud {
 						lastModified
 					})
 				}),
-				this.sdk.getWorker().crypto.utils.hashFn({
-					input: fileName.toLowerCase()
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name: fileName,
+					authVersion: this.sdk.config.authVersion!,
+					dek: this.sdk.config.masterKeys!.at(-1)
 				})
 			])
 
