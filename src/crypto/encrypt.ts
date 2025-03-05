@@ -27,9 +27,18 @@ export class Encrypt {
 		this.sdk = sdk
 	}
 
-	public keyLengthToVersionMetdata(key: string): number {
-		// V3 keys are 64 hex chars (32 random bytes)
-		if (key.length === 64) {
+	public keyLengthToVersionMetadata(key: string): number {
+		// V3 keys are 64 hex chars (32 random bytes) and require auth v3
+		if (key.length === 64 && this.sdk.config.authVersion === 3) {
+			return 3
+		}
+
+		return 2
+	}
+
+	public keyLengthToVersionData(key: string): FileEncryptionVersion {
+		// V3 keys are 64 hex chars (32 random bytes) and require auth v3
+		if (key.length === 64 && this.sdk.config.authVersion === 3) {
 			return 3
 		}
 
@@ -43,7 +52,7 @@ export class Encrypt {
 			throw new Error("crypto.encrypt.metadata no key to use.")
 		}
 
-		const version = this.keyLengthToVersionMetdata(keyToUse)
+		const version = this.keyLengthToVersionMetadata(keyToUse)
 
 		if (version === 2) {
 			const iv = await generateRandomString(12)
@@ -311,15 +320,6 @@ export class Encrypt {
 			}),
 			key
 		})
-	}
-
-	public keyLengthToVersionData(key: string): FileEncryptionVersion {
-		// V3 keys are 64 hex chars (32 random bytes)
-		if (key.length === 64) {
-			return 3
-		}
-
-		return 2
 	}
 
 	public async data({ data, key }: { data: Buffer; key: string }): Promise<Buffer> {

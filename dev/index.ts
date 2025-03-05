@@ -30,6 +30,15 @@ const filen = new FilenSDK(
 	axios.create()
 )
 
-async function main() {}
+async function main() {
+	console.log(filen.config)
+
+	await filen.fs().writeFile({
+		path: "/test/empty3.txt",
+		content: Buffer.from([])
+	})
+
+	console.log("done")
+}
 
 main()

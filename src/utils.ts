@@ -294,7 +294,7 @@ export function fastStringHash(input: string): string {
 }
 
 export function realFileSize({ chunksSize, metadataDecrypted }: { chunksSize?: number; metadataDecrypted: FileMetadata }): number {
-	return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1
+	return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 0
 }
 
 export async function nodeStreamToBuffer(stream: Readable): Promise<Buffer> {
