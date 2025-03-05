@@ -4804,7 +4804,6 @@ export class Cloud {
 				if (
 					!stats ||
 					!stats.isFile() ||
-					stats.size <= 0 ||
 					stats.isSymbolicLink() ||
 					stats.isBlockDevice() ||
 					stats.isCharacterDevice() ||
@@ -4944,7 +4943,7 @@ export class Cloud {
 			for (let i = 0; i < files.length; i++) {
 				const file = files[i]
 
-				if (!file || file.path.length <= 0 || file.file.size <= 0) {
+				if (!file || file.path.length <= 0) {
 					continue
 				}
 
@@ -5031,7 +5030,7 @@ export class Cloud {
 				const fileParent =
 					parentPath === "." || parentPath === "/" || parentPath.length <= 0 ? parent : pathsToUUIDs[parentPath] ?? ""
 
-				if (fileParent.length <= 16 || file.file.size <= 0) {
+				if (fileParent.length <= 16) {
 					continue
 				}
 

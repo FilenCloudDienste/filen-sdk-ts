@@ -1467,7 +1467,9 @@ export class FS {
 		if (parentPath === "/" || parentPath === "." || parentPath === "") {
 			parentUUID = this.sdk.config.baseFolderUUID!
 		} else {
-			await this.mkdir({ path: parentPath })
+			await this.mkdir({
+				path: parentPath
+			})
 
 			const parentItemUUID = await this.pathToItemUUID({
 				path: parentPath,
