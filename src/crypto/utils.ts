@@ -3,7 +3,7 @@ import nodeCrypto from "crypto"
 import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
-import { fastStringHash } from "../utils"
+import { fastStringHash, progressiveSplit } from "../utils"
 import { argon2idAsync } from "@noble/hashes/argon2"
 import { sha256 } from "@noble/hashes/sha256"
 import { sha1 } from "@noble/hashes/sha1"
@@ -110,25 +110,61 @@ export async function generateEncryptionKey({ use, authVersion }: { use: "metada
 	}
 }
 
-export async function hashFileName({ name, authVersion, dek }: { name: string; authVersion: AuthVersion; dek?: string }): Promise<string> {
+export async function hashFileName({
+	name,
+	authVersion,
+	hashedPrivateKeyBuffer
+}: {
+	name: string
+	authVersion: AuthVersion
+	hashedPrivateKeyBuffer?: Buffer
+}): Promise<string> {
 	if (authVersion === 1 || authVersion === 2) {
 		return hashFn({
 			input: name.toLowerCase()
 		})
 	} else {
-		if (!dek || dek.length !== 64) {
-			throw new Error("DEK required for authVersion v3 salted hash.")
+		if (!hashedPrivateKeyBuffer || hashedPrivateKeyBuffer.byteLength !== 32) {
+			throw new Error("hashedPrivateKeyBuffer required for authVersion v3 salted file/directory name hash.")
 		}
 
-		const dekBuffer = Buffer.from(dek, "hex")
 		const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
 
 		if (environment === "browser") {
-			return Buffer.from(sha256.create().update(dekBuffer).update(nameBuffer).digest()).toString("hex")
+			return Buffer.from(sha256.create().update(hashedPrivateKeyBuffer).update(nameBuffer).digest()).toString("hex")
 		} else {
-			return nodeCrypto.createHash("sha256").update(dekBuffer).update(nameBuffer).digest("hex")
+			return nodeCrypto.createHash("sha256").update(hashedPrivateKeyBuffer).update(nameBuffer).digest("hex")
 		}
 	}
+}
+
+export async function hashSearchIndex({ name, hashedPrivateKeyBuffer }: { name: string; hashedPrivateKeyBuffer: Buffer }): Promise<string> {
+	const nameBuffer = Buffer.from(name.toLowerCase().trim(), "utf-8")
+
+	if (environment === "browser") {
+		return Buffer.from(sha256.create().update(hashedPrivateKeyBuffer).update(nameBuffer).digest()).toString("hex")
+	} else {
+		return nodeCrypto.createHash("sha256").update(hashedPrivateKeyBuffer).update(nameBuffer).digest("hex")
+	}
+}
+
+export async function generateSearchIndexHashes({
+	input,
+	hashedPrivateKeyBuffer
+}: {
+	input: string
+	hashedPrivateKeyBuffer: Buffer
+}): Promise<string[]> {
+	const parts = progressiveSplit(input.toLowerCase().trim())
+
+	return await Promise.all(
+		parts.map(part =>
+			hashSearchIndex({
+				name: part,
+				hashedPrivateKeyBuffer
+			})
+		)
+	)
 }
 
 export type DeriveKeyFromPasswordBase = {
@@ -212,7 +248,10 @@ export async function deriveKeyFromPassword({
 					name: hash === "sha512" ? "SHA-512" : hash
 				}
 			},
-			await importPBKDF2Key({ key: password, mode: ["deriveBits"] }),
+			await importPBKDF2Key({
+				key: password,
+				mode: ["deriveBits"]
+			}),
 			bitLength
 		)
 
@@ -245,49 +284,6 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
 	}
 
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
-}
-
-/**
- * Normalize hash names. E.g. WebCrypto uses "SHA-512" while Node.JS's Crypto Core lib uses "sha512".
- * @date 2/2/2024 - 6:59:42 PM
- *
- * @export
- * @param {{hash: string}} param0
- * @param {string} param0.hash
- * @returns {string}
- */
-export function normalizeHash({ hash }: { hash: string }): string {
-	const lowercased = hash.toLowerCase()
-
-	if (lowercased === "sha-512") {
-		return "sha512"
-	}
-
-	if (lowercased === "sha-256") {
-		return "sha256"
-	}
-
-	if (lowercased === "sha-384") {
-		return "sha384"
-	}
-
-	if (lowercased === "sha-1") {
-		return "sha1"
-	}
-
-	if (lowercased === "md-2") {
-		return "md2"
-	}
-
-	if (lowercased === "md-4") {
-		return "md4"
-	}
-
-	if (lowercased === "md-5") {
-		return "md5"
-	}
-
-	return hash
 }
 
 /**
@@ -782,7 +778,9 @@ export const utils = {
 	generateRandomURLSafeString,
 	generateEncryptionKey,
 	generateRandomHexString,
-	hashFileName
+	hashFileName,
+	hashSearchIndex,
+	generateSearchIndexHashes
 }
 
 export default utils

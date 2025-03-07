@@ -21,6 +21,7 @@ import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer"
 import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer"
 import TypedEventEmitter, { type Events } from "./events"
 import axios, { type AxiosInstance } from "axios"
+import { sha256 } from "@noble/hashes/sha256"
 
 export type SDKWorker = {
 	crypto: {
@@ -81,11 +82,11 @@ export class FilenSDK {
 	private _contacts: Contacts
 	private _user: User
 	public socket: Socket = new Socket()
-	private _updateKeyPairTries = 0
 	public workers: SDKWorker[] | null
 	private currentWorkerWorkIndex: number = 0
 	public readonly events: TypedEventEmitter<Events>
 	public readonly axiosInstance: AxiosInstance
+	public hashedPrivateKey: Buffer
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -107,6 +108,7 @@ export class FilenSDK {
 		}
 
 		this.config = params
+		this.hashedPrivateKey = params.privateKey ? Buffer.from(sha256(params.privateKey)) : Buffer.from(sha256("anonymous"))
 		this.workers = workers ? workers : null
 		this.events = new TypedEventEmitter<Events>()
 		this.axiosInstance = axiosInstance ? axiosInstance : axios.create()
@@ -142,6 +144,7 @@ export class FilenSDK {
 		}
 
 		this.config = params
+		this.hashedPrivateKey = params.privateKey ? Buffer.from(sha256(params.privateKey)) : Buffer.from(sha256("anonymous"))
 
 		this._crypto = new Crypto(this)
 		this._api = new API(this)
@@ -373,8 +376,8 @@ export class FilenSDK {
 		if (
 			typeof keyPairInfo.publicKey === "string" &&
 			typeof keyPairInfo.privateKey === "string" &&
-			keyPairInfo.publicKey.length > 0 &&
-			keyPairInfo.privateKey.length > 0
+			keyPairInfo.publicKey.length > 16 &&
+			keyPairInfo.privateKey.length > 16
 		) {
 			let privateKey: string | null = null
 
@@ -396,32 +399,7 @@ export class FilenSDK {
 			}
 
 			if (!privateKey) {
-				// If the user for example changed his password and did not properly import the old master keys, it could be that we cannot decrypt the private key anymore.
-				// We try to decrypt it 3 times (might be network/API related) and if it still does not work, we generate a new keypair.
-				if (this._updateKeyPairTries < 3) {
-					this._updateKeyPairTries += 1
-
-					await new Promise<void>(resolve => setTimeout(resolve, 250))
-
-					return await this.__updateKeyPair({
-						apiKey,
-						masterKeys
-					})
-				}
-
-				const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair()
-
-				await this._updateKeyPair({
-					apiKey,
-					publicKey: generatedKeyPair.publicKey,
-					privateKey: generatedKeyPair.privateKey,
-					masterKeys
-				})
-
-				return {
-					publicKey: generatedKeyPair.publicKey,
-					privateKey: generatedKeyPair.privateKey
-				}
+				throw new Error("Could not decrypt private key.")
 			}
 
 			await this._updateKeyPair({

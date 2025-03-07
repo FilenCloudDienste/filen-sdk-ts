@@ -18,6 +18,8 @@ import { v4 as uuidv4 } from "uuid"
 import { type ReadableStream as ReadableStreamWeb } from "stream/web"
 import type Encrypt from "../src/crypto/encrypt"
 import { argon2idAsync } from "@noble/hashes/argon2"
+import { blake2b } from "@noble/hashes/blake2b"
+import { sha256 } from "@noble/hashes/sha256"
 
 const filen = new FilenSDK(
 	{
@@ -31,14 +33,10 @@ const filen = new FilenSDK(
 )
 
 async function main() {
-	console.log(filen.config)
-
 	await filen.fs().writeFile({
-		path: "/test/empty6.txt",
-		content: Buffer.from([])
+		path: "/test/index1.txt",
+		content: Buffer.from("hello", "utf-8")
 	})
-
-	console.log("done")
 }
 
 main()

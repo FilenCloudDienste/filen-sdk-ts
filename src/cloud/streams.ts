@@ -316,7 +316,7 @@ export class ChunkedUploadWriter extends Writable {
 					nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
 						name: this.name,
 						authVersion: this.sdk.config.authVersion!,
-						dek: this.sdk.config.masterKeys!.at(-1)
+						hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 					}),
 					size: await this.sdk.getWorker().crypto.encrypt.metadata({
 						metadata: this.size.toString(),
@@ -359,7 +359,7 @@ export class ChunkedUploadWriter extends Writable {
 					nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
 						name: this.name,
 						authVersion: this.sdk.config.authVersion!,
-						dek: this.sdk.config.masterKeys!.at(-1)
+						hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 					}),
 					size: await this.sdk.getWorker().crypto.encrypt.metadata({
 						metadata: this.size.toString(),
@@ -386,6 +386,17 @@ export class ChunkedUploadWriter extends Writable {
 						})
 				})
 		}
+
+		await this.sdk
+			.api(3)
+			.search()
+			.add({
+				items: await this.sdk.cloud().generateSearchItems({
+					name: this.name,
+					type: "file",
+					uuid: this.uuid
+				})
+			})
 
 		await this.sdk.cloud().checkIfItemParentIsShared({
 			type: "file",

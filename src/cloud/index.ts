@@ -55,6 +55,7 @@ import { type ReadableStream as ReadableStreamWebType } from "stream/web"
 import { ChunkedUploadWriter } from "./streams"
 import { type FileExistsResponse } from "../api/v3/file/exists"
 import { type DirExistsResponse } from "../api/v3/dir/exists"
+import { type SearchAddItem } from "../api/v3/search/add"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -851,7 +852,7 @@ export class Cloud {
 		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
 			name,
 			authVersion: this.sdk.config.authVersion!,
-			dek: this.sdk.config.masterKeys!.at(-1)
+			hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 		})
 		const exists = await this.sdk.api(3).file().exists({
 			nameHashed,
@@ -875,7 +876,7 @@ export class Cloud {
 		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
 			name,
 			authVersion: this.sdk.config.authVersion!,
-			dek: this.sdk.config.masterKeys!.at(-1)
+			hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 		})
 		const exists = await this.sdk.api(3).dir().exists({
 			nameHashed,
@@ -912,7 +913,7 @@ export class Cloud {
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name: metadata.name,
 				authVersion: this.sdk.config.authVersion!,
-				dek: this.sdk.config.masterKeys!.at(-1)
+				hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify(metadata)
@@ -1006,7 +1007,7 @@ export class Cloud {
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name,
 				authVersion: this.sdk.config.authVersion!,
-				dek: this.sdk.config.masterKeys!.at(-1)
+				hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -1095,7 +1096,7 @@ export class Cloud {
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name,
 				authVersion: this.sdk.config.authVersion!,
-				dek: this.sdk.config.masterKeys!.at(-1)
+				hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -1331,7 +1332,7 @@ export class Cloud {
 					this.sdk.getWorker().crypto.utils.hashFileName({
 						name,
 						authVersion: this.sdk.config.authVersion!,
-						dek: this.sdk.config.masterKeys!.at(-1)
+						hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 					})
 				])
 
@@ -1341,6 +1342,17 @@ export class Cloud {
 					nameHashed,
 					parent
 				})
+
+				await this.sdk
+					.api(3)
+					.search()
+					.add({
+						items: await this.generateSearchItems({
+							name,
+							type: "directory",
+							uuid: uuidToUse
+						})
+					})
 
 				await this.checkIfItemParentIsShared({
 					type: "directory",
@@ -1684,10 +1696,7 @@ export class Cloud {
 				this.getDirectoryTree({
 					uuid
 				}),
-				this.sdk.getWorker().crypto.utils.generateEncryptionKey({
-					use: "metadata",
-					authVersion: this.sdk.config.authVersion!
-				})
+				this.sdk.getWorker().crypto.utils.generateRandomString(32)
 			])
 
 			const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
@@ -3846,10 +3855,7 @@ export class Cloud {
 
 			const [uuid, key, rm, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateEncryptionKey({
-					use: "data",
-					authVersion: this.sdk.config.authVersion!
-				}),
+				this.sdk.getWorker().crypto.utils.generateRandomString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
@@ -3882,7 +3888,7 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.hashFileName({
 					name: fileName,
 					authVersion: this.sdk.config.authVersion!,
-					dek: this.sdk.config.masterKeys!.at(-1)
+					hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 				})
 			])
 
@@ -4015,6 +4021,17 @@ export class Cloud {
 							version,
 							parent
 					  })
+
+			await this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.generateSearchItems({
+						name: fileName,
+						type: "file",
+						uuid
+					})
+				})
 
 			fileChunks = done.chunks
 
@@ -4162,10 +4179,7 @@ export class Cloud {
 			let closed = false
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateEncryptionKey({
-					use: "data",
-					authVersion: this.sdk.config.authVersion!
-				}),
+				this.sdk.getWorker().crypto.utils.generateRandomString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
@@ -4400,10 +4414,7 @@ export class Cloud {
 
 			const [fileUUID, key, rm, uploadKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateEncryptionKey({
-					use: "data",
-					authVersion: this.sdk.config.authVersion!
-				}),
+				this.sdk.getWorker().crypto.utils.generateRandomString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
@@ -4435,7 +4446,7 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.hashFileName({
 					name: fileName,
 					authVersion: this.sdk.config.authVersion!,
-					dek: this.sdk.config.masterKeys!.at(-1)
+					hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
 				})
 			])
 
@@ -4568,6 +4579,17 @@ export class Cloud {
 							version,
 							parent
 					  })
+
+			await this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.generateSearchItems({
+						name: fileName,
+						type: "file",
+						uuid: fileUUID
+					})
+				})
 
 			fileChunks = done.chunks
 
@@ -5217,6 +5239,27 @@ export class Cloud {
 			...dir,
 			metadataDecrypted: dirMetadataDecrypted
 		}
+	}
+
+	public async generateSearchItems({
+		name,
+		type,
+		uuid
+	}: {
+		name: string
+		type: "file" | "directory"
+		uuid: string
+	}): Promise<SearchAddItem[]> {
+		const hashes = await this.sdk.getWorker().crypto.utils.generateSearchIndexHashes({
+			input: name,
+			hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+		})
+
+		return hashes.map(hash => ({
+			hash,
+			uuid,
+			type
+		}))
 	}
 }
 

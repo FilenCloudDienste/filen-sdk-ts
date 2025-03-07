@@ -307,6 +307,16 @@ export async function nodeStreamToBuffer(stream: Readable): Promise<Buffer> {
 	return Buffer.concat(chunks)
 }
 
+export function progressiveSplit(input: string): string[] {
+	const result: string[] = []
+
+	for (let i = 1; i <= input.length; i++) {
+		result.push(input.substring(0, i))
+	}
+
+	return result
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -321,7 +331,8 @@ export const utils = {
 	simpleDate,
 	replacePathStartWithFromAndTo,
 	fastStringHash,
-	nodeStreamToBuffer
+	nodeStreamToBuffer,
+	progressiveSplit
 }
 
 export default utils

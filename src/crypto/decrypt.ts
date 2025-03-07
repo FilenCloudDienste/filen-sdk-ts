@@ -1145,6 +1145,31 @@ export class Decrypt {
 				)
 
 				return Buffer.from(decrypted)
+			} else if (version === 3) {
+				// Version 3 requires the key to be a 32 bytes hex string (64 characters)
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const iv = data.subarray(0, 12)
+				const encData = data.subarray(12)
+				const keyBuffer = Buffer.from(key, "hex")
+				const decrypted = await globalThis.crypto.subtle.decrypt(
+					{
+						name: "AES-GCM",
+						iv
+					},
+					await importRawKey({
+						key: keyBuffer,
+						algorithm: "AES-GCM",
+						mode: ["decrypt"]
+					}),
+					encData
+				)
+
+				return Buffer.from(decrypted)
+			} else {
+				throw new Error(`[crypto.decrypt.data] Invalid version ${version}`)
 			}
 		}
 

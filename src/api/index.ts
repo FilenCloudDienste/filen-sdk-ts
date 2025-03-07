@@ -152,6 +152,7 @@ import V3FileMetadata from "./v3/file/metadata"
 import V3UserGetDEK from "./v3/user/getDEK"
 import V3UserSetDEK from "./v3/user/setDEK"
 import V3UploadEmpty from "./v3/upload/empty"
+import V3SearchAdd from "./v3/search/add"
 
 /**
  * API
@@ -387,6 +388,9 @@ export class API {
 			blocked: V3ContactsBlocked
 			blockedAdd: V3ContactsBlockedAdd
 			blockedDelete: V3ContactsBlockedDelete
+		}
+		search: {
+			add: V3SearchAdd
 		}
 	}
 
@@ -925,6 +929,11 @@ export class API {
 				blockedDelete: new V3ContactsBlockedDelete({
 					apiClient: this.apiClient
 				})
+			},
+			search: {
+				add: new V3SearchAdd({
+					apiClient: this.apiClient
+				})
 			}
 		}
 	}
@@ -1286,6 +1295,11 @@ export class API {
 						this._v3.contacts.blockedAdd.fetch(...params),
 					blockedDelete: (...params: Parameters<typeof this._v3.contacts.blockedDelete.fetch>) =>
 						this._v3.contacts.blockedDelete.fetch(...params)
+				}
+			},
+			search: () => {
+				return {
+					add: (...params: Parameters<typeof this._v3.search.add.fetch>) => this._v3.search.add.fetch(...params)
 				}
 			}
 		}

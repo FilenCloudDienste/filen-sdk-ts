@@ -33,7 +33,7 @@ export const UPLOAD_CHUNK_SIZE = 1024 * 1024
 export const MAX_NOTE_SIZE = 1024 * 1024 - 1
 export const MAX_CHAT_SIZE = 1024 * 64
 
-export const ANONYMOUS_SDK_CONFIG: Partial<FilenSDKConfig> = {
+export const ANONYMOUS_SDK_CONFIG: FilenSDKConfig = {
 	email: "anonymous@filen.io",
 	password: "anonymous",
 	masterKeys: ["anonymous"],
