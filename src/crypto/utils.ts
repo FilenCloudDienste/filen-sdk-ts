@@ -78,9 +78,9 @@ export async function generateRandomURLSafeString(length: number = 32): Promise<
 
 export async function generateRandomHexString(length: number = 32): Promise<string> {
 	if (environment === "node") {
-		return nodeCrypto.randomBytes(Math.floor(length / 2)).toString("hex")
+		return nodeCrypto.randomBytes(length).toString("hex")
 	} else if (environment === "browser") {
-		const array = new Uint8Array(Math.floor(length / 2))
+		const array = new Uint8Array(length)
 
 		globalThis.crypto.getRandomValues(array)
 
@@ -88,26 +88,6 @@ export async function generateRandomHexString(length: number = 32): Promise<stri
 	}
 
 	throw new Error(`crypto.utils.generateRandomHexString not implemented for ${environment} environment`)
-}
-
-export async function generateEncryptionKey({ use, authVersion }: { use: "metadata" | "data"; authVersion: AuthVersion }): Promise<string> {
-	if (use === "metadata") {
-		if (authVersion === 1) {
-			return await generateRandomURLSafeString(32)
-		} else if (authVersion === 2) {
-			return await generateRandomString(32)
-		} else {
-			return (await generateRandomBytes(32)).toString("hex")
-		}
-	} else {
-		if (authVersion === 1) {
-			return await generateRandomURLSafeString(32)
-		} else if (authVersion === 2) {
-			return await generateRandomString(32)
-		} else {
-			return (await generateRandomBytes(32)).toString("hex")
-		}
-	}
 }
 
 export async function hashFileName({
@@ -776,7 +756,6 @@ export const utils = {
 	importPBKDF2Key,
 	generateRandomBytes,
 	generateRandomURLSafeString,
-	generateEncryptionKey,
 	generateRandomHexString,
 	hashFileName,
 	hashSearchIndex,

@@ -1,4 +1,4 @@
-import { type Environment } from "./types"
+import { type Environment, type FileEncryptionVersion, type MetadataEncryptionVersion } from "./types"
 import { type FilenSDKConfig } from "."
 import os from "os"
 
@@ -48,3 +48,6 @@ export const ANONYMOUS_SDK_CONFIG: FilenSDKConfig = {
 	userId: 1,
 	tmpPath: os.tmpdir()
 }
+
+export const METADATA_ENCRYPTION_VERSION: MetadataEncryptionVersion = 2
+export const FILE_ENCRYPTION_VERSION: FileEncryptionVersion = 2

@@ -6,6 +6,7 @@ import { type DirGetResponse } from "./api/v3/dir/get"
 
 export type AuthVersion = 1 | 2 | 3
 export type FileEncryptionVersion = 1 | 2 | 3
+export type MetadataEncryptionVersion = 1 | 2 | 3
 export type Environment = "node" | "browser"
 
 export type FileMetadata = {

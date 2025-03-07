@@ -317,6 +317,14 @@ export function progressiveSplit(input: string): string[] {
 	return result
 }
 
+export function isValidHexString(str: string): boolean {
+	if (!/^[0-9a-fA-F]+$/.test(str)) {
+		return false
+	}
+
+	return str.length % 2 === 0
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -332,7 +340,8 @@ export const utils = {
 	replacePathStartWithFromAndTo,
 	fastStringHash,
 	nodeStreamToBuffer,
-	progressiveSplit
+	progressiveSplit,
+	isValidHexString
 }
 
 export default utils

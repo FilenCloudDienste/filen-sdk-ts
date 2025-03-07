@@ -31,7 +31,8 @@ import {
 	MAX_CONCURRENT_DIRECTORY_DOWNLOADS,
 	MAX_CONCURRENT_DIRECTORY_UPLOADS,
 	MAX_CONCURRENT_SHARES,
-	BUFFER_SIZE
+	BUFFER_SIZE,
+	FILE_ENCRYPTION_VERSION
 } from "../constants"
 import { PauseSignal } from "./signals"
 import pathModule from "path"
@@ -1771,7 +1772,7 @@ export class Cloud {
 				}),
 				downloadBtn: true,
 				type: "enable",
-				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(32)
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(16)
 			})
 
 		return linkUUID
@@ -1814,7 +1815,7 @@ export class Cloud {
 		enableDownload?: boolean
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(32)
+		const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(16)
 		const pass = password && password.length > 0 ? "notempty" : "empty"
 		const passHashed =
 			password && password.length > 0
@@ -1909,7 +1910,7 @@ export class Cloud {
 				passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({
 					password: "empty"
 				}),
-				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(32),
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(16),
 				downloadBtn: true,
 				type: "disable"
 			})
@@ -3860,8 +3861,6 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
-			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
-
 			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
 				this.sdk.getWorker().crypto.encrypt.metadata({
 					metadata: fileName,
@@ -4008,7 +4007,7 @@ export class Cloud {
 							mime: mimeEncrypted,
 							rm,
 							metadata,
-							version,
+							version: FILE_ENCRYPTION_VERSION,
 							uploadKey
 					  })
 					: await this.sdk.api(3).upload().empty({
@@ -4018,7 +4017,7 @@ export class Cloud {
 							size: sizeEncrypted,
 							mime: mimeEncrypted,
 							metadata,
-							version,
+							version: FILE_ENCRYPTION_VERSION,
 							parent
 					  })
 
@@ -4045,7 +4044,7 @@ export class Cloud {
 				timestamp: Date.now(),
 				parent,
 				rm,
-				version,
+				version: FILE_ENCRYPTION_VERSION,
 				chunks: fileChunks,
 				favorited: false,
 				key,
@@ -4182,7 +4181,6 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
-			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
 
 			const waitForPause = async (): Promise<void> => {
 				if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted || closed) {
@@ -4254,7 +4252,7 @@ export class Cloud {
 						timestamp: Date.now(),
 						parent,
 						rm: "",
-						version,
+						version: FILE_ENCRYPTION_VERSION,
 						chunks: item.type === "directory" ? 0 : item.metadata.chunks,
 						favorited: false,
 						key,
@@ -4419,8 +4417,6 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
-			const version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
-
 			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
 				this.sdk.getWorker().crypto.encrypt.metadata({
 					metadata: fileName,
@@ -4566,7 +4562,7 @@ export class Cloud {
 							mime: mimeEncrypted,
 							rm,
 							metadata,
-							version,
+							version: FILE_ENCRYPTION_VERSION,
 							uploadKey
 					  })
 					: await this.sdk.api(3).upload().empty({
@@ -4576,7 +4572,7 @@ export class Cloud {
 							size: sizeEncrypted,
 							mime: mimeEncrypted,
 							metadata,
-							version,
+							version: FILE_ENCRYPTION_VERSION,
 							parent
 					  })
 
@@ -4603,7 +4599,7 @@ export class Cloud {
 				timestamp: Date.now(),
 				parent,
 				rm,
-				version,
+				version: FILE_ENCRYPTION_VERSION,
 				chunks: fileChunks,
 				favorited: false,
 				key,
