@@ -93,7 +93,7 @@
 	},
 	"dependencies": {
 		"agentkeepalive": "^4.5.0",
-		"axios": "^0.28.1",
+		"axios": "^1.8.2",
 		"crypto-api-v1": "^1.0.0",
 		"crypto-js": "^4.2.0",
 		"eventemitter3": "^5.0.1",
