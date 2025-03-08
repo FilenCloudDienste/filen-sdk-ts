@@ -9,9 +9,11 @@ import { sha256 } from "@noble/hashes/sha256"
 import { sha1 } from "@noble/hashes/sha1"
 import { sha512 } from "@noble/hashes/sha512"
 import CryptoAPI from "crypto-api-v1"
+import { hmac } from "@noble/hashes/hmac"
+import { hkdf } from "@noble/hashes/hkdf"
 
-export const urlSafeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-export const charset = Buffer.from(
+export const base64Charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+export const asciiCharset = Buffer.from(
 	new Uint8Array(
 		Array.from(
 			{
@@ -27,7 +29,7 @@ export async function generateRandomString(length: number = 32): Promise<string>
 		const array = nodeCrypto.randomBytes(length)
 
 		return Array.from(array)
-			.map(byte => charset[byte & 0x7f])
+			.map(byte => asciiCharset[byte & 0x7f])
 			.join("")
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
@@ -35,7 +37,7 @@ export async function generateRandomString(length: number = 32): Promise<string>
 		globalThis.crypto.getRandomValues(array)
 
 		return Array.from(array)
-			.map(byte => charset[byte & 0x7f])
+			.map(byte => asciiCharset[byte & 0x7f])
 			.join("")
 	}
 
@@ -61,7 +63,7 @@ export async function generateRandomURLSafeString(length: number = 32): Promise<
 		const array = nodeCrypto.randomBytes(length)
 
 		return Array.from(array)
-			.map(byte => urlSafeCharset[byte % urlSafeCharset.length])
+			.map(byte => base64Charset[byte % base64Charset.length])
 			.join("")
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
@@ -69,7 +71,7 @@ export async function generateRandomURLSafeString(length: number = 32): Promise<
 		globalThis.crypto.getRandomValues(array)
 
 		return Array.from(array)
-			.map(byte => urlSafeCharset[byte % urlSafeCharset.length])
+			.map(byte => base64Charset[byte % base64Charset.length])
 			.join("")
 	}
 
@@ -93,58 +95,69 @@ export async function generateRandomHexString(length: number = 32): Promise<stri
 export async function hashFileName({
 	name,
 	authVersion,
-	hashedPrivateKeyBuffer
+	hmacKey
 }: {
 	name: string
 	authVersion: AuthVersion
-	hashedPrivateKeyBuffer?: Buffer
+	hmacKey?: Buffer
 }): Promise<string> {
 	if (authVersion === 1 || authVersion === 2) {
 		return hashFn({
 			input: name.toLowerCase()
 		})
 	} else {
-		if (!hashedPrivateKeyBuffer || hashedPrivateKeyBuffer.byteLength !== 32) {
-			throw new Error("hashedPrivateKeyBuffer required for authVersion v3 salted file/directory name hash.")
+		if (!hmacKey || hmacKey.byteLength !== 32) {
+			throw new Error("hmacKey required for authVersion v3 salted file/directory name hash.")
 		}
 
-		const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
-
-		if (environment === "browser") {
-			return Buffer.from(sha256.create().update(hashedPrivateKeyBuffer).update(nameBuffer).digest()).toString("hex")
-		} else {
-			return nodeCrypto.createHash("sha256").update(hashedPrivateKeyBuffer).update(nameBuffer).digest("hex")
-		}
+		return hashSearchIndex({
+			name,
+			hmacKey
+		})
 	}
 }
 
-export async function hashSearchIndex({ name, hashedPrivateKeyBuffer }: { name: string; hashedPrivateKeyBuffer: Buffer }): Promise<string> {
-	const nameBuffer = Buffer.from(name.toLowerCase().trim(), "utf-8")
+export async function hashSearchIndex({ name, hmacKey }: { name: string; hmacKey: Buffer }): Promise<string> {
+	const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
 
 	if (environment === "browser") {
-		return Buffer.from(sha256.create().update(hashedPrivateKeyBuffer).update(nameBuffer).digest()).toString("hex")
+		return Buffer.from(hmac(sha256, hmacKey, nameBuffer)).toString("hex")
 	} else {
-		return nodeCrypto.createHash("sha256").update(hashedPrivateKeyBuffer).update(nameBuffer).digest("hex")
+		return nodeCrypto.createHmac("sha256", hmacKey).update(nameBuffer).digest("hex")
 	}
 }
 
-export async function generateSearchIndexHashes({
-	input,
-	hashedPrivateKeyBuffer
-}: {
-	input: string
-	hashedPrivateKeyBuffer: Buffer
-}): Promise<string[]> {
-	const parts = progressiveSplit(input.toLowerCase().trim())
+export async function generateSearchIndexHashes({ input, hmacKey }: { input: string; hmacKey: Buffer }): Promise<string[]> {
+	const parts = progressiveSplit(input.toLowerCase())
 
 	return await Promise.all(
 		parts.map(part =>
 			hashSearchIndex({
 				name: part,
-				hashedPrivateKeyBuffer
+				hmacKey
 			})
 		)
 	)
+}
+
+export async function generatePrivateKeyHMAC(privateKey: string): Promise<Buffer> {
+	const privateKeyBuffer = Buffer.from(privateKey, "base64")
+
+	if (environment === "browser") {
+		return Buffer.from(hkdf(sha256, privateKeyBuffer, Buffer.from([]), Buffer.from("hmac-sha256-key", "utf-8"), 32))
+	} else {
+		return new Promise<Buffer>((resolve, reject) => {
+			nodeCrypto.hkdf("sha256", privateKeyBuffer, Buffer.from([]), Buffer.from("hmac-sha256-key", "utf-8"), 32, (err, result) => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve(Buffer.from(result))
+			})
+		})
+	}
 }
 
 export type DeriveKeyFromPasswordBase = {
@@ -162,7 +175,9 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Buffer>
+}: DeriveKeyFromPasswordBase & {
+	returnHex: false
+}): Promise<Buffer>
 
 export async function deriveKeyFromPassword({
 	password,
@@ -171,7 +186,9 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: DeriveKeyFromPasswordBase & { returnHex: true }): Promise<string>
+}: DeriveKeyFromPasswordBase & {
+	returnHex: true
+}): Promise<string>
 
 /**
  * Derive a key from given inputs using PBKDF2.
@@ -759,7 +776,8 @@ export const utils = {
 	generateRandomHexString,
 	hashFileName,
 	hashSearchIndex,
-	generateSearchIndexHashes
+	generateSearchIndexHashes,
+	generatePrivateKeyHMAC
 }
 
 export default utils

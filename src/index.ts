@@ -21,7 +21,6 @@ import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer"
 import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer"
 import TypedEventEmitter, { type Events } from "./events"
 import axios, { type AxiosInstance } from "axios"
-import { sha256 } from "@noble/hashes/sha256"
 
 export type SDKWorker = {
 	crypto: {
@@ -86,7 +85,7 @@ export class FilenSDK {
 	private currentWorkerWorkIndex: number = 0
 	public readonly events: TypedEventEmitter<Events>
 	public readonly axiosInstance: AxiosInstance
-	public hashedPrivateKey: Buffer
+	public hmacKey: Buffer | null = null
 
 	/**
 	 * Creates an instance of FilenSDK.
@@ -108,7 +107,6 @@ export class FilenSDK {
 		}
 
 		this.config = params
-		this.hashedPrivateKey = params.privateKey ? Buffer.from(sha256(params.privateKey)) : Buffer.from(sha256("anonymous"))
 		this.workers = workers ? workers : null
 		this.events = new TypedEventEmitter<Events>()
 		this.axiosInstance = axiosInstance ? axiosInstance : axios.create()
@@ -144,7 +142,6 @@ export class FilenSDK {
 		}
 
 		this.config = params
-		this.hashedPrivateKey = params.privateKey ? Buffer.from(sha256(params.privateKey)) : Buffer.from(sha256("anonymous"))
 
 		this._crypto = new Crypto(this)
 		this._api = new API(this)
@@ -288,6 +285,20 @@ export class FilenSDK {
 			[1, 2, 3].includes(this.config.authVersion) &&
 			this.config.apiKey !== "anonymous"
 		)
+	}
+
+	public async generateHMACKey(): Promise<Buffer> {
+		if (this.hmacKey) {
+			return this.hmacKey
+		}
+
+		if (!this.config.privateKey || this.config.privateKey === "anonymous") {
+			throw new Error("No private key set for HMAC key generation.")
+		}
+
+		this.hmacKey = await this.getWorker().crypto.utils.generatePrivateKeyHMAC(this.config.privateKey)
+
+		return this.hmacKey
 	}
 
 	/**

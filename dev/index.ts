@@ -33,10 +33,14 @@ const filen = new FilenSDK(
 )
 
 async function main() {
+	console.log("starting")
+
 	await filen.fs().writeFile({
 		path: "/test/index1.txt",
 		content: Buffer.from("hello", "utf-8")
 	})
+
+	console.log("done")
 }
 
 main()

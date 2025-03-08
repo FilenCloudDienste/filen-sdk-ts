@@ -853,7 +853,7 @@ export class Cloud {
 		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
 			name,
 			authVersion: this.sdk.config.authVersion!,
-			hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+			hmacKey: await this.sdk.generateHMACKey()
 		})
 		const exists = await this.sdk.api(3).file().exists({
 			nameHashed,
@@ -877,7 +877,7 @@ export class Cloud {
 		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
 			name,
 			authVersion: this.sdk.config.authVersion!,
-			hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+			hmacKey: await this.sdk.generateHMACKey()
 		})
 		const exists = await this.sdk.api(3).dir().exists({
 			nameHashed,
@@ -914,7 +914,7 @@ export class Cloud {
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name: metadata.name,
 				authVersion: this.sdk.config.authVersion!,
-				hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+				hmacKey: await this.sdk.generateHMACKey()
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify(metadata)
@@ -1008,7 +1008,7 @@ export class Cloud {
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name,
 				authVersion: this.sdk.config.authVersion!,
-				hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+				hmacKey: await this.sdk.generateHMACKey()
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -1097,7 +1097,7 @@ export class Cloud {
 			this.sdk.getWorker().crypto.utils.hashFileName({
 				name,
 				authVersion: this.sdk.config.authVersion!,
-				hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+				hmacKey: await this.sdk.generateHMACKey()
 			}),
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -1333,7 +1333,7 @@ export class Cloud {
 					this.sdk.getWorker().crypto.utils.hashFileName({
 						name,
 						authVersion: this.sdk.config.authVersion!,
-						hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+						hmacKey: await this.sdk.generateHMACKey()
 					})
 				])
 
@@ -3887,7 +3887,7 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.hashFileName({
 					name: fileName,
 					authVersion: this.sdk.config.authVersion!,
-					hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+					hmacKey: await this.sdk.generateHMACKey()
 				})
 			])
 
@@ -4442,7 +4442,7 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.hashFileName({
 					name: fileName,
 					authVersion: this.sdk.config.authVersion!,
-					hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+					hmacKey: await this.sdk.generateHMACKey()
 				})
 			])
 
@@ -4980,7 +4980,7 @@ export class Cloud {
 				const ex = file.path.split("/")
 
 				if (!name && ex[0] && ex[0].length > 0) {
-					baseDirectoryName = ex[0].trim()
+					baseDirectoryName = ex[0]
 				}
 
 				const parentPath = pathModule.posix.dirname(file.path)
@@ -5248,7 +5248,7 @@ export class Cloud {
 	}): Promise<SearchAddItem[]> {
 		const hashes = await this.sdk.getWorker().crypto.utils.generateSearchIndexHashes({
 			input: name,
-			hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+			hmacKey: await this.sdk.generateHMACKey()
 		})
 
 		return hashes.map(hash => ({

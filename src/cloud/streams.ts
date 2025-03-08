@@ -2,7 +2,7 @@ import { Writable } from "stream"
 import { Semaphore } from "../semaphore"
 import mimeTypes from "mime-types"
 import nodeCrypto from "crypto"
-import { CHUNK_SIZE, MAX_UPLOAD_THREADS } from "../constants"
+import { CHUNK_SIZE, MAX_UPLOAD_THREADS, FILE_ENCRYPTION_VERSION } from "../constants"
 import { type FileEncryptionVersion, type FSItem, type ProgressCallback, type FilenSDK } from ".."
 
 /**
@@ -100,7 +100,7 @@ export class ChunkedUploadWriter extends Writable {
 		this.chunkBuffer = Buffer.from([])
 		this.uuid = uuid
 		this.key = key
-		this.version = this.sdk.crypto().encrypt().keyLengthToVersionData(key)
+		this.version = FILE_ENCRYPTION_VERSION
 		this.size = 0
 		this.name = name
 		this.lastModified = lastModified ? lastModified : Date.now()
@@ -316,7 +316,7 @@ export class ChunkedUploadWriter extends Writable {
 					nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
 						name: this.name,
 						authVersion: this.sdk.config.authVersion!,
-						hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+						hmacKey: await this.sdk.generateHMACKey()
 					}),
 					size: await this.sdk.getWorker().crypto.encrypt.metadata({
 						metadata: this.size.toString(),
@@ -359,7 +359,7 @@ export class ChunkedUploadWriter extends Writable {
 					nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
 						name: this.name,
 						authVersion: this.sdk.config.authVersion!,
-						hashedPrivateKeyBuffer: this.sdk.hashedPrivateKey
+						hmacKey: await this.sdk.generateHMACKey()
 					}),
 					size: await this.sdk.getWorker().crypto.encrypt.metadata({
 						metadata: this.size.toString(),
