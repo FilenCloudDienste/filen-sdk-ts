@@ -102,7 +102,7 @@ export async function hashFileName({
 	hmacKey?: Buffer
 }): Promise<string> {
 	if (authVersion === 1 || authVersion === 2) {
-		return hashFn({
+		return await hashFn({
 			input: name.toLowerCase()
 		})
 	} else {
@@ -110,7 +110,7 @@ export async function hashFileName({
 			throw new Error("hmacKey required for authVersion v3 salted file/directory name hash.")
 		}
 
-		return hashSearchIndex({
+		return await hashSearchIndex({
 			name,
 			hmacKey
 		})
