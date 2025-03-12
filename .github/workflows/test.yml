@@ -10,6 +10,11 @@ jobs:
     test:
         name: Run tests
         runs-on: ubuntu-latest
+        env:
+            V2_TEST_ACC_EMAIL: ${{ secrets.V2_TEST_ACC_EMAIL }}
+            V2_TEST_ACC_PASS: ${{ secrets.V2_TEST_ACC_PASS }}
+            V3_TEST_ACC_EMAIL: ${{ secrets.V2_TEST_ACC_EMAIL }}
+            V3_TEST_ACC_PASS: ${{ secrets.V2_TEST_ACC_PASS }}
 
         strategy:
             matrix:
@@ -30,3 +35,8 @@ jobs:
 
             - name: Run tests
               run: npm run test
+              env:
+                  V2_TEST_ACC_EMAIL: ${{ secrets.V2_TEST_ACC_EMAIL }}
+                  V2_TEST_ACC_PASS: ${{ secrets.V2_TEST_ACC_PASS }}
+                  V3_TEST_ACC_EMAIL: ${{ secrets.V2_TEST_ACC_EMAIL }}
+                  V3_TEST_ACC_PASS: ${{ secrets.V2_TEST_ACC_PASS }}
