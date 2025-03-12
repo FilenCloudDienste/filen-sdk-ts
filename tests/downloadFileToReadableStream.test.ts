@@ -1,23 +1,40 @@
 import pathModule from "path"
-import { UPLOAD_CHUNK_SIZE, FilenSDK, type AuthVersion } from "../src"
-import testConfig from "./test.config.json"
+import { UPLOAD_CHUNK_SIZE, type CloudItem } from "../src"
+import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import fs from "fs-extra"
 import crypto from "crypto"
+import { getSDK } from "./sdk"
+import os from "os"
 
-const sdk = new FilenSDK({
-	...testConfig,
-	authVersion: testConfig.authVersion as AuthVersion,
-	connectToSocket: false,
-	metadataCache: true
-})
+const localTestFile = pathModule.join(os.tmpdir(), `filen-sdk-test-${crypto.randomBytes(16).toString("hex")}.bin`)
+let remoteTestFile: CloudItem | null = null
 
-const bufferToHash = (buffer: Buffer): string => {
+beforeAll(async () => {
+	const sdk = await getSDK()
+
+	await fs.writeFile(localTestFile, crypto.randomBytes(5242880))
+
+	const parent = await sdk.fs().mkdir({
+		path: "/ts"
+	})
+
+	remoteTestFile = await sdk.cloud().uploadLocalFile({
+		source: localTestFile,
+		parent
+	})
+}, 60000)
+
+afterAll(async () => {
+	await fs.rm(localTestFile)
+}, 60000)
+
+function bufferToHash(buffer: Buffer): string {
 	return crypto.createHash("sha512").update(buffer).digest("hex")
 }
 
-const readFromDisk = (start?: number, end?: number): Promise<Buffer> => {
+function readFromDisk(start?: number, end?: number): Promise<Buffer> {
 	return new Promise<Buffer>((resolve, reject) => {
-		const stream = fs.createReadStream(pathModule.join(__dirname, "testfile"), {
+		const stream = fs.createReadStream(localTestFile, {
 			start,
 			end
 		})
@@ -36,17 +53,17 @@ const readFromDisk = (start?: number, end?: number): Promise<Buffer> => {
 	})
 }
 
-const readFromFilen = async (start?: number, end?: number): Promise<Buffer> => {
+async function readFromFilen(start?: number, end?: number): Promise<Buffer> {
+	const sdk = await getSDK()
+
+	if (!remoteTestFile || remoteTestFile.type !== "file") {
+		throw new Error("Remote test file not defined.")
+	}
+
 	const stream = sdk.cloud().downloadFileToReadableStream({
-		uuid: "0559f9e6-2f9f-4283-bfe9-03a01c3a734c",
-		bucket: "filen-39217",
-		region: "de-1",
-		key: "BHfW7InPgqmeiXaRP2MaFFvq8x6YywlN",
-		chunks: 5,
-		size: 5242880,
+		...remoteTestFile,
 		start,
-		end,
-		version: 2
+		end
 	})
 
 	const reader = stream.getReader()
