@@ -21,6 +21,14 @@ export async function setup(): Promise<void> {
 export async function teardown(): Promise<void> {
 	const sdk = await getSDK()
 
+	await sdk.fs().rm({
+		path: "/compat-ts"
+	})
+
+	await sdk.fs().mkdir({
+		path: "/compat-ts"
+	})
+
 	await Promise.all([
 		sdk.fs().rm({
 			path: "/ts"

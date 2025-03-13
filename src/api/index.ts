@@ -153,6 +153,7 @@ import V3UserGetDEK from "./v3/user/getDEK"
 import V3UserSetDEK from "./v3/user/setDEK"
 import V3UploadEmpty from "./v3/upload/empty"
 import V3SearchAdd from "./v3/search/add"
+import V3SearchFind from "./v3/search/find"
 
 /**
  * API
@@ -391,6 +392,7 @@ export class API {
 		}
 		search: {
 			add: V3SearchAdd
+			find: V3SearchFind
 		}
 	}
 
@@ -933,6 +935,9 @@ export class API {
 			search: {
 				add: new V3SearchAdd({
 					apiClient: this.apiClient
+				}),
+				find: new V3SearchFind({
+					apiClient: this.apiClient
 				})
 			}
 		}
@@ -1299,7 +1304,8 @@ export class API {
 			},
 			search: () => {
 				return {
-					add: (...params: Parameters<typeof this._v3.search.add.fetch>) => this._v3.search.add.fetch(...params)
+					add: (...params: Parameters<typeof this._v3.search.add.fetch>) => this._v3.search.add.fetch(...params),
+					find: (...params: Parameters<typeof this._v3.search.find.fetch>) => this._v3.search.find.fetch(...params)
 				}
 			}
 		}
