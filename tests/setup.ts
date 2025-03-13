@@ -16,6 +16,16 @@ export async function setup(): Promise<void> {
 			path: "/compat-ts"
 		})
 	])
+
+	const notes = await sdk.notes().all()
+
+	await Promise.all(
+		notes.map(async note => {
+			await sdk.notes().delete({
+				uuid: note.uuid
+			})
+		})
+	)
 }
 
 export async function teardown(): Promise<void> {
@@ -49,4 +59,14 @@ export async function teardown(): Promise<void> {
 			path: "/compat-ts/dir"
 		})
 	])
+
+	const notes = await sdk.notes().all()
+
+	await Promise.all(
+		notes.map(async note => {
+			await sdk.notes().delete({
+				uuid: note.uuid
+			})
+		})
+	)
 }
