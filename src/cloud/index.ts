@@ -890,7 +890,7 @@ export class Cloud {
 	}
 
 	/**
-	 * Edit metadata of a file (currently uses the rename endpoint, might change later).
+	 * Edit metadata of a file.
 	 *
 	 * @public
 	 * @async
@@ -960,6 +960,82 @@ export class Cloud {
 		await this.checkIfItemIsSharedForRename({
 			uuid,
 			itemMetadata: metadata
+		})
+	}
+
+	/**
+	 * Edit directory metadata.
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		uuid: string
+	 * 		name: string
+	 * 	}} param0
+	 * @param {string} param0.uuid
+	 * @param {string} param0.name
+	 * @returns {Promise<void>}
+	 */
+	public async editDirectoryMetadata({ uuid, name }: { uuid: string; name: string }): Promise<void> {
+		if (!isValidDirectoryName(name)) {
+			throw new Error(`"${name}" is not a valid directory name.`)
+		}
+
+		const get = await this.sdk.api(3).dir().get({
+			uuid
+		})
+		const exists = await this.directoryExists({
+			name,
+			parent: get.parent
+		})
+
+		if (exists.exists && exists.uuid !== uuid) {
+			throw new Error("A directory with the same name already exists in this directory.")
+		}
+
+		const [nameHashed, metadataEncrypted] = await Promise.all([
+			this.sdk.getWorker().crypto.utils.hashFileName({
+				name,
+				authVersion: this.sdk.config.authVersion!,
+				hmacKey: await this.sdk.generateHMACKey()
+			}),
+			this.sdk.getWorker().crypto.encrypt.metadata({
+				metadata: JSON.stringify({
+					name
+				})
+			})
+		])
+
+		try {
+			await this.sdk.api(3).dir().metadata({
+				uuid,
+				metadataEncrypted,
+				nameHashed
+			})
+		} catch (e) {
+			if (e instanceof APIError) {
+				if (e.code === "folder_not_found") {
+					return
+				}
+			}
+		}
+
+		await this.sdk
+			.api(3)
+			.search()
+			.add({
+				items: await this.generateSearchItems({
+					name,
+					type: "directory",
+					uuid
+				})
+			})
+
+		await this.checkIfItemIsSharedForRename({
+			uuid,
+			itemMetadata: {
+				name
+			}
 		})
 	}
 

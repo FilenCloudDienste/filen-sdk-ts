@@ -154,6 +154,7 @@ import V3UserSetDEK from "./v3/user/setDEK"
 import V3UploadEmpty from "./v3/upload/empty"
 import V3SearchAdd from "./v3/search/add"
 import V3SearchFind from "./v3/search/find"
+import V3DirMetadata from "./v3/dir/metadata"
 
 /**
  * API
@@ -188,6 +189,7 @@ export class API {
 			trash: V3DirTrash
 			move: V3DirMove
 			rename: V3DirRename
+			metadata: V3DirMetadata
 			size: V3DirSize
 			sizeLink: V3DirSizeLink
 			delete: {
@@ -458,6 +460,9 @@ export class API {
 					apiClient: this.apiClient
 				}),
 				rename: new V3DirRename({
+					apiClient: this.apiClient
+				}),
+				metadata: new V3DirMetadata({
 					apiClient: this.apiClient
 				}),
 				size: new V3DirSize({
@@ -971,6 +976,7 @@ export class API {
 					trash: (...params: Parameters<typeof this._v3.dir.trash.fetch>) => this._v3.dir.trash.fetch(...params),
 					move: (...params: Parameters<typeof this._v3.dir.move.fetch>) => this._v3.dir.move.fetch(...params),
 					rename: (...params: Parameters<typeof this._v3.dir.rename.fetch>) => this._v3.dir.rename.fetch(...params),
+					metadata: (...params: Parameters<typeof this._v3.dir.metadata.fetch>) => this._v3.dir.metadata.fetch(...params),
 					size: (...params: Parameters<typeof this._v3.dir.size.fetch>) => this._v3.dir.size.fetch(...params),
 					sizeLink: (...params: Parameters<typeof this._v3.dir.sizeLink.fetch>) => this._v3.dir.sizeLink.fetch(...params),
 					delete: () => {
