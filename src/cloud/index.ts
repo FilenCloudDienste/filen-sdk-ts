@@ -946,6 +946,17 @@ export class Cloud {
 			}
 		}
 
+		await this.sdk
+			.api(3)
+			.search()
+			.add({
+				items: await this.generateSearchItems({
+					name: metadata.name,
+					type: "directory",
+					uuid
+				})
+			})
+
 		await this.checkIfItemIsSharedForRename({
 			uuid,
 			itemMetadata: metadata
@@ -1047,6 +1058,17 @@ export class Cloud {
 			}
 		}
 
+		await this.sdk
+			.api(3)
+			.search()
+			.add({
+				items: await this.generateSearchItems({
+					name,
+					type: "file",
+					uuid
+				})
+			})
+
 		await this.checkIfItemIsSharedForRename({
 			uuid,
 			itemMetadata: metadata
@@ -1133,6 +1155,17 @@ export class Cloud {
 				}
 			}
 		}
+
+		await this.sdk
+			.api(3)
+			.search()
+			.add({
+				items: await this.generateSearchItems({
+					name,
+					type: "directory",
+					uuid
+				})
+			})
 
 		await this.checkIfItemIsSharedForRename({
 			uuid,
