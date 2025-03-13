@@ -23,7 +23,7 @@ describe("fs", () => {
 		expect(stat.name).toBe(path.replace("/ts/", ""))
 	})
 
-	it("upload+download", async () => {
+	it("upload+download file", async () => {
 		const sdk = await getSDK()
 		const name = crypto.randomBytes(16).toString("hex")
 		const localPath = pathModule.join(os.tmpdir(), name)
@@ -43,9 +43,92 @@ describe("fs", () => {
 
 		const [local, remote] = await Promise.all([fs.readFile(localPath), fs.readFile(downloadPath)])
 
-		await Promise.all([fs.rm(localPath), fs.rm(downloadPath)])
+		await Promise.all([
+			fs.rm(localPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			}),
+			fs.rm(downloadPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+		])
 
 		expect(remote.toString("hex")).toBe(local.toString("hex"))
+	})
+
+	it("upload+download dir", async () => {
+		const sdk = await getSDK()
+		const name = crypto.randomBytes(16).toString("hex")
+		const localPath = pathModule.join(os.tmpdir(), name)
+		const downloadPath = pathModule.join(os.tmpdir(), `download.${name}`)
+		const fileContent = crypto.randomBytes(1024).toString("hex")
+
+		await fs.mkdir(pathModule.join(localPath, "intermediate", "dir"), {
+			recursive: true
+		})
+
+		await fs.writeFile(pathModule.join(localPath, "intermediate", "dir", "file.txt"), fileContent, "utf-8")
+
+		await sdk.fs().upload({
+			path: `/ts/${name}`,
+			source: localPath
+		})
+
+		await sdk.fs().download({
+			path: `/ts/${name}`,
+			destination: downloadPath
+		})
+
+		const [local, remote, remoteFile] = await Promise.all([
+			fs.readdir(localPath, {
+				recursive: true,
+				withFileTypes: false
+			}),
+			fs.readdir(downloadPath, {
+				recursive: true,
+				withFileTypes: false
+			}),
+			fs.readFile(pathModule.join(downloadPath, "intermediate", "dir", "file.txt"), "utf-8")
+		])
+
+		await Promise.all([
+			fs.rm(localPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			}),
+			fs.rm(downloadPath, {
+				force: true,
+				maxRetries: 60 * 10,
+				recursive: true,
+				retryDelay: 100
+			})
+		])
+
+		expect(
+			JSON.stringify(
+				(local as unknown as string[]).sort((a, b) =>
+					a.toLowerCase().localeCompare(b.toLowerCase(), "en", {
+						numeric: true
+					})
+				)
+			)
+		).toBe(
+			JSON.stringify(
+				(remote as unknown as string[]).sort((a, b) =>
+					a.toLowerCase().localeCompare(b.toLowerCase(), "en", {
+						numeric: true
+					})
+				)
+			)
+		)
+		expect(remoteFile).toBe(fileContent)
 	})
 
 	it("mkdir intermediates", async () => {

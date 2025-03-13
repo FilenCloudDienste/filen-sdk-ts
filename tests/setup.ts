@@ -8,14 +8,11 @@ export async function setup(): Promise<void> {
 		path: "/ts"
 	})
 
-	await Promise.all([
-		sdk.fs().mkdir({
-			path: "/ts"
-		}),
-		sdk.fs().mkdir({
-			path: "/compat-ts"
-		})
-	])
+	await sdk.fs().mkdir({
+		path: "/ts"
+	})
+
+	await sdk.cloud().emptyTrash()
 }
 
 export async function teardown(): Promise<void> {

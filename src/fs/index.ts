@@ -1653,7 +1653,9 @@ export class FS {
 			throw new Error(`fs.upload is not implemented for a ${environment} environment`)
 		}
 
-		path = this.normalizePath({ path })
+		path = this.normalizePath({
+			path
+		})
 		source = normalizePath(source)
 
 		const sourceStat = await fs.stat(source)
