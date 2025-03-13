@@ -325,6 +325,22 @@ export function isValidHexString(str: string): boolean {
 	return str.length % 2 === 0
 }
 
+export function isValidDirectoryName(name: string): boolean {
+	if (name.includes("/")) {
+		return false
+	}
+
+	return true
+}
+
+export function isValidFileName(name: string): boolean {
+	if (name.includes("/")) {
+		return false
+	}
+
+	return true
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -341,7 +357,9 @@ export const utils = {
 	fastStringHash,
 	nodeStreamToBuffer,
 	progressiveSplit,
-	isValidHexString
+	isValidHexString,
+	isValidDirectoryName,
+	isValidFileName
 }
 
 export default utils

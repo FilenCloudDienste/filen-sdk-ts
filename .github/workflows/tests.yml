@@ -1,0 +1,42 @@
+name: Run tests
+
+on:
+    push:
+        branches: [main, master]
+    pull_request:
+        branches: [main, master]
+
+jobs:
+    test:
+        strategy:
+            max-parallel: 1
+            matrix:
+                version: ["V2", "V3"]
+        name: Run tests
+        runs-on: ubuntu-latest
+        env:
+            TEST_ACC_EMAIL: ${{ matrix.version == 'V2' && secrets.V2_TEST_ACC_EMAIL || secrets.V3_TEST_ACC_EMAIL }}
+            TEST_ACC_PASS: ${{ matrix.version == 'V2' && secrets.V2_TEST_ACC_PASS || secrets.V3_TEST_ACC_PASS }}
+            METADATA_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
+            FILE_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm install --package-lock-only --force && npm ci --force
+
+            - name: Run tests
+              run: npm run test
+              env:
+                  TEST_ACC_EMAIL: ${{ matrix.version == 'V2' && secrets.V2_TEST_ACC_EMAIL || secrets.V3_TEST_ACC_EMAIL }}
+                  TEST_ACC_PASS: ${{ matrix.version == 'V2' && secrets.V2_TEST_ACC_PASS || secrets.V3_TEST_ACC_PASS }}
+                  METADATA_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
+                  FILE_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}

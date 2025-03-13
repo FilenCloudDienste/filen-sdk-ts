@@ -39,7 +39,7 @@ export async function teardown(): Promise<void> {
 		}),
 		sdk.fs().writeFile({
 			path: "/compat-ts/small.txt",
-			content: Buffer.from(crypto.randomBytes(1024).toString("hex"), "utf-8")
+			content: Buffer.from("Hello World from TypeScript!", "utf-8")
 		}),
 		sdk.fs().writeFile({
 			path: "/compat-ts/big.txt",

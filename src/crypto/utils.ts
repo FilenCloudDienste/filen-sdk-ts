@@ -1,4 +1,4 @@
-import { environment } from "../constants"
+import { environment, FILE_ENCRYPTION_VERSION, METADATA_ENCRYPTION_VERSION } from "../constants"
 import nodeCrypto from "crypto"
 import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
@@ -90,6 +90,26 @@ export async function generateRandomHexString(length: number = 32): Promise<stri
 	}
 
 	throw new Error(`crypto.utils.generateRandomHexString not implemented for ${environment} environment`)
+}
+
+export async function generateEncryptionKey(use: "file" | "metadata"): Promise<string> {
+	if (use === "file") {
+		if (FILE_ENCRYPTION_VERSION === 1) {
+			return await generateRandomURLSafeString(32)
+		} else if (FILE_ENCRYPTION_VERSION === 2) {
+			return await generateRandomString(32)
+		} else {
+			return await generateRandomHexString(32)
+		}
+	} else {
+		if (METADATA_ENCRYPTION_VERSION === 1) {
+			return await generateRandomURLSafeString(32)
+		} else if (METADATA_ENCRYPTION_VERSION === 2) {
+			return await generateRandomString(32)
+		} else {
+			return await generateRandomHexString(32)
+		}
+	}
 }
 
 export async function hashFileName({
@@ -813,7 +833,8 @@ export const utils = {
 	createProgressiveSHA512Hasher,
 	updateProgressiveSHA512Hasher,
 	digestProgressiveSHA512Hasher,
-	deleteProgressiveSHA512Hasher
+	deleteProgressiveSHA512Hasher,
+	generateEncryptionKey
 }
 
 export default utils

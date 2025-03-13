@@ -13,13 +13,13 @@ export async function getSDK(): Promise<FilenSDK> {
 			return sdk
 		}
 
-		if (!process.env.V2_TEST_ACC_EMAIL || !process.env.V2_TEST_ACC_PASS) {
+		if (!process.env.TEST_ACC_EMAIL || !process.env.TEST_ACC_PASS) {
 			throw new Error("Test environment variables not defined.")
 		}
 
 		await sdk.login({
-			email: process.env.V2_TEST_ACC_EMAIL ?? "",
-			password: process.env.V2_TEST_ACC_PASS ?? ""
+			email: process.env.TEST_ACC_EMAIL ?? "",
+			password: process.env.TEST_ACC_PASS ?? ""
 		})
 
 		return sdk

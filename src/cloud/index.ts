@@ -16,7 +16,9 @@ import {
 	normalizePath,
 	getEveryPossibleDirectoryPath,
 	realFileSize,
-	promiseAllSettledChunked
+	promiseAllSettledChunked,
+	isValidDirectoryName,
+	isValidFileName
 } from "../utils"
 import {
 	environment,
@@ -898,6 +900,10 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async editFileMetadata({ uuid, metadata }: { uuid: string; metadata: FileMetadata }): Promise<void> {
+		if (!isValidFileName(metadata.name)) {
+			throw new Error(`"${metadata.name}" is not a valid file name.`)
+		}
+
 		const get = await this.sdk.api(3).file().get({
 			uuid
 		})
@@ -974,6 +980,10 @@ export class Cloud {
 		name: string
 		overwriteIfExists?: boolean
 	}): Promise<void> {
+		if (!isValidFileName(name)) {
+			throw new Error(`"${name}" is not a valid file name.`)
+		}
+
 		if (metadata.key.length === 0) {
 			throw new Error("Invalid metadata key.")
 		}
@@ -1067,6 +1077,10 @@ export class Cloud {
 		name: string
 		overwriteIfExists?: boolean
 	}): Promise<void> {
+		if (!isValidDirectoryName(name)) {
+			throw new Error(`"${name}" is not a valid directory name.`)
+		}
+
 		const isPresent = await this.sdk.api(3).dir().present({
 			uuid
 		})
@@ -1304,6 +1318,10 @@ export class Cloud {
 		parent: string
 		renameIfExists?: boolean
 	}): Promise<string> {
+		if (!isValidDirectoryName(name)) {
+			throw new Error(`"${name}" is not a valid directory name.`)
+		}
+
 		await this._semaphores.createDirectory.acquire()
 
 		try {
@@ -1697,7 +1715,7 @@ export class Cloud {
 				this.getDirectoryTree({
 					uuid
 				}),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32)
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("metadata")
 			])
 
 			const linkKeyEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
@@ -3834,6 +3852,10 @@ export class Cloud {
 				throw new Error(`Invalid source file at path "${source}". Could not parse file name.`)
 			}
 
+			if (!isValidFileName(fileName)) {
+				throw new Error(`"${fileName}" is not a valid file name.`)
+			}
+
 			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
 			const fileStats = await fs.stat(source)
 
@@ -3859,7 +3881,7 @@ export class Cloud {
 
 			const [fileUUID, key, rm, uploadKey, hmacKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.generateHMACKey()
@@ -4172,6 +4194,10 @@ export class Cloud {
 			throw new Error(`cloud.uploadLocalFileStream is not implemented for ${environment}`)
 		}
 
+		if (!isValidFileName(name)) {
+			throw new Error(`"${name}" is not a valid file name.`)
+		}
+
 		if (onQueued) {
 			onQueued()
 		}
@@ -4191,7 +4217,7 @@ export class Cloud {
 			let closed = false
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
@@ -4414,6 +4440,11 @@ export class Cloud {
 			}
 
 			const fileName = name ? name : file.name
+
+			if (!isValidFileName(fileName)) {
+				throw new Error(`"${fileName}" is not a valid file name.`)
+			}
+
 			const mimeType = mimeTypes.lookup(fileName) || "application/octet-stream"
 			const fileSize = file.size
 			let fileChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE)
@@ -4425,7 +4456,7 @@ export class Cloud {
 
 			const [fileUUID, key, rm, uploadKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
@@ -4757,6 +4788,10 @@ export class Cloud {
 				throw new Error(`Invalid source directory at path ${source}. Could not parse directory name.`)
 			}
 
+			if (!isValidDirectoryName(baseDirectoryName)) {
+				throw new Error(`"${baseDirectoryName}" is not a valid directory name.`)
+			}
+
 			parent = await this.createDirectory({
 				name: baseDirectoryName,
 				parent
@@ -5014,6 +5049,10 @@ export class Cloud {
 
 			if (!baseDirectoryName) {
 				throw new Error(`Can not upload directory to parent directory ${parent}. Could not parse base directory name.`)
+			}
+
+			if (!isValidDirectoryName(baseDirectoryName)) {
+				throw new Error(`"${baseDirectoryName}" is not a valid directory name.`)
 			}
 
 			for (const path of directoryPaths) {
