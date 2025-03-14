@@ -1,8 +1,8 @@
 import { getSDK } from "./sdk"
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, afterEach } from "vitest"
 import crypto from "crypto"
 
-beforeEach(async () => {
+afterEach(async () => {
 	const sdk = await getSDK()
 	const [notes, notesTags] = await Promise.all([sdk.notes().all(), sdk.notes().tags()])
 
