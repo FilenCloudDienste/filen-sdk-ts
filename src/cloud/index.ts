@@ -59,6 +59,7 @@ import { ChunkedUploadWriter } from "./streams"
 import { type FileExistsResponse } from "../api/v3/file/exists"
 import { type DirExistsResponse } from "../api/v3/dir/exists"
 import { type SearchAddItem } from "../api/v3/search/add"
+import { type SearchFindItemDecrypted } from "../api/v3/search/find"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -946,21 +947,22 @@ export class Cloud {
 			}
 		}
 
-		await this.sdk
-			.api(3)
-			.search()
-			.add({
-				items: await this.generateSearchItems({
-					name: metadata.name,
-					type: "directory",
-					uuid
-				})
+		await Promise.all([
+			this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.generateSearchItems({
+						name: metadata.name,
+						type: "directory",
+						uuid
+					})
+				}),
+			this.checkIfItemIsSharedForRename({
+				uuid,
+				itemMetadata: metadata
 			})
-
-		await this.checkIfItemIsSharedForRename({
-			uuid,
-			itemMetadata: metadata
-		})
+		])
 	}
 
 	/**
@@ -1020,23 +1022,24 @@ export class Cloud {
 			}
 		}
 
-		await this.sdk
-			.api(3)
-			.search()
-			.add({
-				items: await this.generateSearchItems({
-					name,
-					type: "directory",
-					uuid
+		await Promise.all([
+			this.checkIfItemIsSharedForRename({
+				uuid,
+				itemMetadata: {
+					name
+				}
+			}),
+			this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.generateSearchItems({
+						name,
+						type: "directory",
+						uuid
+					})
 				})
-			})
-
-		await this.checkIfItemIsSharedForRename({
-			uuid,
-			itemMetadata: {
-				name
-			}
-		})
+		])
 	}
 
 	/**
@@ -1134,21 +1137,22 @@ export class Cloud {
 			}
 		}
 
-		await this.sdk
-			.api(3)
-			.search()
-			.add({
-				items: await this.generateSearchItems({
-					name,
-					type: "file",
-					uuid
+		await Promise.all([
+			this.checkIfItemIsSharedForRename({
+				uuid,
+				itemMetadata: metadata
+			}),
+			this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.generateSearchItems({
+						name,
+						type: "file",
+						uuid
+					})
 				})
-			})
-
-		await this.checkIfItemIsSharedForRename({
-			uuid,
-			itemMetadata: metadata
-		})
+		])
 	}
 
 	/**
@@ -1232,23 +1236,24 @@ export class Cloud {
 			}
 		}
 
-		await this.sdk
-			.api(3)
-			.search()
-			.add({
-				items: await this.generateSearchItems({
-					name,
-					type: "directory",
-					uuid
+		await Promise.all([
+			this.checkIfItemIsSharedForRename({
+				uuid,
+				itemMetadata: {
+					name
+				}
+			}),
+			this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.generateSearchItems({
+						name,
+						type: "directory",
+						uuid
+					})
 				})
-			})
-
-		await this.checkIfItemIsSharedForRename({
-			uuid,
-			itemMetadata: {
-				name
-			}
-		})
+		])
 	}
 
 	/**
@@ -1471,25 +1476,26 @@ export class Cloud {
 					parent
 				})
 
-				await this.sdk
-					.api(3)
-					.search()
-					.add({
-						items: await this.generateSearchItems({
-							name,
-							type: "directory",
-							uuid: uuidToUse
+				await Promise.all([
+					this.checkIfItemParentIsShared({
+						type: "directory",
+						parent,
+						uuid: uuidToUse,
+						itemMetadata: {
+							name
+						}
+					}),
+					this.sdk
+						.api(3)
+						.search()
+						.add({
+							items: await this.generateSearchItems({
+								name,
+								type: "directory",
+								uuid: uuidToUse
+							})
 						})
-					})
-
-				await this.checkIfItemParentIsShared({
-					type: "directory",
-					parent,
-					uuid: uuidToUse,
-					itemMetadata: {
-						name
-					}
-				})
+				])
 			}
 
 			return uuidToUse
@@ -4162,17 +4168,6 @@ export class Cloud {
 								parent
 						  })
 
-				await this.sdk
-					.api(3)
-					.search()
-					.add({
-						items: await this.generateSearchItems({
-							name: fileName,
-							type: "file",
-							uuid: fileUUID
-						})
-					})
-
 				fileChunks = done.chunks
 
 				const item: CloudItem = {
@@ -4194,19 +4189,31 @@ export class Cloud {
 					creation
 				}
 
-				await this.checkIfItemParentIsShared({
-					type: "file",
-					parent,
-					uuid: fileUUID,
-					itemMetadata: {
-						name: fileName,
-						size: fileSize,
-						mime: mimeType,
-						lastModified,
-						creation,
-						key
-					}
-				})
+				await Promise.all([
+					this.checkIfItemParentIsShared({
+						type: "file",
+						parent,
+						uuid: fileUUID,
+						itemMetadata: {
+							name: fileName,
+							size: fileSize,
+							mime: mimeType,
+							lastModified,
+							creation,
+							key
+						}
+					}),
+					this.sdk
+						.api(3)
+						.search()
+						.add({
+							items: await this.generateSearchItems({
+								name: fileName,
+								type: "file",
+								uuid: fileUUID
+							})
+						})
+				])
 
 				if (onUploaded) {
 					await onUploaded.call(undefined, item)
@@ -4735,17 +4742,6 @@ export class Cloud {
 								parent
 						  })
 
-				await this.sdk
-					.api(3)
-					.search()
-					.add({
-						items: await this.generateSearchItems({
-							name: fileName,
-							type: "file",
-							uuid: fileUUID
-						})
-					})
-
 				fileChunks = done.chunks
 
 				const item: CloudItem = {
@@ -4766,18 +4762,30 @@ export class Cloud {
 					region
 				}
 
-				await this.checkIfItemParentIsShared({
-					type: "file",
-					parent,
-					uuid: fileUUID,
-					itemMetadata: {
-						name: fileName,
-						size: fileSize,
-						mime: mimeType,
-						lastModified,
-						key
-					}
-				})
+				await Promise.all([
+					this.checkIfItemParentIsShared({
+						type: "file",
+						parent,
+						uuid: fileUUID,
+						itemMetadata: {
+							name: fileName,
+							size: fileSize,
+							mime: mimeType,
+							lastModified,
+							key
+						}
+					}),
+					this.sdk
+						.api(3)
+						.search()
+						.add({
+							items: await this.generateSearchItems({
+								name: fileName,
+								type: "file",
+								uuid: fileUUID
+							})
+						})
+				])
 
 				if (onUploaded) {
 					await onUploaded.call(undefined, item)
@@ -5426,6 +5434,42 @@ export class Cloud {
 			uuid,
 			type
 		}))
+	}
+
+	public async queryGlobalSearch({ name }: { name: string }): Promise<SearchFindItemDecrypted[]> {
+		const hmacKey = await this.sdk.generateHMACKey()
+		const hashes = await this.sdk.getWorker().crypto.utils.generateSearchIndexHashes({
+			input: name,
+			hmacKey
+		})
+
+		const found = (
+			await this.sdk.api(3).search().find({
+				hashes
+			})
+		).items
+
+		const items: SearchFindItemDecrypted[] = await promiseAllChunked(
+			found.map(async item => {
+				if (item.type === "directory") {
+					return {
+						...item,
+						metadataDecrypted: await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+							metadata: item.metadata
+						})
+					}
+				}
+
+				return {
+					...item,
+					metadataDecrypted: await this.sdk.getWorker().crypto.decrypt.fileMetadata({
+						metadata: item.metadata
+					})
+				}
+			})
+		)
+
+		return items
 	}
 }
 

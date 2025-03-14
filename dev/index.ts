@@ -20,6 +20,8 @@ import type Encrypt from "../src/crypto/encrypt"
 import { argon2idAsync } from "@noble/hashes/argon2"
 import { blake2b } from "@noble/hashes/blake2b"
 import { sha256 } from "@noble/hashes/sha256"
+import { nameSplitter } from "../src/utils"
+import crypto from "crypto"
 
 const filen = new FilenSDK(
 	{
@@ -34,11 +36,6 @@ const filen = new FilenSDK(
 
 async function main() {
 	console.log("starting")
-
-	await filen.fs().writeFile({
-		path: "/test/index1.txt",
-		content: Buffer.from("hello", "utf-8")
-	})
 
 	console.log("done")
 }

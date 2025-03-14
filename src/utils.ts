@@ -307,14 +307,122 @@ export async function nodeStreamToBuffer(stream: Readable): Promise<Buffer> {
 	return Buffer.concat(chunks)
 }
 
-export function progressiveSplit(input: string): string[] {
-	const result: string[] = []
-
-	for (let i = 1; i <= input.length; i++) {
-		result.push(input.substring(0, i))
+export function nameSplitter(input: string): string[] {
+	if (!input || input.length === 0) {
+		return []
 	}
 
-	return result
+	const result = new Set<string>()
+	const normalized = input.toLowerCase().trim()
+	const len = normalized.length
+
+	// Full string for exact matches
+	result.add(normalized)
+
+	// Skip further processing for very short inputs
+	if (len < 3) {
+		return Array.from(result)
+	}
+
+	// Important prefixes with special chars removed
+	const cleanPrefix = normalized.replace(/[^a-z0-9]/g, "")
+	const cleanLen = cleanPrefix.length
+
+	// Only process if we have enough characters
+	if (cleanLen >= 3) {
+		result.add(cleanPrefix.substring(0, 3))
+
+		if (cleanLen >= 5) {
+			result.add(cleanPrefix.substring(0, 5))
+		}
+
+		if (cleanLen >= 7) {
+			result.add(cleanPrefix.substring(0, 7))
+		}
+	}
+
+	// Sliding window
+	const windowSize = 4
+	const stride = 2
+
+	if (len >= windowSize) {
+		for (let i = 0; i <= len - windowSize; i += stride) {
+			result.add(normalized.substring(i, i + windowSize))
+		}
+	}
+
+	// Word tokenization
+	// eslint-disable-next-line no-useless-escape
+	const wordSplitter = /[\s\-_\.]+/
+	const words = normalized.split(wordSplitter)
+	const wordCount = words.length
+
+	if (wordCount === 1 && words[0] && words[0].length >= 2) {
+		result.add(words[0])
+
+		if (words[0].length > 8) {
+			result.add(words[0].substring(0, 4))
+		}
+	}
+
+	// Multiple words
+	else if (wordCount > 1) {
+		// Extract important words and create word pairs
+		const importantWords: string[] = []
+
+		for (let i = 0; i < wordCount; i++) {
+			const word = words[i]
+
+			if (word && word.length >= 2) {
+				importantWords.push(word)
+				result.add(word)
+
+				// Only include prefix of longer words
+				if (word.length > 8) {
+					result.add(word.substring(0, 4))
+				}
+			}
+		}
+
+		// Word pairs - only for reasonable counts
+		const pairCount = importantWords.length
+
+		if (pairCount > 1 && pairCount <= 5) {
+			for (let i = 0; i < pairCount - 1; i++) {
+				const one = importantWords[i]
+				const two = importantWords[i + 1]
+
+				if (!one || !two) {
+					continue
+				}
+
+				result.add(one + two)
+			}
+		}
+	}
+
+	// Suffix - just one key suffix (only for longer items)
+	if (len >= 3) {
+		result.add(normalized.substring(len - 3))
+	}
+
+	// File extension handling
+	const lastDotIndex = normalized.lastIndexOf(".")
+
+	// Validate dot position
+	if (lastDotIndex > 0 && lastDotIndex < len - 1) {
+		const extension = normalized.substring(lastDotIndex + 1)
+
+		result.add(normalized.substring(lastDotIndex)) // Include the dot
+		result.add(extension) // Without the dot
+
+		// Name without extension (only for shorter names)
+		if (lastDotIndex < 32) {
+			result.add(normalized.substring(0, lastDotIndex))
+		}
+	}
+
+	return Array.from(result)
 }
 
 export function isValidHexString(str: string): boolean {
@@ -356,7 +464,7 @@ export const utils = {
 	replacePathStartWithFromAndTo,
 	fastStringHash,
 	nodeStreamToBuffer,
-	progressiveSplit,
+	nameSplitter,
 	isValidHexString,
 	isValidDirectoryName,
 	isValidFileName

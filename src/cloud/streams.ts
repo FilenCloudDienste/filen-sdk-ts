@@ -387,31 +387,32 @@ export class ChunkedUploadWriter extends Writable {
 				})
 		}
 
-		await this.sdk
-			.api(3)
-			.search()
-			.add({
-				items: await this.sdk.cloud().generateSearchItems({
+		await Promise.all([
+			this.sdk.cloud().checkIfItemParentIsShared({
+				type: "file",
+				parent: this.parent,
+				uuid: this.uuid,
+				itemMetadata: {
 					name: this.name,
-					type: "file",
-					uuid: this.uuid
+					size: this.size,
+					mime: this.mime,
+					lastModified: this.lastModified,
+					creation: this.creation,
+					key: this.key,
+					hash
+				}
+			}),
+			this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.sdk.cloud().generateSearchItems({
+						name: this.name,
+						type: "file",
+						uuid: this.uuid
+					})
 				})
-			})
-
-		await this.sdk.cloud().checkIfItemParentIsShared({
-			type: "file",
-			parent: this.parent,
-			uuid: this.uuid,
-			itemMetadata: {
-				name: this.name,
-				size: this.size,
-				mime: this.mime,
-				lastModified: this.lastModified,
-				creation: this.creation,
-				key: this.key,
-				hash
-			}
-		})
+		])
 
 		this.emit("uploaded", {
 			type: "file",

@@ -3,7 +3,7 @@ import nodeCrypto from "crypto"
 import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
-import { fastStringHash, progressiveSplit } from "../utils"
+import { fastStringHash, nameSplitter } from "../utils"
 import { argon2idAsync } from "@noble/hashes/argon2"
 import { sha256 } from "@noble/hashes/sha256"
 import { sha1 } from "@noble/hashes/sha1"
@@ -148,7 +148,7 @@ export async function hashSearchIndex({ name, hmacKey }: { name: string; hmacKey
 }
 
 export async function generateSearchIndexHashes({ input, hmacKey }: { input: string; hmacKey: Buffer }): Promise<string[]> {
-	const parts = progressiveSplit(input.toLowerCase())
+	const parts = nameSplitter(input.toLowerCase())
 
 	return await Promise.all(
 		parts.map(part =>

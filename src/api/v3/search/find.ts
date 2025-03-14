@@ -1,5 +1,5 @@
 import type APIClient from "../../client"
-import { type FileEncryptionVersion } from "../../.."
+import { type FileEncryptionVersion, type FileMetadata, type FolderMetadata } from "../../.."
 
 export type SearchFindItem =
 	| {
@@ -18,6 +18,7 @@ export type SearchFindItem =
 			versioned: boolean
 			uuidPath: string[]
 			metadataPath: string[]
+			nameHashed: string
 	  }
 	| {
 			uuid: string
@@ -30,6 +31,42 @@ export type SearchFindItem =
 			favorited: boolean
 			uuidPath: string[]
 			metadataPath: string[]
+			nameHashed: string
+	  }
+
+export type SearchFindItemDecrypted =
+	| {
+			uuid: string
+			type: "file"
+			parent: string
+			metadata: string
+			timestamp: number
+			chunks: number
+			size: number
+			bucket: string
+			region: string
+			version: FileEncryptionVersion
+			favorited: boolean
+			trash: boolean
+			versioned: boolean
+			uuidPath: string[]
+			metadataPath: string[]
+			nameHashed: string
+			metadataDecrypted: FileMetadata
+	  }
+	| {
+			uuid: string
+			type: "directory"
+			parent: string
+			metadata: string
+			trash: boolean
+			color: string | null
+			timestamp: number
+			favorited: boolean
+			uuidPath: string[]
+			metadataPath: string[]
+			nameHashed: string
+			metadataDecrypted: FolderMetadata
 	  }
 
 export type SearchFindResponse = {
