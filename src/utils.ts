@@ -307,28 +307,47 @@ export async function nodeStreamToBuffer(stream: Readable): Promise<Buffer> {
 	return Buffer.concat(chunks)
 }
 
+export function progressiveSplit(input: string): string[] {
+	const result: string[] = []
+
+	for (let i = 1; i <= input.length; i++) {
+		result.push(input.substring(0, i))
+	}
+
+	return result
+}
+
+// eslint-disable-next-line no-useless-escape
+const WORD_SPLITTER_REGEX = /[\s\-_\.;:,]+/g
+const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g
+
 export function nameSplitter(input: string): string[] {
 	if (!input || input.length === 0) {
 		return []
 	}
 
 	const result = new Set<string>()
-	const normalized = input.toLowerCase().trim()
+	const normalized = input.normalize("NFKC").toLowerCase().trim()
 	const len = normalized.length
 
-	// Full string for exact matches
 	result.add(normalized)
 
-	// Skip further processing for very short inputs
+	// Add non-accented version for better search
+	const normalizedPlain = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+
+	if (normalizedPlain !== normalized) {
+		result.add(normalizedPlain)
+	}
+
 	if (len < 3) {
 		return Array.from(result)
 	}
 
-	// Important prefixes with special chars removed
-	const cleanPrefix = normalized.replace(/[^a-z0-9]/g, "")
+	// Precompute frequently used values
+	const cleanPrefix = normalized.replace(CLEAN_PREFIX_REGEX, "")
 	const cleanLen = cleanPrefix.length
 
-	// Only process if we have enough characters
+	// Prefix handling
 	if (cleanLen >= 3) {
 		result.add(cleanPrefix.substring(0, 3))
 
@@ -339,90 +358,105 @@ export function nameSplitter(input: string): string[] {
 		if (cleanLen >= 7) {
 			result.add(cleanPrefix.substring(0, 7))
 		}
+
+		if (cleanLen >= 9) {
+			result.add(cleanPrefix.substring(0, 9))
+		}
+	}
+
+	// Number sequence extraction
+	const numberMatches = [...cleanPrefix.matchAll(/\d{3,}/g)]
+
+	for (const match of numberMatches) {
+		result.add(match[0])
 	}
 
 	// Sliding window
-	const windowSize = 4
-	const stride = 2
+	const windowSizes = len > 15 ? [4, 5] : [4]
 
-	if (len >= windowSize) {
-		for (let i = 0; i <= len - windowSize; i += stride) {
-			result.add(normalized.substring(i, i + windowSize))
-		}
-	}
+	for (const windowSize of windowSizes) {
+		const stride = windowSize >>> 1 // Fast integer division by 2
 
-	// Word tokenization
-	// eslint-disable-next-line no-useless-escape
-	const wordSplitter = /[\s\-_\.]+/
-	const words = normalized.split(wordSplitter)
-	const wordCount = words.length
+		if (len >= windowSize) {
+			const limit = len - windowSize
 
-	if (wordCount === 1 && words[0] && words[0].length >= 2) {
-		result.add(words[0])
-
-		if (words[0].length > 8) {
-			result.add(words[0].substring(0, 4))
-		}
-	}
-
-	// Multiple words
-	else if (wordCount > 1) {
-		// Extract important words and create word pairs
-		const importantWords: string[] = []
-
-		for (let i = 0; i < wordCount; i++) {
-			const word = words[i]
-
-			if (word && word.length >= 2) {
-				importantWords.push(word)
-				result.add(word)
-
-				// Only include prefix of longer words
-				if (word.length > 8) {
-					result.add(word.substring(0, 4))
-				}
+			for (let i = 0; i <= limit; i += stride) {
+				result.add(normalized.substring(i, i + windowSize)) // Fixed: added i +
 			}
 		}
+	}
 
-		// Word pairs - only for reasonable counts
-		const pairCount = importantWords.length
+	// Word processing
+	const words = normalized.split(WORD_SPLITTER_REGEX)
+	const importantWords: string[] = []
 
-		if (pairCount > 1 && pairCount <= 5) {
-			for (let i = 0; i < pairCount - 1; i++) {
-				const one = importantWords[i]
-				const two = importantWords[i + 1]
+	for (let i = 0; i < words.length; i++) {
+		const word = words[i]
 
-				if (!one || !two) {
-					continue
-				}
+		if (word && word.length >= 2) {
+			importantWords.push(word)
+			result.add(word)
 
+			if (word.length > 8) {
+				result.add(word.substring(0, 4))
+				result.add(word.substring(0, 6))
+			}
+		}
+	}
+
+	// Word combinations
+	const importantCount = importantWords.length
+
+	if (importantCount > 1 && importantCount <= 5) {
+		for (let i = 0; i < importantCount - 1; i++) {
+			const one = importantWords[i]
+			const two = importantWords[i + 1]
+
+			if (one && two) {
+				result.add(one + two)
+			}
+		}
+		if (importantCount >= 3) {
+			const one = importantWords[0]
+			const two = importantWords[importantCount - 1]
+
+			if (one && two) {
 				result.add(one + two)
 			}
 		}
 	}
 
-	// Suffix - just one key suffix (only for longer items)
+	// Suffix handling
 	if (len >= 3) {
 		result.add(normalized.substring(len - 3))
 	}
 
-	// File extension handling
-	const lastDotIndex = normalized.lastIndexOf(".")
+	if (len >= 5) {
+		result.add(normalized.substring(len - 5))
+	}
 
-	// Validate dot position
-	if (lastDotIndex > 0 && lastDotIndex < len - 1) {
-		const extension = normalized.substring(lastDotIndex + 1)
+	if (len >= 7) {
+		result.add(normalized.substring(len - 7))
+	}
 
-		result.add(normalized.substring(lastDotIndex)) // Include the dot
-		result.add(extension) // Without the dot
+	// Extension handling
+	const dotIndex = normalized.lastIndexOf(".")
 
-		// Name without extension (only for shorter names)
-		if (lastDotIndex < 32) {
-			result.add(normalized.substring(0, lastDotIndex))
+	if (dotIndex > 0 && dotIndex < len - 1) {
+		const base = normalized.substring(0, dotIndex)
+		const ext = normalized.substring(dotIndex + 1)
+
+		result.add("." + ext)
+		result.add(ext)
+
+		if (dotIndex < 32) {
+			result.add(base)
 		}
 	}
 
 	return Array.from(result)
+		.filter(token => token.length >= 2)
+		.slice(0, 256)
 }
 
 export function isValidHexString(str: string): boolean {
@@ -449,6 +483,16 @@ export function isValidFileName(name: string): boolean {
 	return true
 }
 
+export function chunkArray<T>(array: T[], chunkSize: number): T[][] {
+	const chunks: T[][] = []
+
+	for (let i = 0; i < array.length; i += chunkSize) {
+		chunks.push(array.slice(i, i + chunkSize))
+	}
+
+	return chunks
+}
+
 export const utils = {
 	sleep,
 	convertTimestampToMs,
@@ -467,7 +511,9 @@ export const utils = {
 	nameSplitter,
 	isValidHexString,
 	isValidDirectoryName,
-	isValidFileName
+	isValidFileName,
+	progressiveSplit,
+	chunkArray
 }
 
 export default utils

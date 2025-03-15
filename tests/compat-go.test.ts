@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { getSDK } from "./sdk"
 import { describe, it, expect } from "vitest"
 import { isValidHexString } from "../src/utils"
@@ -28,6 +29,12 @@ describe("compat-go", () => {
 			sdk.fs().readFile({
 				path: "/compat-go/small.txt"
 			})
+			/*sdk.fs().readFile({
+				path: `/compat-go/${txtCompatFile.name}`
+			}),
+			sdk.fs().stat({
+				path: `/compat-go/${txtCompatFile.name}`
+			})*/
 		])
 
 		expect(list).toContain("dir")
@@ -47,5 +54,12 @@ describe("compat-go", () => {
 		expect(Buffer.from(smallRead).toString("utf-8")).toBe("Hello World from Go!")
 		expect(bigRead.byteLength).toBe(1024 * 1024 * 8)
 		expect(smallRead.byteLength).toBe("Hello World from Go!".length)
+		/*expect(txtCompatRead.toString("hex")).toBe(txtCompatFile.content.toString("hex"))
+		expect(txtCompatStat.isFile()).toBe(true)
+		expect(txtCompatStat.type).toBe("file")
+		expect(txtCompatStat.birthtimeMs).toBe(txtCompatFile.creation)
+		expect(txtCompatStat.mtimeMs).toBe(txtCompatFile.lastModified)
+		expect(txtCompatStat.name).toBe(txtCompatFile.name)
+		expect(txtCompatStat.type === "file" ? txtCompatStat.key : "").toBe(txtCompatFile.key)*/
 	})
 })

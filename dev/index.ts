@@ -37,6 +37,14 @@ const filen = new FilenSDK(
 async function main() {
 	console.log("starting")
 
+	console.log(
+		nameSplitter("this is a test folder name!!9338").sort((a, b) =>
+			a.localeCompare(b, "en", {
+				numeric: true
+			})
+		)
+	)
+
 	console.log("done")
 }
 

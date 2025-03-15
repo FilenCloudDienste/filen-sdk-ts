@@ -7,7 +7,8 @@ import {
 	type PublicLinkExpiration,
 	type ProgressWithTotalCallback,
 	type GetFileResult,
-	type GetDirResult
+	type GetDirResult,
+	type RebuildGlobalSearchIndexProgressCallback
 } from "../types"
 import {
 	convertTimestampToMs,
@@ -18,7 +19,8 @@ import {
 	realFileSize,
 	promiseAllSettledChunked,
 	isValidDirectoryName,
-	isValidFileName
+	isValidFileName,
+	chunkArray
 } from "../utils"
 import {
 	environment,
@@ -3924,7 +3926,8 @@ export class Cloud {
 		onError,
 		onFinished,
 		onUploaded,
-		uuid
+		uuid,
+		encryptionKey
 	}: {
 		source: string
 		parent: string
@@ -3939,6 +3942,7 @@ export class Cloud {
 		onFinished?: () => void
 		onUploaded?: (item: CloudItem) => Promise<void>
 		uuid?: string
+		encryptionKey?: string
 	}): Promise<CloudItem> {
 		if (environment !== "node") {
 			throw new Error(`cloud.uploadFileFromLocal is not implemented for ${environment}`)
@@ -3996,7 +4000,7 @@ export class Cloud {
 
 			const [fileUUID, key, rm, uploadKey, hmacKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
+				encryptionKey ? encryptionKey : this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
 				this.sdk.generateHMACKey()
@@ -5456,7 +5460,16 @@ export class Cloud {
 						...item,
 						metadataDecrypted: await this.sdk.getWorker().crypto.decrypt.folderMetadata({
 							metadata: item.metadata
-						})
+						}),
+						metadataPathDecrypted: await promiseAllChunked(
+							item.metadataPath.map(async directoryName => {
+								return (
+									await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+										metadata: directoryName
+									})
+								).name
+							})
+						)
 					}
 				}
 
@@ -5464,12 +5477,152 @@ export class Cloud {
 					...item,
 					metadataDecrypted: await this.sdk.getWorker().crypto.decrypt.fileMetadata({
 						metadata: item.metadata
-					})
+					}),
+					metadataPathDecrypted: await promiseAllChunked(
+						item.metadataPath.map(async directoryName => {
+							return (
+								await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+									metadata: directoryName
+								})
+							).name
+						})
+					)
 				}
 			})
 		)
 
 		return items
+	}
+
+	public async rebuildGlobalSearchIndex(params?: {
+		onProgress?: RebuildGlobalSearchIndexProgressCallback
+		onProgressId?: string
+	}): Promise<void> {
+		let added = 0
+		let generated = 0
+
+		params?.onProgress?.({
+			type: "gettingTree",
+			generated,
+			added,
+			id: params.onProgressId
+		})
+
+		const [tree, hmacKey] = await Promise.all([
+			this.getDirectoryTree({
+				uuid: this.sdk.config.baseFolderUUID!,
+				type: "normal"
+			}),
+			this.sdk.generateHMACKey()
+		])
+
+		params?.onProgress?.({
+			type: "generatingHashes",
+			generated,
+			added,
+			id: params.onProgressId
+		})
+
+		const promises: Promise<void>[] = []
+		const items: SearchAddItem[] = []
+
+		for (const entry of Object.entries(tree)) {
+			promises.push(
+				new Promise<void>((resolve, reject) => {
+					if (entry[1].type === "directory" && entry[1].uuid === this.sdk.config.baseFolderUUID) {
+						resolve()
+
+						return
+					}
+
+					this.sdk
+						.getWorker()
+						.crypto.utils.generateSearchIndexHashes({
+							input: entry[1].name,
+							hmacKey
+						})
+						.then(hashes => {
+							items.push(
+								...hashes.map(hash => ({
+									type: entry[1].type,
+									uuid: entry[1].uuid,
+									hash
+								}))
+							)
+
+							generated += hashes.length
+
+							params?.onProgress?.({
+								type: "generatingHashes",
+								generated,
+								added,
+								id: params.onProgressId
+							})
+
+							resolve()
+						})
+						.catch(reject)
+				})
+			)
+		}
+
+		await promiseAllChunked(promises)
+
+		if (items.length === 0) {
+			return
+		}
+
+		const chunks = chunkArray(items, 10000)
+
+		if (chunks.length === 0) {
+			return
+		}
+
+		const addPromises: Promise<void>[] = []
+		const semaphore = new Semaphore(10)
+
+		params?.onProgress?.({
+			type: "adding",
+			generated,
+			added,
+			id: params.onProgressId
+		})
+
+		for (const chunk of chunks) {
+			promises.push(
+				new Promise<void>((resolve, reject) => {
+					semaphore
+						.acquire()
+						.then(() => {
+							this.sdk
+								.api(3)
+								.search()
+								.add({
+									items: chunk
+								})
+								.then(() => {
+									added += chunk.length
+
+									params?.onProgress?.({
+										type: "adding",
+										generated,
+										added,
+										id: params.onProgressId
+									})
+
+									resolve()
+								})
+								.catch(reject)
+								.finally(() => {
+									semaphore.release()
+								})
+						})
+						.catch(reject)
+				})
+			)
+		}
+
+		await promiseAllChunked(addPromises)
 	}
 }
 

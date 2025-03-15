@@ -1433,7 +1433,8 @@ export class FS {
 		abortSignal,
 		pauseSignal,
 		onProgress,
-		onProgressId
+		onProgressId,
+		encryptionKey
 	}: {
 		path: string
 		content: Buffer
@@ -1441,6 +1442,7 @@ export class FS {
 		pauseSignal?: PauseSignal
 		onProgress?: ProgressCallback
 		onProgressId?: string
+		encryptionKey?: string
 	}): Promise<CloudItem> {
 		if (environment !== "node") {
 			throw new Error(`fs.writeFile is not implemented for a ${environment} environment`)
@@ -1490,7 +1492,8 @@ export class FS {
 				abortSignal,
 				pauseSignal,
 				onProgress,
-				onProgressId
+				onProgressId,
+				encryptionKey
 			})
 
 			if (item.type === "file") {

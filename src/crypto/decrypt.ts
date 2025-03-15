@@ -1402,7 +1402,9 @@ export class Decrypt {
 			event.type === "fileVersioned" ||
 			event.type === "deleteFilePermanently"
 		) {
-			const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata })
+			const metadataDecrypted = await this.fileMetadata({
+				metadata: event.info.metadata
+			})
 
 			return {
 				...event,
@@ -1422,10 +1424,14 @@ export class Decrypt {
 							  }
 				}
 			}
-		} else if (event.type === "fileRenamed") {
+		} else if (event.type === "fileRenamed" || event.type === "fileMetadataChanged") {
 			const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
-				this.fileMetadata({ metadata: event.info.metadata }),
-				this.fileMetadata({ metadata: event.info.oldMetadata })
+				this.fileMetadata({
+					metadata: event.info.metadata
+				}),
+				this.fileMetadata({
+					metadata: event.info.oldMetadata
+				})
 			])
 
 			return {
@@ -1459,7 +1465,9 @@ export class Decrypt {
 				}
 			}
 		} else if (event.type === "fileShared") {
-			const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata })
+			const metadataDecrypted = await this.fileMetadata({
+				metadata: event.info.metadata
+			})
 
 			return {
 				...event,
@@ -1488,7 +1496,9 @@ export class Decrypt {
 			event.type === "folderColorChanged" ||
 			event.type === "deleteFolderPermanently"
 		) {
-			const nameDecrypted = await this.folderMetadata({ metadata: event.info.name })
+			const nameDecrypted = await this.folderMetadata({
+				metadata: event.info.name
+			})
 
 			return {
 				...event,
@@ -1503,7 +1513,9 @@ export class Decrypt {
 				}
 			}
 		} else if (event.type === "folderShared") {
-			const nameDecrypted = await this.folderMetadata({ metadata: event.info.name })
+			const nameDecrypted = await this.folderMetadata({
+				metadata: event.info.name
+			})
 
 			return {
 				...event,
@@ -1519,8 +1531,12 @@ export class Decrypt {
 			}
 		} else if (event.type === "itemFavorite") {
 			const [folderDecrypted, fileDecrypted] = await Promise.all([
-				this.folderMetadata({ metadata: event.info.metadata }),
-				this.fileMetadata({ metadata: event.info.metadata })
+				this.folderMetadata({
+					metadata: event.info.metadata
+				}),
+				this.fileMetadata({
+					metadata: event.info.metadata
+				})
 			])
 
 			return {
@@ -1531,10 +1547,14 @@ export class Decrypt {
 					nameDecrypted: folderDecrypted.name.length > 0 ? folderDecrypted : null
 				}
 			}
-		} else if (event.type === "folderRenamed") {
+		} else if (event.type === "folderRenamed" || event.type === "folderMetadataChanged") {
 			const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
-				this.folderMetadata({ metadata: event.info.name }),
-				this.folderMetadata({ metadata: event.info.oldName })
+				this.folderMetadata({
+					metadata: event.info.name
+				}),
+				this.folderMetadata({
+					metadata: event.info.oldName
+				})
 			])
 
 			return {

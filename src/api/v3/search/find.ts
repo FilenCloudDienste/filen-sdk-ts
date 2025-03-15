@@ -53,6 +53,7 @@ export type SearchFindItemDecrypted =
 			metadataPath: string[]
 			nameHashed: string
 			metadataDecrypted: FileMetadata
+			metadataPathDecrypted: string[]
 	  }
 	| {
 			uuid: string
@@ -67,6 +68,7 @@ export type SearchFindItemDecrypted =
 			metadataPath: string[]
 			nameHashed: string
 			metadataDecrypted: FolderMetadata
+			metadataPathDecrypted: string[]
 	  }
 
 export type SearchFindResponse = {

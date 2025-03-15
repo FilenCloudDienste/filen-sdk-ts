@@ -179,7 +179,7 @@ describe("fs", () => {
 		})
 
 		// Deleting/trashing a dir is not 100% immediate
-		await new Promise<void>(resolve => setTimeout(resolve, 5000))
+		await new Promise<void>(resolve => setTimeout(resolve, 15000))
 
 		const list = await sdk.fs().readdir({
 			path: "/ts"
