@@ -4569,6 +4569,7 @@ export class Cloud {
 			const fileSize = file.size
 			let fileChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE)
 			const lastModified = file.lastModified
+			const creation = file.lastModified
 			let bucket = DEFAULT_UPLOAD_BUCKET
 			let region = DEFAULT_UPLOAD_REGION
 			const uploadThreads = new Semaphore(MAX_UPLOAD_THREADS)
@@ -4711,6 +4712,7 @@ export class Cloud {
 							mime: mimeType,
 							key,
 							lastModified,
+							creation,
 							hash: await this.sdk.getWorker().crypto.utils.digestProgressiveSHA512Hasher(fileUUID)
 						})
 					}),

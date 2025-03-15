@@ -14,6 +14,8 @@ export type DirDownloadFile = {
 	version: FileEncryptionVersion
 	chunksSize?: number
 	timestamp?: number
+	nameHashed?: string
+	favorited?: boolean
 }
 
 export type DirDownloadFolder = {
@@ -21,6 +23,9 @@ export type DirDownloadFolder = {
 	name: string
 	parent: string | "base"
 	timestamp?: number
+	nameHashed?: string
+	favorited?: boolean
+	color?: string | null
 }
 
 export type DirDownloadResponse = {

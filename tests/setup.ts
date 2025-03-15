@@ -1,3 +1,4 @@
+import "dotenv/config"
 import { getSDK } from "./sdk"
 import crypto from "crypto"
 import { txtCompatFile } from "./constants"
@@ -48,9 +49,17 @@ export async function teardown(): Promise<void> {
 		})
 	])
 
+	const fileEncryptionVersion = process.env.FILE_ENCRYPTION_VERSION ? parseInt(process.env.FILE_ENCRYPTION_VERSION) : null
+
+	if (fileEncryptionVersion === null) {
+		throw new Error("No fileEncryptionVersion defined.")
+	}
+
 	const txtCompatFileItem = await sdk.fs().writeFile({
 		path: txtCompatFile.path,
-		content: txtCompatFile.content
+		content: txtCompatFile.content,
+		encryptionKey:
+			fileEncryptionVersion === 3 ? Buffer.from(txtCompatFile.encryptionKey, "utf-8").toString("hex") : txtCompatFile.encryptionKey
 	})
 
 	if (txtCompatFileItem.type !== "file") {
