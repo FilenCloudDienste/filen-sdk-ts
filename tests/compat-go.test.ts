@@ -1,13 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+import "dotenv/config"
 import { getSDK } from "./sdk"
 import { describe, it, expect } from "vitest"
 import { isValidHexString } from "../src/utils"
+import { txtCompatFile } from "./constants"
 
 describe("compat-go", () => {
 	it("read", async () => {
 		const sdk = await getSDK()
 
-		const [list, dirStat, bigStat, emptyStat, smallStat, bigRead, smallRead] = await Promise.all([
+		const [list, dirStat, bigStat, emptyStat, smallStat, bigRead, smallRead, txtCompatRead, txtCompatStat] = await Promise.all([
 			sdk.fs().readdir({
 				path: "/compat-go"
 			}),
@@ -28,13 +29,13 @@ describe("compat-go", () => {
 			}),
 			sdk.fs().readFile({
 				path: "/compat-go/small.txt"
-			})
-			/*sdk.fs().readFile({
+			}),
+			sdk.fs().readFile({
 				path: `/compat-go/${txtCompatFile.name}`
 			}),
 			sdk.fs().stat({
 				path: `/compat-go/${txtCompatFile.name}`
-			})*/
+			})
 		])
 
 		expect(list).toContain("dir")
@@ -54,12 +55,17 @@ describe("compat-go", () => {
 		expect(Buffer.from(smallRead).toString("utf-8")).toBe("Hello World from Go!")
 		expect(bigRead.byteLength).toBe(1024 * 1024 * 8)
 		expect(smallRead.byteLength).toBe("Hello World from Go!".length)
-		/*expect(txtCompatRead.toString("hex")).toBe(txtCompatFile.content.toString("hex"))
+
+		const fileEncryptionVersion = process.env.FILE_ENCRYPTION_VERSION ? parseInt(process.env.FILE_ENCRYPTION_VERSION) : null
+		const encryptionKey =
+			fileEncryptionVersion === 3 ? Buffer.from(txtCompatFile.encryptionKey, "utf-8").toString("hex") : txtCompatFile.encryptionKey
+
+		expect(txtCompatRead.toString("hex")).toBe(txtCompatFile.content.toString("hex"))
 		expect(txtCompatStat.isFile()).toBe(true)
 		expect(txtCompatStat.type).toBe("file")
-		expect(txtCompatStat.birthtimeMs).toBe(txtCompatFile.creation)
-		expect(txtCompatStat.mtimeMs).toBe(txtCompatFile.lastModified)
+		// expect(Math.floor(txtCompatStat.birthtimeMs / 1000)).toBe(Math.floor(txtCompatFile.creation / 1000))
+		// expect(Math.floor(txtCompatStat.mtimeMs / 1000)).toBe(Math.floor(txtCompatFile.lastModified / 1000))
 		expect(txtCompatStat.name).toBe(txtCompatFile.name)
-		expect(txtCompatStat.type === "file" ? txtCompatStat.key : "").toBe(txtCompatFile.key)*/
+		expect(txtCompatStat.type === "file" ? txtCompatStat.key : "").toBe(encryptionKey)
 	})
 })
