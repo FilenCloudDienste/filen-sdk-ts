@@ -4006,7 +4006,7 @@ export class Cloud {
 				this.sdk.generateHMACKey()
 			])
 
-			await this.sdk.getWorker().crypto.utils.createProgressiveSHA512Hasher(fileUUID)
+			await this.sdk.crypto().utils.createProgressiveSHA512Hasher(fileUUID)
 
 			try {
 				if (fileSize > 0) {
@@ -4062,7 +4062,7 @@ export class Cloud {
 										return
 									}
 
-									await this.sdk.getWorker().crypto.utils.updateProgressiveSHA512Hasher(fileUUID, chunkBuffer)
+									await this.sdk.crypto().utils.updateProgressiveSHA512Hasher(fileUUID, chunkBuffer)
 
 									const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
 										data: chunkBuffer,
@@ -4137,7 +4137,7 @@ export class Cloud {
 							key,
 							lastModified,
 							creation,
-							hash: await this.sdk.getWorker().crypto.utils.digestProgressiveSHA512Hasher(fileUUID)
+							hash: await this.sdk.crypto().utils.digestProgressiveSHA512Hasher(fileUUID)
 						})
 					}),
 					this.sdk.getWorker().crypto.utils.hashFileName({
@@ -4229,7 +4229,7 @@ export class Cloud {
 
 				return item
 			} finally {
-				await this.sdk.getWorker().crypto.utils.deleteProgressiveSHA512Hasher(fileUUID)
+				await this.sdk.crypto().utils.deleteProgressiveSHA512Hasher(fileUUID)
 			}
 		} catch (e) {
 			if (onError) {
@@ -4582,7 +4582,7 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
-			await this.sdk.getWorker().crypto.utils.createProgressiveSHA512Hasher(fileUUID)
+			await this.sdk.crypto().utils.createProgressiveSHA512Hasher(fileUUID)
 
 			try {
 				if (fileSize > 0) {
@@ -4638,7 +4638,7 @@ export class Cloud {
 										return
 									}
 
-									await this.sdk.getWorker().crypto.utils.updateProgressiveSHA512Hasher(fileUUID, chunkBuffer)
+									await this.sdk.crypto().utils.updateProgressiveSHA512Hasher(fileUUID, chunkBuffer)
 
 									const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
 										data: chunkBuffer,
@@ -4713,7 +4713,7 @@ export class Cloud {
 							key,
 							lastModified,
 							creation,
-							hash: await this.sdk.getWorker().crypto.utils.digestProgressiveSHA512Hasher(fileUUID)
+							hash: await this.sdk.crypto().utils.digestProgressiveSHA512Hasher(fileUUID)
 						})
 					}),
 					this.sdk.getWorker().crypto.utils.hashFileName({
@@ -4803,7 +4803,7 @@ export class Cloud {
 
 				return item
 			} finally {
-				await this.sdk.getWorker().crypto.utils.deleteProgressiveSHA512Hasher(fileUUID)
+				await this.sdk.crypto().utils.deleteProgressiveSHA512Hasher(fileUUID)
 			}
 		} catch (e) {
 			if (onError) {
