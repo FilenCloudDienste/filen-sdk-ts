@@ -62,6 +62,8 @@ import { type FileExistsResponse } from "../api/v3/file/exists"
 import { type DirExistsResponse } from "../api/v3/dir/exists"
 import { type SearchAddItem } from "../api/v3/search/add"
 import { type SearchFindItemDecrypted } from "../api/v3/search/find"
+import nodeCrypto from "crypto"
+import { sha512 } from "@noble/hashes/sha512"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -4006,231 +4008,227 @@ export class Cloud {
 				this.sdk.generateHMACKey()
 			])
 
-			await this.sdk.crypto().utils.createProgressiveSHA512Hasher(fileUUID)
+			const fileHasher = environment === "node" ? nodeCrypto.createHash("sha512") : sha512.create()
 
-			try {
-				if (fileSize > 0) {
-					const waitForPause = async (): Promise<void> => {
-						if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-							return
-						}
-
-						await new Promise<void>(resolve => {
-							const wait = setInterval(() => {
-								if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-									clearInterval(wait)
-
-									resolve()
-								}
-							}, 10)
-						})
+			if (fileSize > 0) {
+				const waitForPause = async (): Promise<void> => {
+					if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+						return
 					}
 
-					await new Promise<void>((resolve, reject) => {
-						let done = 0
+					await new Promise<void>(resolve => {
+						const wait = setInterval(() => {
+							if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+								clearInterval(wait)
 
-						for (let i = 0; i < fileChunks; i++) {
-							const index = i
+								resolve()
+							}
+						}, 10)
+					})
+				}
 
-							;(async () => {
-								await uploadThreads.acquire()
+				await new Promise<void>((resolve, reject) => {
+					let done = 0
 
-								try {
-									if (pauseSignal && pauseSignal.isPaused()) {
-										await waitForPause()
-									}
+					for (let i = 0; i < fileChunks; i++) {
+						const index = i
 
-									if (abortSignal && abortSignal.aborted) {
-										reject(new Error("Aborted"))
+						;(async () => {
+							await uploadThreads.acquire()
 
-										return
-									}
-
-									const chunkBuffer = await utils.readLocalFileChunk({
-										path: source,
-										offset: index * UPLOAD_CHUNK_SIZE,
-										length: UPLOAD_CHUNK_SIZE
-									})
-
-									if (pauseSignal && pauseSignal.isPaused()) {
-										await waitForPause()
-									}
-
-									if (abortSignal && abortSignal.aborted) {
-										reject(new Error("Aborted"))
-
-										return
-									}
-
-									await this.sdk.crypto().utils.updateProgressiveSHA512Hasher(fileUUID, chunkBuffer)
-
-									const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
-										data: chunkBuffer,
-										key
-									})
-
-									if (pauseSignal && pauseSignal.isPaused()) {
-										await waitForPause()
-									}
-
-									if (abortSignal && abortSignal.aborted) {
-										reject(new Error("Aborted"))
-
-										return
-									}
-
-									const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
-										uuid: fileUUID,
-										index,
-										parent,
-										uploadKey,
-										abortSignal,
-										buffer: encryptedChunkBuffer,
-										onProgress,
-										onProgressId
-									})
-
-									bucket = uploadResponse.bucket
-									region = uploadResponse.region
-
-									done += 1
-
-									uploadThreads.release()
-
-									if (done >= fileChunks) {
-										resolve()
-									}
-								} catch (e) {
-									aborted = true
-
-									uploadThreads.release()
-
-									throw e
+							try {
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
 								}
-							})().catch(err => {
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const chunkBuffer = await utils.readLocalFileChunk({
+									path: source,
+									offset: index * UPLOAD_CHUNK_SIZE,
+									length: UPLOAD_CHUNK_SIZE
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								fileHasher.update(chunkBuffer)
+
+								const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
+									data: chunkBuffer,
+									key
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
+									uuid: fileUUID,
+									index,
+									parent,
+									uploadKey,
+									abortSignal,
+									buffer: encryptedChunkBuffer,
+									onProgress,
+									onProgressId
+								})
+
+								bucket = uploadResponse.bucket
+								region = uploadResponse.region
+
+								done += 1
+
+								uploadThreads.release()
+
+								if (done >= fileChunks) {
+									resolve()
+								}
+							} catch (e) {
 								aborted = true
 
-								reject(err)
-							})
-						}
-					})
-				}
+								uploadThreads.release()
 
-				const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: fileName,
-						key
-					}),
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: mimeType,
-						key
-					}),
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: fileSize.toString(),
-						key
-					}),
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: JSON.stringify({
-							name: fileName,
-							size: fileSize,
-							mime: mimeType,
-							key,
-							lastModified,
-							creation,
-							hash: await this.sdk.crypto().utils.digestProgressiveSHA512Hasher(fileUUID)
+								throw e
+							}
+						})().catch(err => {
+							aborted = true
+
+							reject(err)
 						})
-					}),
-					this.sdk.getWorker().crypto.utils.hashFileName({
-						name: fileName,
-						authVersion: this.sdk.config.authVersion!,
-						hmacKey
-					})
-				])
-
-				const done =
-					fileSize > 0
-						? await this.sdk.api(3).upload().done({
-								uuid: fileUUID,
-								name: nameEncrypted,
-								nameHashed,
-								size: sizeEncrypted,
-								chunks: fileChunks,
-								mime: mimeEncrypted,
-								rm,
-								metadata,
-								version: FILE_ENCRYPTION_VERSION,
-								uploadKey
-						  })
-						: await this.sdk.api(3).upload().empty({
-								uuid: fileUUID,
-								name: nameEncrypted,
-								nameHashed,
-								size: sizeEncrypted,
-								mime: mimeEncrypted,
-								metadata,
-								version: FILE_ENCRYPTION_VERSION,
-								parent
-						  })
-
-				fileChunks = done.chunks
-
-				const item: CloudItem = {
-					type: "file",
-					uuid: fileUUID,
-					name: fileName,
-					size: fileSize,
-					mime: mimeType,
-					lastModified,
-					timestamp: Date.now(),
-					parent,
-					rm,
-					version: FILE_ENCRYPTION_VERSION,
-					chunks: fileChunks,
-					favorited: false,
-					key,
-					bucket,
-					region,
-					creation
-				}
-
-				await Promise.all([
-					this.checkIfItemParentIsShared({
-						type: "file",
-						parent,
-						uuid: fileUUID,
-						itemMetadata: {
-							name: fileName,
-							size: fileSize,
-							mime: mimeType,
-							lastModified,
-							creation,
-							key
-						}
-					}),
-					this.sdk
-						.api(3)
-						.search()
-						.add({
-							items: await this.generateSearchItems({
-								name: fileName,
-								type: "file",
-								uuid: fileUUID
-							})
-						})
-				])
-
-				if (onUploaded) {
-					await onUploaded.call(undefined, item)
-				}
-
-				if (onFinished) {
-					onFinished()
-				}
-
-				return item
-			} finally {
-				await this.sdk.crypto().utils.deleteProgressiveSHA512Hasher(fileUUID)
+					}
+				})
 			}
+
+			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: fileName,
+					key
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: mimeType,
+					key
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: fileSize.toString(),
+					key
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: JSON.stringify({
+						name: fileName,
+						size: fileSize,
+						mime: mimeType,
+						key,
+						lastModified,
+						creation,
+						hash: Buffer.from(fileHasher.digest()).toString("hex")
+					})
+				}),
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name: fileName,
+					authVersion: this.sdk.config.authVersion!,
+					hmacKey
+				})
+			])
+
+			const done =
+				fileSize > 0
+					? await this.sdk.api(3).upload().done({
+							uuid: fileUUID,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							chunks: fileChunks,
+							mime: mimeEncrypted,
+							rm,
+							metadata,
+							version: FILE_ENCRYPTION_VERSION,
+							uploadKey
+					  })
+					: await this.sdk.api(3).upload().empty({
+							uuid: fileUUID,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							mime: mimeEncrypted,
+							metadata,
+							version: FILE_ENCRYPTION_VERSION,
+							parent
+					  })
+
+			fileChunks = done.chunks
+
+			const item: CloudItem = {
+				type: "file",
+				uuid: fileUUID,
+				name: fileName,
+				size: fileSize,
+				mime: mimeType,
+				lastModified,
+				timestamp: Date.now(),
+				parent,
+				rm,
+				version: FILE_ENCRYPTION_VERSION,
+				chunks: fileChunks,
+				favorited: false,
+				key,
+				bucket,
+				region,
+				creation
+			}
+
+			await Promise.all([
+				this.checkIfItemParentIsShared({
+					type: "file",
+					parent,
+					uuid: fileUUID,
+					itemMetadata: {
+						name: fileName,
+						size: fileSize,
+						mime: mimeType,
+						lastModified,
+						creation,
+						key
+					}
+				}),
+				this.sdk
+					.api(3)
+					.search()
+					.add({
+						items: await this.generateSearchItems({
+							name: fileName,
+							type: "file",
+							uuid: fileUUID
+						})
+					})
+			])
+
+			if (onUploaded) {
+				await onUploaded.call(undefined, item)
+			}
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return item
 		} catch (e) {
 			if (onError) {
 				onError(e as unknown as Error)
@@ -4582,229 +4580,225 @@ export class Cloud {
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 
-			await this.sdk.crypto().utils.createProgressiveSHA512Hasher(fileUUID)
+			const fileHasher = sha512.create()
 
-			try {
-				if (fileSize > 0) {
-					const waitForPause = async (): Promise<void> => {
-						if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-							return
-						}
-
-						await new Promise<void>(resolve => {
-							const wait = setInterval(() => {
-								if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
-									clearInterval(wait)
-
-									resolve()
-								}
-							}, 10)
-						})
+			if (fileSize > 0) {
+				const waitForPause = async (): Promise<void> => {
+					if (!pauseSignal || !pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+						return
 					}
 
-					await new Promise<void>((resolve, reject) => {
-						let done = 0
+					await new Promise<void>(resolve => {
+						const wait = setInterval(() => {
+							if (!pauseSignal.isPaused() || abortSignal?.aborted || aborted) {
+								clearInterval(wait)
 
-						for (let i = 0; i < fileChunks; i++) {
-							const index = i
+								resolve()
+							}
+						}, 10)
+					})
+				}
 
-							;(async () => {
-								await uploadThreads.acquire()
+				await new Promise<void>((resolve, reject) => {
+					let done = 0
 
-								try {
-									if (pauseSignal && pauseSignal.isPaused()) {
-										await waitForPause()
-									}
+					for (let i = 0; i < fileChunks; i++) {
+						const index = i
 
-									if (abortSignal && abortSignal.aborted) {
-										reject(new Error("Aborted"))
+						;(async () => {
+							await uploadThreads.acquire()
 
-										return
-									}
-
-									const chunkBuffer = await utils.readWebFileChunk({
-										file,
-										index,
-										length: UPLOAD_CHUNK_SIZE
-									})
-
-									if (pauseSignal && pauseSignal.isPaused()) {
-										await waitForPause()
-									}
-
-									if (abortSignal && abortSignal.aborted) {
-										reject(new Error("Aborted"))
-
-										return
-									}
-
-									await this.sdk.crypto().utils.updateProgressiveSHA512Hasher(fileUUID, chunkBuffer)
-
-									const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
-										data: chunkBuffer,
-										key
-									})
-
-									if (pauseSignal && pauseSignal.isPaused()) {
-										await waitForPause()
-									}
-
-									if (abortSignal && abortSignal.aborted) {
-										reject(new Error("Aborted"))
-
-										return
-									}
-
-									const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
-										uuid: fileUUID,
-										index,
-										parent,
-										uploadKey,
-										abortSignal,
-										buffer: encryptedChunkBuffer,
-										onProgress,
-										onProgressId
-									})
-
-									bucket = uploadResponse.bucket
-									region = uploadResponse.region
-
-									done += 1
-
-									uploadThreads.release()
-
-									if (done >= fileChunks) {
-										resolve()
-									}
-								} catch (e) {
-									aborted = true
-
-									uploadThreads.release()
-
-									throw e
+							try {
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
 								}
-							})().catch(err => {
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const chunkBuffer = await utils.readWebFileChunk({
+									file,
+									index,
+									length: UPLOAD_CHUNK_SIZE
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								fileHasher.update(chunkBuffer)
+
+								const encryptedChunkBuffer = await this.sdk.getWorker().crypto.encrypt.data({
+									data: chunkBuffer,
+									key
+								})
+
+								if (pauseSignal && pauseSignal.isPaused()) {
+									await waitForPause()
+								}
+
+								if (abortSignal && abortSignal.aborted) {
+									reject(new Error("Aborted"))
+
+									return
+								}
+
+								const uploadResponse = await this.sdk.getWorker().api.v3.file.upload.chunk.buffer.fetch({
+									uuid: fileUUID,
+									index,
+									parent,
+									uploadKey,
+									abortSignal,
+									buffer: encryptedChunkBuffer,
+									onProgress,
+									onProgressId
+								})
+
+								bucket = uploadResponse.bucket
+								region = uploadResponse.region
+
+								done += 1
+
+								uploadThreads.release()
+
+								if (done >= fileChunks) {
+									resolve()
+								}
+							} catch (e) {
 								aborted = true
 
-								reject(err)
-							})
-						}
-					})
-				}
+								uploadThreads.release()
 
-				const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: fileName,
-						key
-					}),
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: mimeType,
-						key
-					}),
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: fileSize.toString(),
-						key
-					}),
-					this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: JSON.stringify({
-							name: fileName,
-							size: fileSize,
-							mime: mimeType,
-							key,
-							lastModified,
-							creation,
-							hash: await this.sdk.crypto().utils.digestProgressiveSHA512Hasher(fileUUID)
+								throw e
+							}
+						})().catch(err => {
+							aborted = true
+
+							reject(err)
 						})
-					}),
-					this.sdk.getWorker().crypto.utils.hashFileName({
-						name: fileName,
-						authVersion: this.sdk.config.authVersion!,
-						hmacKey: await this.sdk.generateHMACKey()
-					})
-				])
-
-				const done =
-					fileSize > 0
-						? await this.sdk.api(3).upload().done({
-								uuid: fileUUID,
-								name: nameEncrypted,
-								nameHashed,
-								size: sizeEncrypted,
-								chunks: fileChunks,
-								mime: mimeEncrypted,
-								rm,
-								metadata,
-								version: FILE_ENCRYPTION_VERSION,
-								uploadKey
-						  })
-						: await this.sdk.api(3).upload().empty({
-								uuid: fileUUID,
-								name: nameEncrypted,
-								nameHashed,
-								size: sizeEncrypted,
-								mime: mimeEncrypted,
-								metadata,
-								version: FILE_ENCRYPTION_VERSION,
-								parent
-						  })
-
-				fileChunks = done.chunks
-
-				const item: CloudItem = {
-					type: "file",
-					uuid: fileUUID,
-					name: fileName,
-					size: fileSize,
-					mime: mimeType,
-					lastModified,
-					timestamp: Date.now(),
-					parent,
-					rm,
-					version: FILE_ENCRYPTION_VERSION,
-					chunks: fileChunks,
-					favorited: false,
-					key,
-					bucket,
-					region
-				}
-
-				await Promise.all([
-					this.checkIfItemParentIsShared({
-						type: "file",
-						parent,
-						uuid: fileUUID,
-						itemMetadata: {
-							name: fileName,
-							size: fileSize,
-							mime: mimeType,
-							lastModified,
-							key
-						}
-					}),
-					this.sdk
-						.api(3)
-						.search()
-						.add({
-							items: await this.generateSearchItems({
-								name: fileName,
-								type: "file",
-								uuid: fileUUID
-							})
-						})
-				])
-
-				if (onUploaded) {
-					await onUploaded.call(undefined, item)
-				}
-
-				if (onFinished) {
-					onFinished()
-				}
-
-				return item
-			} finally {
-				await this.sdk.crypto().utils.deleteProgressiveSHA512Hasher(fileUUID)
+					}
+				})
 			}
+
+			const [nameEncrypted, mimeEncrypted, sizeEncrypted, metadata, nameHashed] = await Promise.all([
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: fileName,
+					key
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: mimeType,
+					key
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: fileSize.toString(),
+					key
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: JSON.stringify({
+						name: fileName,
+						size: fileSize,
+						mime: mimeType,
+						key,
+						lastModified,
+						creation,
+						hash: Buffer.from(fileHasher.digest()).toString("hex")
+					})
+				}),
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name: fileName,
+					authVersion: this.sdk.config.authVersion!,
+					hmacKey: await this.sdk.generateHMACKey()
+				})
+			])
+
+			const done =
+				fileSize > 0
+					? await this.sdk.api(3).upload().done({
+							uuid: fileUUID,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							chunks: fileChunks,
+							mime: mimeEncrypted,
+							rm,
+							metadata,
+							version: FILE_ENCRYPTION_VERSION,
+							uploadKey
+					  })
+					: await this.sdk.api(3).upload().empty({
+							uuid: fileUUID,
+							name: nameEncrypted,
+							nameHashed,
+							size: sizeEncrypted,
+							mime: mimeEncrypted,
+							metadata,
+							version: FILE_ENCRYPTION_VERSION,
+							parent
+					  })
+
+			fileChunks = done.chunks
+
+			const item: CloudItem = {
+				type: "file",
+				uuid: fileUUID,
+				name: fileName,
+				size: fileSize,
+				mime: mimeType,
+				lastModified,
+				timestamp: Date.now(),
+				parent,
+				rm,
+				version: FILE_ENCRYPTION_VERSION,
+				chunks: fileChunks,
+				favorited: false,
+				key,
+				bucket,
+				region
+			}
+
+			await Promise.all([
+				this.checkIfItemParentIsShared({
+					type: "file",
+					parent,
+					uuid: fileUUID,
+					itemMetadata: {
+						name: fileName,
+						size: fileSize,
+						mime: mimeType,
+						lastModified,
+						key
+					}
+				}),
+				this.sdk
+					.api(3)
+					.search()
+					.add({
+						items: await this.generateSearchItems({
+							name: fileName,
+							type: "file",
+							uuid: fileUUID
+						})
+					})
+			])
+
+			if (onUploaded) {
+				await onUploaded.call(undefined, item)
+			}
+
+			if (onFinished) {
+				onFinished()
+			}
+
+			return item
 		} catch (e) {
 			if (onError) {
 				onError(e as unknown as Error)

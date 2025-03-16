@@ -778,38 +778,6 @@ export function EVP_BytesToKey({
 	}
 }
 
-const progressiveSHA512Hashers: Record<string, ReturnType<typeof nodeCrypto.createHash> | ReturnType<typeof sha512.create>> = {}
-
-export async function createProgressiveSHA512Hasher(id: string): Promise<void> {
-	if (!progressiveSHA512Hashers[id]) {
-		progressiveSHA512Hashers[id] = environment === "node" ? nodeCrypto.createHash("sha512") : sha512.create()
-	}
-}
-
-export async function updateProgressiveSHA512Hasher(id: string, buffer: Buffer): Promise<void> {
-	if (!progressiveSHA512Hashers[id]) {
-		throw new Error(`Progressive hasher for id ${id} does not exist.`)
-	}
-
-	progressiveSHA512Hashers[id]!.update(buffer)
-}
-
-export async function digestProgressiveSHA512Hasher(id: string): Promise<string> {
-	if (!progressiveSHA512Hashers[id]) {
-		throw new Error(`Progressive hasher for id ${id} does not exist.`)
-	}
-
-	const result = progressiveSHA512Hashers[id]!.digest()
-
-	delete progressiveSHA512Hashers[id]
-
-	return Buffer.from(result).toString("hex")
-}
-
-export async function deleteProgressiveSHA512Hasher(id: string): Promise<void> {
-	delete progressiveSHA512Hashers[id]
-}
-
 export const utils = {
 	generateRandomString,
 	deriveKeyFromPassword,
@@ -830,10 +798,6 @@ export const utils = {
 	hashSearchIndex,
 	generateSearchIndexHashes,
 	generatePrivateKeyHMAC,
-	createProgressiveSHA512Hasher,
-	updateProgressiveSHA512Hasher,
-	digestProgressiveSHA512Hasher,
-	deleteProgressiveSHA512Hasher,
 	generateEncryptionKey
 }
 
