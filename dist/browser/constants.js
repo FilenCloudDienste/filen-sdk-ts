@@ -1,3 +1,4 @@
+import os from "os";
 export const isBrowser = (typeof window !== "undefined" && typeof window.document !== "undefined" && typeof window.navigator !== "undefined") ||
     // @ts-expect-error WorkerEnv's are not typed
     (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) ||
@@ -21,9 +22,6 @@ export const DEFAULT_UPLOAD_BUCKET = "filen-1";
 export const UPLOAD_CHUNK_SIZE = 1024 * 1024;
 export const MAX_NOTE_SIZE = 1024 * 1024 - 1;
 export const MAX_CHAT_SIZE = 1024 * 64;
-export const METADATA_CRYPTO_VERSION = 2;
-export const DATA_CRYPTO_VERSION = 2;
-export const AUTH_VERSION = 2;
 export const ANONYMOUS_SDK_CONFIG = {
     email: "anonymous@filen.io",
     password: "anonymous",
@@ -37,6 +35,12 @@ export const ANONYMOUS_SDK_CONFIG = {
     authVersion: 3,
     baseFolderUUID: "anonymous",
     userId: 1,
-    tmpPath: undefined
+    tmpPath: os.tmpdir()
 };
+export const METADATA_ENCRYPTION_VERSION = process.env.METADATA_ENCRYPTION_VERSION
+    ? parseInt(process.env.METADATA_ENCRYPTION_VERSION)
+    : 2;
+export const FILE_ENCRYPTION_VERSION = process.env.FILE_ENCRYPTION_VERSION
+    ? parseInt(process.env.FILE_ENCRYPTION_VERSION)
+    : 2;
 //# sourceMappingURL=constants.js.map

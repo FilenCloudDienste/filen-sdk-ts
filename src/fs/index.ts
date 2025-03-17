@@ -91,7 +91,6 @@ export type FSItemUUID = FSItem & { path: string }
  */
 export class FS {
 	private readonly sdk: FilenSDK
-	private readonly connectToSocket: boolean
 	public _items: FSItems
 	public _uuidToItem: Record<string, FSItemUUID>
 	private readonly socket = new Socket()
@@ -101,7 +100,6 @@ export class FS {
 
 	public constructor(params: FSConfig) {
 		this.sdk = params.sdk
-		this.connectToSocket = params.connectToSocket ?? false
 
 		this._items = {
 			"/": {

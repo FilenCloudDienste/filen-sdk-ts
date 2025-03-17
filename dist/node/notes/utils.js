@@ -3,7 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.createNotePreviewFromContentText = void 0;
+exports.utils = void 0;
+exports.createNotePreviewFromContentText = createNotePreviewFromContentText;
 const striptags_1 = __importDefault(require("striptags"));
 function createNotePreviewFromContentText({ content, type }) {
     var _a, _b;
@@ -45,7 +46,6 @@ function createNotePreviewFromContentText({ content, type }) {
         return "";
     }
 }
-exports.createNotePreviewFromContentText = createNotePreviewFromContentText;
 exports.utils = {
     createNotePreviewFromContentText
 };

@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { EventEmitter } from "events";
 import { type DirColors } from "../api/v3/dir/color";
 import { type ChatMessage } from "../api/v3/chat/messages";

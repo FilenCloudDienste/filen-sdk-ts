@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import type FilenSDK from "..";
 import { type FolderMetadata, type FileMetadata, type FileEncryptionVersion, type ProgressCallback, type Prettify } from "../types";
 import { type PauseSignal } from "../cloud/signals";
@@ -66,7 +65,6 @@ export type FSItemUUID = FSItem & {
  */
 export declare class FS {
     private readonly sdk;
-    private readonly connectToSocket;
     _items: FSItems;
     _uuidToItem: Record<string, FSItemUUID>;
     private readonly socket;
@@ -360,13 +358,14 @@ export declare class FS {
      * @param {string} param0.onProgressId
      * @returns {Promise<CloudItem>}
      */
-    writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId }: {
+    writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId, encryptionKey }: {
         path: string;
         content: Buffer;
         abortSignal?: AbortSignal;
         pauseSignal?: PauseSignal;
         onProgress?: ProgressCallback;
         onProgressId?: string;
+        encryptionKey?: string;
     }): Promise<CloudItem>;
     /**
      * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.

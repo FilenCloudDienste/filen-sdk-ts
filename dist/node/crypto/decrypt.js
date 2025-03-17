@@ -27,7 +27,6 @@ const pipelineAsync = (0, util_1.promisify)(stream_1.pipeline);
  */
 class Decrypt {
     constructor(sdk) {
-        this.textDecoder = new TextDecoder();
         this.sdk = sdk;
     }
     /**
@@ -153,7 +152,7 @@ class Decrypt {
             const decrypted = await globalThis.crypto.subtle.decrypt({
                 name: "RSA-OAEP"
             }, importedPrivateKey, Buffer.from(metadata, "base64"));
-            return this.textDecoder.decode(decrypted);
+            return Buffer.from(decrypted).toString("utf-8");
         }
         throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${constants_1.environment} environment`);
     }
@@ -835,7 +834,7 @@ class Decrypt {
                     isCBC = false;
                 }
                 if (needsConvert && !isCBC) {
-                    data = Buffer.from(this.textDecoder.decode(data), "base64");
+                    data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64");
                 }
                 if (!isCBC) {
                     // Old and deprecated, not in use anymore, just here for backwards compatibility
@@ -905,7 +904,7 @@ class Decrypt {
                     isCBC = false;
                 }
                 if (needsConvert && !isCBC) {
-                    data = Buffer.from(this.textDecoder.decode(data), "base64");
+                    data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64");
                 }
                 if (!isCBC) {
                     // Old and deprecated, not in use anymore, just here for backwards compatibility
@@ -954,6 +953,27 @@ class Decrypt {
                     mode: ["decrypt"]
                 }), encData);
                 return Buffer.from(decrypted);
+            }
+            else if (version === 3) {
+                // Version 3 requires the key to be a 32 bytes hex string (64 characters)
+                if (key.length !== 64) {
+                    throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`);
+                }
+                const iv = data.subarray(0, 12);
+                const encData = data.subarray(12);
+                const keyBuffer = Buffer.from(key, "hex");
+                const decrypted = await globalThis.crypto.subtle.decrypt({
+                    name: "AES-GCM",
+                    iv
+                }, await (0, utils_1.importRawKey)({
+                    key: keyBuffer,
+                    algorithm: "AES-GCM",
+                    mode: ["decrypt"]
+                }), encData);
+                return Buffer.from(decrypted);
+            }
+            else {
+                throw new Error(`[crypto.decrypt.data] Invalid version ${version}`);
             }
         }
         throw new Error(`crypto.decrypt.data not implemented for ${constants_1.environment} environment`);
@@ -1137,7 +1157,9 @@ class Decrypt {
             event.type === "fileLinkEdited" ||
             event.type === "fileVersioned" ||
             event.type === "deleteFilePermanently") {
-            const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata });
+            const metadataDecrypted = await this.fileMetadata({
+                metadata: event.info.metadata
+            });
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: metadataDecrypted.name.length > 0
                         ? metadataDecrypted
                         : {
@@ -1150,10 +1172,14 @@ class Decrypt {
                             mime: "application/octet-stream"
                         } }) });
         }
-        else if (event.type === "fileRenamed") {
+        else if (event.type === "fileRenamed" || event.type === "fileMetadataChanged") {
             const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
-                this.fileMetadata({ metadata: event.info.metadata }),
-                this.fileMetadata({ metadata: event.info.oldMetadata })
+                this.fileMetadata({
+                    metadata: event.info.metadata
+                }),
+                this.fileMetadata({
+                    metadata: event.info.oldMetadata
+                })
             ]);
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: decryptedMetadata.name.length > 0
                         ? decryptedMetadata
@@ -1178,7 +1204,9 @@ class Decrypt {
                         } }) });
         }
         else if (event.type === "fileShared") {
-            const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata });
+            const metadataDecrypted = await this.fileMetadata({
+                metadata: event.info.metadata
+            });
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: metadataDecrypted.name.length > 0
                         ? metadataDecrypted
                         : {
@@ -1198,7 +1226,9 @@ class Decrypt {
             event.type === "folderRestored" ||
             event.type === "folderColorChanged" ||
             event.type === "deleteFolderPermanently") {
-            const nameDecrypted = await this.folderMetadata({ metadata: event.info.name });
+            const nameDecrypted = await this.folderMetadata({
+                metadata: event.info.name
+            });
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: nameDecrypted.name.length > 0
                         ? nameDecrypted
                         : {
@@ -1206,7 +1236,9 @@ class Decrypt {
                         } }) });
         }
         else if (event.type === "folderShared") {
-            const nameDecrypted = await this.folderMetadata({ metadata: event.info.name });
+            const nameDecrypted = await this.folderMetadata({
+                metadata: event.info.name
+            });
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: nameDecrypted.name.length > 0
                         ? nameDecrypted
                         : {
@@ -1215,15 +1247,23 @@ class Decrypt {
         }
         else if (event.type === "itemFavorite") {
             const [folderDecrypted, fileDecrypted] = await Promise.all([
-                this.folderMetadata({ metadata: event.info.metadata }),
-                this.fileMetadata({ metadata: event.info.metadata })
+                this.folderMetadata({
+                    metadata: event.info.metadata
+                }),
+                this.fileMetadata({
+                    metadata: event.info.metadata
+                })
             ]);
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { metadataDecrypted: fileDecrypted.name.length > 0 ? fileDecrypted : null, nameDecrypted: folderDecrypted.name.length > 0 ? folderDecrypted : null }) });
         }
-        else if (event.type === "folderRenamed") {
+        else if (event.type === "folderRenamed" || event.type === "folderMetadataChanged") {
             const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
-                this.folderMetadata({ metadata: event.info.name }),
-                this.folderMetadata({ metadata: event.info.oldName })
+                this.folderMetadata({
+                    metadata: event.info.name
+                }),
+                this.folderMetadata({
+                    metadata: event.info.oldName
+                })
             ]);
             return Object.assign(Object.assign({}, event), { info: Object.assign(Object.assign({}, event.info), { nameDecrypted: decryptedMetadata.name.length > 0
                         ? decryptedMetadata

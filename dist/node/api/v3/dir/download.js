@@ -59,10 +59,12 @@ class DirDownload {
                         bitLength: 512,
                         returnHex: true
                     })
-                    : await this.apiClient.sdk
-                        .getWorker()
-                        .crypto.utils.hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
-                : await this.apiClient.sdk.getWorker().crypto.utils.hashFn({ input: "empty" }) }, (skipCache ? { skipCache } : {}));
+                    : await this.apiClient.sdk.getWorker().crypto.utils.hashFn({
+                        input: linkPassword.length === 0 ? "empty" : linkPassword
+                    })
+                : await this.apiClient.sdk.getWorker().crypto.utils.hashFn({
+                    input: "empty"
+                }) }, (skipCache ? { skipCache } : {}));
         const response = await this.apiClient.request({
             method: "POST",
             endpoint,

@@ -48,6 +48,14 @@ export type UserEvent = UserEventBase & ({
         oldMetadataDecrypted: FileMetadata;
     };
 } | {
+    type: "fileMetadataChanged";
+    info: UserEventInfoBase & {
+        metadata: string;
+        metadataDecrypted: FileMetadata;
+        oldMetadata: string;
+        oldMetadataDecrypted: FileMetadata;
+    };
+} | {
     type: "fileTrash";
     info: UserEventInfoBase & {
         metadata: string;
@@ -93,6 +101,14 @@ export type UserEvent = UserEventBase & ({
     };
 } | {
     type: "folderRenamed";
+    info: UserEventInfoBase & {
+        name: string;
+        nameDecrypted: FolderMetadata;
+        oldName: string;
+        oldNameDecrypted: FolderMetadata;
+    };
+} | {
+    type: "folderMetadataChanged";
     info: UserEventInfoBase & {
         name: string;
         nameDecrypted: FolderMetadata;

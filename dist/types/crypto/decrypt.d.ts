@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import type FilenSDK from "..";
 import { type FileMetadata, type FolderMetadata, type FileEncryptionVersion } from "../types";
 import { type UserEvent } from "../api/v3/user/events";
@@ -12,7 +11,6 @@ import { type UserEvent } from "../api/v3/user/events";
  */
 export declare class Decrypt {
     private readonly sdk;
-    private readonly textDecoder;
     constructor(sdk: FilenSDK);
     /**
      * Decrypt a string with the given key.

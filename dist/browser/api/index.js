@@ -150,6 +150,10 @@ import V3FilePresent from "./v3/file/present";
 import V3FileMetadata from "./v3/file/metadata";
 import V3UserGetDEK from "./v3/user/getDEK";
 import V3UserSetDEK from "./v3/user/setDEK";
+import V3UploadEmpty from "./v3/upload/empty";
+import V3SearchAdd from "./v3/search/add";
+import V3SearchFind from "./v3/search/find";
+import V3DirMetadata from "./v3/dir/metadata";
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -221,6 +225,9 @@ export class API {
                     apiClient: this.apiClient
                 }),
                 rename: new V3DirRename({
+                    apiClient: this.apiClient
+                }),
+                metadata: new V3DirMetadata({
                     apiClient: this.apiClient
                 }),
                 size: new V3DirSize({
@@ -402,6 +409,9 @@ export class API {
             },
             upload: {
                 done: new V3UploadDone({
+                    apiClient: this.apiClient
+                }),
+                empty: new V3UploadEmpty({
                     apiClient: this.apiClient
                 })
             },
@@ -691,6 +701,14 @@ export class API {
                 blockedDelete: new V3ContactsBlockedDelete({
                     apiClient: this.apiClient
                 })
+            },
+            search: {
+                add: new V3SearchAdd({
+                    apiClient: this.apiClient
+                }),
+                find: new V3SearchFind({
+                    apiClient: this.apiClient
+                })
             }
         };
     }
@@ -719,6 +737,7 @@ export class API {
                     trash: (...params) => this._v3.dir.trash.fetch(...params),
                     move: (...params) => this._v3.dir.move.fetch(...params),
                     rename: (...params) => this._v3.dir.rename.fetch(...params),
+                    metadata: (...params) => this._v3.dir.metadata.fetch(...params),
                     size: (...params) => this._v3.dir.size.fetch(...params),
                     sizeLink: (...params) => this._v3.dir.sizeLink.fetch(...params),
                     delete: () => {
@@ -825,7 +844,8 @@ export class API {
             },
             upload: () => {
                 return {
-                    done: (...params) => this._v3.upload.done.fetch(...params)
+                    done: (...params) => this._v3.upload.done.fetch(...params),
+                    empty: (...params) => this._v3.upload.empty.fetch(...params)
                 };
             },
             item: () => {
@@ -985,6 +1005,12 @@ export class API {
                     blocked: (...params) => this._v3.contacts.blocked.fetch(...params),
                     blockedAdd: (...params) => this._v3.contacts.blockedAdd.fetch(...params),
                     blockedDelete: (...params) => this._v3.contacts.blockedDelete.fetch(...params)
+                };
+            },
+            search: () => {
+                return {
+                    add: (...params) => this._v3.search.add.fetch(...params),
+                    find: (...params) => this._v3.search.find.fetch(...params)
                 };
             }
         };

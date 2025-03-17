@@ -247,7 +247,7 @@ export function getEveryPossibleDirectoryPath(path: string): string[] {
 export function simpleDate(timestamp: number): string {
 	try {
 		return new Date(convertTimestampToMs(timestamp)).toString().split(" ").slice(0, 5).join(" ")
-	} catch (e) {
+	} catch {
 		return new Date().toString().split(" ").slice(0, 5).join(" ")
 	}
 }

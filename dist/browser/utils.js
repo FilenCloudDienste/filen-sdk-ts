@@ -211,7 +211,7 @@ export function simpleDate(timestamp) {
     try {
         return new Date(convertTimestampToMs(timestamp)).toString().split(" ").slice(0, 5).join(" ");
     }
-    catch (e) {
+    catch {
         return new Date().toString().split(" ").slice(0, 5).join(" ");
     }
 }
@@ -249,7 +249,7 @@ export function fastStringHash(input) {
     return input.substring(0, 8) + xxHash32(input, 0).toString(16) + input.substring(input.length - 8, input.length);
 }
 export function realFileSize({ chunksSize, metadataDecrypted }) {
-    return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 1;
+    return metadataDecrypted.name.length > 0 ? metadataDecrypted.size : typeof chunksSize === "number" && chunksSize > 0 ? chunksSize : 0;
 }
 export async function nodeStreamToBuffer(stream) {
     const chunks = [];
@@ -257,6 +257,146 @@ export async function nodeStreamToBuffer(stream) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     }
     return Buffer.concat(chunks);
+}
+export function progressiveSplit(input) {
+    const result = [];
+    for (let i = 1; i <= input.length; i++) {
+        result.push(input.substring(0, i));
+    }
+    return result;
+}
+// eslint-disable-next-line no-useless-escape
+const WORD_SPLITTER_REGEX = /[\s\-_\.;:,]+/g;
+const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g;
+export function nameSplitter(input) {
+    if (!input || input.length === 0) {
+        return [];
+    }
+    const result = new Set();
+    const normalized = input.normalize("NFKC").toLowerCase().trim();
+    const len = normalized.length;
+    result.add(normalized);
+    // Add non-accented version for better search
+    const normalizedPlain = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    if (normalizedPlain !== normalized) {
+        result.add(normalizedPlain);
+    }
+    if (len < 3) {
+        return Array.from(result);
+    }
+    // Precompute frequently used values
+    const cleanPrefix = normalized.replace(CLEAN_PREFIX_REGEX, "");
+    const cleanLen = cleanPrefix.length;
+    // Prefix handling
+    if (cleanLen >= 3) {
+        result.add(cleanPrefix.substring(0, 3));
+        if (cleanLen >= 5) {
+            result.add(cleanPrefix.substring(0, 5));
+        }
+        if (cleanLen >= 7) {
+            result.add(cleanPrefix.substring(0, 7));
+        }
+        if (cleanLen >= 9) {
+            result.add(cleanPrefix.substring(0, 9));
+        }
+    }
+    // Number sequence extraction
+    const numberMatches = [...cleanPrefix.matchAll(/\d{3,}/g)];
+    for (const match of numberMatches) {
+        result.add(match[0]);
+    }
+    // Sliding window
+    const windowSizes = len > 15 ? [4, 5] : [4];
+    for (const windowSize of windowSizes) {
+        const stride = windowSize >>> 1; // Fast integer division by 2
+        if (len >= windowSize) {
+            const limit = len - windowSize;
+            for (let i = 0; i <= limit; i += stride) {
+                result.add(normalized.substring(i, i + windowSize)); // Fixed: added i +
+            }
+        }
+    }
+    // Word processing
+    const words = normalized.split(WORD_SPLITTER_REGEX);
+    const importantWords = [];
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (word && word.length >= 2) {
+            importantWords.push(word);
+            result.add(word);
+            if (word.length > 8) {
+                result.add(word.substring(0, 4));
+                result.add(word.substring(0, 6));
+            }
+        }
+    }
+    // Word combinations
+    const importantCount = importantWords.length;
+    if (importantCount > 1 && importantCount <= 5) {
+        for (let i = 0; i < importantCount - 1; i++) {
+            const one = importantWords[i];
+            const two = importantWords[i + 1];
+            if (one && two) {
+                result.add(one + two);
+            }
+        }
+        if (importantCount >= 3) {
+            const one = importantWords[0];
+            const two = importantWords[importantCount - 1];
+            if (one && two) {
+                result.add(one + two);
+            }
+        }
+    }
+    // Suffix handling
+    if (len >= 3) {
+        result.add(normalized.substring(len - 3));
+    }
+    if (len >= 5) {
+        result.add(normalized.substring(len - 5));
+    }
+    if (len >= 7) {
+        result.add(normalized.substring(len - 7));
+    }
+    // Extension handling
+    const dotIndex = normalized.lastIndexOf(".");
+    if (dotIndex > 0 && dotIndex < len - 1) {
+        const base = normalized.substring(0, dotIndex);
+        const ext = normalized.substring(dotIndex + 1);
+        result.add("." + ext);
+        result.add(ext);
+        if (dotIndex < 32) {
+            result.add(base);
+        }
+    }
+    return Array.from(result)
+        .filter(token => token.length >= 2)
+        .slice(0, 256);
+}
+export function isValidHexString(str) {
+    if (!/^[0-9a-fA-F]+$/.test(str)) {
+        return false;
+    }
+    return str.length % 2 === 0;
+}
+export function isValidDirectoryName(name) {
+    if (name.includes("/")) {
+        return false;
+    }
+    return true;
+}
+export function isValidFileName(name) {
+    if (name.includes("/")) {
+        return false;
+    }
+    return true;
+}
+export function chunkArray(array, chunkSize) {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+        chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
 }
 export const utils = {
     sleep,
@@ -272,7 +412,13 @@ export const utils = {
     simpleDate,
     replacePathStartWithFromAndTo,
     fastStringHash,
-    nodeStreamToBuffer
+    nodeStreamToBuffer,
+    nameSplitter,
+    isValidHexString,
+    isValidDirectoryName,
+    isValidFileName,
+    progressiveSplit,
+    chunkArray
 };
 export default utils;
 //# sourceMappingURL=utils.js.map

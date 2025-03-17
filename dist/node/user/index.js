@@ -260,7 +260,7 @@ class User {
             this.sdk.api(3).auth().info({
                 email: this.sdk.config.email
             }),
-            this.sdk.getWorker().crypto.utils.generateRandomHexString(256)
+            this.sdk.getWorker().crypto.utils.generateRandomHexString(128)
         ]);
         const [derivedCurrent, derivedNew] = await Promise.all([
             this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({

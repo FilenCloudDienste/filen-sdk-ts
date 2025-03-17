@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { type APIClient, type UploadChunkResponse } from "../../../../client";
 import { type ProgressCallback } from "../../../../../types";
 /**

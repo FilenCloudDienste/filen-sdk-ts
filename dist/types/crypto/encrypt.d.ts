@@ -1,5 +1,4 @@
-/// <reference types="node" />
-import { type FilenSDK, type FileEncryptionVersion } from "..";
+import { type FilenSDK, type FileEncryptionVersion, type MetadataEncryptionVersion } from "..";
 /**
  * Encrypt
  * @date 2/1/2024 - 2:44:28 AM
@@ -10,17 +9,36 @@ import { type FilenSDK, type FileEncryptionVersion } from "..";
  */
 export declare class Encrypt {
     private readonly sdk;
-    private readonly textEncoder;
+    /**
+     * Creates an instance of Encrypt.
+     *
+     * @constructor
+     * @public
+     * @param {FilenSDK} sdk
+     */
     constructor(sdk: FilenSDK);
-    keyLengthToVersionMetdata(key: string): number;
-    metadata({ metadata, key, derive }: {
+    /**
+     * Encrypt metadata using the user's DEK or a provided key.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		metadata: string
+     * 		key?: string
+     * 		version?: MetadataEncryptionVersion
+     * 	}} param0
+     * @param {string} param0.metadata
+     * @param {string} param0.key
+     * @param {MetadataEncryptionVersion} [param0.version=METADATA_ENCRYPTION_VERSION]
+     * @returns {Promise<string>}
+     */
+    metadata({ metadata, key, version }: {
         metadata: string;
         key?: string;
-        derive?: boolean;
+        version?: MetadataEncryptionVersion;
     }): Promise<string>;
     /**
      * Encrypts metadata using a public key.
-     * @date 2/2/2024 - 6:49:12 PM
      *
      * @public
      * @async
@@ -123,15 +141,16 @@ export declare class Encrypt {
         name: string;
         key: string;
     }): Promise<string>;
-    keyLengthToVersionData(key: string): FileEncryptionVersion;
-    data({ data, key }: {
+    data({ data, key, version }: {
         data: Buffer;
         key: string;
+        version?: FileEncryptionVersion;
     }): Promise<Buffer>;
-    dataStream({ inputFile, key, outputFile }: {
+    dataStream({ inputFile, key, outputFile, version }: {
         inputFile: string;
         key: string;
         outputFile?: string;
+        version?: FileEncryptionVersion;
     }): Promise<string>;
 }
 export default Encrypt;

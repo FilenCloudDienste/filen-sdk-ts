@@ -1,8 +1,8 @@
-import { environment, BUFFER_SIZE } from "../constants";
+import { environment, BUFFER_SIZE, METADATA_ENCRYPTION_VERSION, FILE_ENCRYPTION_VERSION } from "../constants";
 import os from "os";
 import nodeCrypto from "crypto";
 import { generateRandomString, deriveKeyFromPassword, derKeyToPem, importPublicKey, importRawKey, generateRandomBytes } from "./utils";
-import { uuidv4, normalizePath } from "../utils";
+import { uuidv4, normalizePath, isValidHexString } from "../utils";
 import pathModule from "path";
 import fs from "fs-extra";
 import { pipeline } from "stream";
@@ -18,55 +18,68 @@ const pipelineAsync = promisify(pipeline);
  */
 export class Encrypt {
     sdk;
-    textEncoder = new TextEncoder();
+    /**
+     * Creates an instance of Encrypt.
+     *
+     * @constructor
+     * @public
+     * @param {FilenSDK} sdk
+     */
     constructor(sdk) {
         this.sdk = sdk;
     }
-    keyLengthToVersionMetdata(key) {
-        // V3 keys are 64 hex chars (32 random bytes)
-        if (key.length === 64) {
-            return 3;
-        }
-        return 2;
-    }
-    async metadata({ metadata, key, derive = true }) {
+    /**
+     * Encrypt metadata using the user's DEK or a provided key.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		metadata: string
+     * 		key?: string
+     * 		version?: MetadataEncryptionVersion
+     * 	}} param0
+     * @param {string} param0.metadata
+     * @param {string} param0.key
+     * @param {MetadataEncryptionVersion} [param0.version=METADATA_ENCRYPTION_VERSION]
+     * @returns {Promise<string>}
+     */
+    async metadata({ metadata, key, version = METADATA_ENCRYPTION_VERSION }) {
         const keyToUse = key ? key : this.sdk.config.masterKeys ? this.sdk.config.masterKeys.at(-1) : undefined;
         if (!keyToUse) {
             throw new Error("crypto.encrypt.metadata no key to use.");
         }
-        const version = this.keyLengthToVersionMetdata(keyToUse);
+        // If the key provided is not a 64 char hex encoded key, we cannot use it with v3. Downgrade to v2.
+        if (version === 3 && (keyToUse.length !== 64 || !isValidHexString(keyToUse))) {
+            version = 2;
+        }
         if (version === 2) {
             const iv = await generateRandomString(12);
-            const ivBuffer = this.textEncoder.encode(iv);
+            const ivBuffer = Buffer.from(iv, "utf-8");
             if (environment === "node") {
-                const derivedKey = derive
-                    ? await deriveKeyFromPassword({
-                        password: keyToUse,
-                        salt: keyToUse,
-                        iterations: 1,
-                        hash: "sha512",
-                        bitLength: 256,
-                        returnHex: false
-                    })
-                    : this.textEncoder.encode(keyToUse);
-                const dataBuffer = this.textEncoder.encode(metadata);
+                const derivedKey = await deriveKeyFromPassword({
+                    password: keyToUse,
+                    salt: keyToUse,
+                    iterations: 1,
+                    hash: "sha512",
+                    bitLength: 256,
+                    returnHex: false
+                });
+                const dataBuffer = Buffer.from(metadata, "utf-8");
                 const cipher = nodeCrypto.createCipheriv("aes-256-gcm", derivedKey, ivBuffer);
                 const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
                 const authTag = cipher.getAuthTag();
                 return `002${iv}${Buffer.concat([encrypted, authTag]).toString("base64")}`;
             }
             else if (environment === "browser") {
-                const derivedKey = derive
-                    ? await deriveKeyFromPassword({
-                        password: keyToUse,
-                        salt: keyToUse,
-                        iterations: 1,
-                        hash: "sha512",
-                        bitLength: 256,
-                        returnHex: false
-                    })
-                    : Buffer.from(keyToUse, "utf-8");
-                const dataBuffer = this.textEncoder.encode(metadata);
+                const derivedKey = await deriveKeyFromPassword({
+                    password: keyToUse,
+                    salt: keyToUse,
+                    iterations: 1,
+                    hash: "sha512",
+                    bitLength: 256,
+                    returnHex: false
+                });
+                const dataBuffer = Buffer.from(metadata, "utf-8");
                 const encrypted = await globalThis.crypto.subtle.encrypt({
                     name: "AES-GCM",
                     iv: ivBuffer
@@ -83,17 +96,20 @@ export class Encrypt {
             }
         }
         else if (version === 3) {
+            if (keyToUse.length !== 64) {
+                throw new Error("v3 metadata encryption requires 64 char hex key.");
+            }
             const ivBuffer = await generateRandomBytes(12);
             const keyBuffer = Buffer.from(keyToUse, "hex");
             if (environment === "node") {
-                const dataBuffer = this.textEncoder.encode(metadata);
+                const dataBuffer = Buffer.from(metadata, "utf-8");
                 const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer);
                 const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()]);
                 const authTag = cipher.getAuthTag();
                 return `003${ivBuffer.toString("hex")}${Buffer.concat([encrypted, authTag]).toString("base64")}`;
             }
             else if (environment === "browser") {
-                const dataBuffer = this.textEncoder.encode(metadata);
+                const dataBuffer = Buffer.from(metadata, "utf-8");
                 const encrypted = await globalThis.crypto.subtle.encrypt({
                     name: "AES-GCM",
                     iv: ivBuffer
@@ -115,7 +131,6 @@ export class Encrypt {
     }
     /**
      * Encrypts metadata using a public key.
-     * @date 2/2/2024 - 6:49:12 PM
      *
      * @public
      * @async
@@ -133,7 +148,7 @@ export class Encrypt {
                 key: pemKey,
                 padding: nodeCrypto.constants.RSA_PKCS1_OAEP_PADDING,
                 oaepHash: "sha512"
-            }, this.textEncoder.encode(metadata));
+            }, Buffer.from(metadata, "utf-8"));
             return Buffer.from(encrypted).toString("base64");
         }
         else if (environment === "browser") {
@@ -143,7 +158,7 @@ export class Encrypt {
             });
             const encrypted = await globalThis.crypto.subtle.encrypt({
                 name: "RSA-OAEP"
-            }, importedPublicKey, this.textEncoder.encode(metadata));
+            }, importedPublicKey, Buffer.from(metadata, "utf-8"));
             return Buffer.from(encrypted).toString("base64");
         }
         throw new Error(`crypto.encrypt.metadataPublic not implemented for ${environment} environment`);
@@ -164,7 +179,9 @@ export class Encrypt {
             throw new Error("Invalid key.");
         }
         return await this.metadata({
-            metadata: JSON.stringify({ message }),
+            metadata: JSON.stringify({
+                message
+            }),
             key
         });
     }
@@ -184,7 +201,9 @@ export class Encrypt {
             throw new Error("Invalid key.");
         }
         return await this.metadata({
-            metadata: JSON.stringify({ content }),
+            metadata: JSON.stringify({
+                content
+            }),
             key
         });
     }
@@ -204,7 +223,9 @@ export class Encrypt {
             throw new Error("Invalid key.");
         }
         return await this.metadata({
-            metadata: JSON.stringify({ title }),
+            metadata: JSON.stringify({
+                title
+            }),
             key
         });
     }
@@ -245,7 +266,9 @@ export class Encrypt {
             throw new Error("Invalid key.");
         }
         return await this.metadata({
-            metadata: JSON.stringify({ name }),
+            metadata: JSON.stringify({
+                name
+            }),
             key: keyToUse
         });
     }
@@ -271,19 +294,18 @@ export class Encrypt {
             key
         });
     }
-    keyLengthToVersionData(key) {
-        // V3 keys are 64 hex chars (32 random bytes)
-        if (key.length === 64) {
-            return 3;
-        }
-        return 2;
-    }
-    async data({ data, key }) {
+    async data({ data, key, version = FILE_ENCRYPTION_VERSION }) {
         if (key.length === 0) {
             throw new Error("Invalid key.");
         }
-        const version = this.keyLengthToVersionData(key);
+        // If the key provided is not a 64 char hex encoded key, we cannot use it with v3. Downgrade to v2.
+        if (version === 3 && (key.length !== 64 || !isValidHexString(key))) {
+            version = 2;
+        }
         if (version === 2) {
+            if (key.length !== 32) {
+                throw new Error("v2 file encryption requires 32 char ascii key.");
+            }
             const iv = await generateRandomString(12);
             const ivBuffer = Buffer.from(iv, "utf-8");
             if (environment === "node") {
@@ -310,6 +332,9 @@ export class Encrypt {
             }
         }
         else if (version === 3) {
+            if (key.length !== 64) {
+                throw new Error("v3 file encryption requires 64 char hex key.");
+            }
             const ivBuffer = await generateRandomBytes(12);
             const keyBuffer = Buffer.from(key, "hex");
             if (environment === "node") {
@@ -339,7 +364,7 @@ export class Encrypt {
             throw new Error(`crypto.encrypt.data invalid version ${version}`);
         }
     }
-    async dataStream({ inputFile, key, outputFile }) {
+    async dataStream({ inputFile, key, outputFile, version = FILE_ENCRYPTION_VERSION }) {
         if (key.length === 0) {
             throw new Error("Invalid key.");
         }
@@ -357,7 +382,16 @@ export class Encrypt {
             recursive: true,
             retryDelay: 100
         });
-        const version = this.keyLengthToVersionData(key);
+        // If the key provided is not a 64 char hex encoded key, we cannot use it with v3. Downgrade to v2.
+        if (version === 3 && (key.length !== 64 || !isValidHexString(key))) {
+            version = 2;
+        }
+        if (version === 2 && key.length !== 32) {
+            throw new Error("v2 data encryption requires 32 char ascii key.");
+        }
+        if (version === 3 && key.length !== 64) {
+            throw new Error("v3 file encryption requires 64 char hex key.");
+        }
         const keyBuffer = version === 2 ? Buffer.from(key, "utf-8") : Buffer.from(key, "hex");
         const ivBuffer = version === 2 ? Buffer.from(await generateRandomString(12), "utf-8") : await generateRandomBytes(12);
         const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer);

@@ -7,3 +7,4 @@ dev/**/*
 tests/test.config.json
 tests/testfile
 .env
+docs/**/*

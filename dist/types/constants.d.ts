@@ -1,4 +1,4 @@
-import { type Environment } from "./types";
+import { type Environment, type FileEncryptionVersion, type MetadataEncryptionVersion } from "./types";
 import { type FilenSDKConfig } from ".";
 export declare const isBrowser: boolean;
 export declare const environment: Environment;
@@ -19,7 +19,6 @@ export declare const DEFAULT_UPLOAD_BUCKET = "filen-1";
 export declare const UPLOAD_CHUNK_SIZE: number;
 export declare const MAX_NOTE_SIZE: number;
 export declare const MAX_CHAT_SIZE: number;
-export declare const METADATA_CRYPTO_VERSION: number;
-export declare const DATA_CRYPTO_VERSION: number;
-export declare const AUTH_VERSION: number;
-export declare const ANONYMOUS_SDK_CONFIG: Partial<FilenSDKConfig>;
+export declare const ANONYMOUS_SDK_CONFIG: FilenSDKConfig;
+export declare const METADATA_ENCRYPTION_VERSION: MetadataEncryptionVersion;
+export declare const FILE_ENCRYPTION_VERSION: FileEncryptionVersion;

@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { type FilenSDK } from "..";
 import { type UserInfoResponse } from "../api/v3/user/info";
 import { type UserSettingsResponse } from "../api/v3/user/settings";

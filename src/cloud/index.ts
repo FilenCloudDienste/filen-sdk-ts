@@ -3327,7 +3327,6 @@ export class Cloud {
 		return new ReadableStream(
 			{
 				start(controller) {
-					// eslint-disable-next-line no-extra-semi
 					;(async () => {
 						const write = async ({ index, buffer }: { index: number; buffer: Buffer }): Promise<void> => {
 							try {
@@ -3400,7 +3399,6 @@ export class Cloud {
 								let done = firstChunkIndex
 
 								for (let index = firstChunkIndex; index < chunksToDownload; index++) {
-									// eslint-disable-next-line no-extra-semi
 									;(async () => {
 										try {
 											await waitForPull(index)

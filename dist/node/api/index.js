@@ -156,6 +156,10 @@ const present_2 = __importDefault(require("./v3/file/present"));
 const metadata_1 = __importDefault(require("./v3/file/metadata"));
 const getDEK_1 = __importDefault(require("./v3/user/getDEK"));
 const setDEK_1 = __importDefault(require("./v3/user/setDEK"));
+const empty_2 = __importDefault(require("./v3/upload/empty"));
+const add_5 = __importDefault(require("./v3/search/add"));
+const find_1 = __importDefault(require("./v3/search/find"));
+const metadata_2 = __importDefault(require("./v3/dir/metadata"));
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -224,6 +228,9 @@ class API {
                     apiClient: this.apiClient
                 }),
                 rename: new rename_4.default({
+                    apiClient: this.apiClient
+                }),
+                metadata: new metadata_2.default({
                     apiClient: this.apiClient
                 }),
                 size: new size_1.default({
@@ -405,6 +412,9 @@ class API {
             },
             upload: {
                 done: new done_1.default({
+                    apiClient: this.apiClient
+                }),
+                empty: new empty_2.default({
                     apiClient: this.apiClient
                 })
             },
@@ -694,6 +704,14 @@ class API {
                 blockedDelete: new delete_6.default({
                     apiClient: this.apiClient
                 })
+            },
+            search: {
+                add: new add_5.default({
+                    apiClient: this.apiClient
+                }),
+                find: new find_1.default({
+                    apiClient: this.apiClient
+                })
             }
         };
     }
@@ -722,6 +740,7 @@ class API {
                     trash: (...params) => this._v3.dir.trash.fetch(...params),
                     move: (...params) => this._v3.dir.move.fetch(...params),
                     rename: (...params) => this._v3.dir.rename.fetch(...params),
+                    metadata: (...params) => this._v3.dir.metadata.fetch(...params),
                     size: (...params) => this._v3.dir.size.fetch(...params),
                     sizeLink: (...params) => this._v3.dir.sizeLink.fetch(...params),
                     delete: () => {
@@ -828,7 +847,8 @@ class API {
             },
             upload: () => {
                 return {
-                    done: (...params) => this._v3.upload.done.fetch(...params)
+                    done: (...params) => this._v3.upload.done.fetch(...params),
+                    empty: (...params) => this._v3.upload.empty.fetch(...params)
                 };
             },
             item: () => {
@@ -988,6 +1008,12 @@ class API {
                     blocked: (...params) => this._v3.contacts.blocked.fetch(...params),
                     blockedAdd: (...params) => this._v3.contacts.blockedAdd.fetch(...params),
                     blockedDelete: (...params) => this._v3.contacts.blockedDelete.fetch(...params)
+                };
+            },
+            search: () => {
+                return {
+                    add: (...params) => this._v3.search.add.fetch(...params),
+                    find: (...params) => this._v3.search.find.fetch(...params)
                 };
             }
         };

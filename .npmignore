@@ -8,8 +8,12 @@ __tests__/**/*
 src/**/*
 .babelrc
 .eslintrc
+eslint.config.mjs
 .gitignore
 .npmignore
 .prettierrc
 package-lock.json
 tests/**/*
+vitest.config.test
+SECURITY.md
+.env

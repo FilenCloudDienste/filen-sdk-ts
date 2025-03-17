@@ -17,7 +17,6 @@ import writeFileAtomic from "write-file-atomic";
  */
 export class FS {
     sdk;
-    connectToSocket;
     _items;
     _uuidToItem;
     socket = new Socket();
@@ -26,7 +25,6 @@ export class FS {
     itemsMutex = new Semaphore(1);
     constructor(params) {
         this.sdk = params.sdk;
-        this.connectToSocket = params.connectToSocket ?? false;
         this._items = {
             "/": {
                 uuid: this.sdk.config.baseFolderUUID,
@@ -725,14 +723,16 @@ export class FS {
             });
             const item = this._items[from];
             if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
-                throw new ENOENT({ path: from });
+                throw new ENOENT({
+                    path: from
+                });
             }
             const currentParentPath = pathModule.posix.dirname(from);
             const newParentPath = pathModule.posix.dirname(to);
             const newBasename = pathModule.posix.basename(to);
             const oldBasename = pathModule.posix.basename(from);
             const itemMetadata = item.type === "file"
-                ? ({
+                ? {
                     name: newBasename,
                     size: item.metadata.size,
                     mime: item.metadata.mime,
@@ -744,10 +744,10 @@ export class FS {
                     region: item.metadata.region,
                     bucket: item.metadata.bucket,
                     version: item.metadata.version
-                })
-                : ({
+                }
+                : {
                     name: newBasename
-                });
+                };
             if (newParentPath === currentParentPath) {
                 if (to === "/" || newBasename.length <= 0) {
                     return;
@@ -802,26 +802,20 @@ export class FS {
                     }
                 }
                 else {
-                    await this.mkdir({
+                    const newParentUUID = await this.mkdir({
                         path: newParentPath
                     });
-                    const newParentItem = this._items[newParentPath];
-                    if (!newParentItem) {
-                        throw new ENOENT({
-                            path: newParentPath
-                        });
-                    }
                     if (item.type === "directory") {
                         await this.sdk.cloud().moveDirectory({
                             uuid,
-                            to: newParentItem.uuid,
+                            to: newParentUUID,
                             metadata: itemMetadata
                         });
                     }
                     else {
                         await this.sdk.cloud().moveFile({
                             uuid,
-                            to: newParentItem.uuid,
+                            to: newParentUUID,
                             metadata: itemMetadata
                         });
                     }
@@ -1059,6 +1053,9 @@ export class FS {
                 path
             });
         }
+        if (item.metadata.size <= 0) {
+            return Buffer.from([]);
+        }
         if (!position) {
             position = 0;
         }
@@ -1159,7 +1156,7 @@ export class FS {
      * @param {string} param0.onProgressId
      * @returns {Promise<CloudItem>}
      */
-    async writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId }) {
+    async writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId, encryptionKey }) {
         if (environment !== "node") {
             throw new Error(`fs.writeFile is not implemented for a ${environment} environment`);
         }
@@ -1176,16 +1173,9 @@ export class FS {
             parentUUID = this.sdk.config.baseFolderUUID;
         }
         else {
-            await this.mkdir({ path: parentPath });
-            const parentItemUUID = await this.pathToItemUUID({
-                path: parentPath,
-                type: "directory"
+            parentUUID = await this.mkdir({
+                path: parentPath
             });
-            const parentItem = this._items[parentPath];
-            if (!parentItemUUID || !parentItem) {
-                throw new Error(`Could not find parent for path ${path}`);
-            }
-            parentUUID = parentItem.uuid;
         }
         const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os.tmpdir();
         const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4());
@@ -1207,7 +1197,8 @@ export class FS {
                 abortSignal,
                 pauseSignal,
                 onProgress,
-                onProgressId
+                onProgressId,
+                encryptionKey
             });
             if (item.type === "file") {
                 await this.itemsMutex.acquire();
@@ -1328,7 +1319,9 @@ export class FS {
         if (environment !== "node") {
             throw new Error(`fs.upload is not implemented for a ${environment} environment`);
         }
-        path = this.normalizePath({ path });
+        path = this.normalizePath({
+            path
+        });
         source = normalizePath(source);
         const sourceStat = await fs.stat(source);
         const parentPath = pathModule.posix.dirname(path);
@@ -1341,18 +1334,9 @@ export class FS {
             parentUUID = this.sdk.config.baseFolderUUID;
         }
         else {
-            await this.mkdir({
+            parentUUID = await this.mkdir({
                 path: parentPath
             });
-            const parentItemUUID = await this.pathToItemUUID({
-                path: parentPath,
-                type: "directory"
-            });
-            const parentItem = this._items[parentPath];
-            if (!parentItemUUID || !parentItem) {
-                throw new Error(`Could not find parent for path ${path}.`);
-            }
-            parentUUID = parentItem.uuid;
         }
         if (sourceStat.isDirectory()) {
             if (overwriteDirectory) {
@@ -1483,7 +1467,9 @@ export class FS {
         });
         const item = this._items[from];
         if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
-            throw new ENOENT({ path: from });
+            throw new ENOENT({
+                path: from
+            });
         }
         const parentPath = pathModule.posix.dirname(to);
         let parentUUID = "";
@@ -1491,21 +1477,12 @@ export class FS {
             parentUUID = this.sdk.config.baseFolderUUID;
         }
         else {
-            await this.mkdir({
+            parentUUID = await this.mkdir({
                 path: parentPath
             });
-            const parentItemUUID = await this.pathToItemUUID({
-                path: parentPath,
-                type: "directory"
-            });
-            const parentItem = this._items[parentPath];
-            if (!parentItemUUID || !parentItem) {
-                throw new Error(`Could not find parent for path ${to}`);
-            }
-            parentUUID = parentItem.uuid;
         }
+        const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os.tmpdir();
         if (item.type === "directory") {
-            const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os.tmpdir();
             const baseDirectoryName = pathModule.posix.basename(from);
             if (!baseDirectoryName || baseDirectoryName.length === 0 || baseDirectoryName === ".") {
                 throw new Error("Could not parse baseDirectoryName.");
@@ -1545,10 +1522,11 @@ export class FS {
         }
         else {
             const newFileName = pathModule.posix.basename(to);
+            const tmpFilePath = normalizePath(pathModule.join(tmpDir, "filen-sdk", await uuidv4()));
             if (!newFileName || newFileName.length === 0 || newFileName === ".") {
                 throw new Error("Could not parse newFileName.");
             }
-            const tmpFilePath = await this.sdk.cloud().downloadFileToLocal({
+            await this.sdk.cloud().downloadFileToLocal({
                 uuid,
                 bucket: item.metadata.bucket,
                 region: item.metadata.region,
@@ -1559,10 +1537,11 @@ export class FS {
                 pauseSignal,
                 onProgress,
                 onProgressId,
-                size: item.metadata.size
+                size: item.metadata.size,
+                to: tmpFilePath
             });
             try {
-                const uploadedItem = await this.sdk.cloud().uploadLocalFile({
+                await this.sdk.cloud().uploadLocalFile({
                     source: tmpFilePath,
                     parent: parentUUID,
                     abortSignal,
@@ -1571,41 +1550,9 @@ export class FS {
                     onProgressId,
                     name: newFileName
                 });
-                if (uploadedItem.type === "file") {
-                    await this.itemsMutex.acquire();
-                    this._items[to] = {
-                        uuid: item.uuid,
-                        type: "file",
-                        metadata: {
-                            name: uploadedItem.name,
-                            size: uploadedItem.size,
-                            mime: uploadedItem.mime,
-                            key: uploadedItem.key,
-                            lastModified: uploadedItem.lastModified,
-                            chunks: uploadedItem.chunks,
-                            region: uploadedItem.region,
-                            bucket: uploadedItem.bucket,
-                            version: uploadedItem.version
-                        }
-                    };
-                    this._uuidToItem[item.uuid] = {
-                        uuid: item.uuid,
-                        type: "file",
-                        path: to,
-                        metadata: {
-                            name: uploadedItem.name,
-                            size: uploadedItem.size,
-                            mime: uploadedItem.mime,
-                            key: uploadedItem.key,
-                            lastModified: uploadedItem.lastModified,
-                            chunks: uploadedItem.chunks,
-                            region: uploadedItem.region,
-                            bucket: uploadedItem.bucket,
-                            version: uploadedItem.version
-                        }
-                    };
-                    this.itemsMutex.release();
-                }
+                await this.readdir({
+                    path: pathModule.posix.dirname(to)
+                });
             }
             finally {
                 await fs.rm(tmpFilePath, {

@@ -13,12 +13,17 @@ export type DirDownloadFile = {
     version: FileEncryptionVersion;
     chunksSize?: number;
     timestamp?: number;
+    nameHashed?: string;
+    favorited?: boolean;
 };
 export type DirDownloadFolder = {
     uuid: string;
     name: string;
     parent: string | "base";
     timestamp?: number;
+    nameHashed?: string;
+    favorited?: boolean;
+    color?: string | null;
 };
 export type DirDownloadResponse = {
     files: DirDownloadFile[];

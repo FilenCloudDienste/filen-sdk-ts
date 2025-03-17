@@ -3,7 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.streamEncodeBase64 = exports.streamDecodeBase64 = exports.Base64EncodeStream = exports.Base64DecodeStream = void 0;
+exports.Base64EncodeStream = exports.Base64DecodeStream = void 0;
+exports.streamDecodeBase64 = streamDecodeBase64;
+exports.streamEncodeBase64 = streamEncodeBase64;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const stream_1 = require("stream");
 const util_1 = require("util");
@@ -113,7 +115,6 @@ async function streamDecodeBase64({ inputFile, outputFile }) {
     await pipelineAsync(readStream, new Base64DecodeStream(), writeStream);
     return output;
 }
-exports.streamDecodeBase64 = streamDecodeBase64;
 /**
  * Encodes a input file to an output file in base64 using streams.
  * @date 2/10/2024 - 2:56:34 PM
@@ -144,5 +145,4 @@ async function streamEncodeBase64({ inputFile, outputFile }) {
     await pipelineAsync(readStream, new Base64EncodeStream(), writeStream);
     return output;
 }
-exports.streamEncodeBase64 = streamEncodeBase64;
 //# sourceMappingURL=base64.js.map

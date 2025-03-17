@@ -3,7 +3,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = exports.calculateChunkIndices = exports.readWebFileChunk = exports.readLocalFileChunk = void 0;
+exports.utils = void 0;
+exports.readLocalFileChunk = readLocalFileChunk;
+exports.readWebFileChunk = readWebFileChunk;
+exports.calculateChunkIndices = calculateChunkIndices;
 const utils_1 = require("../utils");
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const constants_1 = require("../constants");
@@ -57,7 +60,6 @@ function readLocalFileChunk({ path, offset, length }) {
         });
     });
 }
-exports.readLocalFileChunk = readLocalFileChunk;
 /**
  * Reads a chunk from a web-based file, such as from an <input /> field.
  * @date 2/16/2024 - 5:45:27 AM
@@ -84,7 +86,6 @@ function readWebFileChunk({ file, index, length }) {
         fileReader.readAsArrayBuffer(file.slice(offset, offset + length));
     });
 }
-exports.readWebFileChunk = readWebFileChunk;
 /**
  * Calculate the first and the last chunk of a file to fetch between startBytes and endBytes.
  * @date 3/18/2024 - 1:19:27 AM
@@ -113,7 +114,6 @@ function calculateChunkIndices({ start, end, chunks }) {
     }
     return [firstChunkIndex, lastChunkIndex];
 }
-exports.calculateChunkIndices = calculateChunkIndices;
 exports.utils = {
     readLocalFileChunk,
     readWebFileChunk,

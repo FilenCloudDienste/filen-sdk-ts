@@ -11,4 +11,6 @@ export interface ISemaphore {
  *
  * @type {new (max: number) => ISemaphore}
  */
-export declare const Semaphore: new (max: number) => ISemaphore;
+export declare const Semaphore: {
+    new (max: number): ISemaphore;
+};

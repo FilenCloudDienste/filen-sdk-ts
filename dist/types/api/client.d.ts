@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import { type ResponseType } from "axios";
 import fs from "fs-extra";
 import { type ProgressCallback } from "../types";
