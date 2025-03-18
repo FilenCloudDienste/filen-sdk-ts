@@ -19,6 +19,7 @@ jobs:
             TEST_ACC_PASS: ${{ matrix.version == 'V2' && secrets.V2_TEST_ACC_PASS || secrets.V3_TEST_ACC_PASS }}
             METADATA_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
             FILE_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
+            V2_SHARE_ACC_EMAIL: ${{ secrets.V2_SHARE_ACC_EMAIL }}
 
         steps:
             - name: Checkout code
@@ -40,3 +41,4 @@ jobs:
                   TEST_ACC_PASS: ${{ matrix.version == 'V2' && secrets.V2_TEST_ACC_PASS || secrets.V3_TEST_ACC_PASS }}
                   METADATA_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
                   FILE_ENCRYPTION_VERSION: ${{ matrix.version == 'V2' && 2 || 3 }}
+                  V2_SHARE_ACC_EMAIL: ${{ secrets.V2_SHARE_ACC_EMAIL }}

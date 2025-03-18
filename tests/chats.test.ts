@@ -35,6 +35,79 @@ describe("chats", () => {
 		expect(chats.some(chat => chat.uuid === uuid)).toBe(true)
 	})
 
+	it("create multiple participants", async () => {
+		const sdk = await getSDK()
+		const uuid = crypto.randomUUID()
+
+		const contacts = await sdk.contacts().all()
+
+		await sdk.chats().create({
+			uuid,
+			contacts
+		})
+
+		const chats = await sdk.chats().conversations()
+
+		expect(chats.some(chat => chat.uuid === uuid && chat.participants.length === contacts.length + 1)).toBe(true)
+	})
+
+	it("add participant", async () => {
+		const sdk = await getSDK()
+		const uuid = crypto.randomUUID()
+
+		await sdk.chats().create({
+			uuid
+		})
+
+		const contacts = await sdk.contacts().all()
+
+		if (contacts.length === 0) {
+			expect(true).toBe(true)
+
+			return
+		}
+
+		await sdk.chats().addParticipant({
+			conversation: uuid,
+			contact: contacts.at(0)!
+		})
+
+		const chats = await sdk.chats().conversations()
+
+		expect(chats.some(chat => chat.uuid === uuid && chat.participants.length === 2)).toBe(true)
+	})
+
+	it("remove participant", async () => {
+		const sdk = await getSDK()
+		const uuid = crypto.randomUUID()
+
+		await sdk.chats().create({
+			uuid
+		})
+
+		const contacts = await sdk.contacts().all()
+
+		if (contacts.length === 0) {
+			expect(true).toBe(true)
+
+			return
+		}
+
+		await sdk.chats().addParticipant({
+			conversation: uuid,
+			contact: contacts.at(0)!
+		})
+
+		await sdk.chats().removeParticipant({
+			conversation: uuid,
+			userId: contacts.at(0)!.userId
+		})
+
+		const chats = await sdk.chats().conversations()
+
+		expect(chats.some(chat => chat.uuid === uuid && chat.participants.length === 1)).toBe(true)
+	})
+
 	it("delete", async () => {
 		const sdk = await getSDK()
 		const uuid = crypto.randomUUID()
@@ -97,6 +170,48 @@ describe("chats", () => {
 
 		expect(chats.some(chat => chat.uuid === uuid)).toBe(true)
 		expect(messages.some(m => m.conversation === uuid && m.uuid === messageUUID && m.message === message)).toBe(true)
+	})
+
+	it("send replyTo message", async () => {
+		const sdk = await getSDK()
+		const uuid = crypto.randomUUID()
+		const message = crypto.randomBytes(16).toString("hex")
+		const messageUUID = crypto.randomUUID()
+		const replyToUUID = crypto.randomUUID()
+		const replyToMessage = crypto.randomBytes(16).toString("hex")
+
+		await sdk.chats().create({
+			uuid
+		})
+
+		await sdk.chats().sendMessage({
+			conversation: uuid,
+			uuid: messageUUID,
+			message,
+			replyTo: ""
+		})
+
+		await sdk.chats().sendMessage({
+			conversation: uuid,
+			uuid: replyToUUID,
+			message: replyToMessage,
+			replyTo: messageUUID
+		})
+
+		const [chats, messages] = await Promise.all([
+			sdk.chats().conversations(),
+			sdk.chats().messages({
+				conversation: uuid
+			})
+		])
+
+		expect(chats.some(chat => chat.uuid === uuid)).toBe(true)
+		expect(messages.some(m => m.conversation === uuid && m.uuid === messageUUID && m.message === message)).toBe(true)
+		expect(
+			messages.some(
+				m => m.conversation === uuid && m.uuid === replyToUUID && m.message === replyToMessage && m.replyTo.uuid === messageUUID
+			)
+		).toBe(true)
 	})
 
 	it("edit message", async () => {

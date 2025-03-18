@@ -16,6 +16,18 @@ export async function setup(): Promise<void> {
 	})
 
 	await sdk.cloud().emptyTrash()
+
+	if (!process.env.V2_SHARE_ACC_EMAIL) {
+		throw new Error("V2 share account email not defined.")
+	}
+
+	try {
+		await sdk.contacts().sendRequest({
+			email: process.env.V2_SHARE_ACC_EMAIL
+		})
+	} catch {
+		// Noop
+	}
 }
 
 export async function teardown(): Promise<void> {
