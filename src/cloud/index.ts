@@ -5413,6 +5413,21 @@ export class Cloud {
 		}
 	}
 
+	/**
+	 * Generate global search item hashes.
+	 *
+	 * @public
+	 * @async
+	 * @param {{
+	 * 		name: string
+	 * 		type: "file" | "directory"
+	 * 		uuid: string
+	 * 	}} param0
+	 * @param {string} param0.name
+	 * @param {("file" | "directory")} param0.type
+	 * @param {string} param0.uuid
+	 * @returns {Promise<SearchAddItem[]>}
+	 */
 	public async generateSearchItems({
 		name,
 		type,
@@ -5434,10 +5449,19 @@ export class Cloud {
 		}))
 	}
 
-	public async queryGlobalSearch({ name }: { name: string }): Promise<SearchFindItemDecrypted[]> {
+	/**
+	 * Query the global search database.
+	 *
+	 * @public
+	 * @async
+	 * @param {string} input
+	 * @returns {Promise<SearchFindItemDecrypted[]>}
+	 */
+	public async queryGlobalSearch(input: string): Promise<SearchFindItemDecrypted[]> {
+		const inputNormalized = input.trim().toLowerCase()
 		const hmacKey = await this.sdk.generateHMACKey()
 		const hashes = await this.sdk.getWorker().crypto.utils.generateSearchIndexHashes({
-			input: name,
+			input,
 			hmacKey
 		})
 
@@ -5447,16 +5471,46 @@ export class Cloud {
 			})
 		).items
 
-		const items: SearchFindItemDecrypted[] = await promiseAllChunked(
-			found.map(async item => {
-				if (item.type === "directory") {
-					return {
-						...item,
-						metadataDecrypted: await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+		const items: SearchFindItemDecrypted[] = (
+			await promiseAllChunked(
+				found.map(async item => {
+					if (item.type === "directory") {
+						const [metadataDecrypted, metadataPathDecrypted] = await Promise.all([
+							this.sdk.getWorker().crypto.decrypt.folderMetadata({
+								metadata: item.metadata
+							}),
+							promiseAllChunked(
+								item.metadataPath.map(async directoryName => {
+									if (directoryName === "default") {
+										return directoryName
+									}
+
+									return (
+										await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+											metadata: directoryName
+										})
+									).name
+								})
+							)
+						])
+
+						return {
+							...item,
+							metadataDecrypted,
+							metadataPathDecrypted
+						}
+					}
+
+					const [metadataDecrypted, metadataPathDecrypted] = await Promise.all([
+						this.sdk.getWorker().crypto.decrypt.fileMetadata({
 							metadata: item.metadata
 						}),
-						metadataPathDecrypted: await promiseAllChunked(
+						promiseAllChunked(
 							item.metadataPath.map(async directoryName => {
+								if (directoryName === "default") {
+									return directoryName
+								}
+
 								return (
 									await this.sdk.getWorker().crypto.decrypt.folderMetadata({
 										metadata: directoryName
@@ -5464,30 +5518,31 @@ export class Cloud {
 								).name
 							})
 						)
-					}
-				}
+					])
 
-				return {
-					...item,
-					metadataDecrypted: await this.sdk.getWorker().crypto.decrypt.fileMetadata({
-						metadata: item.metadata
-					}),
-					metadataPathDecrypted: await promiseAllChunked(
-						item.metadataPath.map(async directoryName => {
-							return (
-								await this.sdk.getWorker().crypto.decrypt.folderMetadata({
-									metadata: directoryName
-								})
-							).name
-						})
-					)
-				}
-			})
-		)
+					return {
+						...item,
+						metadataDecrypted,
+						metadataPathDecrypted
+					}
+				})
+			)
+		).filter(item => item.metadataDecrypted.name.trim().toLowerCase().includes(inputNormalized))
 
 		return items
 	}
 
+	/**
+	 * Completely rebuild the global search index. Can be expensive when the user stores a lot of items!
+	 *
+	 * @public
+	 * @async
+	 * @param {?{
+	 * 		onProgress?: RebuildGlobalSearchIndexProgressCallback
+	 * 		onProgressId?: string
+	 * 	}} [params]
+	 * @returns {Promise<void>}
+	 */
 	public async rebuildGlobalSearchIndex(params?: {
 		onProgress?: RebuildGlobalSearchIndexProgressCallback
 		onProgressId?: string

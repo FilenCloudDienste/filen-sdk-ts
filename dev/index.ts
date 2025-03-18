@@ -1,6 +1,3 @@
-/* eslint-disable quotes */
-/* eslint-disable no-constant-condition */
-/* eslint-disable prefer-const */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import FilenSDK, { UPLOAD_CHUNK_SIZE } from "../src"
