@@ -44,7 +44,6 @@
 		"@types/progress-stream": "^2.0.5",
 		"@types/socket.io-client": "^3.0.0",
 		"@types/uuid": "^10.0.0",
-		"@types/write-file-atomic": "^4.0.3",
 		"@typescript-eslint/eslint-plugin": "^8.26.1",
 		"@typescript-eslint/parser": "^8.26.1",
 		"eslint": "^9.22.0",
@@ -71,7 +70,6 @@
 		"progress-stream": "^2.0.0",
 		"socket.io-client": "^2.5.0",
 		"striptags": "^3.2.0",
-		"uuid": "^11.1.0",
-		"write-file-atomic": "^6.0.0"
+		"uuid": "^11.1.0"
 	}
 }
