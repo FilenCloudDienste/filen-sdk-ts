@@ -4289,7 +4289,8 @@ export class Cloud {
 		onFinished,
 		onUploaded,
 		lastModified,
-		creation
+		creation,
+		encryptionKey
 	}: {
 		source: Readable | ReadableStreamWebType
 		parent: string
@@ -4305,6 +4306,7 @@ export class Cloud {
 		onUploaded?: (item: CloudItem) => Promise<void>
 		lastModified?: number
 		creation?: number
+		encryptionKey?: string
 	}): Promise<CloudItem> {
 		if (!isValidFileName(name)) {
 			throw new Error(`"${name}" is not a valid file name.`)
@@ -4329,7 +4331,7 @@ export class Cloud {
 			let closed = false
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
-				this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
+				encryptionKey ? encryptionKey : this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
 				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
 			])
 

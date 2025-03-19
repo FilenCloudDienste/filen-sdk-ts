@@ -10,7 +10,7 @@ import os from "os"
 import { type CloudItem } from "../cloud"
 import { Socket, type SocketEvent } from "../socket"
 import { Semaphore } from "../semaphore"
-import writeFileAtomic from "write-file-atomic"
+import { Readable } from "stream"
 
 export type FSConfig = {
 	sdk: FilenSDK
@@ -1442,10 +1442,6 @@ export class FS {
 		onProgressId?: string
 		encryptionKey?: string
 	}): Promise<CloudItem> {
-		if (environment !== "node") {
-			throw new Error(`fs.writeFile is not implemented for a ${environment} environment`)
-		}
-
 		path = this.normalizePath({
 			path
 		})
@@ -1466,65 +1462,40 @@ export class FS {
 			})
 		}
 
-		const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os.tmpdir()
-		const tmpFilePath = pathModule.join(tmpDir, "filen-sdk", await uuidv4())
-
-		await fs.rm(tmpFilePath, {
-			force: true,
-			maxRetries: 60 * 10,
-			recursive: true,
-			retryDelay: 100
+		const item = await this.sdk.cloud().uploadLocalFileStream({
+			source: Readable.from(content),
+			parent: parentUUID,
+			name: fileName,
+			abortSignal,
+			pauseSignal,
+			onProgress,
+			onProgressId,
+			encryptionKey
 		})
 
-		await fs.mkdir(pathModule.join(tmpFilePath, ".."), {
-			recursive: true
-		})
+		if (item.type === "file") {
+			await this.itemsMutex.acquire()
 
-		await writeFileAtomic(tmpFilePath, content)
-
-		try {
-			const item = await this.sdk.cloud().uploadLocalFile({
-				source: tmpFilePath,
-				parent: parentUUID,
-				name: fileName,
-				abortSignal,
-				pauseSignal,
-				onProgress,
-				onProgressId,
-				encryptionKey
-			})
-
-			if (item.type === "file") {
-				await this.itemsMutex.acquire()
-
-				this._items[path] = {
-					uuid: item.uuid,
-					type: "file",
-					metadata: {
-						name: item.name,
-						size: item.size,
-						mime: item.mime,
-						key: item.key,
-						lastModified: item.lastModified,
-						chunks: item.chunks,
-						region: item.region,
-						bucket: item.bucket,
-						version: item.version
-					}
+			this._items[path] = {
+				uuid: item.uuid,
+				type: "file",
+				metadata: {
+					name: item.name,
+					size: item.size,
+					mime: item.mime,
+					key: item.key,
+					lastModified: item.lastModified,
+					chunks: item.chunks,
+					region: item.region,
+					bucket: item.bucket,
+					version: item.version
 				}
-
-				this.itemsMutex.release()
 			}
 
-			return item
-		} finally {
-			await fs.rm(tmpFilePath, {
-				force: true,
-				maxRetries: 60 * 10,
-				recursive: true,
-				retryDelay: 100
-			})
+			this.itemsMutex.release()
 		}
+
+		return item
 	}
 
 	/**
