@@ -4291,7 +4291,7 @@ export class Cloud {
 		lastModified,
 		creation
 	}: {
-		source: NodeJS.ReadableStream
+		source: Readable | ReadableStreamWebType
 		parent: string
 		name: string
 		abortSignal?: AbortSignal
@@ -4306,10 +4306,6 @@ export class Cloud {
 		lastModified?: number
 		creation?: number
 	}): Promise<CloudItem> {
-		if (environment !== "node") {
-			throw new Error(`cloud.uploadLocalFileStream is not implemented for ${environment}`)
-		}
-
 		if (!isValidFileName(name)) {
 			throw new Error(`"${name}" is not a valid file name.`)
 		}
@@ -4354,6 +4350,8 @@ export class Cloud {
 			}
 
 			const item = await new Promise<CloudItem>((resolve, reject) => {
+				const sourceStream = source instanceof Readable ? source : Readable.fromWeb(source)
+
 				const transformer = new Transform({
 					transform(chunk, _, callback) {
 						waitForPause()
@@ -4433,15 +4431,15 @@ export class Cloud {
 					closed = true
 				})
 
-				source.once("close", () => {
+				sourceStream.once("close", () => {
 					closed = true
 				})
 
-				source.once("finish", () => {
+				sourceStream.once("finish", () => {
 					closed = true
 				})
 
-				pipelineAsync(source, transformer, writeStream, {
+				pipelineAsync(sourceStream, transformer, writeStream, {
 					signal: abortSignal
 				})
 					.then(() => {
