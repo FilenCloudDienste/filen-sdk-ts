@@ -21,6 +21,7 @@ import type APIV3FileUploadChunkBuffer from "./api/v3/file/upload/chunk/buffer"
 import type APIV3FileDownloadChunkBuffer from "./api/v3/file/download/chunk/buffer"
 import TypedEventEmitter, { type Events } from "./events"
 import axios, { type AxiosInstance } from "axios"
+import Lock from "./lock"
 
 export type SDKWorker = {
 	crypto: {
@@ -86,6 +87,25 @@ export class FilenSDK {
 	public readonly events: TypedEventEmitter<Events>
 	public readonly axiosInstance: AxiosInstance
 	public hmacKey: Buffer | null = null
+
+	public readonly _locks: {
+		driveWrite: Lock
+		notesWrite: Lock
+		chatsWrite: Lock
+	} = {
+		driveWrite: new Lock({
+			sdk: this,
+			resource: "drive-write"
+		}),
+		notesWrite: new Lock({
+			sdk: this,
+			resource: "notes-write"
+		}),
+		chatsWrite: new Lock({
+			sdk: this,
+			resource: "chats-write"
+		})
+	}
 
 	/**
 	 * Creates an instance of FilenSDK.

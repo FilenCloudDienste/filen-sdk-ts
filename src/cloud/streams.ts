@@ -304,87 +304,99 @@ export class ChunkedUploadWriter extends Writable {
 
 			hash = this.hasher.digest("hex")
 
-			await this.sdk
-				.api(3)
-				.upload()
-				.done({
-					uuid: this.uuid,
-					name: await this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: this.name,
-						key: this.key
-					}),
-					nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
-						name: this.name,
-						authVersion: this.sdk.config.authVersion!,
-						hmacKey: await this.sdk.generateHMACKey()
-					}),
-					size: await this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: this.size.toString(),
-						key: this.key
-					}),
-					chunks: fileChunks,
-					mime: await this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: this.mime,
-						key: this.key
-					}),
-					version: this.version,
-					uploadKey: this.uploadKey,
-					rm: await this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
-					metadata: await this.sdk
-						.crypto()
-						.encrypt()
-						.metadata({
-							metadata: JSON.stringify({
-								name: this.name,
-								size: this.size,
-								mime: this.mime,
-								key: this.key,
-								lastModified: this.lastModified,
-								creation: this.creation,
-								hash
+			await this.sdk._locks.driveWrite.acquire()
+
+			try {
+				await this.sdk
+					.api(3)
+					.upload()
+					.done({
+						uuid: this.uuid,
+						name: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.name,
+							key: this.key
+						}),
+						nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
+							name: this.name,
+							authVersion: this.sdk.config.authVersion!,
+							hmacKey: await this.sdk.generateHMACKey()
+						}),
+						size: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.size.toString(),
+							key: this.key
+						}),
+						chunks: fileChunks,
+						mime: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.mime,
+							key: this.key
+						}),
+						version: this.version,
+						uploadKey: this.uploadKey,
+						rm: await this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
+						metadata: await this.sdk
+							.crypto()
+							.encrypt()
+							.metadata({
+								metadata: JSON.stringify({
+									name: this.name,
+									size: this.size,
+									mime: this.mime,
+									key: this.key,
+									lastModified: this.lastModified,
+									creation: this.creation,
+									hash
+								})
 							})
-						})
-				})
+					})
+			} finally {
+				await this.sdk._locks.driveWrite.release().catch(() => {})
+			}
 		} else {
-			await this.sdk
-				.api(3)
-				.upload()
-				.empty({
-					uuid: this.uuid,
-					parent: this.parent,
-					name: await this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: this.name,
-						key: this.key
-					}),
-					nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
-						name: this.name,
-						authVersion: this.sdk.config.authVersion!,
-						hmacKey: await this.sdk.generateHMACKey()
-					}),
-					size: await this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: this.size.toString(),
-						key: this.key
-					}),
-					mime: await this.sdk.getWorker().crypto.encrypt.metadata({
-						metadata: this.mime,
-						key: this.key
-					}),
-					version: this.version,
-					metadata: await this.sdk
-						.crypto()
-						.encrypt()
-						.metadata({
-							metadata: JSON.stringify({
-								name: this.name,
-								size: this.size,
-								mime: this.mime,
-								key: this.key,
-								lastModified: this.lastModified,
-								creation: this.creation,
-								hash
+			await this.sdk._locks.driveWrite.acquire()
+
+			try {
+				await this.sdk
+					.api(3)
+					.upload()
+					.empty({
+						uuid: this.uuid,
+						parent: this.parent,
+						name: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.name,
+							key: this.key
+						}),
+						nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
+							name: this.name,
+							authVersion: this.sdk.config.authVersion!,
+							hmacKey: await this.sdk.generateHMACKey()
+						}),
+						size: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.size.toString(),
+							key: this.key
+						}),
+						mime: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.mime,
+							key: this.key
+						}),
+						version: this.version,
+						metadata: await this.sdk
+							.crypto()
+							.encrypt()
+							.metadata({
+								metadata: JSON.stringify({
+									name: this.name,
+									size: this.size,
+									mime: this.mime,
+									key: this.key,
+									lastModified: this.lastModified,
+									creation: this.creation,
+									hash
+								})
 							})
-						})
-				})
+					})
+			} finally {
+				await this.sdk._locks.driveWrite.release().catch(() => {})
+			}
 		}
 
 		await Promise.all([

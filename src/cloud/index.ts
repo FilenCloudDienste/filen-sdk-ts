@@ -909,46 +909,52 @@ export class Cloud {
 			throw new Error(`"${metadata.name}" is not a valid file name.`)
 		}
 
-		const get = await this.sdk.api(3).file().get({
-			uuid
-		})
-		const exists = await this.fileExists({
-			name: metadata.name,
-			parent: get.parent
-		})
-
-		if (exists.exists && exists.uuid !== uuid) {
-			throw new Error("A file with the same name already exists in this directory.")
-		}
-
-		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFileName({
-				name: metadata.name,
-				authVersion: this.sdk.config.authVersion!,
-				hmacKey: await this.sdk.generateHMACKey()
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: JSON.stringify(metadata)
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: metadata.name,
-				key: metadata.key
-			})
-		])
+		await this.sdk._locks.driveWrite.acquire()
 
 		try {
-			await this.sdk.api(3).file().metadata({
-				uuid,
-				metadataEncrypted,
-				nameEncrypted,
-				nameHashed
+			const get = await this.sdk.api(3).file().get({
+				uuid
 			})
-		} catch (e) {
-			if (e instanceof APIError) {
-				if (e.code === "file_not_found") {
-					return
+			const exists = await this.fileExists({
+				name: metadata.name,
+				parent: get.parent
+			})
+
+			if (exists.exists && exists.uuid !== uuid) {
+				throw new Error("A file with the same name already exists in this directory.")
+			}
+
+			const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name: metadata.name,
+					authVersion: this.sdk.config.authVersion!,
+					hmacKey: await this.sdk.generateHMACKey()
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: JSON.stringify(metadata)
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: metadata.name,
+					key: metadata.key
+				})
+			])
+
+			try {
+				await this.sdk.api(3).file().metadata({
+					uuid,
+					metadataEncrypted,
+					nameEncrypted,
+					nameHashed
+				})
+			} catch (e) {
+				if (e instanceof APIError) {
+					if (e.code === "file_not_found") {
+						return
+					}
 				}
 			}
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
 
 		await Promise.all([
@@ -987,43 +993,49 @@ export class Cloud {
 			throw new Error(`"${name}" is not a valid directory name.`)
 		}
 
-		const get = await this.sdk.api(3).dir().get({
-			uuid
-		})
-		const exists = await this.directoryExists({
-			name,
-			parent: get.parent
-		})
-
-		if (exists.exists && exists.uuid !== uuid) {
-			throw new Error("A directory with the same name already exists in this directory.")
-		}
-
-		const [nameHashed, metadataEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFileName({
-				name,
-				authVersion: this.sdk.config.authVersion!,
-				hmacKey: await this.sdk.generateHMACKey()
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: JSON.stringify({
-					name
-				})
-			})
-		])
+		await this.sdk._locks.driveWrite.acquire()
 
 		try {
-			await this.sdk.api(3).dir().metadata({
-				uuid,
-				metadataEncrypted,
-				nameHashed
+			const get = await this.sdk.api(3).dir().get({
+				uuid
 			})
-		} catch (e) {
-			if (e instanceof APIError) {
-				if (e.code === "folder_not_found") {
-					return
+			const exists = await this.directoryExists({
+				name,
+				parent: get.parent
+			})
+
+			if (exists.exists && exists.uuid !== uuid) {
+				throw new Error("A directory with the same name already exists in this directory.")
+			}
+
+			const [nameHashed, metadataEncrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name,
+					authVersion: this.sdk.config.authVersion!,
+					hmacKey: await this.sdk.generateHMACKey()
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: JSON.stringify({
+						name
+					})
+				})
+			])
+
+			try {
+				await this.sdk.api(3).dir().metadata({
+					uuid,
+					metadataEncrypted,
+					nameHashed
+				})
+			} catch (e) {
+				if (e instanceof APIError) {
+					if (e.code === "folder_not_found") {
+						return
+					}
 				}
 			}
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
 
 		await Promise.all([
@@ -1082,63 +1094,69 @@ export class Cloud {
 			throw new Error("Invalid metadata key.")
 		}
 
-		const isPresent = await this.sdk.api(3).file().present({
-			uuid
-		})
-
-		if (!isPresent.present) {
-			return
-		}
-
-		const get = await this.sdk.api(3).file().get({
-			uuid
-		})
-		const exists = await this.fileExists({
-			name,
-			parent: get.parent
-		})
-
-		if (exists.exists && exists.uuid !== uuid) {
-			if (overwriteIfExists) {
-				await this.trashFile({
-					uuid: exists.uuid
-				})
-			} else {
-				throw new Error("A file with the same name already exists in this directory.")
-			}
-		}
-
-		const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFileName({
-				name,
-				authVersion: this.sdk.config.authVersion!,
-				hmacKey: await this.sdk.generateHMACKey()
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: JSON.stringify({
-					...metadata,
-					name
-				})
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: name,
-				key: metadata.key
-			})
-		])
+		await this.sdk._locks.driveWrite.acquire()
 
 		try {
-			await this.sdk.api(3).file().rename({
-				uuid,
-				metadataEncrypted,
-				nameEncrypted,
-				nameHashed
+			const isPresent = await this.sdk.api(3).file().present({
+				uuid
 			})
-		} catch (e) {
-			if (e instanceof APIError) {
-				if (e.code === "file_not_found") {
-					return
+
+			if (!isPresent.present) {
+				return
+			}
+
+			const get = await this.sdk.api(3).file().get({
+				uuid
+			})
+			const exists = await this.fileExists({
+				name,
+				parent: get.parent
+			})
+
+			if (exists.exists && exists.uuid !== uuid) {
+				if (overwriteIfExists) {
+					await this.trashFile({
+						uuid: exists.uuid
+					})
+				} else {
+					throw new Error("A file with the same name already exists in this directory.")
 				}
 			}
+
+			const [nameHashed, metadataEncrypted, nameEncrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name,
+					authVersion: this.sdk.config.authVersion!,
+					hmacKey: await this.sdk.generateHMACKey()
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: JSON.stringify({
+						...metadata,
+						name
+					})
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: name,
+					key: metadata.key
+				})
+			])
+
+			try {
+				await this.sdk.api(3).file().rename({
+					uuid,
+					metadataEncrypted,
+					nameEncrypted,
+					nameHashed
+				})
+			} catch (e) {
+				if (e instanceof APIError) {
+					if (e.code === "file_not_found") {
+						return
+					}
+				}
+			}
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
 
 		await Promise.all([
@@ -1187,57 +1205,63 @@ export class Cloud {
 			throw new Error(`"${name}" is not a valid directory name.`)
 		}
 
-		const isPresent = await this.sdk.api(3).dir().present({
-			uuid
-		})
-
-		if (!isPresent.present) {
-			return
-		}
-
-		const get = await this.sdk.api(3).dir().get({
-			uuid
-		})
-		const exists = await this.directoryExists({
-			name,
-			parent: get.parent
-		})
-
-		if (exists.exists && exists.uuid !== uuid) {
-			if (overwriteIfExists) {
-				await this.trashDirectory({
-					uuid: exists.uuid
-				})
-			} else {
-				throw new Error("A directory with the same name already exists in this directory.")
-			}
-		}
-
-		const [nameHashed, metadataEncrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.hashFileName({
-				name,
-				authVersion: this.sdk.config.authVersion!,
-				hmacKey: await this.sdk.generateHMACKey()
-			}),
-			this.sdk.getWorker().crypto.encrypt.metadata({
-				metadata: JSON.stringify({
-					name
-				})
-			})
-		])
+		await this.sdk._locks.driveWrite.acquire()
 
 		try {
-			await this.sdk.api(3).dir().rename({
-				uuid,
-				metadataEncrypted,
-				nameHashed
+			const isPresent = await this.sdk.api(3).dir().present({
+				uuid
 			})
-		} catch (e) {
-			if (e instanceof APIError) {
-				if (e.code === "folder_not_found") {
-					return
+
+			if (!isPresent.present) {
+				return
+			}
+
+			const get = await this.sdk.api(3).dir().get({
+				uuid
+			})
+			const exists = await this.directoryExists({
+				name,
+				parent: get.parent
+			})
+
+			if (exists.exists && exists.uuid !== uuid) {
+				if (overwriteIfExists) {
+					await this.trashDirectory({
+						uuid: exists.uuid
+					})
+				} else {
+					throw new Error("A directory with the same name already exists in this directory.")
 				}
 			}
+
+			const [nameHashed, metadataEncrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.utils.hashFileName({
+					name,
+					authVersion: this.sdk.config.authVersion!,
+					hmacKey: await this.sdk.generateHMACKey()
+				}),
+				this.sdk.getWorker().crypto.encrypt.metadata({
+					metadata: JSON.stringify({
+						name
+					})
+				})
+			])
+
+			try {
+				await this.sdk.api(3).dir().rename({
+					uuid,
+					metadataEncrypted,
+					nameHashed
+				})
+			} catch (e) {
+				if (e instanceof APIError) {
+					if (e.code === "folder_not_found") {
+						return
+					}
+				}
+			}
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
 
 		await Promise.all([
@@ -1288,27 +1312,33 @@ export class Cloud {
 		metadata: FileMetadata
 		overwriteIfExists?: boolean
 	}): Promise<void> {
-		const exists = await this.fileExists({
-			name: metadata.name,
-			parent: to
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		if (exists.exists) {
-			if (exists.uuid === uuid) {
-				return
+		try {
+			const exists = await this.fileExists({
+				name: metadata.name,
+				parent: to
+			})
+
+			if (exists.exists) {
+				if (exists.uuid === uuid) {
+					return
+				}
+
+				if (overwriteIfExists) {
+					await this.trashFile({
+						uuid: exists.uuid
+					})
+				}
 			}
 
-			if (overwriteIfExists) {
-				await this.trashFile({
-					uuid: exists.uuid
-				})
-			}
+			await this.sdk.api(3).file().move({
+				uuid,
+				to
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
-
-		await this.sdk.api(3).file().move({
-			uuid,
-			to
-		})
 
 		await this.checkIfItemParentIsShared({
 			type: "file",
@@ -1346,27 +1376,33 @@ export class Cloud {
 		metadata: FolderMetadata
 		overwriteIfExists?: boolean
 	}): Promise<void> {
-		const exists = await this.directoryExists({
-			name: metadata.name,
-			parent: to
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		if (exists.exists) {
-			if (exists.uuid === uuid) {
-				return
+		try {
+			const exists = await this.directoryExists({
+				name: metadata.name,
+				parent: to
+			})
+
+			if (exists.exists) {
+				if (exists.uuid === uuid) {
+					return
+				}
+
+				if (overwriteIfExists) {
+					await this.trashDirectory({
+						uuid: exists.uuid
+					})
+				}
 			}
 
-			if (overwriteIfExists) {
-				await this.trashDirectory({
-					uuid: exists.uuid
-				})
-			}
+			await this.sdk.api(3).dir().move({
+				uuid,
+				to
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
-
-		await this.sdk.api(3).dir().move({
-			uuid,
-			to
-		})
 
 		await this.checkIfItemParentIsShared({
 			type: "directory",
@@ -1387,9 +1423,15 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async trashFile({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).file().trash({
-			uuid
-		})
+		await this.sdk._locks.driveWrite.acquire()
+
+		try {
+			await this.sdk.api(3).file().trash({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -1403,9 +1445,15 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async trashDirectory({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).dir().trash({
-			uuid
-		})
+		await this.sdk._locks.driveWrite.acquire()
+
+		try {
+			await this.sdk.api(3).dir().trash({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -1440,7 +1488,7 @@ export class Cloud {
 			throw new Error(`"${name}" is not a valid directory name.`)
 		}
 
-		await this._semaphores.createDirectory.acquire()
+		await Promise.all([this._semaphores.createDirectory.acquire(), this.sdk._locks.driveWrite.acquire()])
 
 		try {
 			let uuidToUse = uuid ? uuid : await uuidv4()
@@ -1504,6 +1552,8 @@ export class Cloud {
 
 			return uuidToUse
 		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+
 			this._semaphores.createDirectory.release()
 		}
 	}
@@ -1575,9 +1625,15 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async deleteFile({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).file().delete().permanent({
-			uuid
-		})
+		await this.sdk._locks.driveWrite.acquire()
+
+		try {
+			await this.sdk.api(3).file().delete().permanent({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -1591,9 +1647,15 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async deleteDirectory({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).dir().delete().permanent({
-			uuid
-		})
+		await this.sdk._locks.driveWrite.acquire()
+
+		try {
+			await this.sdk.api(3).dir().delete().permanent({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -1607,9 +1669,15 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async restoreFile({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).file().restore({
-			uuid
-		})
+		await this.sdk._locks.driveWrite.acquire()
+
+		try {
+			await this.sdk.api(3).file().restore({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -1623,9 +1691,15 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async restoreDirectory({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).dir().restore({
-			uuid
-		})
+		await this.sdk._locks.driveWrite.acquire()
+
+		try {
+			await this.sdk.api(3).dir().restore({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -1640,22 +1714,28 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async restoreFileVersion({ uuid, currentUUID }: { uuid: string; currentUUID: string }): Promise<void> {
-		await this.sdk.api(3).file().version().restore({
-			uuid,
-			currentUUID
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		const restoredFile = await this.getFile({
-			uuid
-		})
+		try {
+			await this.sdk.api(3).file().version().restore({
+				uuid,
+				currentUUID
+			})
 
-		await this.editFileMetadata({
-			uuid,
-			metadata: {
-				...restoredFile.metadataDecrypted,
-				lastModified: Date.now()
-			}
-		})
+			const restoredFile = await this.getFile({
+				uuid
+			})
+
+			await this.editFileMetadata({
+				uuid,
+				metadata: {
+					...restoredFile.metadataDecrypted,
+					lastModified: Date.now()
+				}
+			})
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -4146,32 +4226,38 @@ export class Cloud {
 				})
 			])
 
-			const done =
-				fileSize > 0
-					? await this.sdk.api(3).upload().done({
-							uuid: fileUUID,
-							name: nameEncrypted,
-							nameHashed,
-							size: sizeEncrypted,
-							chunks: fileChunks,
-							mime: mimeEncrypted,
-							rm,
-							metadata,
-							version: FILE_ENCRYPTION_VERSION,
-							uploadKey
-					  })
-					: await this.sdk.api(3).upload().empty({
-							uuid: fileUUID,
-							name: nameEncrypted,
-							nameHashed,
-							size: sizeEncrypted,
-							mime: mimeEncrypted,
-							metadata,
-							version: FILE_ENCRYPTION_VERSION,
-							parent
-					  })
+			await this.sdk._locks.driveWrite.acquire()
 
-			fileChunks = done.chunks
+			try {
+				const done =
+					fileSize > 0
+						? await this.sdk.api(3).upload().done({
+								uuid: fileUUID,
+								name: nameEncrypted,
+								nameHashed,
+								size: sizeEncrypted,
+								chunks: fileChunks,
+								mime: mimeEncrypted,
+								rm,
+								metadata,
+								version: FILE_ENCRYPTION_VERSION,
+								uploadKey
+						  })
+						: await this.sdk.api(3).upload().empty({
+								uuid: fileUUID,
+								name: nameEncrypted,
+								nameHashed,
+								size: sizeEncrypted,
+								mime: mimeEncrypted,
+								metadata,
+								version: FILE_ENCRYPTION_VERSION,
+								parent
+						  })
+
+				fileChunks = done.chunks
+			} finally {
+				await this.sdk._locks.driveWrite.release().catch(() => {})
+			}
 
 			const item: CloudItem = {
 				type: "file",
@@ -4718,32 +4804,38 @@ export class Cloud {
 				})
 			])
 
-			const done =
-				fileSize > 0
-					? await this.sdk.api(3).upload().done({
-							uuid: fileUUID,
-							name: nameEncrypted,
-							nameHashed,
-							size: sizeEncrypted,
-							chunks: fileChunks,
-							mime: mimeEncrypted,
-							rm,
-							metadata,
-							version: FILE_ENCRYPTION_VERSION,
-							uploadKey
-					  })
-					: await this.sdk.api(3).upload().empty({
-							uuid: fileUUID,
-							name: nameEncrypted,
-							nameHashed,
-							size: sizeEncrypted,
-							mime: mimeEncrypted,
-							metadata,
-							version: FILE_ENCRYPTION_VERSION,
-							parent
-					  })
+			await this.sdk._locks.driveWrite.acquire()
 
-			fileChunks = done.chunks
+			try {
+				const done =
+					fileSize > 0
+						? await this.sdk.api(3).upload().done({
+								uuid: fileUUID,
+								name: nameEncrypted,
+								nameHashed,
+								size: sizeEncrypted,
+								chunks: fileChunks,
+								mime: mimeEncrypted,
+								rm,
+								metadata,
+								version: FILE_ENCRYPTION_VERSION,
+								uploadKey
+						  })
+						: await this.sdk.api(3).upload().empty({
+								uuid: fileUUID,
+								name: nameEncrypted,
+								nameHashed,
+								size: sizeEncrypted,
+								mime: mimeEncrypted,
+								metadata,
+								version: FILE_ENCRYPTION_VERSION,
+								parent
+						  })
+
+				fileChunks = done.chunks
+			} finally {
+				await this.sdk._locks.driveWrite.release().catch(() => {})
+			}
 
 			const item: CloudItem = {
 				type: "file",
@@ -4809,7 +4901,7 @@ export class Cloud {
 	}
 
 	/**
-	 * Upload a local file at path. Only works in a Node.JS environment.
+	 * Upload a local directory at path. Only works in a Node.JS environment.
 	 *
 	 * @public
 	 * @async
