@@ -41,8 +41,12 @@ export class Lock {
 	public async acquire(): Promise<void> {
 		await this.mutex.acquire()
 
+		let didIncrement = false
+
 		try {
 			this.acquiredCount++
+
+			didIncrement = true
 
 			if (this.acquiredCount > 1) {
 				return
@@ -54,17 +58,24 @@ export class Lock {
 				this.lockUUID = uuidv4()
 			}
 
-			await this.sdk.user().acquireResourceLock({
-				resource: this.resource,
-				lockUUID: this.lockUUID,
-				maxTries: Infinity,
-				tryTimeout: 1000
-			})
+			try {
+				await this.sdk.user().acquireResourceLock({
+					resource: this.resource,
+					lockUUID: this.lockUUID,
+					maxTries: Infinity,
+					tryTimeout: 1000
+				})
+			} catch (err) {
+				this.acquiredCount--
+
+				didIncrement = false
+
+				throw err
+			}
 
 			this.lockRefreshInterval = setInterval(async () => {
 				if (this.acquiredCount === 0 || !this.lockUUID) {
 					clearInterval(this.lockRefreshInterval)
-
 					return
 				}
 
@@ -81,6 +92,12 @@ export class Lock {
 					this.mutex.release()
 				}
 			}, 15000)
+		} catch (err) {
+			if (didIncrement) {
+				this.acquiredCount--
+			}
+
+			throw err
 		} finally {
 			this.mutex.release()
 		}
@@ -96,24 +113,33 @@ export class Lock {
 	public async release(): Promise<void> {
 		await this.mutex.acquire()
 
+		let previousCount = structuredClone(this.acquiredCount)
+
 		try {
 			if (this.acquiredCount === 0 || !this.lockUUID) {
 				return
 			}
 
-			if (--this.acquiredCount > 0) {
+			this.acquiredCount--
+
+			if (this.acquiredCount > 0) {
 				return
 			}
 
 			clearInterval(this.lockRefreshInterval)
 
-			await this.sdk.user().releaseResourceLock({
-				resource: this.resource,
-				lockUUID: this.lockUUID
-			})
+			try {
+				await this.sdk.user().releaseResourceLock({
+					resource: this.resource,
+					lockUUID: this.lockUUID
+				})
 
-			this.acquiredCount = 0
-			this.lockUUID = null
+				this.lockUUID = null
+			} catch (error) {
+				this.acquiredCount = previousCount
+
+				throw error
+			}
 		} finally {
 			this.mutex.release()
 		}
