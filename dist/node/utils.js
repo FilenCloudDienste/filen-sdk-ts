@@ -10,7 +10,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.utils = void 0;
+exports.utils = exports.CLEAN_PREFIX_REGEX = exports.WORD_SPLITTER_REGEX = void 0;
 exports.sleep = sleep;
 exports.convertTimestampToMs = convertTimestampToMs;
 exports.normalizePath = normalizePath;
@@ -313,9 +313,8 @@ function progressiveSplit(input) {
     }
     return result;
 }
-// eslint-disable-next-line no-useless-escape
-const WORD_SPLITTER_REGEX = /[\s\-_\.;:,]+/g;
-const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g;
+exports.WORD_SPLITTER_REGEX = /[\s\-_.;:,]+/g;
+exports.CLEAN_PREFIX_REGEX = /[^a-z0-9]/g;
 function nameSplitter(input) {
     if (!input || input.length === 0) {
         return [];
@@ -333,7 +332,7 @@ function nameSplitter(input) {
         return Array.from(result);
     }
     // Precompute frequently used values
-    const cleanPrefix = normalized.replace(CLEAN_PREFIX_REGEX, "");
+    const cleanPrefix = normalized.replace(exports.CLEAN_PREFIX_REGEX, "");
     const cleanLen = cleanPrefix.length;
     // Prefix handling
     if (cleanLen >= 3) {
@@ -365,7 +364,7 @@ function nameSplitter(input) {
         }
     }
     // Word processing
-    const words = normalized.split(WORD_SPLITTER_REGEX);
+    const words = normalized.split(exports.WORD_SPLITTER_REGEX);
     const importantWords = [];
     for (let i = 0; i < words.length; i++) {
         const word = words[i];
@@ -419,6 +418,13 @@ function nameSplitter(input) {
     }
     return Array.from(result)
         .filter(token => token.length >= 2)
+        .sort((a, b) => {
+        const lengthDiff = a.length - b.length;
+        if (lengthDiff !== 0) {
+            return lengthDiff;
+        }
+        return a.localeCompare(b);
+    })
         .slice(0, 256);
 }
 function isValidHexString(str) {

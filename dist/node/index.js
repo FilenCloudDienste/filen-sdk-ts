@@ -36,6 +36,7 @@ const user_1 = __importDefault(require("./user"));
 const socket_1 = __importDefault(require("./socket"));
 const events_1 = __importDefault(require("./events"));
 const axios_1 = __importDefault(require("axios"));
+const lock_1 = __importDefault(require("./lock"));
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -58,6 +59,20 @@ class FilenSDK {
         this.socket = new socket_1.default();
         this.currentWorkerWorkIndex = 0;
         this.hmacKey = null;
+        this._locks = {
+            driveWrite: new lock_1.default({
+                sdk: this,
+                resource: "drive-write"
+            }),
+            notesWrite: new lock_1.default({
+                sdk: this,
+                resource: "notes-write"
+            }),
+            chatsWrite: new lock_1.default({
+                sdk: this,
+                resource: "chats-write"
+            })
+        };
         this.utils = Object.assign(Object.assign({}, utils_1.default), { crypto: utils_2.default, streams: {
                 append: append_1.default,
                 decodeBase64: base64_1.streamDecodeBase64,

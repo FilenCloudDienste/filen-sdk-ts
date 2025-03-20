@@ -10,6 +10,8 @@ import { type FileLinkPasswordResponse } from "../api/v3/file/link/password";
 import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info";
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
+import { Readable } from "stream";
+import { type ReadableStream as ReadableStreamWebType } from "stream/web";
 import { type FileExistsResponse } from "../api/v3/file/exists";
 import { type DirExistsResponse } from "../api/v3/dir/exists";
 import { type SearchAddItem } from "../api/v3/search/add";
@@ -1176,8 +1178,8 @@ export declare class Cloud {
      * @param {number} param0.creation
      * @returns {Promise<CloudItem>}
      */
-    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation }: {
-        source: NodeJS.ReadableStream;
+    uploadLocalFileStream({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, lastModified, creation, encryptionKey }: {
+        source: Readable | ReadableStreamWebType;
         parent: string;
         name: string;
         abortSignal?: AbortSignal;
@@ -1191,6 +1193,7 @@ export declare class Cloud {
         onUploaded?: (item: CloudItem) => Promise<void>;
         lastModified?: number;
         creation?: number;
+        encryptionKey?: string;
     }): Promise<CloudItem>;
     /**
      * Upload a web-based file, such as from an <input /> field. Only works in a browser environment.
@@ -1243,7 +1246,7 @@ export declare class Cloud {
         onUploaded?: (item: CloudItem) => Promise<void>;
     }): Promise<CloudItem>;
     /**
-     * Upload a local file at path. Only works in a Node.JS environment.
+     * Upload a local directory at path. Only works in a Node.JS environment.
      *
      * @public
      * @async
@@ -1407,14 +1410,46 @@ export declare class Cloud {
     getDirectory({ uuid }: {
         uuid: string;
     }): Promise<GetDirResult>;
+    /**
+     * Generate global search item hashes.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		name: string
+     * 		type: "file" | "directory"
+     * 		uuid: string
+     * 	}} param0
+     * @param {string} param0.name
+     * @param {("file" | "directory")} param0.type
+     * @param {string} param0.uuid
+     * @returns {Promise<SearchAddItem[]>}
+     */
     generateSearchItems({ name, type, uuid }: {
         name: string;
         type: "file" | "directory";
         uuid: string;
     }): Promise<SearchAddItem[]>;
-    queryGlobalSearch({ name }: {
-        name: string;
-    }): Promise<SearchFindItemDecrypted[]>;
+    /**
+     * Query the global search database.
+     *
+     * @public
+     * @async
+     * @param {string} input
+     * @returns {Promise<SearchFindItemDecrypted[]>}
+     */
+    queryGlobalSearch(input: string): Promise<SearchFindItemDecrypted[]>;
+    /**
+     * Completely rebuild the global search index. Can be expensive when the user stores a lot of items!
+     *
+     * @public
+     * @async
+     * @param {?{
+     * 		onProgress?: RebuildGlobalSearchIndexProgressCallback
+     * 		onProgressId?: string
+     * 	}} [params]
+     * @returns {Promise<void>}
+     */
     rebuildGlobalSearchIndex(params?: {
         onProgress?: RebuildGlobalSearchIndexProgressCallback;
         onProgressId?: string;

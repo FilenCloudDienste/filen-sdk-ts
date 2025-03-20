@@ -265,9 +265,8 @@ export function progressiveSplit(input) {
     }
     return result;
 }
-// eslint-disable-next-line no-useless-escape
-const WORD_SPLITTER_REGEX = /[\s\-_\.;:,]+/g;
-const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g;
+export const WORD_SPLITTER_REGEX = /[\s\-_.;:,]+/g;
+export const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g;
 export function nameSplitter(input) {
     if (!input || input.length === 0) {
         return [];
@@ -371,6 +370,13 @@ export function nameSplitter(input) {
     }
     return Array.from(result)
         .filter(token => token.length >= 2)
+        .sort((a, b) => {
+        const lengthDiff = a.length - b.length;
+        if (lengthDiff !== 0) {
+            return lengthDiff;
+        }
+        return a.localeCompare(b);
+    })
         .slice(0, 256);
 }
 export function isValidHexString(str) {

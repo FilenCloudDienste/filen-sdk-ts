@@ -16,6 +16,7 @@ import User from "./user";
 import Socket from "./socket";
 import TypedEventEmitter from "./events";
 import axios from "axios";
+import Lock from "./lock";
 /**
  * FilenSDK
  * @date 2/1/2024 - 2:45:02 AM
@@ -40,6 +41,20 @@ export class FilenSDK {
     events;
     axiosInstance;
     hmacKey = null;
+    _locks = {
+        driveWrite: new Lock({
+            sdk: this,
+            resource: "drive-write"
+        }),
+        notesWrite: new Lock({
+            sdk: this,
+            resource: "notes-write"
+        }),
+        chatsWrite: new Lock({
+            sdk: this,
+            resource: "chats-write"
+        })
+    };
     /**
      * Creates an instance of FilenSDK.
      *

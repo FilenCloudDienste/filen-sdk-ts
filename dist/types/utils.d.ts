@@ -141,6 +141,8 @@ export declare function realFileSize({ chunksSize, metadataDecrypted }: {
 }): number;
 export declare function nodeStreamToBuffer(stream: Readable): Promise<Buffer>;
 export declare function progressiveSplit(input: string): string[];
+export declare const WORD_SPLITTER_REGEX: RegExp;
+export declare const CLEAN_PREFIX_REGEX: RegExp;
 export declare function nameSplitter(input: string): string[];
 export declare function isValidHexString(str: string): boolean;
 export declare function isValidDirectoryName(name: string): boolean;

@@ -169,19 +169,25 @@ export class Chats {
                 })
             })
         ]);
-        await this.sdk.api(3).chat().conversationsCreate({
-            uuid: uuidToUse,
-            metadata,
-            ownerMetadata
-        });
-        this._chatKeyCache.set(uuidToUse, key);
-        if (contacts) {
-            await promiseAllChunked(contacts.map(contact => this.addParticipant({
-                conversation: uuidToUse,
-                contact
-            })));
+        await this.sdk._locks.chatsWrite.acquire();
+        try {
+            await this.sdk.api(3).chat().conversationsCreate({
+                uuid: uuidToUse,
+                metadata,
+                ownerMetadata
+            });
+            this._chatKeyCache.set(uuidToUse, key);
+            if (contacts) {
+                await promiseAllChunked(contacts.map(contact => this.addParticipant({
+                    conversation: uuidToUse,
+                    contact
+                })));
+            }
+            return uuidToUse;
         }
-        return uuidToUse;
+        finally {
+            await this.sdk._locks.chatsWrite.release().catch(() => { });
+        }
     }
     /**
      * Delete a chat message.
@@ -209,9 +215,15 @@ export class Chats {
      * @returns {Promise<void>}
      */
     async delete({ conversation }) {
-        await this.sdk.api(3).chat().conversationsDelete({
-            uuid: conversation
-        });
+        await this.sdk._locks.chatsWrite.acquire();
+        try {
+            await this.sdk.api(3).chat().conversationsDelete({
+                uuid: conversation
+            });
+        }
+        finally {
+            await this.sdk._locks.chatsWrite.release().catch(() => { });
+        }
     }
     /**
      * Edit a conversation name.
@@ -232,10 +244,16 @@ export class Chats {
             name,
             key
         });
-        await this.sdk.api(3).chat().conversationsName().edit({
-            uuid: conversation,
-            name: nameEncrypted
-        });
+        await this.sdk._locks.chatsWrite.acquire();
+        try {
+            await this.sdk.api(3).chat().conversationsName().edit({
+                uuid: conversation,
+                name: nameEncrypted
+            });
+        }
+        finally {
+            await this.sdk._locks.chatsWrite.release().catch(() => { });
+        }
     }
     /**
      * Edit a chat message.
@@ -400,11 +418,17 @@ export class Chats {
             }),
             publicKey
         });
-        await this.sdk.api(3).chat().conversationsParticipants().add({
-            uuid: conversation,
-            contactUUID: contact.uuid,
-            metadata
-        });
+        await this.sdk._locks.chatsWrite.acquire();
+        try {
+            await this.sdk.api(3).chat().conversationsParticipants().add({
+                uuid: conversation,
+                contactUUID: contact.uuid,
+                metadata
+            });
+        }
+        finally {
+            await this.sdk._locks.chatsWrite.release().catch(() => { });
+        }
     }
     /**
      * Remove a participant from a chat.
@@ -418,10 +442,16 @@ export class Chats {
      * @returns {Promise<void>}
      */
     async removeParticipant({ conversation, userId }) {
-        await this.sdk.api(3).chat().conversationsParticipants().remove({
-            uuid: conversation,
-            userId
-        });
+        await this.sdk._locks.chatsWrite.acquire();
+        try {
+            await this.sdk.api(3).chat().conversationsParticipants().remove({
+                uuid: conversation,
+                userId
+            });
+        }
+        finally {
+            await this.sdk._locks.chatsWrite.release().catch(() => { });
+        }
     }
     /**
      * Mark a conversation as read.

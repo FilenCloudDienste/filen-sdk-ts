@@ -1,63 +1,104 @@
 /**
- * Basic Semaphore implementation.
- * @date 2/15/2024 - 4:52:51 AM
+ * Semaphore
  *
- * @type {new (max: number) => ISemaphore}
+ * @export
+ * @class Semaphore
+ * @typedef {Semaphore}
  */
-export const Semaphore = function (max) {
-    let counter = 0;
-    let waiting = [];
-    let maxCount = max || 1;
-    const take = function () {
-        if (waiting.length > 0 && counter < maxCount) {
-            counter++;
-            const promise = waiting.shift();
-            if (!promise) {
-                return;
-            }
-            promise.resolve();
-        }
-    };
-    this.acquire = function () {
-        if (counter < maxCount) {
-            counter++;
-            return new Promise(resolve => {
-                resolve();
-            });
+export class Semaphore {
+    counter = 0;
+    waiting = [];
+    maxCount;
+    /**
+     * Creates an instance of Semaphore.
+     *
+     * @constructor
+     * @public
+     * @param {number} [max=1]
+     */
+    constructor(max = 1) {
+        this.maxCount = max;
+    }
+    /**
+     * Acquire a lock.
+     *
+     * @public
+     * @returns {Promise<void>}
+     */
+    acquire() {
+        if (this.counter < this.maxCount) {
+            this.counter++;
+            return Promise.resolve();
         }
         else {
-            return new Promise((resolve, err) => {
-                waiting.push({
-                    resolve: resolve,
-                    err: err
+            return new Promise((resolve, reject) => {
+                this.waiting.push({
+                    resolve,
+                    reject
                 });
             });
         }
-    };
-    this.release = function () {
-        if (counter <= 0) {
+    }
+    /**
+     * Release a lock.
+     *
+     * @public
+     */
+    release() {
+        if (this.counter <= 0) {
             return;
         }
-        counter--;
-        take();
-    };
-    this.count = function () {
-        return counter;
-    };
-    this.setMax = function (newMax) {
-        maxCount = newMax;
-    };
-    this.purge = function () {
-        const unresolved = waiting.length;
-        for (let i = 0; i < unresolved; i++) {
-            const w = waiting[i];
-            if (w) {
-                w.err("Task has been purged");
+        this.counter--;
+        this.processQueue();
+    }
+    /**
+     * Returns the locks in the queue.
+     *
+     * @public
+     * @returns {number}
+     */
+    count() {
+        return this.counter;
+    }
+    /**
+     * Set max number of concurrent locks.
+     *
+     * @public
+     * @param {number} newMax
+     */
+    setMax(newMax) {
+        this.maxCount = newMax;
+        this.processQueue();
+    }
+    /**
+     * Purge all waiting promises.
+     *
+     * @public
+     * @returns {number}
+     */
+    purge() {
+        const unresolved = this.waiting.length;
+        for (const waiter of this.waiting) {
+            waiter.reject("Task has been purged");
+        }
+        this.counter = 0;
+        this.waiting = [];
+        return unresolved;
+    }
+    /**
+     * Internal process queue.
+     *
+     * @private
+     */
+    processQueue() {
+        if (this.waiting.length > 0 && this.counter < this.maxCount) {
+            this.counter++;
+            const waiter = this.waiting.shift();
+            if (waiter) {
+                waiter.resolve();
             }
         }
-        counter = 0;
-        waiting = [];
-        return unresolved;
-    };
-};
+    }
+}
+export default Semaphore;
 //# sourceMappingURL=semaphore.js.map

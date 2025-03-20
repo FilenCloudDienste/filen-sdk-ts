@@ -12,7 +12,7 @@ const utils_1 = require("../utils");
 const os_1 = __importDefault(require("os"));
 const socket_1 = require("../socket");
 const semaphore_1 = require("../semaphore");
-const write_file_atomic_1 = __importDefault(require("write-file-atomic"));
+const stream_1 = require("stream");
 /**
  * FS
  * @date 2/1/2024 - 2:44:47 AM
@@ -1140,9 +1140,6 @@ class FS {
      * @returns {Promise<CloudItem>}
      */
     async writeFile({ path, content, abortSignal, pauseSignal, onProgress, onProgressId, encryptionKey }) {
-        if (constants_1.environment !== "node") {
-            throw new Error(`fs.writeFile is not implemented for a ${constants_1.environment} environment`);
-        }
         path = this.normalizePath({
             path
         });
@@ -1160,58 +1157,36 @@ class FS {
                 path: parentPath
             });
         }
-        const tmpDir = this.sdk.config.tmpPath ? this.sdk.config.tmpPath : os_1.default.tmpdir();
-        const tmpFilePath = path_1.default.join(tmpDir, "filen-sdk", await (0, utils_1.uuidv4)());
-        await fs_extra_1.default.rm(tmpFilePath, {
-            force: true,
-            maxRetries: 60 * 10,
-            recursive: true,
-            retryDelay: 100
+        const item = await this.sdk.cloud().uploadLocalFileStream({
+            source: stream_1.Readable.from(content),
+            parent: parentUUID,
+            name: fileName,
+            abortSignal,
+            pauseSignal,
+            onProgress,
+            onProgressId,
+            encryptionKey
         });
-        await fs_extra_1.default.mkdir(path_1.default.join(tmpFilePath, ".."), {
-            recursive: true
-        });
-        await (0, write_file_atomic_1.default)(tmpFilePath, content);
-        try {
-            const item = await this.sdk.cloud().uploadLocalFile({
-                source: tmpFilePath,
-                parent: parentUUID,
-                name: fileName,
-                abortSignal,
-                pauseSignal,
-                onProgress,
-                onProgressId,
-                encryptionKey
-            });
-            if (item.type === "file") {
-                await this.itemsMutex.acquire();
-                this._items[path] = {
-                    uuid: item.uuid,
-                    type: "file",
-                    metadata: {
-                        name: item.name,
-                        size: item.size,
-                        mime: item.mime,
-                        key: item.key,
-                        lastModified: item.lastModified,
-                        chunks: item.chunks,
-                        region: item.region,
-                        bucket: item.bucket,
-                        version: item.version
-                    }
-                };
-                this.itemsMutex.release();
-            }
-            return item;
+        if (item.type === "file") {
+            await this.itemsMutex.acquire();
+            this._items[path] = {
+                uuid: item.uuid,
+                type: "file",
+                metadata: {
+                    name: item.name,
+                    size: item.size,
+                    mime: item.mime,
+                    key: item.key,
+                    lastModified: item.lastModified,
+                    chunks: item.chunks,
+                    region: item.region,
+                    bucket: item.bucket,
+                    version: item.version
+                }
+            };
+            this.itemsMutex.release();
         }
-        finally {
-            await fs_extra_1.default.rm(tmpFilePath, {
-                force: true,
-                maxRetries: 60 * 10,
-                recursive: true,
-                retryDelay: 100
-            });
-        }
+        return item;
     }
     /**
      * Download a file or directory from path to a local destination path. Only available in a Node.JS environment.
