@@ -113,7 +113,7 @@ export class Lock {
 	public async release(): Promise<void> {
 		await this.mutex.acquire()
 
-		let previousCount = structuredClone(this.acquiredCount)
+		const previousCount = structuredClone(this.acquiredCount)
 
 		try {
 			if (this.acquiredCount === 0 || !this.lockUUID) {

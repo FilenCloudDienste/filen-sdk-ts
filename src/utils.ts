@@ -317,9 +317,8 @@ export function progressiveSplit(input: string): string[] {
 	return result
 }
 
-// eslint-disable-next-line no-useless-escape
-const WORD_SPLITTER_REGEX = /[\s\-_\.;:,]+/g
-const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g
+export const WORD_SPLITTER_REGEX = /[\s\-_.;:,]+/g
+export const CLEAN_PREFIX_REGEX = /[^a-z0-9]/g
 
 export function nameSplitter(input: string): string[] {
 	if (!input || input.length === 0) {
