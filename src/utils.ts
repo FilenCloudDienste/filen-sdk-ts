@@ -455,6 +455,15 @@ export function nameSplitter(input: string): string[] {
 
 	return Array.from(result)
 		.filter(token => token.length >= 2)
+		.sort((a, b) => {
+			const lengthDiff = a.length - b.length
+
+			if (lengthDiff !== 0) {
+				return lengthDiff
+			}
+
+			return a.localeCompare(b)
+		})
 		.slice(0, 256)
 }
 
