@@ -1,5 +1,5 @@
 import type APIClient from "../../client"
-import type { NoteType } from "../notes"
+import { type NoteType } from "../notes"
 
 export type NoteHistory = {
 	id: number

@@ -1,5 +1,5 @@
 import type APIClient from "../../../client";
-import type { DirColors } from "../color";
+import { type DirColors } from "../color";
 import { type FileMetadata, type FolderMetadata } from "../../../../types";
 export type DirLinkContentResponse = {
     folders: {

@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import { type FileMetadata } from "./types";
 import { type Readable } from "stream";
 /**
@@ -142,6 +140,12 @@ export declare function realFileSize({ chunksSize, metadataDecrypted }: {
     metadataDecrypted: FileMetadata;
 }): number;
 export declare function nodeStreamToBuffer(stream: Readable): Promise<Buffer>;
+export declare function progressiveSplit(input: string): string[];
+export declare function nameSplitter(input: string): string[];
+export declare function isValidHexString(str: string): boolean;
+export declare function isValidDirectoryName(name: string): boolean;
+export declare function isValidFileName(name: string): boolean;
+export declare function chunkArray<T>(array: T[], chunkSize: number): T[][];
 export declare const utils: {
     sleep: typeof sleep;
     convertTimestampToMs: typeof convertTimestampToMs;
@@ -157,5 +161,11 @@ export declare const utils: {
     replacePathStartWithFromAndTo: typeof replacePathStartWithFromAndTo;
     fastStringHash: typeof fastStringHash;
     nodeStreamToBuffer: typeof nodeStreamToBuffer;
+    nameSplitter: typeof nameSplitter;
+    isValidHexString: typeof isValidHexString;
+    isValidDirectoryName: typeof isValidDirectoryName;
+    isValidFileName: typeof isValidFileName;
+    progressiveSplit: typeof progressiveSplit;
+    chunkArray: typeof chunkArray;
 };
 export default utils;

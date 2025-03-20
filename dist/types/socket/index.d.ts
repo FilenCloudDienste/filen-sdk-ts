@@ -1,9 +1,8 @@
-/// <reference types="node" />
 import { EventEmitter } from "events";
-import type { DirColors } from "../api/v3/dir/color";
-import type { ChatMessage } from "../api/v3/chat/messages";
-import type { NoteParticipant, NoteType } from "../api/v3/notes";
-import type { ChatTypingType } from "../api/v3/chat/typing";
+import { type DirColors } from "../api/v3/dir/color";
+import { type ChatMessage } from "../api/v3/chat/messages";
+import { type NoteParticipant, type NoteType } from "../api/v3/notes";
+import { type ChatTypingType } from "../api/v3/chat/typing";
 export declare const SOCKET_DEFAULTS: {
     url: string;
 };

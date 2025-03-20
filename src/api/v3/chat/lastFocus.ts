@@ -1,5 +1,5 @@
 import type APIClient from "../../client"
-import type { ChatLastFocusValues } from "./lastFocusUpdate"
+import { type ChatLastFocusValues } from "./lastFocusUpdate"
 
 /**
  * ChatLastFocus

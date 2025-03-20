@@ -1,4 +1,3 @@
-/// <reference types="node" />
 /**
  * Reads a chunk from a local file.
  * @date 2/16/2024 - 5:45:19 AM

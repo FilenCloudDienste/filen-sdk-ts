@@ -1,5 +1,5 @@
 import type APIClient from "../../../client"
-import type { ContactRequest } from "./in"
+import { type ContactRequest } from "./in"
 
 export type ContactsRequestsOutResponse = ContactRequest[]
 

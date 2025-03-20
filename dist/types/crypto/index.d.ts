@@ -1,12 +1,6 @@
 import Encrypt from "./encrypt";
 import Decrypt from "./decrypt";
-export type CryptoConfig = {
-    masterKeys: string[];
-    publicKey: string;
-    privateKey: string;
-    metadataCache: boolean;
-    tmpPath: string;
-};
+import type FilenSDK from "..";
 /**
  * Crypto
  * @date 2/1/2024 - 2:44:47 AM
@@ -16,18 +10,10 @@ export type CryptoConfig = {
  * @typedef {Crypto}
  */
 export declare class Crypto {
-    private readonly config;
+    private readonly sdk;
     private readonly _encrypt;
     private readonly _decrypt;
-    /**
-     * Creates an instance of Crypto.
-     * @date 1/31/2024 - 4:30:23 PM
-     *
-     * @constructor
-     * @public
-     * @param {CryptoConfig} params
-     */
-    constructor(params: CryptoConfig);
+    constructor(sdk: FilenSDK);
     /**
      * Returns an Encrypt instance.
      * @date 1/31/2024 - 4:30:26 PM
@@ -57,6 +43,14 @@ export declare class Crypto {
         generateKeyPair: typeof import("./utils").generateKeyPair;
         importRawKey: typeof import("./utils").importRawKey;
         importPBKDF2Key: typeof import("./utils").importPBKDF2Key;
+        generateRandomBytes: typeof import("./utils").generateRandomBytes;
+        generateRandomURLSafeString: typeof import("./utils").generateRandomURLSafeString;
+        generateRandomHexString: typeof import("./utils").generateRandomHexString;
+        hashFileName: typeof import("./utils").hashFileName;
+        hashSearchIndex: typeof import("./utils").hashSearchIndex;
+        generateSearchIndexHashes: typeof import("./utils").generateSearchIndexHashes;
+        generatePrivateKeyHMAC: typeof import("./utils").generatePrivateKeyHMAC;
+        generateEncryptionKey: typeof import("./utils").generateEncryptionKey;
     };
 }
 export default Crypto;

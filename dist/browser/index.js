@@ -1,7 +1,7 @@
 import API from "./api";
 import Crypto from "./crypto";
 import utils from "./utils";
-import { environment } from "./constants";
+import { environment, ANONYMOUS_SDK_CONFIG } from "./constants";
 import os from "os";
 import FS from "./fs";
 import appendStream from "./streams/append";
@@ -35,11 +35,11 @@ export class FilenSDK {
     _contacts;
     _user;
     socket = new Socket();
-    _updateKeyPairTries = 0;
     workers;
     currentWorkerWorkIndex = 0;
     events;
     axiosInstance;
+    hmacKey = null;
     /**
      * Creates an instance of FilenSDK.
      *
@@ -51,75 +51,59 @@ export class FilenSDK {
      */
     constructor(params, workers, axiosInstance) {
         if (!params) {
-            params = {};
+            params = ANONYMOUS_SDK_CONFIG;
+        }
+        else {
+            params = {
+                ...ANONYMOUS_SDK_CONFIG,
+                ...params
+            };
         }
         this.config = params;
         this.workers = workers ? workers : null;
         this.events = new TypedEventEmitter();
         this.axiosInstance = axiosInstance ? axiosInstance : axios.create();
-        this._crypto =
-            params.masterKeys && params.publicKey && params.privateKey
-                ? new Crypto({
-                    masterKeys: params.masterKeys,
-                    publicKey: params.publicKey,
-                    privateKey: params.privateKey,
-                    metadataCache: params.metadataCache ? params.metadataCache : false,
-                    tmpPath: environment === "browser"
-                        ? "/dev/null"
-                        : params.tmpPath
-                            ? utils.normalizePath(params.tmpPath)
-                            : utils.normalizePath(os.tmpdir())
-                })
-                : new Crypto({
-                    masterKeys: [],
-                    publicKey: "",
-                    privateKey: "",
-                    metadataCache: params.metadataCache ? params.metadataCache : false,
-                    tmpPath: environment === "browser"
-                        ? "/dev/null"
-                        : params.tmpPath
-                            ? utils.normalizePath(params.tmpPath)
-                            : utils.normalizePath(os.tmpdir())
-                });
-        this._api = params.apiKey
-            ? new API({
-                apiKey: params.apiKey,
-                sdk: this
-            })
-            : new API({
-                apiKey: "anonymous",
-                sdk: this
-            });
-        this._cloud = new Cloud({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
+        this._crypto = new Crypto(this);
+        this._api = new API(this);
+        this._cloud = new Cloud(this);
         this._fs = new FS({
-            sdkConfig: params,
-            api: this._api,
-            cloud: this._cloud,
+            sdk: this,
             connectToSocket: params.connectToSocket
         });
-        this._notes = new Notes({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
+        this._notes = new Notes(this);
+        this._chats = new Chats(this);
+        this._contacts = new Contacts(this);
+        this._user = new User(this);
+    }
+    /**
+     * Initialize the SDK again (after logging in for example).
+     * @date 2/1/2024 - 3:23:58 PM
+     *
+     * @public
+     * @param {FilenSDKConfig} params
+     */
+    init(params) {
+        if (!params) {
+            params = ANONYMOUS_SDK_CONFIG;
+        }
+        else {
+            params = {
+                ...ANONYMOUS_SDK_CONFIG,
+                ...params
+            };
+        }
+        this.config = params;
+        this._crypto = new Crypto(this);
+        this._api = new API(this);
+        this._cloud = new Cloud(this);
+        this._fs = new FS({
+            sdk: this,
+            connectToSocket: params.connectToSocket
         });
-        this._chats = new Chats({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._contacts = new Contacts({
-            sdkConfig: params,
-            api: this._api
-        });
-        this._user = new User({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
+        this._notes = new Notes(this);
+        this._chats = new Chats(this);
+        this._contacts = new Contacts(this);
+        this._user = new User(this);
     }
     /**
      * Update the SDK Worker pool.
@@ -215,79 +199,6 @@ export class FilenSDK {
         return workerToUse || baseWorker;
     }
     /**
-     * Initialize the SDK again (after logging in for example).
-     * @date 2/1/2024 - 3:23:58 PM
-     *
-     * @public
-     * @param {FilenSDKConfig} params
-     */
-    init(params) {
-        this.config = params;
-        this._crypto =
-            params.masterKeys && params.publicKey && params.privateKey
-                ? new Crypto({
-                    masterKeys: params.masterKeys,
-                    publicKey: params.publicKey,
-                    privateKey: params.privateKey,
-                    metadataCache: params.metadataCache ? params.metadataCache : false,
-                    tmpPath: environment === "browser"
-                        ? "/dev/null"
-                        : params.tmpPath
-                            ? utils.normalizePath(params.tmpPath)
-                            : utils.normalizePath(os.tmpdir())
-                })
-                : new Crypto({
-                    masterKeys: [],
-                    publicKey: "",
-                    privateKey: "",
-                    metadataCache: params.metadataCache ? params.metadataCache : false,
-                    tmpPath: environment === "browser"
-                        ? "/dev/null"
-                        : params.tmpPath
-                            ? utils.normalizePath(params.tmpPath)
-                            : utils.normalizePath(os.tmpdir())
-                });
-        this._api = params.apiKey
-            ? new API({
-                apiKey: params.apiKey,
-                sdk: this
-            })
-            : new API({
-                apiKey: "anonymous",
-                sdk: this
-            });
-        this._cloud = new Cloud({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._fs = new FS({
-            sdkConfig: params,
-            api: this._api,
-            cloud: this._cloud,
-            connectToSocket: params.connectToSocket
-        });
-        this._notes = new Notes({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._chats = new Chats({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-        this._contacts = new Contacts({
-            sdkConfig: params,
-            api: this._api
-        });
-        this._user = new User({
-            sdkConfig: params,
-            api: this._api,
-            sdk: this
-        });
-    }
-    /**
      * Check if the SDK user is authenticated.
      * @date 1/31/2024 - 4:08:17 PM
      *
@@ -308,7 +219,18 @@ export class FilenSDK {
             this.config.privateKey.length > 0 &&
             this.config.baseFolderUUID.length > 0 &&
             this.config.userId > 0 &&
-            [1, 2].includes(this.config.authVersion));
+            [1, 2, 3].includes(this.config.authVersion) &&
+            this.config.apiKey !== "anonymous");
+    }
+    async generateHMACKey() {
+        if (this.hmacKey) {
+            return this.hmacKey;
+        }
+        if (!this.config.privateKey || this.config.privateKey === "anonymous") {
+            throw new Error("No private key set for HMAC key generation.");
+        }
+        this.hmacKey = await this.getWorker().crypto.utils.generatePrivateKeyHMAC(this.config.privateKey);
+        return this.hmacKey;
     }
     /**
      * Update keypair.
@@ -326,7 +248,7 @@ export class FilenSDK {
     async _updateKeyPair({ apiKey, publicKey, privateKey, masterKeys }) {
         const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
             metadata: privateKey,
-            key: masterKeys[masterKeys.length - 1]
+            key: masterKeys.at(-1)
         });
         await this._api.v3().user().keyPair().update({
             publicKey,
@@ -350,7 +272,7 @@ export class FilenSDK {
     async _setKeyPair({ apiKey, publicKey, privateKey, masterKeys }) {
         const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
             metadata: privateKey,
-            key: masterKeys[masterKeys.length - 1]
+            key: masterKeys.at(-1)
         });
         await this._api.v3().user().keyPair().set({
             publicKey,
@@ -359,11 +281,13 @@ export class FilenSDK {
         });
     }
     async __updateKeyPair({ apiKey, masterKeys }) {
-        const keyPairInfo = await this._api.v3().user().keyPair().info({ apiKey });
+        const keyPairInfo = await this._api.v3().user().keyPair().info({
+            apiKey
+        });
         if (typeof keyPairInfo.publicKey === "string" &&
             typeof keyPairInfo.privateKey === "string" &&
-            keyPairInfo.publicKey.length > 0 &&
-            keyPairInfo.privateKey.length > 0) {
+            keyPairInfo.publicKey.length > 16 &&
+            keyPairInfo.privateKey.length > 16) {
             let privateKey = null;
             for (const masterKey of masterKeys) {
                 try {
@@ -381,27 +305,7 @@ export class FilenSDK {
                 }
             }
             if (!privateKey) {
-                // If the user for example changed his password and did not properly import the old master keys, it could be that we cannot decrypt the private key anymore.
-                // We try to decrypt it 3 times (might be network/API related) and if it still does not work, we generate a new keypair.
-                if (this._updateKeyPairTries < 3) {
-                    this._updateKeyPairTries += 1;
-                    await new Promise(resolve => setTimeout(resolve, 250));
-                    return await this.__updateKeyPair({
-                        apiKey,
-                        masterKeys
-                    });
-                }
-                const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair();
-                await this._updateKeyPair({
-                    apiKey,
-                    publicKey: generatedKeyPair.publicKey,
-                    privateKey: generatedKeyPair.privateKey,
-                    masterKeys
-                });
-                return {
-                    publicKey: generatedKeyPair.publicKey,
-                    privateKey: generatedKeyPair.privateKey
-                };
+                throw new Error("Could not decrypt private key.");
             }
             await this._updateKeyPair({
                 apiKey,
@@ -426,51 +330,96 @@ export class FilenSDK {
             privateKey: generatedKeyPair.privateKey
         };
     }
-    async _updateKeys({ apiKey, masterKeys }) {
-        const currentLastMasterKey = masterKeys[masterKeys.length - 1];
-        if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
-            throw new Error("Invalid current master key.");
-        }
-        const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
-            metadata: masterKeys.join("|"),
-            key: currentLastMasterKey
-        });
-        const masterKeysResponse = await this._api.v3().user().masterKeys({
-            encryptedMasterKeys,
-            apiKey
-        });
-        const newMasterKeys = [...masterKeys];
-        for (const masterKey of masterKeys) {
-            try {
-                const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
-                    metadata: masterKeysResponse.keys,
-                    key: masterKey
-                });
-                if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
-                    for (const key of decryptedMasterKeys.split("|")) {
-                        if (key.length > 0 && !newMasterKeys.includes(key)) {
-                            newMasterKeys.push(key);
+    async _updateKeys({ apiKey, masterKeys, authVersion }) {
+        if (authVersion === 1 || authVersion === 2) {
+            const currentLastMasterKey = masterKeys.at(-1);
+            if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
+                throw new Error("Invalid current master key.");
+            }
+            const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
+                metadata: masterKeys.join("|"),
+                key: currentLastMasterKey
+            });
+            const masterKeysResponse = await this._api.v3().user().masterKeys({
+                encryptedMasterKeys,
+                apiKey
+            });
+            const newMasterKeys = [...masterKeys];
+            for (const masterKey of masterKeys) {
+                try {
+                    const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
+                        metadata: masterKeysResponse.keys,
+                        key: masterKey
+                    });
+                    if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
+                        for (const key of decryptedMasterKeys.split("|")) {
+                            if (key.length > 0 && !newMasterKeys.includes(key)) {
+                                newMasterKeys.push(key);
+                            }
                         }
+                        break;
                     }
-                    break;
+                }
+                catch {
+                    continue;
                 }
             }
-            catch {
-                continue;
+            if (newMasterKeys.length === 0) {
+                throw new Error("Could not decrypt master keys.");
             }
+            const { publicKey, privateKey } = await this.__updateKeyPair({
+                apiKey,
+                masterKeys: newMasterKeys
+            });
+            return {
+                masterKeys: newMasterKeys,
+                publicKey,
+                privateKey
+            };
         }
-        if (newMasterKeys.length === 0) {
-            throw new Error("Could not decrypt master keys.");
+        else if (authVersion === 3) {
+            if (masterKeys.length !== 1 || !masterKeys[0]) {
+                throw new Error("Invalid master keys array.");
+            }
+            const dekEncryptionKey = masterKeys[0];
+            if (!dekEncryptionKey || dekEncryptionKey.length !== 64) {
+                throw new Error("Invalid DEK encryption key.");
+            }
+            let dek = (await this._api.v3().user().getDEK({
+                apiKey
+            })).dek;
+            if (!dek) {
+                dek = (await this.getWorker().crypto.utils.generateRandomBytes(32)).toString("hex");
+                await this._api
+                    .v3()
+                    .user()
+                    .setDEK({
+                    apiKey,
+                    encryptedDEK: await this.getWorker().crypto.encrypt.metadata({
+                        metadata: dek,
+                        key: dekEncryptionKey
+                    })
+                });
+            }
+            else {
+                dek = await this.getWorker().crypto.decrypt.metadata({
+                    metadata: dek,
+                    key: dekEncryptionKey
+                });
+            }
+            const { publicKey, privateKey } = await this.__updateKeyPair({
+                apiKey,
+                masterKeys: [dek]
+            });
+            return {
+                masterKeys: [dek],
+                publicKey,
+                privateKey
+            };
         }
-        const { publicKey, privateKey } = await this.__updateKeyPair({
-            apiKey,
-            masterKeys: newMasterKeys
-        });
-        return {
-            masterKeys: newMasterKeys,
-            publicKey,
-            privateKey
-        };
+        else {
+            throw new Error("Invalid authVersion.");
+        }
     }
     /**
      * Authenticate.
@@ -491,11 +440,13 @@ export class FilenSDK {
         if (emailToUse.length === 0 || passwordToUse.length === 0 || twoFactorCodeToUse.length === 0) {
             throw new Error("Empty email, password or twoFactorCode");
         }
-        const authInfo = await this._api.v3().auth().info({ email: emailToUse });
+        const authInfo = await this._api.v3().auth().info({
+            email: emailToUse
+        });
         const authVersion = authInfo.authVersion;
         const derived = await this.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
             rawPassword: passwordToUse,
-            authVersion: authInfo.authVersion,
+            authVersion,
             salt: authInfo.salt
         });
         const loginResponse = await this._api.v3().login({
@@ -504,14 +455,19 @@ export class FilenSDK {
             twoFactorCode: twoFactorCodeToUse,
             authVersion
         });
-        const [infoResponse, baseFolderResponse] = await Promise.all([
-            this._api.v3().user().info({ apiKey: loginResponse.apiKey }),
-            this._api.v3().user().baseFolder({ apiKey: loginResponse.apiKey })
+        const [infoResponse, baseFolderResponse, updateKeys] = await Promise.all([
+            this._api.v3().user().info({
+                apiKey: loginResponse.apiKey
+            }),
+            this._api.v3().user().baseFolder({
+                apiKey: loginResponse.apiKey
+            }),
+            this._updateKeys({
+                apiKey: loginResponse.apiKey,
+                masterKeys: [derived.derivedMasterKeys],
+                authVersion
+            })
         ]);
-        const updateKeys = await this._updateKeys({
-            apiKey: loginResponse.apiKey,
-            masterKeys: [derived.derivedMasterKeys]
-        });
         this.init({
             ...this.config,
             email: emailToUse,
@@ -533,24 +489,9 @@ export class FilenSDK {
      * @public
      */
     logout() {
-        this.init({
-            ...this.config,
-            email: undefined,
-            password: undefined,
-            twoFactorCode: undefined,
-            masterKeys: undefined,
-            apiKey: undefined,
-            publicKey: undefined,
-            privateKey: undefined,
-            authVersion: undefined,
-            baseFolderUUID: undefined,
-            userId: undefined
-        });
+        this.init(ANONYMOUS_SDK_CONFIG);
     }
     api(version) {
-        // if (!this.isLoggedIn()) {
-        // 	throw new Error("Not authenticated, please call login() first")
-        // }
         if (version === 3) {
             return this._api.v3();
         }
@@ -564,9 +505,6 @@ export class FilenSDK {
      * @returns {Crypto}
      */
     crypto() {
-        // if (!this.isLoggedIn()) {
-        // 	throw new Error("Not authenticated, please call login() first")
-        // }
         return this._crypto;
     }
     /**

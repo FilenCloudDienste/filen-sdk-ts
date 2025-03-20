@@ -1,5 +1,5 @@
 import type APIClient from "../../client"
-import type { FileEncryptionVersion } from "../../../types"
+import { type FileEncryptionVersion } from "../../../types"
 
 export type DirDownloadFile = {
 	uuid: string
@@ -14,6 +14,8 @@ export type DirDownloadFile = {
 	version: FileEncryptionVersion
 	chunksSize?: number
 	timestamp?: number
+	nameHashed?: string
+	favorited?: boolean
 }
 
 export type DirDownloadFolder = {
@@ -21,6 +23,9 @@ export type DirDownloadFolder = {
 	name: string
 	parent: string | "base"
 	timestamp?: number
+	nameHashed?: string
+	favorited?: boolean
+	color?: string | null
 }
 
 export type DirDownloadResponse = {
@@ -117,10 +122,12 @@ export class DirDownload {
 											bitLength: 512,
 											returnHex: true
 									  })
-									: await this.apiClient.sdk
-											.getWorker()
-											.crypto.utils.hashFn({ input: linkPassword.length === 0 ? "empty" : linkPassword })
-								: await this.apiClient.sdk.getWorker().crypto.utils.hashFn({ input: "empty" }),
+									: await this.apiClient.sdk.getWorker().crypto.utils.hashFn({
+											input: linkPassword.length === 0 ? "empty" : linkPassword
+									  })
+								: await this.apiClient.sdk.getWorker().crypto.utils.hashFn({
+										input: "empty"
+								  }),
 						...(skipCache ? { skipCache } : {})
 				  }
 

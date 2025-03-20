@@ -1,8 +1,8 @@
 import { environment, BUFFER_SIZE } from "../constants"
-import type { CryptoConfig } from "."
+import type FilenSDK from ".."
 import { deriveKeyFromPassword, importPrivateKey, derKeyToPem, importRawKey, EVP_BytesToKey } from "./utils"
 import nodeCrypto from "crypto"
-import type { FileMetadata, FolderMetadata, FileEncryptionVersion } from "../types"
+import { type FileMetadata, type FolderMetadata, type FileEncryptionVersion } from "../types"
 import { convertTimestampToMs, uuidv4, normalizePath, fastStringHash } from "../utils"
 import cache from "../cache"
 import pathModule from "path"
@@ -12,6 +12,7 @@ import { pipeline } from "stream"
 import { promisify } from "util"
 import CryptoJS from "crypto-js"
 import { type UserEvent } from "../api/v3/user/events"
+import os from "os"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -24,19 +25,10 @@ const pipelineAsync = promisify(pipeline)
  * @typedef {Decrypt}
  */
 export class Decrypt {
-	private readonly config: CryptoConfig
-	private readonly textDecoder = new TextDecoder()
+	private readonly sdk: FilenSDK
 
-	/**
-	 * Creates an instance of Decrypt.
-	 * @date 1/31/2024 - 3:59:10 PM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {CryptoConfig} params
-	 */
-	public constructor(params: CryptoConfig) {
-		this.config = params
+	public constructor(sdk: FilenSDK) {
+		this.sdk = sdk
 	}
 
 	/**
@@ -89,17 +81,56 @@ export class Decrypt {
 							name: "AES-GCM",
 							iv: ivBuffer
 						},
-						await importRawKey({ key: keyBuffer, algorithm: "AES-GCM", mode: ["decrypt"] }),
+						await importRawKey({
+							key: keyBuffer,
+							algorithm: "AES-GCM",
+							mode: ["decrypt"]
+						}),
 						encrypted
 					)
 
 					return Buffer.from(decrypted).toString("utf-8")
+				} else {
+					throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
+				}
+			} else if (version === "003") {
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.metadata] Invalid key length ${key.length}. Expected 64 (hex).`)
 				}
 
-				throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
-			}
+				const keyBuffer = Buffer.from(key, "hex")
+				const ivBuffer = Buffer.from(metadata.slice(3, 27), "hex")
+				const encrypted = Buffer.from(metadata.slice(27), "base64")
 
-			throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`)
+				if (environment === "node") {
+					const authTag = encrypted.subarray(-16)
+					const cipherText = encrypted.subarray(0, encrypted.byteLength - 16)
+					const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer)
+
+					decipher.setAuthTag(authTag)
+
+					return Buffer.concat([decipher.update(cipherText), decipher.final()]).toString("utf-8")
+				} else if (environment === "browser") {
+					const decrypted = await globalThis.crypto.subtle.decrypt(
+						{
+							name: "AES-GCM",
+							iv: ivBuffer
+						},
+						await importRawKey({
+							key: keyBuffer,
+							algorithm: "AES-GCM",
+							mode: ["decrypt"]
+						}),
+						encrypted
+					)
+
+					return Buffer.from(decrypted).toString("utf-8")
+				} else {
+					throw new Error(`crypto.decrypt.metadata is not implemented for ${environment} environment`)
+				}
+			} else {
+				throw new Error(`[crypto.decrypt.metadata] Invalid metadata version ${version}`)
+			}
 		}
 	}
 
@@ -120,7 +151,9 @@ export class Decrypt {
 		}
 
 		if (environment === "node") {
-			const pemKey = await derKeyToPem({ key: privateKey })
+			const pemKey = await derKeyToPem({
+				key: privateKey
+			})
 			const decrypted = nodeCrypto.privateDecrypt(
 				{
 					key: pemKey,
@@ -132,7 +165,10 @@ export class Decrypt {
 
 			return decrypted.toString("utf-8")
 		} else if (environment === "browser") {
-			const importedPrivateKey = await importPrivateKey({ privateKey, mode: ["decrypt"] })
+			const importedPrivateKey = await importPrivateKey({
+				privateKey,
+				mode: ["decrypt"]
+			})
 			const decrypted = await globalThis.crypto.subtle.decrypt(
 				{
 					name: "RSA-OAEP"
@@ -141,7 +177,7 @@ export class Decrypt {
 				Buffer.from(metadata, "base64")
 			)
 
-			return this.textDecoder.decode(decrypted)
+			return Buffer.from(decrypted).toString("utf-8")
 		}
 
 		throw new Error(`crypto.encrypt.metadataPrivate not implemented for ${environment} environment`)
@@ -161,7 +197,7 @@ export class Decrypt {
 	public async fileMetadata({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
 		}
 
@@ -175,11 +211,16 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys
+		const keysToUse = key ? [key] : this.sdk.config.masterKeys ?? []
 
 		for (const masterKey of keysToUse) {
 			try {
-				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
+				const decrypted = JSON.parse(
+					await this.metadata({
+						metadata,
+						key: masterKey
+					})
+				)
 
 				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 					const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
@@ -194,7 +235,7 @@ export class Decrypt {
 						hash: decrypted.hash
 					}
 
-					if (this.config.metadataCache) {
+					if (this.sdk.config.metadataCache) {
 						cache.fileMetadata.set(cacheKey, fileMetadata)
 					}
 
@@ -228,7 +269,7 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
 		}
 
@@ -236,18 +277,23 @@ export class Decrypt {
 			name: ""
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys
+		const keysToUse = key ? [key] : this.sdk.config.masterKeys ?? []
 
 		for (const masterKey of keysToUse) {
 			try {
-				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
+				const decrypted = JSON.parse(
+					await this.metadata({
+						metadata,
+						key: masterKey
+					})
+				)
 
 				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 					folderMetadata = {
 						name: decrypted.name
 					}
 
-					if (this.config.metadataCache) {
+					if (this.sdk.config.metadataCache) {
 						cache.folderMetadata.set(cacheKey, folderMetadata)
 					}
 
@@ -275,7 +321,7 @@ export class Decrypt {
 	public async fileMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FileMetadata> {
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
 		}
 
@@ -289,13 +335,18 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		const privateKey = key ? key : this.config.privateKey
+		const privateKey = key ? key : this.sdk.config.privateKey ?? ""
 
 		if (privateKey.length === 0) {
 			throw new Error("Invalid privateKey.")
 		}
 
-		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
+		const decrypted = JSON.parse(
+			await this.metadataPrivate({
+				metadata,
+				privateKey
+			})
+		)
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
@@ -310,7 +361,7 @@ export class Decrypt {
 				hash: decrypted.hash
 			}
 
-			if (this.config.metadataCache) {
+			if (this.sdk.config.metadataCache) {
 				cache.fileMetadata.set(cacheKey, fileMetadata)
 			}
 		}
@@ -332,7 +383,7 @@ export class Decrypt {
 	public async folderMetadataPrivate({ metadata, key }: { metadata: string; key?: string }): Promise<FolderMetadata> {
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
 		}
 
@@ -340,20 +391,25 @@ export class Decrypt {
 			name: ""
 		}
 
-		const privateKey = key ? key : this.config.privateKey
+		const privateKey = key ? key : this.sdk.config.privateKey ?? ""
 
 		if (privateKey.length === 0) {
 			throw new Error("Invalid privateKey.")
 		}
 
-		const decrypted = JSON.parse(await this.metadataPrivate({ metadata, privateKey }))
+		const decrypted = JSON.parse(
+			await this.metadataPrivate({
+				metadata,
+				privateKey
+			})
+		)
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			folderMetadata = {
 				name: decrypted.name
 			}
 
-			if (this.config.metadataCache) {
+			if (this.sdk.config.metadataCache) {
 				cache.folderMetadata.set(cacheKey, folderMetadata)
 			}
 		}
@@ -379,7 +435,7 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.fileMetadata.has(cacheKey)) {
 			return cache.fileMetadata.get(cacheKey)!
 		}
 
@@ -393,7 +449,12 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
+		const decrypted = JSON.parse(
+			await this.metadata({
+				metadata,
+				key: linkKey
+			})
+		)
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
@@ -408,7 +469,7 @@ export class Decrypt {
 				hash: decrypted.hash
 			}
 
-			if (this.config.metadataCache) {
+			if (this.sdk.config.metadataCache) {
 				cache.fileMetadata.set(cacheKey, fileMetadata)
 			}
 		}
@@ -434,7 +495,7 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.folderMetadata.has(cacheKey)) {
 			return cache.folderMetadata.get(cacheKey)!
 		}
 
@@ -442,14 +503,19 @@ export class Decrypt {
 			name: ""
 		}
 
-		const decrypted = JSON.parse(await this.metadata({ metadata, key: linkKey }))
+		const decrypted = JSON.parse(
+			await this.metadata({
+				metadata,
+				key: linkKey
+			})
+		)
 
 		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
 			folderMetadata = {
 				name: decrypted.name
 			}
 
-			if (this.config.metadataCache) {
+			if (this.sdk.config.metadataCache) {
 				cache.folderMetadata.set(cacheKey, folderMetadata)
 			}
 		}
@@ -471,18 +537,21 @@ export class Decrypt {
 	public async folderLinkKey({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.folderLinkKey.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.folderLinkKey.has(cacheKey)) {
 			return cache.folderLinkKey.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys
+		const keysToUse = key ? [key] : this.sdk.config.masterKeys ?? []
 
 		for (const masterKey of keysToUse) {
 			try {
-				const decrypted = await this.metadata({ metadata, key: masterKey })
+				const decrypted = await this.metadata({
+					metadata,
+					key: masterKey
+				})
 
 				if (typeof decrypted === "string" && decrypted.length > 16) {
-					if (this.config.metadataCache) {
+					if (this.sdk.config.metadataCache) {
 						cache.folderLinkKey.set(cacheKey, decrypted)
 					}
 
@@ -514,18 +583,21 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.chatKeyParticipant.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.chatKeyParticipant.has(cacheKey)) {
 			return cache.chatKeyParticipant.get(cacheKey)!
 		}
 
-		const decrypted = await this.metadataPrivate({ metadata, privateKey })
+		const decrypted = await this.metadataPrivate({
+			metadata,
+			privateKey
+		})
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.key !== "string") {
 			throw new Error("Could not decrypt chat key, malformed decrypted metadata")
 		}
 
-		if (this.config.metadataCache) {
+		if (this.sdk.config.metadataCache) {
 			cache.chatKeyParticipant.set(cacheKey, parsed.key)
 		}
 
@@ -545,11 +617,11 @@ export class Decrypt {
 	public async chatKeyOwner({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.chatKeyOwner.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.chatKeyOwner.has(cacheKey)) {
 			return cache.chatKeyOwner.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys
+		const keysToUse = key ? [key] : this.sdk.config.masterKeys ?? []
 
 		for (const masterKey of keysToUse) {
 			try {
@@ -568,7 +640,7 @@ export class Decrypt {
 					continue
 				}
 
-				if (this.config.metadataCache) {
+				if (this.sdk.config.metadataCache) {
 					cache.chatKeyOwner.set(cacheKey, parsed.key)
 				}
 
@@ -624,18 +696,23 @@ export class Decrypt {
 	public async noteKeyOwner({ metadata, key }: { metadata: string; key?: string }): Promise<string> {
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.noteKeyOwner.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.noteKeyOwner.has(cacheKey)) {
 			return cache.noteKeyOwner.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys
+		const keysToUse = key ? [key] : this.sdk.config.masterKeys ?? []
 
 		for (const masterKey of keysToUse) {
 			try {
-				const decrypted = JSON.parse(await this.metadata({ metadata, key: masterKey }))
+				const decrypted = JSON.parse(
+					await this.metadata({
+						metadata,
+						key: masterKey
+					})
+				)
 
 				if (decrypted && typeof decrypted.key === "string" && decrypted.key.length > 16) {
-					if (this.config.metadataCache) {
+					if (this.sdk.config.metadataCache) {
 						cache.noteKeyOwner.set(cacheKey, decrypted.key)
 					}
 
@@ -667,18 +744,21 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(metadata)
 
-		if (this.config.metadataCache && cache.noteKeyParticipant.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.noteKeyParticipant.has(cacheKey)) {
 			return cache.noteKeyParticipant.get(cacheKey)!
 		}
 
-		const decrypted = await this.metadataPrivate({ metadata, privateKey })
+		const decrypted = await this.metadataPrivate({
+			metadata,
+			privateKey
+		})
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.key !== "string") {
 			throw new Error("Could not decrypt note key of participant, malformed decrypted metadata")
 		}
 
-		if (this.config.metadataCache) {
+		if (this.sdk.config.metadataCache) {
 			cache.noteKeyParticipant.set(cacheKey, parsed.key)
 		}
 
@@ -729,18 +809,21 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(title)
 
-		if (this.config.metadataCache && cache.noteTitle.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.noteTitle.has(cacheKey)) {
 			return cache.noteTitle.get(cacheKey)!
 		}
 
-		const decrypted = await this.metadata({ metadata: title, key })
+		const decrypted = await this.metadata({
+			metadata: title,
+			key
+		})
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.title !== "string") {
 			return ""
 		}
 
-		if (this.config.metadataCache) {
+		if (this.sdk.config.metadataCache) {
 			cache.noteTitle.set(cacheKey, parsed.title)
 		}
 
@@ -765,18 +848,21 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(preview)
 
-		if (this.config.metadataCache && cache.notePreview.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.notePreview.has(cacheKey)) {
 			return cache.notePreview.get(cacheKey)!
 		}
 
-		const decrypted = await this.metadata({ metadata: preview, key })
+		const decrypted = await this.metadata({
+			metadata: preview,
+			key
+		})
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.preview !== "string") {
 			return ""
 		}
 
-		if (this.config.metadataCache) {
+		if (this.sdk.config.metadataCache) {
 			cache.notePreview.set(cacheKey, parsed.preview)
 		}
 
@@ -797,18 +883,23 @@ export class Decrypt {
 	public async noteTagName({ name, key }: { name: string; key?: string }): Promise<string> {
 		const cacheKey = fastStringHash(name)
 
-		if (this.config.metadataCache && cache.noteTagName.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.noteTagName.has(cacheKey)) {
 			return cache.noteTagName.get(cacheKey)!
 		}
 
-		const keysToUse = key ? [key] : this.config.masterKeys
+		const keysToUse = key ? [key] : this.sdk.config.masterKeys ?? []
 
 		for (const masterKey of keysToUse) {
 			try {
-				const decrypted = JSON.parse(await this.metadata({ metadata: name, key: masterKey }))
+				const decrypted = JSON.parse(
+					await this.metadata({
+						metadata: name,
+						key: masterKey
+					})
+				)
 
 				if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-					if (this.config.metadataCache) {
+					if (this.sdk.config.metadataCache) {
 						cache.noteTagName.set(cacheKey, decrypted.name)
 					}
 
@@ -843,18 +934,21 @@ export class Decrypt {
 
 		const cacheKey = fastStringHash(name)
 
-		if (this.config.metadataCache && cache.chatConversationName.has(cacheKey)) {
+		if (this.sdk.config.metadataCache && cache.chatConversationName.has(cacheKey)) {
 			return cache.chatConversationName.get(cacheKey)!
 		}
 
-		const nameDecrypted = await this.metadata({ metadata: name, key })
+		const nameDecrypted = await this.metadata({
+			metadata: name,
+			key
+		})
 		const parsed = JSON.parse(nameDecrypted)
 
 		if (typeof parsed.name !== "string") {
 			return ""
 		}
 
-		if (this.config.metadataCache) {
+		if (this.sdk.config.metadataCache) {
 			cache.chatConversationName.set(cacheKey, parsed.name)
 		}
 
@@ -904,7 +998,7 @@ export class Decrypt {
 				}
 
 				if (needsConvert && !isCBC) {
-					data = Buffer.from(this.textDecoder.decode(data), "base64")
+					data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64")
 				}
 
 				if (!isCBC) {
@@ -941,6 +1035,23 @@ export class Decrypt {
 				decipher.setAuthTag(authTag)
 
 				return Buffer.concat([decipher.update(ciphertext), decipher.final()])
+			} else if (version === 3) {
+				// Version 3 requires the key to be a 32 bytes hex string (64 characters)
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const iv = data.subarray(0, 12)
+				const encData = data.subarray(12)
+				const authTag = encData.subarray(-16)
+				const ciphertext = encData.subarray(0, encData.byteLength - 16)
+				const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", Buffer.from(key, "hex"), iv)
+
+				decipher.setAuthTag(authTag)
+
+				return Buffer.concat([decipher.update(ciphertext), decipher.final()])
+			} else {
+				throw new Error(`[crypto.decrypt.data] Invalid version ${version}`)
 			}
 		} else if (environment === "browser") {
 			if (version === 1) {
@@ -968,7 +1079,7 @@ export class Decrypt {
 				}
 
 				if (needsConvert && !isCBC) {
-					data = Buffer.from(this.textDecoder.decode(data), "base64")
+					data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64")
 				}
 
 				if (!isCBC) {
@@ -1034,6 +1145,31 @@ export class Decrypt {
 				)
 
 				return Buffer.from(decrypted)
+			} else if (version === 3) {
+				// Version 3 requires the key to be a 32 bytes hex string (64 characters)
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const iv = data.subarray(0, 12)
+				const encData = data.subarray(12)
+				const keyBuffer = Buffer.from(key, "hex")
+				const decrypted = await globalThis.crypto.subtle.decrypt(
+					{
+						name: "AES-GCM",
+						iv
+					},
+					await importRawKey({
+						key: keyBuffer,
+						algorithm: "AES-GCM",
+						mode: ["decrypt"]
+					}),
+					encData
+				)
+
+				return Buffer.from(decrypted)
+			} else {
+				throw new Error(`[crypto.decrypt.data] Invalid version ${version}`)
 			}
 		}
 
@@ -1078,7 +1214,7 @@ export class Decrypt {
 		}
 
 		let input = normalizePath(inputFile)
-		const output = normalizePath(outputFile ? outputFile : pathModule.join(this.config.tmpPath, await uuidv4()))
+		const output = normalizePath(outputFile ? outputFile : pathModule.join(this.sdk.config.tmpPath ?? os.tmpdir(), await uuidv4()))
 
 		if (!(await fs.exists(input))) {
 			throw new Error("Input file does not exist.")
@@ -1203,6 +1339,29 @@ export class Decrypt {
 				bytesToSkipAtStartOfInputStream = 12
 				bytesToSkipAtEndOfInputStream = 16
 				inputFileSize = stat.size
+			} else if (version === 3) {
+				// Version 3 requires the key to be a 32 bytes hex string (64 characters)
+				if (key.length !== 64) {
+					throw new Error(`[crypto.decrypt.data] Invalid key length ${key.length}. Expected 64 (hex).`)
+				}
+
+				const keyBytes = Buffer.from(key, "hex")
+				const ivBytes = Buffer.alloc(12)
+				const authTagBytes = Buffer.alloc(16)
+
+				const stat = await fs.stat(input)
+
+				await Promise.all([fs.read(inputHandle, ivBytes, 0, 12, 0), fs.read(inputHandle, authTagBytes, 0, 16, stat.size - 16)])
+
+				if (ivBytes.byteLength === 0 || authTagBytes.byteLength === 0) {
+					throw new Error("Could not read input file.")
+				}
+
+				decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBytes, ivBytes).setAuthTag(authTagBytes)
+
+				bytesToSkipAtStartOfInputStream = 12
+				bytesToSkipAtEndOfInputStream = 16
+				inputFileSize = stat.size
 			} else {
 				throw new Error(`Invalid FileEncryptionVersion: ${version}`)
 			}
@@ -1243,7 +1402,9 @@ export class Decrypt {
 			event.type === "fileVersioned" ||
 			event.type === "deleteFilePermanently"
 		) {
-			const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata })
+			const metadataDecrypted = await this.fileMetadata({
+				metadata: event.info.metadata
+			})
 
 			return {
 				...event,
@@ -1263,10 +1424,14 @@ export class Decrypt {
 							  }
 				}
 			}
-		} else if (event.type === "fileRenamed") {
+		} else if (event.type === "fileRenamed" || event.type === "fileMetadataChanged") {
 			const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
-				this.fileMetadata({ metadata: event.info.metadata }),
-				this.fileMetadata({ metadata: event.info.oldMetadata })
+				this.fileMetadata({
+					metadata: event.info.metadata
+				}),
+				this.fileMetadata({
+					metadata: event.info.oldMetadata
+				})
 			])
 
 			return {
@@ -1300,7 +1465,9 @@ export class Decrypt {
 				}
 			}
 		} else if (event.type === "fileShared") {
-			const metadataDecrypted = await this.fileMetadata({ metadata: event.info.metadata })
+			const metadataDecrypted = await this.fileMetadata({
+				metadata: event.info.metadata
+			})
 
 			return {
 				...event,
@@ -1329,7 +1496,9 @@ export class Decrypt {
 			event.type === "folderColorChanged" ||
 			event.type === "deleteFolderPermanently"
 		) {
-			const nameDecrypted = await this.folderMetadata({ metadata: event.info.name })
+			const nameDecrypted = await this.folderMetadata({
+				metadata: event.info.name
+			})
 
 			return {
 				...event,
@@ -1344,7 +1513,9 @@ export class Decrypt {
 				}
 			}
 		} else if (event.type === "folderShared") {
-			const nameDecrypted = await this.folderMetadata({ metadata: event.info.name })
+			const nameDecrypted = await this.folderMetadata({
+				metadata: event.info.name
+			})
 
 			return {
 				...event,
@@ -1360,8 +1531,12 @@ export class Decrypt {
 			}
 		} else if (event.type === "itemFavorite") {
 			const [folderDecrypted, fileDecrypted] = await Promise.all([
-				this.folderMetadata({ metadata: event.info.metadata }),
-				this.fileMetadata({ metadata: event.info.metadata })
+				this.folderMetadata({
+					metadata: event.info.metadata
+				}),
+				this.fileMetadata({
+					metadata: event.info.metadata
+				})
 			])
 
 			return {
@@ -1372,10 +1547,14 @@ export class Decrypt {
 					nameDecrypted: folderDecrypted.name.length > 0 ? folderDecrypted : null
 				}
 			}
-		} else if (event.type === "folderRenamed") {
+		} else if (event.type === "folderRenamed" || event.type === "folderMetadataChanged") {
 			const [decryptedMetadata, oldDecryptedMetadata] = await Promise.all([
-				this.folderMetadata({ metadata: event.info.name }),
-				this.folderMetadata({ metadata: event.info.oldName })
+				this.folderMetadata({
+					metadata: event.info.name
+				}),
+				this.folderMetadata({
+					metadata: event.info.oldName
+				})
 			])
 
 			return {

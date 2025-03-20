@@ -1,8 +1,5 @@
-/// <reference types="node" />
-/// <reference types="node" />
-import type API from "../api";
-import { type FilenSDKConfig, type FilenSDK } from "..";
-import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback, type GetFileResult, type GetDirResult } from "../types";
+import { type FilenSDK } from "..";
+import { type FileEncryptionVersion, type FileMetadata, type ProgressCallback, type FolderMetadata, type PublicLinkExpiration, type ProgressWithTotalCallback, type GetFileResult, type GetDirResult, type RebuildGlobalSearchIndexProgressCallback } from "../types";
 import { PauseSignal } from "./signals";
 import { type DirColors } from "../api/v3/dir/color";
 import { type FileVersionsResponse } from "../api/v3/file/versions";
@@ -15,11 +12,8 @@ import { type FileLinkInfoResponse } from "../api/v3/file/link/info";
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content";
 import { type FileExistsResponse } from "../api/v3/file/exists";
 import { type DirExistsResponse } from "../api/v3/dir/exists";
-export type CloudConfig = {
-    sdkConfig: FilenSDKConfig;
-    api: API;
-    sdk: FilenSDK;
-};
+import { type SearchAddItem } from "../api/v3/search/add";
+import { type SearchFindItemDecrypted } from "../api/v3/search/find";
 export type CloudItemReceiver = {
     id: number;
     email: string;
@@ -95,19 +89,9 @@ export type DirectoryToShare = {
  * @typedef {Cloud}
  */
 export declare class Cloud {
-    private readonly api;
-    private readonly sdkConfig;
     private readonly sdk;
     private readonly _semaphores;
-    /**
-     * Creates an instance of Cloud.
-     * @date 2/14/2024 - 11:30:03 PM
-     *
-     * @constructor
-     * @public
-     * @param {CloudConfig} params
-     */
-    constructor(params: CloudConfig);
+    constructor(sdk: FilenSDK);
     readonly utils: {
         signals: {
             PauseSignal: typeof PauseSignal;
@@ -226,7 +210,7 @@ export declare class Cloud {
         parent: string;
     }): Promise<DirExistsResponse>;
     /**
-     * Edit metadata of a file (currently uses the rename endpoint, might change later).
+     * Edit metadata of a file.
      *
      * @public
      * @async
@@ -238,6 +222,23 @@ export declare class Cloud {
     editFileMetadata({ uuid, metadata }: {
         uuid: string;
         metadata: FileMetadata;
+    }): Promise<void>;
+    /**
+     * Edit directory metadata.
+     *
+     * @public
+     * @async
+     * @param {{
+     * 		uuid: string
+     * 		name: string
+     * 	}} param0
+     * @param {string} param0.uuid
+     * @param {string} param0.name
+     * @returns {Promise<void>}
+     */
+    editDirectoryMetadata({ uuid, name }: {
+        uuid: string;
+        name: string;
     }): Promise<void>;
     /**
      * Rename a file.
@@ -1106,6 +1107,7 @@ export declare class Cloud {
      * 		onError?: (err: Error) => void
      * 		onFinished?: () => void
      * 		onUploaded?: (item: CloudItem) => Promise<void>
+     * 		uuid?: string
      * 	}} param0
      * @param {string} param0.source
      * @param {string} param0.parent
@@ -1121,7 +1123,7 @@ export declare class Cloud {
      * @param {(item: CloudItem) => Promise<void>} param0.onUploaded
      * @returns {Promise<CloudItem>}
      */
-    uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded }: {
+    uploadLocalFile({ source, parent, name, pauseSignal, abortSignal, onProgress, onProgressId, onQueued, onStarted, onError, onFinished, onUploaded, uuid, encryptionKey }: {
         source: string;
         parent: string;
         name?: string;
@@ -1134,6 +1136,8 @@ export declare class Cloud {
         onError?: (err: Error) => void;
         onFinished?: () => void;
         onUploaded?: (item: CloudItem) => Promise<void>;
+        uuid?: string;
+        encryptionKey?: string;
     }): Promise<CloudItem>;
     /**
      * Upload a file using Node.JS streams. It's not as fast as the normal uploadFile function since it's not completely multithreaded.
@@ -1403,5 +1407,17 @@ export declare class Cloud {
     getDirectory({ uuid }: {
         uuid: string;
     }): Promise<GetDirResult>;
+    generateSearchItems({ name, type, uuid }: {
+        name: string;
+        type: "file" | "directory";
+        uuid: string;
+    }): Promise<SearchAddItem[]>;
+    queryGlobalSearch({ name }: {
+        name: string;
+    }): Promise<SearchFindItemDecrypted[]>;
+    rebuildGlobalSearchIndex(params?: {
+        onProgress?: RebuildGlobalSearchIndexProgressCallback;
+        onProgressId?: string;
+    }): Promise<void>;
 }
 export default Cloud;

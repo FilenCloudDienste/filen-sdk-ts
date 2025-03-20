@@ -1,14 +1,7 @@
 import Encrypt from "./encrypt"
 import Decrypt from "./decrypt"
 import utils from "./utils"
-
-export type CryptoConfig = {
-	masterKeys: string[]
-	publicKey: string
-	privateKey: string
-	metadataCache: boolean
-	tmpPath: string
-}
+import type FilenSDK from ".."
 
 /**
  * Crypto
@@ -19,22 +12,14 @@ export type CryptoConfig = {
  * @typedef {Crypto}
  */
 export class Crypto {
-	private readonly config: CryptoConfig
+	private readonly sdk: FilenSDK
 	private readonly _encrypt: Encrypt
 	private readonly _decrypt: Decrypt
 
-	/**
-	 * Creates an instance of Crypto.
-	 * @date 1/31/2024 - 4:30:23 PM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {CryptoConfig} params
-	 */
-	public constructor(params: CryptoConfig) {
-		this.config = params
-		this._encrypt = new Encrypt(this.config)
-		this._decrypt = new Decrypt(this.config)
+	public constructor(sdk: FilenSDK) {
+		this.sdk = sdk
+		this._encrypt = new Encrypt(this.sdk)
+		this._decrypt = new Decrypt(this.sdk)
 	}
 
 	/**

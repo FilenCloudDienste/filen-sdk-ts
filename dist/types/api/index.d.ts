@@ -1,10 +1,4 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import type FilenSDK from "..";
-export type APIConfig = {
-    apiKey: string;
-    sdk: FilenSDK;
-};
 /**
  * API
  * @date 2/1/2024 - 4:46:43 PM
@@ -14,33 +8,25 @@ export type APIConfig = {
  * @typedef {API}
  */
 export declare class API {
-    private readonly config;
+    private readonly sdk;
     private readonly apiClient;
     private readonly _v3;
-    /**
-     * Creates an instance of API.
-     * @date 2/1/2024 - 4:46:38 PM
-     *
-     * @constructor
-     * @public
-     * @param {APIConfig} params
-     */
-    constructor(params: APIConfig);
+    constructor(sdk: FilenSDK);
     v3(): {
         health: () => Promise<"OK">;
         dir: () => {
             content: (params_0: {
-                uuid: string;
-                dirsOnly?: boolean | undefined;
+                uuid: string | "recents";
+                dirsOnly?: boolean;
             }) => Promise<import("./v3/dir/content").DirContentResponse>;
             download: (params_0: {
                 uuid: string;
-                type?: import("./v3/dir/download").DirDownloadType | undefined;
-                linkUUID?: string | undefined;
-                linkHasPassword?: boolean | undefined;
-                linkPassword?: string | undefined;
-                linkSalt?: string | undefined;
-                skipCache?: boolean | undefined;
+                type?: import("./v3/dir/download").DirDownloadType;
+                linkUUID?: string;
+                linkHasPassword?: boolean;
+                linkPassword?: string;
+                linkSalt?: string;
+                skipCache?: boolean;
             }) => Promise<import("./v3/dir/download").DirDownloadResponse>;
             shared: (params_0: {
                 uuid: string;
@@ -86,7 +72,7 @@ export declare class API {
                 parent: string;
             }) => Promise<import("./v3/dir/exists").DirExistsResponse>;
             create: (params_0: {
-                uuid?: string | undefined;
+                uuid?: string;
                 metadataEncrypted: string;
                 parent: string;
                 nameHashed: string;
@@ -106,11 +92,16 @@ export declare class API {
                 metadataEncrypted: string;
                 nameHashed: string;
             }) => Promise<void>;
+            metadata: (params_0: {
+                uuid: string;
+                metadataEncrypted: string;
+                nameHashed: string;
+            }) => Promise<void>;
             size: (params_0: {
                 uuid: string;
-                sharerId?: number | undefined;
-                receiverId?: number | undefined;
-                trash?: boolean | undefined;
+                sharerId?: number;
+                receiverId?: number;
+                trash?: boolean;
             }) => Promise<import("./v3/dir/size").DirSizeResponse>;
             sizeLink: (params_0: {
                 uuid: string;
@@ -126,13 +117,13 @@ export declare class API {
             }) => Promise<void>;
             color: (params_0: {
                 uuid: string;
-                color: string;
+                color: import("./v3/dir/color").DirColors;
             }) => Promise<void>;
             tree: (params_0: {
                 uuid: string;
                 deviceId: string;
-                skipCache?: boolean | undefined;
-                includeRaw?: boolean | undefined;
+                skipCache?: boolean;
+                includeRaw?: boolean;
             }) => Promise<import("./v3/dir/tree").DirTreeResponse>;
             get: (params_0: {
                 uuid: string;
@@ -146,7 +137,7 @@ export declare class API {
         login: (params_0: {
             email: string;
             password: string;
-            twoFactorCode?: string | undefined;
+            twoFactorCode?: string;
             authVersion: import("..").AuthVersion;
         }) => Promise<import("./v3/login").LoginResponse>;
         register: (params_0: {
@@ -154,18 +145,18 @@ export declare class API {
             password: string;
             salt: string;
             authVersion: import("..").AuthVersion;
-            refId?: string | undefined;
-            affId?: string | undefined;
+            refId?: string;
+            affId?: string;
         }) => Promise<void>;
         confirmationSend: (params_0: {
             email: string;
         }) => Promise<void>;
         user: () => {
             info: (params_0: {
-                apiKey?: string | undefined;
+                apiKey?: string;
             }) => Promise<import("./v3/user/info").UserInfoResponse>;
             baseFolder: (params_0: {
-                apiKey?: string | undefined;
+                apiKey?: string;
             }) => Promise<import("./v3/user/baseFolder").UserBaseFolderResponse>;
             publicKey: (params_0: {
                 email: string;
@@ -198,7 +189,7 @@ export declare class API {
                 }) => Promise<void>;
             };
             delete: (params_0: {
-                twoFactorCode?: string | undefined;
+                twoFactorCode?: string;
             }) => Promise<void>;
             deleteVersions: () => Promise<void>;
             deleteAll: () => Promise<void>;
@@ -268,21 +259,28 @@ export declare class API {
                 update: (params_0: {
                     publicKey: string;
                     encryptedPrivateKey: string;
-                    apiKey?: string | undefined;
+                    apiKey?: string;
                 }) => Promise<void>;
                 set: (params_0: {
                     publicKey: string;
                     encryptedPrivateKey: string;
-                    apiKey?: string | undefined;
+                    apiKey?: string;
                 }) => Promise<void>;
                 info: (params_0: {
-                    apiKey?: string | undefined;
+                    apiKey?: string;
                 }) => Promise<import("./v3/user/keyPair/info").UserKeyPairInfoResponse>;
             };
             masterKeys: (params_0: {
                 encryptedMasterKeys: string;
-                apiKey?: string | undefined;
+                apiKey?: string;
             }) => Promise<import("./v3/user/masterKeys").UserMasterKeysResponse>;
+            setDEK: (params_0: {
+                encryptedDEK: string;
+                apiKey?: string;
+            }) => Promise<void>;
+            getDEK: (params?: {
+                apiKey?: string;
+            } | undefined) => Promise<import("./v3/user/getDEK").UserGetDEKResponse>;
             password: () => {
                 forgot: (params_0: {
                     email: string;
@@ -305,11 +303,11 @@ export declare class API {
         };
         shared: () => {
             in: (params?: {
-                uuid?: string | undefined;
+                uuid?: string;
             } | undefined) => Promise<import("./v3/shared/in").SharedInResponse>;
             out: (params?: {
-                uuid?: string | undefined;
-                receiverId?: number | undefined;
+                uuid?: string;
+                receiverId?: number;
             } | undefined) => Promise<import("./v3/shared/out").SharedOutResponse>;
         };
         upload: () => {
@@ -325,6 +323,16 @@ export declare class API {
                 version: import("..").FileEncryptionVersion;
                 uploadKey: string;
             }) => Promise<import("./v3/upload/done").UploadDoneResponse>;
+            empty: (params_0: {
+                uuid: string;
+                name: string;
+                nameHashed: string;
+                size: string;
+                parent: string;
+                mime: string;
+                metadata: string;
+                version: import("..").FileEncryptionVersion;
+            }) => Promise<import("./v3/upload/empty").UploadEmptyResponse>;
         };
         item: () => {
             share: (params_0: {
@@ -385,6 +393,12 @@ export declare class API {
                 nameEncrypted: string;
                 nameHashed: string;
             }) => Promise<void>;
+            metadata: (params_0: {
+                uuid: string;
+                metadataEncrypted: string;
+                nameEncrypted: string;
+                nameHashed: string;
+            }) => Promise<void>;
             delete: () => {
                 permanent: (params_0: {
                     uuid: string;
@@ -431,31 +445,31 @@ export declare class API {
                         bucket: string;
                         region: string;
                         chunk: number;
-                        timeout?: number | undefined;
-                        abortSignal?: AbortSignal | undefined;
-                        onProgress?: import("..").ProgressCallback | undefined;
-                        onProgressId?: string | undefined;
+                        timeout?: number;
+                        abortSignal?: AbortSignal;
+                        onProgress?: import("..").ProgressCallback;
+                        onProgressId?: string;
                     }) => Promise<Buffer>;
                     stream: (params_0: {
                         uuid: string;
                         bucket: string;
                         region: string;
                         chunk: number;
-                        timeout?: number | undefined;
-                        abortSignal?: AbortSignal | undefined;
-                        onProgress?: import("..").ProgressCallback | undefined;
-                        onProgressId?: string | undefined;
+                        timeout?: number;
+                        abortSignal?: AbortSignal;
+                        onProgress?: import("..").ProgressCallback;
+                        onProgressId?: string;
                     }) => Promise<ReadableStream<any> | import("fs").ReadStream>;
                     local: (params_0: {
                         uuid: string;
                         bucket: string;
                         region: string;
                         chunk: number;
-                        timeout?: number | undefined;
-                        abortSignal?: AbortSignal | undefined;
+                        timeout?: number;
+                        abortSignal?: AbortSignal;
                         to: string;
-                        onProgress?: import("..").ProgressCallback | undefined;
-                        onProgressId?: string | undefined;
+                        onProgress?: import("..").ProgressCallback;
+                        onProgressId?: string;
                     }) => Promise<void>;
                 };
             };
@@ -466,13 +480,13 @@ export declare class API {
                         index: number;
                         parent: string;
                         uploadKey: string;
-                        abortSignal?: AbortSignal | undefined;
-                        maxRetries?: number | undefined;
-                        retryTimeout?: number | undefined;
-                        timeout?: number | undefined;
+                        abortSignal?: AbortSignal;
+                        maxRetries?: number;
+                        retryTimeout?: number;
+                        timeout?: number;
                         buffer: Buffer;
-                        onProgress?: import("..").ProgressCallback | undefined;
-                        onProgressId?: string | undefined;
+                        onProgress?: import("..").ProgressCallback;
+                        onProgressId?: string;
                     }) => Promise<import("./client").UploadChunkResponse>;
                 };
             };
@@ -679,6 +693,14 @@ export declare class API {
             blockedDelete: (params_0: {
                 uuid: string;
             }) => Promise<void>;
+        };
+        search: () => {
+            add: (params_0: {
+                items: import("./v3/search/add").SearchAddItem[];
+            }) => Promise<import("./v3/search/add").SearchAddResponse>;
+            find: (params_0: {
+                hashes: string[];
+            }) => Promise<import("./v3/search/find").SearchFindResponse>;
         };
     };
 }

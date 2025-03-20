@@ -1,11 +1,11 @@
-/* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { type FileGetResponse } from "./api/v3/file/get"
 import { type DirGetResponse } from "./api/v3/dir/get"
 
-export type AuthVersion = 1 | 2
-export type FileEncryptionVersion = 1 | 2
+export type AuthVersion = 1 | 2 | 3
+export type FileEncryptionVersion = 1 | 2 | 3
+export type MetadataEncryptionVersion = 1 | 2 | 3
 export type Environment = "node" | "browser"
 
 export type FileMetadata = {
@@ -25,6 +25,17 @@ export type FolderMetadata = {
 export type ProgressCallback = (transferred: number, id?: string) => void
 export type PublicLinkExpiration = "30d" | "14d" | "7d" | "3d" | "1d" | "6h" | "1h" | "never"
 export type ProgressWithTotalCallback = (transferred: number, total: number) => void
+export type RebuildGlobalSearchIndexProgressCallback = ({
+	type,
+	generated,
+	added,
+	id
+}: {
+	type: "gettingTree" | "generatingHashes" | "adding"
+	generated: number
+	added: number
+	id?: string
+}) => void
 
 export type DistributiveOmit<T, K extends keyof any> = T extends any ? Omit<T, K> : never
 

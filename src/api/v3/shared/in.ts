@@ -1,6 +1,6 @@
 import type APIClient from "../../client"
-import { FileEncryptionVersion } from "../../../types"
-import type { DirColors } from "../dir/color"
+import { type FileEncryptionVersion } from "../../../types"
+import { type DirColors } from "../dir/color"
 
 export type SharedInUpload = {
 	uuid: string

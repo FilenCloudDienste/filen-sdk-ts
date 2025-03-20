@@ -1,5 +1,5 @@
-import type { APIClient, UploadChunkResponse } from "../../../../client"
-import type { ProgressCallback } from "../../../../../types"
+import { type APIClient, type UploadChunkResponse } from "../../../../client"
+import { type ProgressCallback } from "../../../../../types"
 
 /**
  * FileUploadChunkBuffer

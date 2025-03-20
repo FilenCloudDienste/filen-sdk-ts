@@ -1,5 +1,3 @@
-/// <reference types="node" />
-/// <reference types="node" />
 import { Writable } from "stream";
 import { type ProgressCallback, type FilenSDK } from "..";
 /**

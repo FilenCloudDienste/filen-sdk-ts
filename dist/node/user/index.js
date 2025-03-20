@@ -12,18 +12,8 @@ const uuid_1 = require("uuid");
  * @typedef {User}
  */
 class User {
-    /**
-     * Creates an instance of User.
-     * @date 2/9/2024 - 5:54:11 AM
-     *
-     * @constructor
-     * @public
-     * @param {UserConfig} params
-     */
-    constructor(params) {
-        this.api = params.api;
-        this.sdkConfig = params.sdkConfig;
-        this.sdk = params.sdk;
+    constructor(sdk) {
+        this.sdk = sdk;
     }
     /**
      * Fetch the user's info.
@@ -34,7 +24,9 @@ class User {
      * @returns {Promise<UserInfoResponse>}
      */
     async info() {
-        return await this.api.v3().user().info({ apiKey: undefined });
+        return await this.sdk.api(3).user().info({
+            apiKey: undefined
+        });
     }
     /**
      * Fetch the user's base folder UUID.
@@ -45,7 +37,9 @@ class User {
      * @returns {Promise<string>}
      */
     async baseFolder() {
-        return (await this.api.v3().user().baseFolder({ apiKey: undefined })).uuid;
+        return (await this.sdk.api(3).user().baseFolder({
+            apiKey: undefined
+        })).uuid;
     }
     /**
      * Get a user's public key.
@@ -58,7 +52,9 @@ class User {
      * @returns {Promise<string>}
      */
     async publicKey({ email }) {
-        return (await this.api.v3().user().publicKey({ email })).publicKey;
+        return (await this.sdk.api(3).user().publicKey({
+            email
+        })).publicKey;
     }
     /**
      * Fetch the user's settings.
@@ -69,7 +65,7 @@ class User {
      * @returns {Promise<UserSettingsResponse>}
      */
     async settings() {
-        return await this.api.v3().user().settings();
+        return await this.sdk.api(3).user().settings();
     }
     /**
      * Fetch user account.
@@ -80,7 +76,7 @@ class User {
      * @returns {Promise<UserAccountResponse>}
      */
     async account() {
-        return await this.api.v3().user().account();
+        return await this.sdk.api(3).user().account();
     }
     /**
      * Fetch GDPR info.
@@ -91,7 +87,7 @@ class User {
      * @returns {Promise<UserGDPRResponse>}
      */
     async gdpr() {
-        return await this.api.v3().user().gdpr();
+        return await this.sdk.api(3).user().gdpr();
     }
     /**
      * Upload an avatar.
@@ -109,7 +105,7 @@ class User {
             buffer: Buffer.from(base64, "utf-8"),
             algorithm: "sha512"
         });
-        await this.api.v3().user().avatar({
+        await this.sdk.api(3).user().avatar({
             base64,
             hash
         });
@@ -126,17 +122,19 @@ class User {
      * @returns {Promise<void>}
      */
     async changeEmail({ email, password }) {
-        const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email });
+        const authInfo = await this.sdk.api(3).auth().info({
+            email: this.sdk.config.email
+        });
         const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
             rawPassword: password,
-            authVersion: this.sdkConfig.authVersion,
+            authVersion: authInfo.authVersion,
             salt: authInfo.salt
         });
-        await this.api
-            .v3()
-            .user()
-            .settingsEmail()
-            .change({ email, password: derived.derivedPassword, authVersion: this.sdkConfig.authVersion });
+        await this.sdk.api(3).user().settingsEmail().change({
+            email,
+            password: derived.derivedPassword,
+            authVersion: authInfo.authVersion
+        });
     }
     /**
      * Update personal information.
@@ -194,11 +192,17 @@ class User {
         if (vatId.length <= 0) {
             vatId = "__NONE__";
         }
-        await this.api
-            .v3()
-            .user()
-            .personal()
-            .change({ city, companyName, country, firstName, lastName, postalCode, street, streetNumber, vatId });
+        await this.sdk.api(3).user().personal().change({
+            city,
+            companyName,
+            country,
+            firstName,
+            lastName,
+            postalCode,
+            street,
+            streetNumber,
+            vatId
+        });
     }
     /**
      * Request account deletion.
@@ -211,7 +215,9 @@ class User {
      * @returns {Promise<void>}
      */
     async delete({ twoFactorCode = "XXXXXX" }) {
-        await this.api.v3().user().delete({ twoFactorCode });
+        await this.sdk.api(3).user().delete({
+            twoFactorCode
+        });
     }
     /**
      * Delete all versioned files.
@@ -222,7 +228,7 @@ class User {
      * @returns {Promise<void>}
      */
     async deleteAllVersionedFiles() {
-        await this.api.v3().user().deleteVersions();
+        await this.sdk.api(3).user().deleteVersions();
     }
     /**
      * Delete all files and directories.
@@ -233,7 +239,7 @@ class User {
      * @returns {Promise<void>}
      */
     async deleteEverything() {
-        await this.api.v3().user().deleteAll();
+        await this.sdk.api(3).user().deleteAll();
     }
     /**
      * Change password.
@@ -247,34 +253,95 @@ class User {
      * @returns {Promise<string>}
      */
     async changePassword({ currentPassword, newPassword }) {
-        const authInfo = await this.api.v3().auth().info({ email: this.sdkConfig.email });
-        const derivedCurrent = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-            rawPassword: currentPassword,
-            authVersion: this.sdkConfig.authVersion,
-            salt: authInfo.salt
-        });
-        const newSalt = await this.sdk.getWorker().crypto.utils.generateRandomString({ length: 256 });
-        const derivedNew = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-            rawPassword: newPassword,
-            authVersion: this.sdkConfig.authVersion,
-            salt: newSalt
-        });
-        const newMasterKeys = [
-            ...this.sdkConfig.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
-            derivedNew.derivedMasterKeys
-        ];
-        const newMasterKeysEncrypted = await this.sdk.getWorker().crypto.encrypt.metadata({
-            metadata: newMasterKeys.join("|"),
-            key: derivedNew.derivedMasterKeys
-        });
-        const response = await this.api.v3().user().settingsPassword().change({
-            password: derivedNew.derivedPassword,
-            currentPassword: derivedCurrent.derivedPassword,
-            authVersion: this.sdkConfig.authVersion,
-            salt: newSalt,
-            masterKeys: newMasterKeysEncrypted
-        });
-        return response.newAPIKey;
+        if (!this.sdk.config.privateKey || !this.sdk.config.publicKey || !this.sdk.config.masterKeys || !this.sdk.config.email) {
+            throw new Error("Invalid SDK config.");
+        }
+        const [authInfo, newSalt] = await Promise.all([
+            this.sdk.api(3).auth().info({
+                email: this.sdk.config.email
+            }),
+            this.sdk.getWorker().crypto.utils.generateRandomHexString(128)
+        ]);
+        const [derivedCurrent, derivedNew] = await Promise.all([
+            this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+                rawPassword: currentPassword,
+                authVersion: authInfo.authVersion,
+                salt: authInfo.salt
+            }),
+            this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+                rawPassword: newPassword,
+                authVersion: authInfo.authVersion,
+                salt: newSalt
+            })
+        ]);
+        if (authInfo.authVersion === 1 || authInfo.authVersion === 2) {
+            const newMasterKeys = [
+                ...this.sdk.config.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
+                derivedNew.derivedMasterKeys
+            ];
+            const [newMasterKeysEncrypted, privateKeyReEncrypted] = await Promise.all([
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: newMasterKeys.join("|"),
+                    key: derivedNew.derivedMasterKeys
+                }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: this.sdk.config.privateKey,
+                    key: derivedNew.derivedMasterKeys
+                })
+            ]);
+            const [response] = await Promise.all([
+                this.sdk.api(3).user().settingsPassword().change({
+                    password: derivedNew.derivedPassword,
+                    currentPassword: derivedCurrent.derivedPassword,
+                    authVersion: authInfo.authVersion,
+                    salt: newSalt,
+                    masterKeys: newMasterKeysEncrypted
+                }),
+                this.sdk.api(3).user().keyPair().update({
+                    publicKey: this.sdk.config.publicKey,
+                    encryptedPrivateKey: privateKeyReEncrypted
+                })
+            ]);
+            return response.newAPIKey;
+        }
+        else if (authInfo.authVersion === 3) {
+            const newDekEncryptionKey = derivedNew.derivedMasterKeys;
+            let dek = (await this.sdk.api(3).user().getDEK()).dek;
+            if (!dek) {
+                throw new Error("DEK not found.");
+            }
+            dek = await this.sdk.getWorker().crypto.decrypt.metadata({
+                metadata: dek,
+                key: newDekEncryptionKey
+            });
+            const [dekReEncrypted, privateKeyReEncrypted] = await Promise.all([
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: dek,
+                    key: newDekEncryptionKey
+                }),
+                this.sdk.getWorker().crypto.encrypt.metadata({
+                    metadata: this.sdk.config.privateKey,
+                    key: derivedNew.derivedMasterKeys
+                })
+            ]);
+            const [response] = await Promise.all([
+                this.sdk.api(3).user().settingsPassword().change({
+                    password: derivedNew.derivedPassword,
+                    currentPassword: derivedCurrent.derivedPassword,
+                    authVersion: authInfo.authVersion,
+                    salt: newSalt,
+                    masterKeys: dekReEncrypted
+                }),
+                this.sdk.api(3).user().keyPair().update({
+                    publicKey: this.sdk.config.publicKey,
+                    encryptedPrivateKey: privateKeyReEncrypted
+                })
+            ]);
+            return response.newAPIKey;
+        }
+        else {
+            throw new Error("Invalid auth version.");
+        }
     }
     /**
      * Mark the current master keys as exported.
@@ -284,7 +351,7 @@ class User {
      * @returns {Promise<void>}
      */
     async didExportMasterKeys() {
-        return await this.api.v3().user().didExportMasterKeys();
+        return await this.sdk.api(3).user().didExportMasterKeys();
     }
     /**
      * Check if the current API key is valid.
@@ -295,7 +362,7 @@ class User {
      */
     async checkAPIKeyValidity() {
         try {
-            await this.api.v3().user().account();
+            await this.sdk.api(3).user().account();
             return true;
         }
         catch (e) {
@@ -319,7 +386,9 @@ class User {
      * @returns {Promise<string>}
      */
     async enableTwoFactorAuthentication({ twoFactorCode }) {
-        return (await this.api.v3().user().twoFactorAuthentication().enable({ code: twoFactorCode })).recoveryKeys;
+        return (await this.sdk.api(3).user().twoFactorAuthentication().enable({
+            code: twoFactorCode
+        })).recoveryKeys;
     }
     /**
      * Disable two factor authentication.
@@ -332,7 +401,9 @@ class User {
      * @returns {Promise<void>}
      */
     async disableTwoFactorAuthentication({ twoFactorCode }) {
-        return await this.api.v3().user().twoFactorAuthentication().disable({ code: twoFactorCode });
+        return await this.sdk.api(3).user().twoFactorAuthentication().disable({
+            code: twoFactorCode
+        });
     }
     /**
      * Fetch events based on timestamp and filter. Timestamp can be used for pagination.
@@ -343,14 +414,16 @@ class User {
      * @returns {Promise<UserEvent[]>}
      */
     async events(params) {
-        const result = await this.api
-            .v3()
+        const result = await this.sdk
+            .api(3)
             .user()
             .events({
             lastTimestamp: params && params.timestamp ? params.timestamp : Math.floor(Date.now() / 1000) + 60,
             filter: params && params.filter ? params.filter : "all"
         });
-        return await Promise.all(result.map(event => this.sdk.getWorker().crypto.decrypt.event({ event })));
+        return await Promise.all(result.map(event => this.sdk.getWorker().crypto.decrypt.event({
+            event
+        })));
     }
     /**
      * Fetch info about an event.
@@ -363,7 +436,11 @@ class User {
      * @returns {Promise<UserEventResponse>}
      */
     async event({ uuid }) {
-        return await this.sdk.getWorker().crypto.decrypt.event({ event: await this.api.v3().user().event({ uuid }) });
+        return await this.sdk.getWorker().crypto.decrypt.event({
+            event: await this.sdk.api(3).user().event({
+                uuid
+            })
+        });
     }
     /**
      * Cancel a subscription.
@@ -376,7 +453,9 @@ class User {
      * @returns {Promise<void>}
      */
     async cancelSubscription({ uuid }) {
-        await this.api.v3().user().sub().cancel({ uuid });
+        await this.sdk.api(3).user().sub().cancel({
+            uuid
+        });
     }
     /**
      * Create a subscription payment flow. Returns the payment gateway URL.
@@ -390,7 +469,10 @@ class User {
      * @returns {Promise<string>}
      */
     async createSubscription({ planId, paymentMethod }) {
-        return (await this.api.v3().user().sub().create({ planId, method: paymentMethod })).url;
+        return (await this.sdk.api(3).user().sub().create({
+            planId,
+            method: paymentMethod
+        })).url;
     }
     /**
      * Generate a PDF invoice. Returns PDF data as a Base64 encoded string.
@@ -403,7 +485,9 @@ class User {
      * @returns {Promise<string>}
      */
     async generateInvoice({ uuid }) {
-        return await this.api.v3().user().invoice({ uuid });
+        return await this.sdk.api(3).user().invoice({
+            uuid
+        });
     }
     /**
      * Request an affiliate payout.
@@ -417,7 +501,10 @@ class User {
      * @returns {Promise<void>}
      */
     async requestAffiliatePayout({ method, address }) {
-        await this.api.v3().user().affiliate().payout({ address, method });
+        await this.sdk.api(3).user().affiliate().payout({
+            address,
+            method
+        });
     }
     /**
      * Toggle file versioning on/off.
@@ -430,7 +517,9 @@ class User {
      * @returns {Promise<void>}
      */
     async versioning({ enabled }) {
-        await this.api.v3().user().versioning({ enable: enabled });
+        await this.sdk.api(3).user().versioning({
+            enable: enabled
+        });
     }
     /**
      * Toggle login alerts on/off.
@@ -443,7 +532,9 @@ class User {
      * @returns {Promise<void>}
      */
     async loginAlerts({ enabled }) {
-        await this.api.v3().user().loginAlerts({ enable: enabled });
+        await this.sdk.api(3).user().loginAlerts({
+            enable: enabled
+        });
     }
     /**
      * Update account nickname.
@@ -456,7 +547,9 @@ class User {
      * @returns {Promise<void>}
      */
     async updateNickname({ nickname }) {
-        await this.api.v3().user().nickname({ nickname });
+        await this.sdk.api(3).user().nickname({
+            nickname
+        });
     }
     /**
      * Toggle appear offline status on/off.
@@ -469,7 +562,9 @@ class User {
      * @returns {Promise<void>}
      */
     async appearOffline({ enabled }) {
-        await this.api.v3().user().appearOffline({ appearOffline: enabled });
+        await this.sdk.api(3).user().appearOffline({
+            appearOffline: enabled
+        });
     }
     /**
      * Fetch a user's public profile.
@@ -482,7 +577,9 @@ class User {
      * @returns {Promise<UserProfileResponse>}
      */
     async profile({ id }) {
-        return await this.api.v3().user().profile({ id });
+        return await this.sdk.api(3).user().profile({
+            id
+        });
     }
     /**
      * Update desktop last active timestamp.
@@ -495,7 +592,9 @@ class User {
      * @returns {Promise<void>}
      */
     async updateDesktopLastActive({ timestamp }) {
-        await this.api.v3().user().lastActive().desktop({ timestamp });
+        await this.sdk.api(3).user().lastActive().desktop({
+            timestamp
+        });
     }
     /**
      * Lock a resource.
@@ -518,7 +617,7 @@ class User {
         let tries = 0;
         while (tries < maxTries) {
             tries += 1;
-            const response = await this.api.v3().user().lock({
+            const response = await this.sdk.api(3).user().lock({
                 uuid: lockUUID,
                 resource,
                 type: "acquire"
@@ -541,7 +640,7 @@ class User {
      * @returns {Promise<void>}
      */
     async releaseResourceLock({ resource, lockUUID }) {
-        const response = await this.api.v3().user().lock({
+        const response = await this.sdk.api(3).user().lock({
             uuid: lockUUID,
             resource,
             type: "release"
@@ -561,7 +660,7 @@ class User {
      * @returns {Promise<void>}
      */
     async refreshResourceLock({ resource, lockUUID }) {
-        const response = await this.api.v3().user().lock({
+        const response = await this.sdk.api(3).user().lock({
             uuid: lockUUID,
             resource,
             type: "refresh"
@@ -580,7 +679,7 @@ class User {
      * @returns {Promise<UserLockStatus>}
      */
     async resourceLockStatus({ resource }) {
-        const response = await this.api.v3().user().lock({
+        const response = await this.sdk.api(3).user().lock({
             uuid: (0, uuid_1.v4)(),
             resource,
             type: "status"

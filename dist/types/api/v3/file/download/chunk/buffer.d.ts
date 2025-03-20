@@ -1,6 +1,5 @@
-/// <reference types="node" />
 import type APIClient from "../../../../client";
-import type { ProgressCallback } from "../../../../../types";
+import { type ProgressCallback } from "../../../../../types";
 /**
  * FileDownloadChunkBuffer
  * @date 2/15/2024 - 4:38:09 AM

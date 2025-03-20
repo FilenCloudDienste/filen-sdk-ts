@@ -1,4 +1,4 @@
-import type { FileMetadata, FolderMetadata } from "./types";
+import { type FileMetadata, type FolderMetadata } from "./types";
 declare const cache: {
     fileMetadata: Map<string, FileMetadata>;
     folderMetadata: Map<string, FolderMetadata>;

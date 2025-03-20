@@ -2,7 +2,7 @@ import { Writable } from "stream"
 import { Semaphore } from "../semaphore"
 import mimeTypes from "mime-types"
 import nodeCrypto from "crypto"
-import { CHUNK_SIZE, MAX_UPLOAD_THREADS } from "../constants"
+import { CHUNK_SIZE, MAX_UPLOAD_THREADS, FILE_ENCRYPTION_VERSION } from "../constants"
 import { type FileEncryptionVersion, type FSItem, type ProgressCallback, type FilenSDK } from ".."
 
 /**
@@ -100,7 +100,7 @@ export class ChunkedUploadWriter extends Writable {
 		this.chunkBuffer = Buffer.from([])
 		this.uuid = uuid
 		this.key = key
-		this.version = 2
+		this.version = FILE_ENCRYPTION_VERSION
 		this.size = 0
 		this.name = name
 		this.lastModified = lastModified ? lastModified : Date.now()
@@ -228,7 +228,7 @@ export class ChunkedUploadWriter extends Writable {
 
 		this.hasher.update(chunk)
 
-		const encryptedChunk = await this.sdk.crypto().encrypt().data({
+		const encryptedChunk = await this.sdk.getWorker().crypto.encrypt.data({
 			data: chunk,
 			key: this.key
 		})
@@ -293,60 +293,138 @@ export class ChunkedUploadWriter extends Writable {
 			await this.upload(this.chunkBuffer)
 		}
 
-		if (this.size <= 0) {
-			return
+		let hash: string | undefined = undefined
+		let fileChunks: number = 0
+
+		if (this.size > 0) {
+			// Calculate file chunks and size. Warning: This needs to be called AFTER initiating all chunk uploads or it will spit out a wrong chunk count.
+			fileChunks = Math.ceil(this.size / CHUNK_SIZE)
+
+			await this.waitForAllChunksToBeUploaded(fileChunks)
+
+			hash = this.hasher.digest("hex")
+
+			await this.sdk._locks.driveWrite.acquire()
+
+			try {
+				await this.sdk
+					.api(3)
+					.upload()
+					.done({
+						uuid: this.uuid,
+						name: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.name,
+							key: this.key
+						}),
+						nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
+							name: this.name,
+							authVersion: this.sdk.config.authVersion!,
+							hmacKey: await this.sdk.generateHMACKey()
+						}),
+						size: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.size.toString(),
+							key: this.key
+						}),
+						chunks: fileChunks,
+						mime: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.mime,
+							key: this.key
+						}),
+						version: this.version,
+						uploadKey: this.uploadKey,
+						rm: await this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
+						metadata: await this.sdk
+							.crypto()
+							.encrypt()
+							.metadata({
+								metadata: JSON.stringify({
+									name: this.name,
+									size: this.size,
+									mime: this.mime,
+									key: this.key,
+									lastModified: this.lastModified,
+									creation: this.creation,
+									hash
+								})
+							})
+					})
+			} finally {
+				await this.sdk._locks.driveWrite.release().catch(() => {})
+			}
+		} else {
+			await this.sdk._locks.driveWrite.acquire()
+
+			try {
+				await this.sdk
+					.api(3)
+					.upload()
+					.empty({
+						uuid: this.uuid,
+						parent: this.parent,
+						name: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.name,
+							key: this.key
+						}),
+						nameHashed: await this.sdk.getWorker().crypto.utils.hashFileName({
+							name: this.name,
+							authVersion: this.sdk.config.authVersion!,
+							hmacKey: await this.sdk.generateHMACKey()
+						}),
+						size: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.size.toString(),
+							key: this.key
+						}),
+						mime: await this.sdk.getWorker().crypto.encrypt.metadata({
+							metadata: this.mime,
+							key: this.key
+						}),
+						version: this.version,
+						metadata: await this.sdk
+							.crypto()
+							.encrypt()
+							.metadata({
+								metadata: JSON.stringify({
+									name: this.name,
+									size: this.size,
+									mime: this.mime,
+									key: this.key,
+									lastModified: this.lastModified,
+									creation: this.creation,
+									hash
+								})
+							})
+					})
+			} finally {
+				await this.sdk._locks.driveWrite.release().catch(() => {})
+			}
 		}
 
-		// Calculate file chunks and size. Warning: This needs to be called AFTER initiating all chunk uploads or it will spit out a wrong chunk count.
-		const fileChunks = Math.ceil(this.size / CHUNK_SIZE)
-
-		await this.waitForAllChunksToBeUploaded(fileChunks)
-
-		const hash = this.hasher.digest("hex")
-
-		await this.sdk
-			.api(3)
-			.upload()
-			.done({
+		await Promise.all([
+			this.sdk.cloud().checkIfItemParentIsShared({
+				type: "file",
+				parent: this.parent,
 				uuid: this.uuid,
-				name: await this.sdk.crypto().encrypt().metadata({ metadata: this.name, key: this.key }),
-				nameHashed: await this.sdk.crypto().utils.hashFn({ input: this.name.toLowerCase() }),
-				size: await this.sdk.crypto().encrypt().metadata({ metadata: this.size.toString(), key: this.key }),
-				chunks: fileChunks,
-				mime: await this.sdk.crypto().encrypt().metadata({ metadata: this.mime, key: this.key }),
-				version: this.version,
-				uploadKey: this.uploadKey,
-				rm: await this.sdk.crypto().utils.generateRandomString({ length: 32 }),
-				metadata: await this.sdk
-					.crypto()
-					.encrypt()
-					.metadata({
-						metadata: JSON.stringify({
-							name: this.name,
-							size: this.size,
-							mime: this.mime,
-							key: this.key,
-							lastModified: this.lastModified,
-							creation: this.creation,
-							hash
-						})
+				itemMetadata: {
+					name: this.name,
+					size: this.size,
+					mime: this.mime,
+					lastModified: this.lastModified,
+					creation: this.creation,
+					key: this.key,
+					hash
+				}
+			}),
+			this.sdk
+				.api(3)
+				.search()
+				.add({
+					items: await this.sdk.cloud().generateSearchItems({
+						name: this.name,
+						type: "file",
+						uuid: this.uuid
 					})
-			})
-
-		await this.sdk.cloud().checkIfItemParentIsShared({
-			type: "file",
-			parent: this.parent,
-			uuid: this.uuid,
-			itemMetadata: {
-				name: this.name,
-				size: this.size,
-				mime: this.mime,
-				lastModified: this.lastModified,
-				creation: this.creation,
-				key: this.key,
-				hash
-			}
-		})
+				})
+		])
 
 		this.emit("uploaded", {
 			type: "file",

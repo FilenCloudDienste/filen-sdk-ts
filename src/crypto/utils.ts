@@ -1,45 +1,183 @@
-import { environment } from "../constants"
+import { environment, FILE_ENCRYPTION_VERSION, METADATA_ENCRYPTION_VERSION } from "../constants"
 import nodeCrypto from "crypto"
-import CryptoAPI from "crypto-api-v1"
-import type { AuthVersion } from "../types"
+import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
 import cache from "../cache"
-import { fastStringHash } from "../utils"
+import { fastStringHash, nameSplitter } from "../utils"
+import { argon2idAsync } from "@noble/hashes/argon2"
+import { sha256 } from "@noble/hashes/sha256"
+import { sha1 } from "@noble/hashes/sha1"
+import { sha512 } from "@noble/hashes/sha512"
+import CryptoAPI from "crypto-api-v1"
+import { hmac } from "@noble/hashes/hmac"
+import { hkdf } from "@noble/hashes/hkdf"
 
-const textEncoder = new TextEncoder()
+export const base64Charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+export const asciiCharset = Buffer.from(
+	new Uint8Array(
+		Array.from(
+			{
+				length: 128
+			},
+			(_, i) => i
+		)
+	)
+).toString("utf-8")
 
-/**
- * Generate a cryptographically secure random string of given length.
- * @date 1/31/2024 - 4:01:20 PM
- *
- * @export
- * @param {{ length: number }} param0
- * @param {number} param0.length
- * @returns {string}
- */
-export async function generateRandomString({ length }: { length: number }): Promise<string> {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
-
+export async function generateRandomString(length: number = 32): Promise<string> {
 	if (environment === "node") {
-		const randomBytes = nodeCrypto.randomBytes(length)
-		const result = new Array(length)
+		const array = nodeCrypto.randomBytes(length)
 
-		for (let i = 0; i < length; i++) {
-			result[i] = chars[randomBytes[i]! % chars.length]
-		}
-
-		return result.join("")
+		return Array.from(array)
+			.map(byte => asciiCharset[byte & 0x7f])
+			.join("")
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
 
 		globalThis.crypto.getRandomValues(array)
 
 		return Array.from(array)
-			.map(x => chars[x % chars.length])
+			.map(byte => asciiCharset[byte & 0x7f])
 			.join("")
 	}
 
 	throw new Error(`crypto.utils.generateRandomString not implemented for ${environment} environment`)
+}
+
+export async function generateRandomBytes(length: number = 32): Promise<Buffer> {
+	if (environment === "node") {
+		return nodeCrypto.randomBytes(length)
+	} else if (environment === "browser") {
+		const array = new Uint8Array(length)
+
+		globalThis.crypto.getRandomValues(array)
+
+		return Buffer.from(array)
+	}
+
+	throw new Error(`crypto.utils.generateRandomBytes not implemented for ${environment} environment`)
+}
+
+export async function generateRandomURLSafeString(length: number = 32): Promise<string> {
+	if (environment === "node") {
+		const array = nodeCrypto.randomBytes(length)
+
+		return Array.from(array)
+			.map(byte => base64Charset[byte % base64Charset.length])
+			.join("")
+	} else if (environment === "browser") {
+		const array = new Uint8Array(length)
+
+		globalThis.crypto.getRandomValues(array)
+
+		return Array.from(array)
+			.map(byte => base64Charset[byte % base64Charset.length])
+			.join("")
+	}
+
+	throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`)
+}
+
+export async function generateRandomHexString(length: number = 32): Promise<string> {
+	if (environment === "node") {
+		return nodeCrypto.randomBytes(length).toString("hex")
+	} else if (environment === "browser") {
+		const array = new Uint8Array(length)
+
+		globalThis.crypto.getRandomValues(array)
+
+		return Buffer.from(array).toString("hex")
+	}
+
+	throw new Error(`crypto.utils.generateRandomHexString not implemented for ${environment} environment`)
+}
+
+export async function generateEncryptionKey(use: "file" | "metadata"): Promise<string> {
+	if (use === "file") {
+		if (FILE_ENCRYPTION_VERSION === 1) {
+			return await generateRandomURLSafeString(32)
+		} else if (FILE_ENCRYPTION_VERSION === 2) {
+			return await generateRandomString(32)
+		} else {
+			return await generateRandomHexString(32)
+		}
+	} else {
+		if (METADATA_ENCRYPTION_VERSION === 1) {
+			return await generateRandomURLSafeString(32)
+		} else if (METADATA_ENCRYPTION_VERSION === 2) {
+			return await generateRandomString(32)
+		} else {
+			return await generateRandomHexString(32)
+		}
+	}
+}
+
+export async function hashFileName({
+	name,
+	authVersion,
+	hmacKey
+}: {
+	name: string
+	authVersion: AuthVersion
+	hmacKey?: Buffer
+}): Promise<string> {
+	if (authVersion === 1 || authVersion === 2) {
+		return await hashFn({
+			input: name.toLowerCase()
+		})
+	} else {
+		if (!hmacKey || hmacKey.byteLength !== 32) {
+			throw new Error("hmacKey required for authVersion v3 salted file/directory name hash.")
+		}
+
+		return await hashSearchIndex({
+			name,
+			hmacKey
+		})
+	}
+}
+
+export async function hashSearchIndex({ name, hmacKey }: { name: string; hmacKey: Buffer }): Promise<string> {
+	const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
+
+	if (environment === "browser") {
+		return Buffer.from(hmac(sha256, hmacKey, nameBuffer)).toString("hex")
+	} else {
+		return nodeCrypto.createHmac("sha256", hmacKey).update(nameBuffer).digest("hex")
+	}
+}
+
+export async function generateSearchIndexHashes({ input, hmacKey }: { input: string; hmacKey: Buffer }): Promise<string[]> {
+	const parts = nameSplitter(input.toLowerCase())
+
+	return await Promise.all(
+		parts.map(part =>
+			hashSearchIndex({
+				name: part,
+				hmacKey
+			})
+		)
+	)
+}
+
+export async function generatePrivateKeyHMAC(privateKey: string): Promise<Buffer> {
+	const privateKeyBuffer = Buffer.from(privateKey, "base64")
+
+	if (environment === "browser") {
+		return Buffer.from(hkdf(sha256, privateKeyBuffer, Buffer.from([]), Buffer.from("hmac-sha256-key", "utf-8"), 32))
+	} else {
+		return new Promise<Buffer>((resolve, reject) => {
+			nodeCrypto.hkdf("sha256", privateKeyBuffer, Buffer.from([]), Buffer.from("hmac-sha256-key", "utf-8"), 32, (err, result) => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve(Buffer.from(result))
+			})
+		})
+	}
 }
 
 export type DeriveKeyFromPasswordBase = {
@@ -57,7 +195,9 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: DeriveKeyFromPasswordBase & { returnHex: false }): Promise<Buffer>
+}: DeriveKeyFromPasswordBase & {
+	returnHex: false
+}): Promise<Buffer>
 
 export async function deriveKeyFromPassword({
 	password,
@@ -66,7 +206,9 @@ export async function deriveKeyFromPassword({
 	hash,
 	bitLength,
 	returnHex
-}: DeriveKeyFromPasswordBase & { returnHex: true }): Promise<string>
+}: DeriveKeyFromPasswordBase & {
+	returnHex: true
+}): Promise<string>
 
 /**
  * Derive a key from given inputs using PBKDF2.
@@ -117,13 +259,16 @@ export async function deriveKeyFromPassword({
 		const bits = await globalThis.crypto.subtle.deriveBits(
 			{
 				name: "PBKDF2",
-				salt: textEncoder.encode(salt),
+				salt: Buffer.from(salt, "utf-8"),
 				iterations: iterations,
 				hash: {
 					name: hash === "sha512" ? "SHA-512" : hash
 				}
 			},
-			await importPBKDF2Key({ key: password, mode: ["deriveBits"] }),
+			await importPBKDF2Key({
+				key: password,
+				mode: ["deriveBits"]
+			}),
 			bitLength
 		)
 
@@ -149,56 +294,13 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
 	if (environment === "node") {
 		return nodeCrypto
 			.createHash("sha1")
-			.update(nodeCrypto.createHash("sha512").update(textEncoder.encode(input)).digest("hex"))
+			.update(nodeCrypto.createHash("sha512").update(Buffer.from(input, "utf-8")).digest("hex"))
 			.digest("hex")
 	} else if (environment === "browser") {
-		return CryptoAPI.hash("sha1", CryptoAPI.hash("sha512", input))
+		return Buffer.from(sha1(sha512(Buffer.from(input, "utf-8")))).toString("hex")
 	}
 
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
-}
-
-/**
- * Normalize hash names. E.g. WebCrypto uses "SHA-512" while Node.JS's Crypto Core lib uses "sha512".
- * @date 2/2/2024 - 6:59:42 PM
- *
- * @export
- * @param {{hash: string}} param0
- * @param {string} param0.hash
- * @returns {string}
- */
-export function normalizeHash({ hash }: { hash: string }): string {
-	const lowercased = hash.toLowerCase()
-
-	if (lowercased === "sha-512") {
-		return "sha512"
-	}
-
-	if (lowercased === "sha-256") {
-		return "sha256"
-	}
-
-	if (lowercased === "sha-384") {
-		return "sha384"
-	}
-
-	if (lowercased === "sha-1") {
-		return "sha1"
-	}
-
-	if (lowercased === "md-2") {
-		return "md2"
-	}
-
-	if (lowercased === "md-4") {
-		return "md4"
-	}
-
-	if (lowercased === "md-5") {
-		return "md5"
-	}
-
-	return hash
 }
 
 /**
@@ -223,8 +325,7 @@ export async function hashPassword({ password }: { password: string }): Promise<
 }
 
 /**
- * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
- * @date 2/2/2024 - 6:16:04 PM
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use. V2 uses PBKDF2, while V3 uses Argon2id.
  *
  * @export
  * @async
@@ -245,10 +346,17 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 }): Promise<{ derivedMasterKeys: string; derivedPassword: string }> {
 	if (authVersion === 1) {
 		// DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
-		const derivedPassword = await hashPassword({ password: rawPassword })
-		const derivedMasterKeys = await hashFn({ input: rawPassword })
+		const derivedPassword = await hashPassword({
+			password: rawPassword
+		})
+		const derivedMasterKeys = await hashFn({
+			input: rawPassword
+		})
 
-		return { derivedMasterKeys, derivedPassword }
+		return {
+			derivedMasterKeys,
+			derivedPassword
+		}
 	} else if (authVersion === 2) {
 		const derivedKey = await deriveKeyFromPassword({
 			password: rawPassword,
@@ -262,16 +370,37 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 		const derivedMasterKeys = derivedKey.substring(0, derivedKey.length / 2)
 
 		if (environment === "node") {
-			derivedPassword = nodeCrypto.createHash("sha512").update(textEncoder.encode(derivedPassword)).digest("hex")
+			derivedPassword = nodeCrypto.createHash("sha512").update(Buffer.from(derivedPassword, "utf-8")).digest("hex")
 		} else if (environment === "browser") {
-			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", textEncoder.encode(derivedPassword))).toString(
+			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", Buffer.from(derivedPassword, "utf-8"))).toString(
 				"hex"
 			)
 		} else {
 			throw new Error(`crypto.utils.generatePasswordAndMasterKeysBasedOnAuthVersion not implemented for ${environment} environment`)
 		}
 
-		return { derivedMasterKeys, derivedPassword }
+		return {
+			derivedMasterKeys,
+			derivedPassword
+		}
+	} else if (authVersion === 3) {
+		const derived = Buffer.from(
+			await argon2idAsync(rawPassword, salt, {
+				t: 3,
+				m: 65536,
+				p: 4,
+				version: 0x13,
+				dkLen: 64
+			})
+		).toString("hex")
+
+		const derivedMasterKeys = derived.substring(0, derived.length / 2)
+		const derivedPassword = derived.substring(derived.length / 2, derived.length)
+
+		return {
+			derivedMasterKeys,
+			derivedPassword
+		}
 	} else {
 		throw new Error(`Invalid authVersion: ${authVersion}`)
 	}
@@ -472,7 +601,7 @@ export async function importPBKDF2Key({
 
 	const importedPBKF2Key = await globalThis.crypto.subtle.importKey(
 		"raw",
-		textEncoder.encode(key),
+		Buffer.from(key, "utf-8"),
 		{
 			name: "PBKDF2"
 		},
@@ -661,7 +790,15 @@ export const utils = {
 	bufferToHash,
 	generateKeyPair,
 	importRawKey,
-	importPBKDF2Key
+	importPBKDF2Key,
+	generateRandomBytes,
+	generateRandomURLSafeString,
+	generateRandomHexString,
+	hashFileName,
+	hashSearchIndex,
+	generateSearchIndexHashes,
+	generatePrivateKeyHMAC,
+	generateEncryptionKey
 }
 
 export default utils

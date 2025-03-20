@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.append = void 0;
+exports.append = append;
 const fs_extra_1 = __importDefault(require("fs-extra"));
 const stream_1 = require("stream");
 const util_1 = require("util");
@@ -36,6 +36,5 @@ async function append({ inputFile, baseFile }) {
     }), fs_extra_1.default.createWriteStream(output, { flags: "a" }));
     return inputStats.size;
 }
-exports.append = append;
 exports.default = append;
 //# sourceMappingURL=append.js.map

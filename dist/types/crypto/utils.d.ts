@@ -1,17 +1,25 @@
-/// <reference types="node" />
-import type { AuthVersion } from "../types";
-/**
- * Generate a cryptographically secure random string of given length.
- * @date 1/31/2024 - 4:01:20 PM
- *
- * @export
- * @param {{ length: number }} param0
- * @param {number} param0.length
- * @returns {string}
- */
-export declare function generateRandomString({ length }: {
-    length: number;
+import { type AuthVersion } from "../types";
+export declare const base64Charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+export declare const asciiCharset: string;
+export declare function generateRandomString(length?: number): Promise<string>;
+export declare function generateRandomBytes(length?: number): Promise<Buffer>;
+export declare function generateRandomURLSafeString(length?: number): Promise<string>;
+export declare function generateRandomHexString(length?: number): Promise<string>;
+export declare function generateEncryptionKey(use: "file" | "metadata"): Promise<string>;
+export declare function hashFileName({ name, authVersion, hmacKey }: {
+    name: string;
+    authVersion: AuthVersion;
+    hmacKey?: Buffer;
 }): Promise<string>;
+export declare function hashSearchIndex({ name, hmacKey }: {
+    name: string;
+    hmacKey: Buffer;
+}): Promise<string>;
+export declare function generateSearchIndexHashes({ input, hmacKey }: {
+    input: string;
+    hmacKey: Buffer;
+}): Promise<string[]>;
+export declare function generatePrivateKeyHMAC(privateKey: string): Promise<Buffer>;
 export type DeriveKeyFromPasswordBase = {
     password: string;
     salt: string;
@@ -39,18 +47,6 @@ export declare function hashFn({ input }: {
     input: string;
 }): Promise<string>;
 /**
- * Normalize hash names. E.g. WebCrypto uses "SHA-512" while Node.JS's Crypto Core lib uses "sha512".
- * @date 2/2/2024 - 6:59:42 PM
- *
- * @export
- * @param {{hash: string}} param0
- * @param {string} param0.hash
- * @returns {string}
- */
-export declare function normalizeHash({ hash }: {
-    hash: string;
-}): string;
-/**
  * Old V1 authentication password hashing. DEPRECATED AND NOT IN USE, JUST HERE FOR BACKWARDS COMPATIBILITY.
  * @date 2/2/2024 - 6:59:54 PM
  *
@@ -64,8 +60,7 @@ export declare function hashPassword({ password }: {
     password: string;
 }): Promise<string>;
 /**
- * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use.
- * @date 2/2/2024 - 6:16:04 PM
+ * Generates/derives the password and master key based on the auth version. Auth Version 1 is deprecated and no longer in use. V2 uses PBKDF2, while V3 uses Argon2id.
  *
  * @export
  * @async
@@ -237,5 +232,13 @@ export declare const utils: {
     generateKeyPair: typeof generateKeyPair;
     importRawKey: typeof importRawKey;
     importPBKDF2Key: typeof importPBKDF2Key;
+    generateRandomBytes: typeof generateRandomBytes;
+    generateRandomURLSafeString: typeof generateRandomURLSafeString;
+    generateRandomHexString: typeof generateRandomHexString;
+    hashFileName: typeof hashFileName;
+    hashSearchIndex: typeof hashSearchIndex;
+    generateSearchIndexHashes: typeof generateSearchIndexHashes;
+    generatePrivateKeyHMAC: typeof generatePrivateKeyHMAC;
+    generateEncryptionKey: typeof generateEncryptionKey;
 };
 export default utils;

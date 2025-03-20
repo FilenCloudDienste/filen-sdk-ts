@@ -1,13 +1,7 @@
-import type API from "../api"
-import type { FilenSDKConfig } from ".."
-import type { Contact } from "../api/v3/contacts"
-import type { BlockedContact } from "../api/v3/contacts/blocked"
-import type { ContactRequest } from "../api/v3/contacts/requests/in"
-
-export type ContactsConfig = {
-	sdkConfig: FilenSDKConfig
-	api: API
-}
+import { type Contact } from "../api/v3/contacts"
+import { type BlockedContact } from "../api/v3/contacts/blocked"
+import { type ContactRequest } from "../api/v3/contacts/requests/in"
+import type FilenSDK from ".."
 
 /**
  * Contacts
@@ -18,20 +12,10 @@ export type ContactsConfig = {
  * @typedef {Contacts}
  */
 export class Contacts {
-	private readonly api: API
-	private readonly sdkConfig: FilenSDKConfig
+	private readonly sdk: FilenSDK
 
-	/**
-	 * Creates an instance of Contacts.
-	 * @date 2/9/2024 - 5:54:11 AM
-	 *
-	 * @constructor
-	 * @public
-	 * @param {ContactsConfig} params
-	 */
-	public constructor(params: ContactsConfig) {
-		this.api = params.api
-		this.sdkConfig = params.sdkConfig
+	public constructor(sdk: FilenSDK) {
+		this.sdk = sdk
 	}
 
 	/**
@@ -43,7 +27,7 @@ export class Contacts {
 	 * @returns {Promise<Contact[]>}
 	 */
 	public async all(): Promise<Contact[]> {
-		return await this.api.v3().contacts().all()
+		return await this.sdk.api(3).contacts().all()
 	}
 
 	/**
@@ -55,7 +39,7 @@ export class Contacts {
 	 * @returns {Promise<ContactRequest[]>}
 	 */
 	public async incomingRequests(): Promise<ContactRequest[]> {
-		return await this.api.v3().contacts().requestsIn()
+		return await this.sdk.api(3).contacts().requestsIn()
 	}
 
 	/**
@@ -67,7 +51,7 @@ export class Contacts {
 	 * @returns {Promise<number>}
 	 */
 	public async incomingRequestsCount(): Promise<number> {
-		return await this.api.v3().contacts().requestsInCount()
+		return await this.sdk.api(3).contacts().requestsInCount()
 	}
 
 	/**
@@ -79,7 +63,7 @@ export class Contacts {
 	 * @returns {Promise<ContactRequest[]>}
 	 */
 	public async outgoingRequests(): Promise<ContactRequest[]> {
-		return await this.api.v3().contacts().requestsOut()
+		return await this.sdk.api(3).contacts().requestsOut()
 	}
 
 	/**
@@ -93,7 +77,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async deleteOutgoingRequest({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().contacts().requestsOutDelete({ uuid })
+		await this.sdk.api(3).contacts().requestsOutDelete({
+			uuid
+		})
 	}
 
 	/**
@@ -107,7 +93,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async sendRequest({ email }: { email: string }): Promise<void> {
-		await this.api.v3().contacts().requestsSend({ email })
+		await this.sdk.api(3).contacts().requestsSend({
+			email
+		})
 	}
 
 	/**
@@ -121,7 +109,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async acceptRequest({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().contacts().requestsAccept({ uuid })
+		await this.sdk.api(3).contacts().requestsAccept({
+			uuid
+		})
 	}
 
 	/**
@@ -135,7 +125,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async denyRequest({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().contacts().requestsDeny({ uuid })
+		await this.sdk.api(3).contacts().requestsDeny({
+			uuid
+		})
 	}
 
 	/**
@@ -149,7 +141,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async remove({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().contacts().delete({ uuid })
+		await this.sdk.api(3).contacts().delete({
+			uuid
+		})
 	}
 
 	/**
@@ -161,7 +155,7 @@ export class Contacts {
 	 * @returns {Promise<BlockedContact[]>}
 	 */
 	public async blocked(): Promise<BlockedContact[]> {
-		return await this.api.v3().contacts().blocked()
+		return await this.sdk.api(3).contacts().blocked()
 	}
 
 	/**
@@ -175,7 +169,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async block({ email }: { email: string }): Promise<void> {
-		await this.api.v3().contacts().blockedAdd({ email })
+		await this.sdk.api(3).contacts().blockedAdd({
+			email
+		})
 	}
 
 	/**
@@ -189,7 +185,9 @@ export class Contacts {
 	 * @returns {Promise<void>}
 	 */
 	public async unblock({ uuid }: { uuid: string }): Promise<void> {
-		await this.api.v3().contacts().blockedDelete({ uuid })
+		await this.sdk.api(3).contacts().blockedDelete({
+			uuid
+		})
 	}
 }
 

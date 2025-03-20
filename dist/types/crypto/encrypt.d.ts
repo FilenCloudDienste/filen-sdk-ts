@@ -1,5 +1,4 @@
-/// <reference types="node" />
-import type { CryptoConfig } from ".";
+import { type FilenSDK, type FileEncryptionVersion, type MetadataEncryptionVersion } from "..";
 /**
  * Encrypt
  * @date 2/1/2024 - 2:44:28 AM
@@ -9,35 +8,37 @@ import type { CryptoConfig } from ".";
  * @typedef {Encrypt}
  */
 export declare class Encrypt {
-    private readonly config;
-    private readonly textEncoder;
+    private readonly sdk;
     /**
      * Creates an instance of Encrypt.
-     * @date 1/31/2024 - 3:59:21 PM
      *
      * @constructor
      * @public
-     * @param {CryptoConfig} params
+     * @param {FilenSDK} sdk
      */
-    constructor(params: CryptoConfig);
+    constructor(sdk: FilenSDK);
     /**
-     * Encrypt a string using the user's last master key.
-     * @date 1/31/2024 - 3:59:29 PM
+     * Encrypt metadata using the user's DEK or a provided key.
      *
      * @public
      * @async
-     * @param {{ data: string }} param0
-     * @param {string} param0.data
+     * @param {{
+     * 		metadata: string
+     * 		key?: string
+     * 		version?: MetadataEncryptionVersion
+     * 	}} param0
+     * @param {string} param0.metadata
+     * @param {string} param0.key
+     * @param {MetadataEncryptionVersion} [param0.version=METADATA_ENCRYPTION_VERSION]
      * @returns {Promise<string>}
      */
-    metadata({ metadata, key, derive }: {
+    metadata({ metadata, key, version }: {
         metadata: string;
         key?: string;
-        derive?: boolean;
+        version?: MetadataEncryptionVersion;
     }): Promise<string>;
     /**
      * Encrypts metadata using a public key.
-     * @date 2/2/2024 - 6:49:12 PM
      *
      * @public
      * @async
@@ -140,37 +141,16 @@ export declare class Encrypt {
         name: string;
         key: string;
     }): Promise<string>;
-    /**
-     * Encrypt data.
-     * @date 2/7/2024 - 1:50:47 AM
-     *
-     * @public
-     * @async
-     * @param {{ data: Buffer; key: string }} param0
-     * @param {Buffer} param0.data
-     * @param {string} param0.key
-     * @returns {Promise<Buffer>}
-     */
-    data({ data, key }: {
+    data({ data, key, version }: {
         data: Buffer;
         key: string;
+        version?: FileEncryptionVersion;
     }): Promise<Buffer>;
-    /**
-     * Encrypt a file/chunk using streams. Only available in a Node.JS environment.
-     * @date 2/7/2024 - 1:51:28 AM
-     *
-     * @public
-     * @async
-     * @param {{ inputFile: string; key: string; outputFile?: string }} param0
-     * @param {string} param0.inputFile
-     * @param {string} param0.key
-     * @param {string} param0.outputFile
-     * @returns {Promise<string>}
-     */
-    dataStream({ inputFile, key, outputFile }: {
+    dataStream({ inputFile, key, outputFile, version }: {
         inputFile: string;
         key: string;
         outputFile?: string;
+        version?: FileEncryptionVersion;
     }): Promise<string>;
 }
 export default Encrypt;

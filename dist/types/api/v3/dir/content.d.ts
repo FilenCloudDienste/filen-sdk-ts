@@ -1,6 +1,6 @@
 import type APIClient from "../../client";
-import type { FileEncryptionVersion } from "../../../types";
-import type { DirColors } from "./color";
+import { type FileEncryptionVersion } from "../../../types";
+import { type DirColors } from "./color";
 export type DirContentUpload = {
     uuid: string;
     metadata: string;

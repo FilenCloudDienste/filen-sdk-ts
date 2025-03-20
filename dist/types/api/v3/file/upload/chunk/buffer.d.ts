@@ -1,6 +1,5 @@
-/// <reference types="node" />
-import type { APIClient, UploadChunkResponse } from "../../../../client";
-import type { ProgressCallback } from "../../../../../types";
+import { type APIClient, type UploadChunkResponse } from "../../../../client";
+import { type ProgressCallback } from "../../../../../types";
 /**
  * FileUploadChunkBuffer
  * @date 2/15/2024 - 4:38:09 AM
