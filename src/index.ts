@@ -302,8 +302,7 @@ export class FilenSDK {
 			this.config.privateKey.length > 0 &&
 			this.config.baseFolderUUID.length > 0 &&
 			this.config.userId > 0 &&
-			[1, 2, 3].includes(this.config.authVersion) &&
-			this.config.apiKey !== "anonymous"
+			[1, 2, 3].includes(this.config.authVersion)
 		)
 	}
 
