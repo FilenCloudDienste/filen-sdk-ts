@@ -6,8 +6,6 @@ import cache from "../cache"
 import { fastStringHash, nameSplitter } from "../utils"
 import { argon2idAsync } from "@noble/hashes/argon2"
 import { sha256 } from "@noble/hashes/sha256"
-import { sha1 } from "@noble/hashes/sha1"
-import { sha512 } from "@noble/hashes/sha512"
 import CryptoAPI from "crypto-api-v1"
 import { hmac } from "@noble/hashes/hmac"
 import { hkdf } from "@noble/hashes/hkdf"
@@ -297,7 +295,7 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
 			.update(nodeCrypto.createHash("sha512").update(Buffer.from(input, "utf-8")).digest("hex"))
 			.digest("hex")
 	} else if (environment === "browser") {
-		return Buffer.from(sha1(sha512(Buffer.from(input, "utf-8")))).toString("hex")
+		return CryptoAPI.hash("sha1", CryptoAPI.hash("sha512", input))
 	}
 
 	throw new Error(`crypto.utils.hashFn not implemented for ${environment} environment`)
