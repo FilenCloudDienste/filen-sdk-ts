@@ -138,19 +138,16 @@ export type CloudItemShared =
 			CloudItemSharedBase)
 
 export type CloudItemTree =
-	| Omit<
-			{
-				type: "directory"
-			} & CloudItemBase &
-				CloudItemDirectory,
-			"color" | "favorited"
-	  >
+	| ({
+			type: "directory"
+	  } & CloudItemBase &
+			CloudItemDirectory)
 	| Omit<
 			{
 				type: "file"
 			} & CloudItemBase &
 				CloudItemFile,
-			"favorited" | "rm"
+			"rm"
 	  >
 
 export type FileToShare = {
@@ -3698,7 +3695,9 @@ export class Cloud {
 					parent: folder.parent,
 					size: 0,
 					timestamp: typeof folder.timestamp === "number" ? convertTimestampToMs(folder.timestamp) : Date.now(),
-					lastModified: typeof folder.timestamp === "number" ? convertTimestampToMs(folder.timestamp) : Date.now()
+					lastModified: typeof folder.timestamp === "number" ? convertTimestampToMs(folder.timestamp) : Date.now(),
+					favorited: folder.favorited ?? false,
+					color: folder.color ?? null
 				}
 			} catch {
 				continue
@@ -3767,7 +3766,8 @@ export class Cloud {
 								region: file.region,
 								creation: decrypted.name.length > 0 ? decrypted.creation : undefined,
 								hash: decrypted.name.length > 0 ? decrypted.hash : undefined,
-								timestamp: typeof file.timestamp === "number" ? convertTimestampToMs(file.timestamp) : Date.now()
+								timestamp: typeof file.timestamp === "number" ? convertTimestampToMs(file.timestamp) : Date.now(),
+								favorited: file.favorited ?? false
 							}
 
 							resolve()
