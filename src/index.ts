@@ -92,6 +92,7 @@ export class FilenSDK {
 		driveWrite: Lock
 		notesWrite: Lock
 		chatsWrite: Lock
+		intensive: Lock
 	} = {
 		driveWrite: new Lock({
 			sdk: this,
@@ -104,6 +105,10 @@ export class FilenSDK {
 		chatsWrite: new Lock({
 			sdk: this,
 			resource: "chats-write"
+		}),
+		intensive: new Lock({
+			sdk: this,
+			resource: "intensive"
 		})
 	}
 

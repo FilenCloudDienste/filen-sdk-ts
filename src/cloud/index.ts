@@ -854,17 +854,23 @@ export class Cloud {
 	 * @returns {Promise<FileExistsResponse>}
 	 */
 	public async fileExists({ name, parent }: { name: string; parent: string }): Promise<FileExistsResponse> {
-		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
-			name,
-			authVersion: this.sdk.config.authVersion!,
-			hmacKey: await this.sdk.generateHMACKey()
-		})
-		const exists = await this.sdk.api(3).file().exists({
-			nameHashed,
-			parent
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		return exists
+		try {
+			const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
+				name,
+				authVersion: this.sdk.config.authVersion!,
+				hmacKey: await this.sdk.generateHMACKey()
+			})
+			const exists = await this.sdk.api(3).file().exists({
+				nameHashed,
+				parent
+			})
+
+			return exists
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -878,17 +884,23 @@ export class Cloud {
 	 * @returns {Promise<DirExistsResponse>}
 	 */
 	public async directoryExists({ name, parent }: { name: string; parent: string }): Promise<DirExistsResponse> {
-		const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
-			name,
-			authVersion: this.sdk.config.authVersion!,
-			hmacKey: await this.sdk.generateHMACKey()
-		})
-		const exists = await this.sdk.api(3).dir().exists({
-			nameHashed,
-			parent
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		return exists
+		try {
+			const nameHashed = await this.sdk.getWorker().crypto.utils.hashFileName({
+				name,
+				authVersion: this.sdk.config.authVersion!,
+				hmacKey: await this.sdk.generateHMACKey()
+			})
+			const exists = await this.sdk.api(3).dir().exists({
+				nameHashed,
+				parent
+			})
+
+			return exists
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -5386,35 +5398,41 @@ export class Cloud {
 	 * @returns {Promise<string>}
 	 */
 	public async fileUUIDToPath({ uuid }: { uuid: string }): Promise<string> {
-		const pathParts: string[] = []
+		await this.sdk._locks.driveWrite.acquire()
 
-		const file = await this.sdk.api(3).file().get({
-			uuid
-		})
+		try {
+			const pathParts: string[] = []
 
-		let nextParent = file.parent
-
-		const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
-			metadata: file.metadata
-		})
-
-		pathParts.push(fileMetadataDecrypted.name.length > 0 ? fileMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`)
-
-		while (nextParent !== this.sdk.config.baseFolderUUID) {
-			const dir = await this.sdk.api(3).dir().get({
-				uuid: nextParent
+			const file = await this.sdk.api(3).file().get({
+				uuid
 			})
 
-			const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
-				metadata: dir.nameEncrypted
+			let nextParent = file.parent
+
+			const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
+				metadata: file.metadata
 			})
 
-			pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`)
+			pathParts.push(fileMetadataDecrypted.name.length > 0 ? fileMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`)
 
-			nextParent = dir.parent
+			while (nextParent !== this.sdk.config.baseFolderUUID) {
+				const dir = await this.sdk.api(3).dir().get({
+					uuid: nextParent
+				})
+
+				const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+					metadata: dir.nameEncrypted
+				})
+
+				pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`)
+
+				nextParent = dir.parent
+			}
+
+			return `/${pathModule.posix.join(...pathParts.reverse())}`
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
-
-		return `/${pathModule.posix.join(...pathParts.reverse())}`
 	}
 
 	/**
@@ -5427,35 +5445,41 @@ export class Cloud {
 	 * @returns {Promise<string>}
 	 */
 	public async directoryUUIDToPath({ uuid }: { uuid: string }): Promise<string> {
-		const pathParts: string[] = []
+		await this.sdk._locks.driveWrite.acquire()
 
-		const firstDir = await this.sdk.api(3).dir().get({
-			uuid
-		})
+		try {
+			const pathParts: string[] = []
 
-		let nextParent = firstDir.parent
-
-		const firstDirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
-			metadata: firstDir.nameEncrypted
-		})
-
-		pathParts.push(firstDirMetadataDecrypted.name.length > 0 ? firstDirMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`)
-
-		while (nextParent !== this.sdk.config.baseFolderUUID) {
-			const dir = await this.sdk.api(3).dir().get({
-				uuid: nextParent
+			const firstDir = await this.sdk.api(3).dir().get({
+				uuid
 			})
 
-			const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
-				metadata: dir.nameEncrypted
+			let nextParent = firstDir.parent
+
+			const firstDirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+				metadata: firstDir.nameEncrypted
 			})
 
-			pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`)
+			pathParts.push(firstDirMetadataDecrypted.name.length > 0 ? firstDirMetadataDecrypted.name : `CANNOT_DECRYPT_NAME_${uuid}`)
 
-			nextParent = dir.parent
+			while (nextParent !== this.sdk.config.baseFolderUUID) {
+				const dir = await this.sdk.api(3).dir().get({
+					uuid: nextParent
+				})
+
+				const decrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+					metadata: dir.nameEncrypted
+				})
+
+				pathParts.push(decrypted.name.length > 0 ? decrypted.name : `CANNOT_DECRYPT_NAME_${dir.uuid}`)
+
+				nextParent = dir.parent
+			}
+
+			return `/${pathModule.posix.join(...pathParts.reverse())}`
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
-
-		return `/${pathModule.posix.join(...pathParts.reverse())}`
 	}
 
 	/**
@@ -5468,17 +5492,23 @@ export class Cloud {
 	 * @returns {Promise<GetFileResult>}
 	 */
 	public async getFile({ uuid }: { uuid: string }): Promise<GetFileResult> {
-		const file = await this.sdk.api(3).file().get({
-			uuid
-		})
-		const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
-			metadata: file.metadata
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		return {
-			...file,
-			metadataDecrypted: fileMetadataDecrypted,
-			chunks: Math.ceil(file.size / UPLOAD_CHUNK_SIZE)
+		try {
+			const file = await this.sdk.api(3).file().get({
+				uuid
+			})
+			const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
+				metadata: file.metadata
+			})
+
+			return {
+				...file,
+				metadataDecrypted: fileMetadataDecrypted,
+				chunks: Math.ceil(file.size / UPLOAD_CHUNK_SIZE)
+			}
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
 	}
 
@@ -5492,16 +5522,22 @@ export class Cloud {
 	 * @returns {Promise<GetDirResult>}
 	 */
 	public async getDirectory({ uuid }: { uuid: string }): Promise<GetDirResult> {
-		const dir = await this.sdk.api(3).dir().get({
-			uuid
-		})
-		const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
-			metadata: dir.nameEncrypted
-		})
+		await this.sdk._locks.driveWrite.acquire()
 
-		return {
-			...dir,
-			metadataDecrypted: dirMetadataDecrypted
+		try {
+			const dir = await this.sdk.api(3).dir().get({
+				uuid
+			})
+			const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
+				metadata: dir.nameEncrypted
+			})
+
+			return {
+				...dir,
+				metadataDecrypted: dirMetadataDecrypted
+			}
+		} finally {
+			await this.sdk._locks.driveWrite.release().catch(() => {})
 		}
 	}
 
@@ -5639,131 +5675,137 @@ export class Cloud {
 		onProgress?: RebuildGlobalSearchIndexProgressCallback
 		onProgressId?: string
 	}): Promise<void> {
-		let added = 0
-		let generated = 0
+		await this.sdk._locks.intensive.acquire()
 
-		params?.onProgress?.({
-			type: "gettingTree",
-			generated,
-			added,
-			id: params.onProgressId
-		})
+		try {
+			let added = 0
+			let generated = 0
 
-		const [tree, hmacKey] = await Promise.all([
-			this.getDirectoryTree({
-				uuid: this.sdk.config.baseFolderUUID!,
-				type: "normal"
-			}),
-			this.sdk.generateHMACKey()
-		])
+			params?.onProgress?.({
+				type: "gettingTree",
+				generated,
+				added,
+				id: params.onProgressId
+			})
 
-		params?.onProgress?.({
-			type: "generatingHashes",
-			generated,
-			added,
-			id: params.onProgressId
-		})
+			const [tree, hmacKey] = await Promise.all([
+				this.getDirectoryTree({
+					uuid: this.sdk.config.baseFolderUUID!,
+					type: "normal"
+				}),
+				this.sdk.generateHMACKey()
+			])
 
-		const promises: Promise<void>[] = []
-		const items: SearchAddItem[] = []
+			params?.onProgress?.({
+				type: "generatingHashes",
+				generated,
+				added,
+				id: params.onProgressId
+			})
 
-		for (const entry of Object.entries(tree)) {
-			promises.push(
-				new Promise<void>((resolve, reject) => {
-					if (entry[1].type === "directory" && entry[1].uuid === this.sdk.config.baseFolderUUID) {
-						resolve()
+			const promises: Promise<void>[] = []
+			const items: SearchAddItem[] = []
 
-						return
-					}
-
-					this.sdk
-						.getWorker()
-						.crypto.utils.generateSearchIndexHashes({
-							input: entry[1].name,
-							hmacKey
-						})
-						.then(hashes => {
-							items.push(
-								...hashes.map(hash => ({
-									type: entry[1].type,
-									uuid: entry[1].uuid,
-									hash
-								}))
-							)
-
-							generated += hashes.length
-
-							params?.onProgress?.({
-								type: "generatingHashes",
-								generated,
-								added,
-								id: params.onProgressId
-							})
-
+			for (const entry of Object.entries(tree)) {
+				promises.push(
+					new Promise<void>((resolve, reject) => {
+						if (entry[1].type === "directory" && entry[1].uuid === this.sdk.config.baseFolderUUID) {
 							resolve()
-						})
-						.catch(reject)
-				})
-			)
-		}
 
-		await promiseAllChunked(promises)
+							return
+						}
 
-		if (items.length === 0) {
-			return
-		}
+						this.sdk
+							.getWorker()
+							.crypto.utils.generateSearchIndexHashes({
+								input: entry[1].name,
+								hmacKey
+							})
+							.then(hashes => {
+								items.push(
+									...hashes.map(hash => ({
+										type: entry[1].type,
+										uuid: entry[1].uuid,
+										hash
+									}))
+								)
 
-		const chunks = chunkArray(items, 10000)
+								generated += hashes.length
 
-		if (chunks.length === 0) {
-			return
-		}
-
-		const addPromises: Promise<void>[] = []
-		const semaphore = new Semaphore(10)
-
-		params?.onProgress?.({
-			type: "adding",
-			generated,
-			added,
-			id: params.onProgressId
-		})
-
-		for (const chunk of chunks) {
-			promises.push(
-				new Promise<void>((resolve, reject) => {
-					semaphore
-						.acquire()
-						.then(() => {
-							this.sdk
-								.api(3)
-								.search()
-								.add({
-									items: chunk
+								params?.onProgress?.({
+									type: "generatingHashes",
+									generated,
+									added,
+									id: params.onProgressId
 								})
-								.then(() => {
-									added += chunk.length
 
-									params?.onProgress?.({
-										type: "adding",
-										generated,
-										added,
-										id: params.onProgressId
+								resolve()
+							})
+							.catch(reject)
+					})
+				)
+			}
+
+			await promiseAllChunked(promises)
+
+			if (items.length === 0) {
+				return
+			}
+
+			const chunks = chunkArray(items, 10000)
+
+			if (chunks.length === 0) {
+				return
+			}
+
+			const addPromises: Promise<void>[] = []
+			const semaphore = new Semaphore(10)
+
+			params?.onProgress?.({
+				type: "adding",
+				generated,
+				added,
+				id: params.onProgressId
+			})
+
+			for (const chunk of chunks) {
+				promises.push(
+					new Promise<void>((resolve, reject) => {
+						semaphore
+							.acquire()
+							.then(() => {
+								this.sdk
+									.api(3)
+									.search()
+									.add({
+										items: chunk
 									})
+									.then(() => {
+										added += chunk.length
 
-									resolve()
-								})
-								.catch(reject)
-								.finally(() => {
-									semaphore.release()
-								})
-						})
-						.catch(reject)
-				})
-			)
+										params?.onProgress?.({
+											type: "adding",
+											generated,
+											added,
+											id: params.onProgressId
+										})
+
+										resolve()
+									})
+									.catch(reject)
+									.finally(() => {
+										semaphore.release()
+									})
+							})
+							.catch(reject)
+					})
+				)
+			}
+
+			await promiseAllChunked(addPromises)
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
 		}
-
-		await promiseAllChunked(addPromises)
 	}
 }
 
