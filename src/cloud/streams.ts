@@ -332,7 +332,7 @@ export class ChunkedUploadWriter extends Writable {
 						}),
 						version: this.version,
 						uploadKey: this.uploadKey,
-						rm: await this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
+						rm: await this.sdk.getWorker().crypto.utils.generateRandomString(32),
 						metadata: await this.sdk
 							.crypto()
 							.encrypt()

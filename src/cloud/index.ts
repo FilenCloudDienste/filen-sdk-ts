@@ -4081,8 +4081,8 @@ export class Cloud {
 			const [fileUUID, key, rm, uploadKey, hmacKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
 				encryptionKey ? encryptionKey : this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
-				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
-				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
+				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateRandomString(32),
 				this.sdk.generateHMACKey()
 			])
 
@@ -4418,7 +4418,7 @@ export class Cloud {
 			const [uuid, key, uploadKey] = await Promise.all([
 				uuidv4(),
 				encryptionKey ? encryptionKey : this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
-				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
+				this.sdk.getWorker().crypto.utils.generateRandomString(32)
 			])
 
 			const waitForPause = async (): Promise<void> => {
@@ -4660,8 +4660,8 @@ export class Cloud {
 			const [fileUUID, key, rm, uploadKey] = await Promise.all([
 				uuid ? Promise.resolve(uuid) : uuidv4(),
 				this.sdk.getWorker().crypto.utils.generateEncryptionKey("file"),
-				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32),
-				this.sdk.getWorker().crypto.utils.generateRandomURLSafeString(32)
+				this.sdk.getWorker().crypto.utils.generateRandomString(32),
+				this.sdk.getWorker().crypto.utils.generateRandomString(32)
 			])
 
 			const fileHasher = sha512.create()

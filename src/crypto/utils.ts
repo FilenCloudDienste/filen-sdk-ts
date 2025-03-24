@@ -27,7 +27,7 @@ export async function generateRandomString(length: number = 32): Promise<string>
 		const array = nodeCrypto.randomBytes(length)
 
 		return Array.from(array)
-			.map(byte => asciiCharset[byte & 0x7f])
+			.map(byte => base64Charset[byte % base64Charset.length])
 			.join("")
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
@@ -35,7 +35,7 @@ export async function generateRandomString(length: number = 32): Promise<string>
 		globalThis.crypto.getRandomValues(array)
 
 		return Array.from(array)
-			.map(byte => asciiCharset[byte & 0x7f])
+			.map(byte => base64Charset[byte % base64Charset.length])
 			.join("")
 	}
 
@@ -56,26 +56,6 @@ export async function generateRandomBytes(length: number = 32): Promise<Buffer> 
 	throw new Error(`crypto.utils.generateRandomBytes not implemented for ${environment} environment`)
 }
 
-export async function generateRandomURLSafeString(length: number = 32): Promise<string> {
-	if (environment === "node") {
-		const array = nodeCrypto.randomBytes(length)
-
-		return Array.from(array)
-			.map(byte => base64Charset[byte % base64Charset.length])
-			.join("")
-	} else if (environment === "browser") {
-		const array = new Uint8Array(length)
-
-		globalThis.crypto.getRandomValues(array)
-
-		return Array.from(array)
-			.map(byte => base64Charset[byte % base64Charset.length])
-			.join("")
-	}
-
-	throw new Error(`crypto.utils.generateUrlSafeString not implemented for ${environment} environment`)
-}
-
 export async function generateRandomHexString(length: number = 32): Promise<string> {
 	if (environment === "node") {
 		return nodeCrypto.randomBytes(length).toString("hex")
@@ -92,17 +72,13 @@ export async function generateRandomHexString(length: number = 32): Promise<stri
 
 export async function generateEncryptionKey(use: "file" | "metadata"): Promise<string> {
 	if (use === "file") {
-		if (FILE_ENCRYPTION_VERSION === 1) {
-			return await generateRandomURLSafeString(32)
-		} else if (FILE_ENCRYPTION_VERSION === 2) {
+		if (FILE_ENCRYPTION_VERSION === 1 || FILE_ENCRYPTION_VERSION === 2) {
 			return await generateRandomString(32)
 		} else {
 			return await generateRandomHexString(32)
 		}
 	} else {
-		if (METADATA_ENCRYPTION_VERSION === 1) {
-			return await generateRandomURLSafeString(32)
-		} else if (METADATA_ENCRYPTION_VERSION === 2) {
+		if (METADATA_ENCRYPTION_VERSION === 1 || METADATA_ENCRYPTION_VERSION === 2) {
 			return await generateRandomString(32)
 		} else {
 			return await generateRandomHexString(32)
@@ -790,7 +766,6 @@ export const utils = {
 	importRawKey,
 	importPBKDF2Key,
 	generateRandomBytes,
-	generateRandomURLSafeString,
 	generateRandomHexString,
 	hashFileName,
 	hashSearchIndex,
