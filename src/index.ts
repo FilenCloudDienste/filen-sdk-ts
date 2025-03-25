@@ -93,6 +93,7 @@ export class FilenSDK {
 		notesWrite: Lock
 		chatsWrite: Lock
 		intensive: Lock
+		auth: Lock
 	} = {
 		driveWrite: new Lock({
 			sdk: this,
@@ -109,6 +110,10 @@ export class FilenSDK {
 		intensive: new Lock({
 			sdk: this,
 			resource: "intensive"
+		}),
+		auth: new Lock({
+			sdk: this,
+			resource: "auth"
 		})
 	}
 
@@ -349,16 +354,22 @@ export class FilenSDK {
 		privateKey: string
 		masterKeys: string[]
 	}): Promise<void> {
-		const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
-			metadata: privateKey,
-			key: masterKeys.at(-1)
-		})
+		await this._locks.auth.acquire()
 
-		await this._api.v3().user().keyPair().update({
-			publicKey,
-			encryptedPrivateKey,
-			apiKey
-		})
+		try {
+			const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
+				metadata: privateKey,
+				key: masterKeys.at(-1)
+			})
+
+			await this._api.v3().user().keyPair().update({
+				publicKey,
+				encryptedPrivateKey,
+				apiKey
+			})
+		} finally {
+			await this._locks.auth.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -385,16 +396,22 @@ export class FilenSDK {
 		privateKey: string
 		masterKeys: string[]
 	}): Promise<void> {
-		const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
-			metadata: privateKey,
-			key: masterKeys.at(-1)
-		})
+		await this._locks.auth.acquire()
 
-		await this._api.v3().user().keyPair().set({
-			publicKey,
-			encryptedPrivateKey,
-			apiKey
-		})
+		try {
+			const encryptedPrivateKey = await this.getWorker().crypto.encrypt.metadata({
+				metadata: privateKey,
+				key: masterKeys.at(-1)
+			})
+
+			await this._api.v3().user().keyPair().set({
+				publicKey,
+				encryptedPrivateKey,
+				apiKey
+			})
+		} finally {
+			await this._locks.auth.release().catch(() => {})
+		}
 	}
 
 	private async __updateKeyPair({
@@ -404,64 +421,70 @@ export class FilenSDK {
 		apiKey: string
 		masterKeys: string[]
 	}): Promise<{ publicKey: string; privateKey: string }> {
-		const keyPairInfo = await this._api.v3().user().keyPair().info({
-			apiKey
-		})
+		await this._locks.auth.acquire()
 
-		if (
-			typeof keyPairInfo.publicKey === "string" &&
-			typeof keyPairInfo.privateKey === "string" &&
-			keyPairInfo.publicKey.length > 16 &&
-			keyPairInfo.privateKey.length > 16
-		) {
-			let privateKey: string | null = null
+		try {
+			const keyPairInfo = await this._api.v3().user().keyPair().info({
+				apiKey
+			})
 
-			for (const masterKey of masterKeys) {
-				try {
-					const decryptedPrivateKey = await this.getWorker().crypto.decrypt.metadata({
-						metadata: keyPairInfo.privateKey,
-						key: masterKey
-					})
+			if (
+				typeof keyPairInfo.publicKey === "string" &&
+				typeof keyPairInfo.privateKey === "string" &&
+				keyPairInfo.publicKey.length > 16 &&
+				keyPairInfo.privateKey.length > 16
+			) {
+				let privateKey: string | null = null
 
-					if (typeof decryptedPrivateKey === "string" && decryptedPrivateKey.length > 16) {
-						privateKey = decryptedPrivateKey
+				for (const masterKey of masterKeys) {
+					try {
+						const decryptedPrivateKey = await this.getWorker().crypto.decrypt.metadata({
+							metadata: keyPairInfo.privateKey,
+							key: masterKey
+						})
 
-						break
+						if (typeof decryptedPrivateKey === "string" && decryptedPrivateKey.length > 16) {
+							privateKey = decryptedPrivateKey
+
+							break
+						}
+					} catch {
+						continue
 					}
-				} catch {
-					continue
+				}
+
+				if (!privateKey) {
+					throw new Error("Could not decrypt private key.")
+				}
+
+				await this._updateKeyPair({
+					apiKey,
+					publicKey: keyPairInfo.publicKey,
+					privateKey,
+					masterKeys
+				})
+
+				return {
+					publicKey: keyPairInfo.publicKey,
+					privateKey
 				}
 			}
 
-			if (!privateKey) {
-				throw new Error("Could not decrypt private key.")
-			}
+			const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair()
 
-			await this._updateKeyPair({
+			await this._setKeyPair({
 				apiKey,
-				publicKey: keyPairInfo.publicKey,
-				privateKey,
+				publicKey: generatedKeyPair.publicKey,
+				privateKey: generatedKeyPair.privateKey,
 				masterKeys
 			})
 
 			return {
-				publicKey: keyPairInfo.publicKey,
-				privateKey
+				publicKey: generatedKeyPair.publicKey,
+				privateKey: generatedKeyPair.privateKey
 			}
-		}
-
-		const generatedKeyPair = await this.getWorker().crypto.utils.generateKeyPair()
-
-		await this._setKeyPair({
-			apiKey,
-			publicKey: generatedKeyPair.publicKey,
-			privateKey: generatedKeyPair.privateKey,
-			masterKeys
-		})
-
-		return {
-			publicKey: generatedKeyPair.publicKey,
-			privateKey: generatedKeyPair.privateKey
+		} finally {
+			await this._locks.auth.release().catch(() => {})
 		}
 	}
 
@@ -474,109 +497,119 @@ export class FilenSDK {
 		masterKeys: string[]
 		authVersion: AuthVersion
 	}): Promise<{ masterKeys: string[]; publicKey: string; privateKey: string }> {
-		if (authVersion === 1 || authVersion === 2) {
-			const currentLastMasterKey = masterKeys.at(-1)
+		await this._locks.auth.acquire()
 
-			if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
-				throw new Error("Invalid current master key.")
-			}
+		try {
+			if (authVersion === 1 || authVersion === 2) {
+				const currentLastMasterKey = masterKeys.at(-1)
 
-			const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
-				metadata: masterKeys.join("|"),
-				key: currentLastMasterKey
-			})
-
-			const masterKeysResponse = await this._api.v3().user().masterKeys({
-				encryptedMasterKeys,
-				apiKey
-			})
-
-			const newMasterKeys: string[] = [...masterKeys]
-
-			for (const masterKey of masterKeys) {
-				try {
-					const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
-						metadata: masterKeysResponse.keys,
-						key: masterKey
-					})
-
-					if (typeof decryptedMasterKeys === "string" && decryptedMasterKeys.length > 16 && decryptedMasterKeys.includes("|")) {
-						for (const key of decryptedMasterKeys.split("|")) {
-							if (key.length > 0 && !newMasterKeys.includes(key)) {
-								newMasterKeys.push(key)
-							}
-						}
-
-						break
-					}
-				} catch {
-					continue
+				if (!currentLastMasterKey || currentLastMasterKey.length < 16) {
+					throw new Error("Invalid current master key.")
 				}
-			}
 
-			if (newMasterKeys.length === 0) {
-				throw new Error("Could not decrypt master keys.")
-			}
+				const encryptedMasterKeys = await this.getWorker().crypto.encrypt.metadata({
+					metadata: masterKeys.join("|"),
+					key: currentLastMasterKey
+				})
 
-			const { publicKey, privateKey } = await this.__updateKeyPair({
-				apiKey,
-				masterKeys: newMasterKeys
-			})
-
-			return {
-				masterKeys: newMasterKeys,
-				publicKey,
-				privateKey
-			}
-		} else if (authVersion === 3) {
-			if (masterKeys.length !== 1 || !masterKeys[0]) {
-				throw new Error("Invalid master keys array.")
-			}
-
-			const dekEncryptionKey = masterKeys[0]
-
-			if (!dekEncryptionKey || dekEncryptionKey.length !== 64) {
-				throw new Error("Invalid DEK encryption key.")
-			}
-
-			let dek = (
-				await this._api.v3().user().getDEK({
+				const masterKeysResponse = await this._api.v3().user().masterKeys({
+					encryptedMasterKeys,
 					apiKey
 				})
-			).dek
 
-			if (!dek) {
-				dek = (await this.getWorker().crypto.utils.generateRandomBytes(32)).toString("hex")
+				const newMasterKeys: string[] = [...masterKeys]
 
-				await this._api
-					.v3()
-					.user()
-					.setDEK({
-						apiKey,
-						encryptedDEK: await this.getWorker().crypto.encrypt.metadata({
-							metadata: dek,
-							key: dekEncryptionKey
+				for (const masterKey of masterKeys) {
+					try {
+						const decryptedMasterKeys = await this.getWorker().crypto.decrypt.metadata({
+							metadata: masterKeysResponse.keys,
+							key: masterKey
 						})
-					})
-			} else {
-				dek = await this.getWorker().crypto.decrypt.metadata({
-					metadata: dek,
-					key: dekEncryptionKey
+
+						if (
+							typeof decryptedMasterKeys === "string" &&
+							decryptedMasterKeys.length > 16 &&
+							decryptedMasterKeys.includes("|")
+						) {
+							for (const key of decryptedMasterKeys.split("|")) {
+								if (key.length > 0 && !newMasterKeys.includes(key)) {
+									newMasterKeys.push(key)
+								}
+							}
+
+							break
+						}
+					} catch {
+						continue
+					}
+				}
+
+				if (newMasterKeys.length === 0) {
+					throw new Error("Could not decrypt master keys.")
+				}
+
+				const { publicKey, privateKey } = await this.__updateKeyPair({
+					apiKey,
+					masterKeys: newMasterKeys
 				})
-			}
 
-			const { publicKey, privateKey } = await this.__updateKeyPair({
-				apiKey,
-				masterKeys: [dek]
-			})
+				return {
+					masterKeys: newMasterKeys,
+					publicKey,
+					privateKey
+				}
+			} else if (authVersion === 3) {
+				if (masterKeys.length !== 1 || !masterKeys[0]) {
+					throw new Error("Invalid master keys array.")
+				}
 
-			return {
-				masterKeys: [dek],
-				publicKey,
-				privateKey
+				const dekEncryptionKey = masterKeys[0]
+
+				if (!dekEncryptionKey || dekEncryptionKey.length !== 64) {
+					throw new Error("Invalid DEK encryption key.")
+				}
+
+				let dek = (
+					await this._api.v3().user().getDEK({
+						apiKey
+					})
+				).dek
+
+				if (!dek) {
+					dek = (await this.getWorker().crypto.utils.generateRandomBytes(32)).toString("hex")
+
+					await this._api
+						.v3()
+						.user()
+						.setDEK({
+							apiKey,
+							encryptedDEK: await this.getWorker().crypto.encrypt.metadata({
+								metadata: dek,
+								key: dekEncryptionKey
+							})
+						})
+				} else {
+					dek = await this.getWorker().crypto.decrypt.metadata({
+						metadata: dek,
+						key: dekEncryptionKey
+					})
+				}
+
+				const { publicKey, privateKey } = await this.__updateKeyPair({
+					apiKey,
+					masterKeys: [dek]
+				})
+
+				return {
+					masterKeys: [dek],
+					publicKey,
+					privateKey
+				}
+			} else {
+				throw new Error("Invalid authVersion.")
 			}
-		} else {
-			throw new Error("Invalid authVersion.")
+		} finally {
+			await this._locks.auth.release().catch(() => {})
 		}
 	}
 
@@ -619,33 +652,48 @@ export class FilenSDK {
 			authVersion
 		})
 
-		const [infoResponse, baseFolderResponse, updateKeys] = await Promise.all([
-			this._api.v3().user().info({
-				apiKey: loginResponse.apiKey
-			}),
-			this._api.v3().user().baseFolder({
-				apiKey: loginResponse.apiKey
-			}),
-			this._updateKeys({
-				apiKey: loginResponse.apiKey,
-				masterKeys: [derived.derivedMasterKeys],
-				authVersion
-			})
-		])
-
 		this.init({
 			...this.config,
 			email: emailToUse,
 			password: passwordToUse,
 			twoFactorCode: twoFactorCodeToUse,
-			masterKeys: updateKeys.masterKeys,
 			apiKey: loginResponse.apiKey,
-			publicKey: updateKeys.publicKey,
-			privateKey: updateKeys.privateKey,
-			authVersion,
-			baseFolderUUID: baseFolderResponse.uuid,
-			userId: infoResponse.id
+			authVersion
 		})
+
+		await this._locks.auth.acquire()
+
+		try {
+			const [infoResponse, baseFolderResponse, updateKeys] = await Promise.all([
+				this._api.v3().user().info({
+					apiKey: loginResponse.apiKey
+				}),
+				this._api.v3().user().baseFolder({
+					apiKey: loginResponse.apiKey
+				}),
+				this._updateKeys({
+					apiKey: loginResponse.apiKey,
+					masterKeys: [derived.derivedMasterKeys],
+					authVersion
+				})
+			])
+
+			this.init({
+				...this.config,
+				email: emailToUse,
+				password: passwordToUse,
+				twoFactorCode: twoFactorCodeToUse,
+				masterKeys: updateKeys.masterKeys,
+				apiKey: loginResponse.apiKey,
+				publicKey: updateKeys.publicKey,
+				privateKey: updateKeys.privateKey,
+				authVersion,
+				baseFolderUUID: baseFolderResponse.uuid,
+				userId: infoResponse.id
+			})
+		} finally {
+			await this._locks.auth.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -782,7 +830,9 @@ export class FilenSDK {
 
 		const tmpDir = utils.normalizePath(pathModule.join(this.config.tmpPath ? this.config.tmpPath : os.tmpdir(), "filen-sdk"))
 
-		await utils.clearTempDirectory({ tmpDir })
+		await utils.clearTempDirectory({
+			tmpDir
+		})
 	}
 
 	public readonly utils = {

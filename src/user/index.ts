@@ -120,16 +120,22 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async uploadAvatar({ buffer }: { buffer: Buffer }): Promise<void> {
-		const base64 = buffer.toString("base64")
-		const hash = await this.sdk.getWorker().crypto.utils.bufferToHash({
-			buffer: Buffer.from(base64, "utf-8"),
-			algorithm: "sha512"
-		})
+		await this.sdk._locks.intensive.acquire()
 
-		await this.sdk.api(3).user().avatar({
-			base64,
-			hash
-		})
+		try {
+			const base64 = buffer.toString("base64")
+			const hash = await this.sdk.getWorker().crypto.utils.bufferToHash({
+				buffer: Buffer.from(base64, "utf-8"),
+				algorithm: "sha512"
+			})
+
+			await this.sdk.api(3).user().avatar({
+				base64,
+				hash
+			})
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -144,21 +150,27 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async changeEmail({ email, password }: { email: string; password: string }): Promise<void> {
-		const authInfo = await this.sdk.api(3).auth().info({
-			email: this.sdk.config.email!
-		})
+		await this.sdk._locks.auth.acquire()
 
-		const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-			rawPassword: password,
-			authVersion: authInfo.authVersion,
-			salt: authInfo.salt
-		})
+		try {
+			const authInfo = await this.sdk.api(3).auth().info({
+				email: this.sdk.config.email!
+			})
 
-		await this.sdk.api(3).user().settingsEmail().change({
-			email,
-			password: derived.derivedPassword,
-			authVersion: authInfo.authVersion
-		})
+			const derived = await this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+				rawPassword: password,
+				authVersion: authInfo.authVersion,
+				salt: authInfo.salt
+			})
+
+			await this.sdk.api(3).user().settingsEmail().change({
+				email,
+				password: derived.derivedPassword,
+				authVersion: authInfo.authVersion
+			})
+		} finally {
+			await this.sdk._locks.auth.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -284,7 +296,13 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async deleteAllVersionedFiles(): Promise<void> {
-		await this.sdk.api(3).user().deleteVersions()
+		await this.sdk._locks.intensive.acquire()
+
+		try {
+			await this.sdk.api(3).user().deleteVersions()
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -296,7 +314,13 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async deleteEverything(): Promise<void> {
-		await this.sdk.api(3).user().deleteAll()
+		await this.sdk._locks.intensive.acquire()
+
+		try {
+			await this.sdk.api(3).user().deleteAll()
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -315,100 +339,106 @@ export class User {
 			throw new Error("Invalid SDK config.")
 		}
 
-		const [authInfo, newSalt] = await Promise.all([
-			this.sdk.api(3).auth().info({
-				email: this.sdk.config.email
-			}),
-			this.sdk.getWorker().crypto.utils.generateRandomHexString(128)
-		])
+		await this.sdk._locks.auth.acquire()
 
-		const [derivedCurrent, derivedNew] = await Promise.all([
-			this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-				rawPassword: currentPassword,
-				authVersion: authInfo.authVersion,
-				salt: authInfo.salt
-			}),
-			this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
-				rawPassword: newPassword,
-				authVersion: authInfo.authVersion,
-				salt: newSalt
-			})
-		])
-
-		if (authInfo.authVersion === 1 || authInfo.authVersion === 2) {
-			const newMasterKeys: string[] = [
-				...this.sdk.config.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
-				derivedNew.derivedMasterKeys
-			]
-
-			const [newMasterKeysEncrypted, privateKeyReEncrypted] = await Promise.all([
-				this.sdk.getWorker().crypto.encrypt.metadata({
-					metadata: newMasterKeys.join("|"),
-					key: derivedNew.derivedMasterKeys
+		try {
+			const [authInfo, newSalt] = await Promise.all([
+				this.sdk.api(3).auth().info({
+					email: this.sdk.config.email
 				}),
-				this.sdk.getWorker().crypto.encrypt.metadata({
-					metadata: this.sdk.config.privateKey,
-					key: derivedNew.derivedMasterKeys
-				})
+				this.sdk.getWorker().crypto.utils.generateRandomHexString(128)
 			])
 
-			const [response] = await Promise.all([
-				this.sdk.api(3).user().settingsPassword().change({
-					password: derivedNew.derivedPassword,
-					currentPassword: derivedCurrent.derivedPassword,
+			const [derivedCurrent, derivedNew] = await Promise.all([
+				this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+					rawPassword: currentPassword,
 					authVersion: authInfo.authVersion,
-					salt: newSalt,
-					masterKeys: newMasterKeysEncrypted
+					salt: authInfo.salt
 				}),
-				this.sdk.api(3).user().keyPair().update({
-					publicKey: this.sdk.config.publicKey,
-					encryptedPrivateKey: privateKeyReEncrypted
+				this.sdk.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+					rawPassword: newPassword,
+					authVersion: authInfo.authVersion,
+					salt: newSalt
 				})
 			])
 
-			return response.newAPIKey
-		} else if (authInfo.authVersion === 3) {
-			const newDekEncryptionKey = derivedNew.derivedMasterKeys
+			if (authInfo.authVersion === 1 || authInfo.authVersion === 2) {
+				const newMasterKeys: string[] = [
+					...this.sdk.config.masterKeys.filter(key => key !== derivedNew.derivedMasterKeys),
+					derivedNew.derivedMasterKeys
+				]
 
-			let dek = (await this.sdk.api(3).user().getDEK()).dek
+				const [newMasterKeysEncrypted, privateKeyReEncrypted] = await Promise.all([
+					this.sdk.getWorker().crypto.encrypt.metadata({
+						metadata: newMasterKeys.join("|"),
+						key: derivedNew.derivedMasterKeys
+					}),
+					this.sdk.getWorker().crypto.encrypt.metadata({
+						metadata: this.sdk.config.privateKey,
+						key: derivedNew.derivedMasterKeys
+					})
+				])
 
-			if (!dek) {
-				throw new Error("DEK not found.")
-			}
+				const [response] = await Promise.all([
+					this.sdk.api(3).user().settingsPassword().change({
+						password: derivedNew.derivedPassword,
+						currentPassword: derivedCurrent.derivedPassword,
+						authVersion: authInfo.authVersion,
+						salt: newSalt,
+						masterKeys: newMasterKeysEncrypted
+					}),
+					this.sdk.api(3).user().keyPair().update({
+						publicKey: this.sdk.config.publicKey,
+						encryptedPrivateKey: privateKeyReEncrypted
+					})
+				])
 
-			dek = await this.sdk.getWorker().crypto.decrypt.metadata({
-				metadata: dek,
-				key: newDekEncryptionKey
-			})
+				return response.newAPIKey
+			} else if (authInfo.authVersion === 3) {
+				const newDekEncryptionKey = derivedNew.derivedMasterKeys
 
-			const [dekReEncrypted, privateKeyReEncrypted] = await Promise.all([
-				this.sdk.getWorker().crypto.encrypt.metadata({
+				let dek = (await this.sdk.api(3).user().getDEK()).dek
+
+				if (!dek) {
+					throw new Error("DEK not found.")
+				}
+
+				dek = await this.sdk.getWorker().crypto.decrypt.metadata({
 					metadata: dek,
 					key: newDekEncryptionKey
-				}),
-				this.sdk.getWorker().crypto.encrypt.metadata({
-					metadata: this.sdk.config.privateKey,
-					key: derivedNew.derivedMasterKeys
 				})
-			])
 
-			const [response] = await Promise.all([
-				this.sdk.api(3).user().settingsPassword().change({
-					password: derivedNew.derivedPassword,
-					currentPassword: derivedCurrent.derivedPassword,
-					authVersion: authInfo.authVersion,
-					salt: newSalt,
-					masterKeys: dekReEncrypted
-				}),
-				this.sdk.api(3).user().keyPair().update({
-					publicKey: this.sdk.config.publicKey,
-					encryptedPrivateKey: privateKeyReEncrypted
-				})
-			])
+				const [dekReEncrypted, privateKeyReEncrypted] = await Promise.all([
+					this.sdk.getWorker().crypto.encrypt.metadata({
+						metadata: dek,
+						key: newDekEncryptionKey
+					}),
+					this.sdk.getWorker().crypto.encrypt.metadata({
+						metadata: this.sdk.config.privateKey,
+						key: derivedNew.derivedMasterKeys
+					})
+				])
 
-			return response.newAPIKey
-		} else {
-			throw new Error("Invalid auth version.")
+				const [response] = await Promise.all([
+					this.sdk.api(3).user().settingsPassword().change({
+						password: derivedNew.derivedPassword,
+						currentPassword: derivedCurrent.derivedPassword,
+						authVersion: authInfo.authVersion,
+						salt: newSalt,
+						masterKeys: dekReEncrypted
+					}),
+					this.sdk.api(3).user().keyPair().update({
+						publicKey: this.sdk.config.publicKey,
+						encryptedPrivateKey: privateKeyReEncrypted
+					})
+				])
+
+				return response.newAPIKey
+			} else {
+				throw new Error("Invalid auth version.")
+			}
+		} finally {
+			await this.sdk._locks.auth.release().catch(() => {})
 		}
 	}
 
@@ -459,11 +489,17 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async enableTwoFactorAuthentication({ twoFactorCode }: { twoFactorCode: string }): Promise<string> {
-		return (
-			await this.sdk.api(3).user().twoFactorAuthentication().enable({
-				code: twoFactorCode
-			})
-		).recoveryKeys
+		await this.sdk._locks.auth.acquire()
+
+		try {
+			return (
+				await this.sdk.api(3).user().twoFactorAuthentication().enable({
+					code: twoFactorCode
+				})
+			).recoveryKeys
+		} finally {
+			await this.sdk._locks.auth.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -477,9 +513,15 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async disableTwoFactorAuthentication({ twoFactorCode }: { twoFactorCode: string }): Promise<void> {
-		return await this.sdk.api(3).user().twoFactorAuthentication().disable({
-			code: twoFactorCode
-		})
+		await this.sdk._locks.auth.acquire()
+
+		try {
+			return await this.sdk.api(3).user().twoFactorAuthentication().disable({
+				code: twoFactorCode
+			})
+		} finally {
+			await this.sdk._locks.auth.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -537,9 +579,15 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async cancelSubscription({ uuid }: { uuid: string }): Promise<void> {
-		await this.sdk.api(3).user().sub().cancel({
-			uuid
-		})
+		await this.sdk._locks.intensive.acquire()
+
+		try {
+			await this.sdk.api(3).user().sub().cancel({
+				uuid
+			})
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -554,12 +602,18 @@ export class User {
 	 * @returns {Promise<string>}
 	 */
 	public async createSubscription({ planId, paymentMethod }: { planId: number; paymentMethod: PaymentMethods }): Promise<string> {
-		return (
-			await this.sdk.api(3).user().sub().create({
-				planId,
-				method: paymentMethod
-			})
-		).url
+		await this.sdk._locks.intensive.acquire()
+
+		try {
+			return (
+				await this.sdk.api(3).user().sub().create({
+					planId,
+					method: paymentMethod
+				})
+			).url
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
+		}
 	}
 
 	/**
@@ -590,10 +644,16 @@ export class User {
 	 * @returns {Promise<void>}
 	 */
 	public async requestAffiliatePayout({ method, address }: { method: string; address: string }): Promise<void> {
-		await this.sdk.api(3).user().affiliate().payout({
-			address,
-			method
-		})
+		await this.sdk._locks.intensive.acquire()
+
+		try {
+			await this.sdk.api(3).user().affiliate().payout({
+				address,
+				method
+			})
+		} finally {
+			await this.sdk._locks.intensive.release().catch(() => {})
+		}
 	}
 
 	/**
