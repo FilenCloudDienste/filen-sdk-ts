@@ -9,7 +9,6 @@ on:
 jobs:
     test:
         strategy:
-            max-parallel: 1
             matrix:
                 version: ["V2", "V3"]
         name: Run tests
