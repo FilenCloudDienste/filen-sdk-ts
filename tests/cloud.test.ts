@@ -376,7 +376,7 @@ describe("cloud", () => {
 			linkUUID,
 			enableDownload: true,
 			expiration: "never",
-			password: "test",
+			password: name,
 			itemUUID: item.uuid
 		})
 
@@ -391,7 +391,7 @@ describe("cloud", () => {
 			}),
 			sdk.cloud().filePublicLinkInfo({
 				uuid: linkUUID,
-				password: "test",
+				password: name,
 				salt: passwordStatus.salt,
 				key: item.key
 			})
@@ -405,5 +405,130 @@ describe("cloud", () => {
 		expect(typeof linkStatus.password === "string").toBe(true)
 		expect(linkStatus.enabled).toBe(true)
 		expect(info.name).toBe(name)
+	})
+
+	it("dir public link", async () => {
+		const sdk = await getSDK()
+		const name = crypto.randomBytes(16).toString("hex")
+
+		const dirUUID = await sdk.fs().mkdir({
+			path: `/ts/${name}`
+		})
+
+		const file = await sdk.fs().writeFile({
+			path: `/ts/${name}/${name}`,
+			content: crypto.randomBytes(1)
+		})
+
+		if (file.type !== "file") {
+			throw new Error("Item not of type file.")
+		}
+
+		const linkUUID = await sdk.cloud().enablePublicLink({
+			type: "directory",
+			uuid: dirUUID
+		})
+
+		const info = await sdk.cloud().publicLinkStatus({
+			type: "directory",
+			uuid: dirUUID
+		})
+
+		if (!info.exists) {
+			throw new Error("Link does not exist.")
+		}
+
+		const [list, content] = await Promise.all([
+			sdk.cloud().listPublicLinks(),
+			sdk.cloud().directoryPublicLinkContent({
+				uuid: linkUUID,
+				parent: dirUUID,
+				key: await sdk.crypto().decrypt().folderLinkKey({
+					metadata: info.key
+				}),
+				password: undefined,
+				salt: undefined
+			})
+		])
+
+		await sdk.fs().rm({
+			path: `/ts/${name}`
+		})
+
+		expect(list.some(i => i.uuid === dirUUID)).toBe(true)
+		expect(info.exists).toBe(true)
+		expect(typeof info.password).not.toBe("string")
+		expect(content.files.some(i => i.uuid === file.uuid)).toBe(true)
+	})
+
+	it("dir public link with password", async () => {
+		const sdk = await getSDK()
+		const name = crypto.randomBytes(16).toString("hex")
+
+		const dirUUID = await sdk.fs().mkdir({
+			path: `/ts/${name}`
+		})
+
+		const file = await sdk.fs().writeFile({
+			path: `/ts/${name}/${name}`,
+			content: crypto.randomBytes(1)
+		})
+
+		if (file.type !== "file") {
+			throw new Error("Item not of type file.")
+		}
+
+		const linkUUID = await sdk.cloud().enablePublicLink({
+			type: "directory",
+			uuid: dirUUID
+		})
+
+		await sdk.cloud().editPublicLink({
+			type: "directory",
+			linkUUID,
+			enableDownload: true,
+			expiration: "never",
+			password: name,
+			itemUUID: dirUUID
+		})
+
+		const status = await sdk.cloud().publicLinkStatus({
+			type: "directory",
+			uuid: dirUUID
+		})
+
+		if (!status.exists) {
+			throw new Error("Link does not exist.")
+		}
+
+		const info = await sdk.cloud().directoryPublicLinkInfo({
+			uuid: linkUUID,
+			key: await sdk.crypto().decrypt().folderLinkKey({
+				metadata: status.key
+			})
+		})
+
+		const [list, content] = await Promise.all([
+			sdk.cloud().listPublicLinks(),
+			sdk.cloud().directoryPublicLinkContent({
+				uuid: linkUUID,
+				parent: dirUUID,
+				key: await sdk.crypto().decrypt().folderLinkKey({
+					metadata: status.key
+				}),
+				password: name,
+				salt: info.salt
+			})
+		])
+
+		await sdk.fs().rm({
+			path: `/ts/${name}`
+		})
+
+		expect(list.some(i => i.uuid === dirUUID)).toBe(true)
+		expect(status.exists).toBe(true)
+		expect(info.hasPassword).toBe(true)
+		expect(typeof status.password).toBe("string")
+		expect(content.files.some(i => i.uuid === file.uuid)).toBe(true)
 	})
 })
