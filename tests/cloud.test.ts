@@ -305,4 +305,105 @@ describe("cloud", () => {
 		expect(trash.some(i => i.uuid === uuid)).toBe(false)
 		expect(list).not.toContain(name)
 	})
+
+	it("global search", async () => {
+		const sdk = await getSDK()
+		const name = crypto.randomBytes(16).toString("hex")
+
+		const item = await sdk.fs().writeFile({
+			path: `/ts/${name}`,
+			content: crypto.randomBytes(1)
+		})
+
+		const query = await sdk.cloud().queryGlobalSearch(name)
+
+		await sdk.cloud().deleteFile({
+			uuid: item.uuid
+		})
+
+		expect(query.some(i => i.metadataDecrypted.name === name && i.type === "file" && i.uuid === item.uuid)).toBe(true)
+	})
+
+	it("file public link", async () => {
+		const sdk = await getSDK()
+		const name = crypto.randomBytes(16).toString("hex")
+
+		const item = await sdk.fs().writeFile({
+			path: `/ts/${name}`,
+			content: crypto.randomBytes(1)
+		})
+
+		const linkUUID = await sdk.cloud().enablePublicLink({
+			type: "file",
+			uuid: item.uuid
+		})
+
+		const [list, passwordStatus] = await Promise.all([
+			sdk.cloud().listPublicLinks(),
+			sdk.cloud().filePublicLinkHasPassword({
+				uuid: linkUUID
+			})
+		])
+
+		await sdk.cloud().deleteFile({
+			uuid: item.uuid
+		})
+
+		expect(list.some(i => i.uuid === item.uuid)).toBe(true)
+		expect(passwordStatus.hasPassword).toBe(false)
+	})
+
+	it("file public link with password", async () => {
+		const sdk = await getSDK()
+		const name = crypto.randomBytes(16).toString("hex")
+
+		const item = await sdk.fs().writeFile({
+			path: `/ts/${name}`,
+			content: crypto.randomBytes(1)
+		})
+
+		if (item.type !== "file") {
+			throw new Error("Item not of type file.")
+		}
+
+		const linkUUID = await sdk.cloud().enablePublicLink({
+			type: "file",
+			uuid: item.uuid
+		})
+
+		await sdk.cloud().editPublicLink({
+			type: "file",
+			linkUUID,
+			enableDownload: true,
+			expiration: "never",
+			password: "test",
+			itemUUID: item.uuid
+		})
+
+		const passwordStatus = await sdk.cloud().filePublicLinkHasPassword({
+			uuid: linkUUID
+		})
+
+		const [linkStatus, info] = await Promise.all([
+			sdk.cloud().publicLinkStatus({
+				type: "file",
+				uuid: item.uuid
+			}),
+			sdk.cloud().filePublicLinkInfo({
+				uuid: linkUUID,
+				password: "test",
+				salt: passwordStatus.salt,
+				key: item.key
+			})
+		])
+
+		await sdk.cloud().deleteFile({
+			uuid: item.uuid
+		})
+
+		expect(passwordStatus.hasPassword).toBe(true)
+		expect(typeof linkStatus.password === "string").toBe(true)
+		expect(linkStatus.enabled).toBe(true)
+		expect(info.name).toBe(name)
+	})
 })

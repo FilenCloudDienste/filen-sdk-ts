@@ -1,5 +1,6 @@
 import type APIClient from "../../client"
 import { type FileEncryptionVersion } from "../../../types"
+import { argon2idAsync } from "@noble/hashes/argon2"
 
 export type DirDownloadFile = {
 	uuid: string
@@ -106,14 +107,28 @@ export class DirDownload {
 			type === "shared" || type === "normal"
 				? {
 						uuid,
-						...(skipCache ? { skipCache } : {})
+						...(skipCache
+							? {
+									skipCache
+							  }
+							: {})
 				  }
 				: {
 						uuid: linkUUID,
 						parent: uuid,
 						password:
 							linkHasPassword && linkSalt && linkPassword
-								? linkSalt.length === 32
+								? linkSalt.length === 512
+									? Buffer.from(
+											await argon2idAsync(Buffer.from(linkPassword, "utf-8"), Buffer.from(linkSalt, "hex"), {
+												t: 3,
+												m: 65536,
+												p: 4,
+												version: 0x13,
+												dkLen: 64
+											})
+									  ).toString("hex")
+									: linkSalt.length === 32
 									? await this.apiClient.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
 											password: linkPassword,
 											salt: linkSalt,
@@ -128,7 +143,11 @@ export class DirDownload {
 								: await this.apiClient.sdk.getWorker().crypto.utils.hashFn({
 										input: "empty"
 								  }),
-						...(skipCache ? { skipCache } : {})
+						...(skipCache
+							? {
+									skipCache
+							  }
+							: {})
 				  }
 
 		const response = await this.apiClient.request<DirDownloadResponse>({

@@ -49,10 +49,10 @@ export const ANONYMOUS_SDK_CONFIG: FilenSDKConfig = {
 	tmpPath: os.tmpdir()
 }
 
-export const METADATA_ENCRYPTION_VERSION: MetadataEncryptionVersion = process.env.METADATA_ENCRYPTION_VERSION
+export const METADATA_ENCRYPTION_VERSION: MetadataEncryptionVersion = process?.env?.METADATA_ENCRYPTION_VERSION
 	? (parseInt(process.env.METADATA_ENCRYPTION_VERSION) as MetadataEncryptionVersion)
 	: 2
 
-export const FILE_ENCRYPTION_VERSION: FileEncryptionVersion = process.env.FILE_ENCRYPTION_VERSION
+export const FILE_ENCRYPTION_VERSION: FileEncryptionVersion = process?.env?.FILE_ENCRYPTION_VERSION
 	? (parseInt(process.env.FILE_ENCRYPTION_VERSION) as FileEncryptionVersion)
 	: 2

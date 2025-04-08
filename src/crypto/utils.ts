@@ -359,7 +359,7 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 		}
 	} else if (authVersion === 3) {
 		const derived = Buffer.from(
-			await argon2idAsync(rawPassword, salt, {
+			await argon2idAsync(Buffer.from(rawPassword, "utf-8"), Buffer.from(salt, "hex"), {
 				t: 3,
 				m: 65536,
 				p: 4,

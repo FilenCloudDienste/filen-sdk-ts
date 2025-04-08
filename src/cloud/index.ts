@@ -64,6 +64,7 @@ import { type SearchAddItem } from "../api/v3/search/add"
 import { type SearchFindItemDecrypted } from "../api/v3/search/find"
 import nodeCrypto from "crypto"
 import { sha512 } from "@noble/hashes/sha512"
+import { argon2idAsync } from "@noble/hashes/argon2"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -1998,7 +1999,7 @@ export class Cloud {
 				}),
 				downloadBtn: true,
 				type: "enable",
-				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(16)
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(256)
 			})
 
 		return linkUUID
@@ -2041,18 +2042,19 @@ export class Cloud {
 		enableDownload?: boolean
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(16)
+		const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(256)
 		const pass = password && password.length > 0 ? "notempty" : "empty"
 		const passHashed =
 			password && password.length > 0
-				? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
-						password,
-						salt,
-						iterations: 200000,
-						hash: "sha512",
-						bitLength: 512,
-						returnHex: true
-				  })
+				? Buffer.from(
+						await argon2idAsync(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+							t: 3,
+							m: 65536,
+							p: 4,
+							version: 0x13,
+							dkLen: 64
+						})
+				  ).toString("hex")
 				: "empty"
 
 		if (type === "directory") {
@@ -2136,7 +2138,7 @@ export class Cloud {
 				passwordHashed: await this.sdk.getWorker().crypto.utils.hashPassword({
 					password: "empty"
 				}),
-				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(16),
+				salt: await this.sdk.getWorker().crypto.utils.generateRandomHexString(256),
 				downloadBtn: true,
 				type: "disable"
 			})
@@ -2221,7 +2223,17 @@ export class Cloud {
 		}
 
 		const derivedPassword = password
-			? salt && salt.length === 32
+			? salt && salt.length === 512
+				? Buffer.from(
+						await argon2idAsync(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+							t: 3,
+							m: 65536,
+							p: 4,
+							version: 0x13,
+							dkLen: 64
+						})
+				  ).toString("hex")
+				: salt && salt.length === 32
 				? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
 						password,
 						salt,
@@ -2333,7 +2345,17 @@ export class Cloud {
 		}
 
 		const derivedPassword = password
-			? salt && salt.length === 32
+			? salt && salt.length === 512
+				? Buffer.from(
+						await argon2idAsync(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+							t: 3,
+							m: 65536,
+							p: 4,
+							version: 0x13,
+							dkLen: 64
+						})
+				  ).toString("hex")
+				: salt && salt.length === 32
 				? await this.sdk.getWorker().crypto.utils.deriveKeyFromPassword({
 						password,
 						salt,
@@ -5588,15 +5610,18 @@ export class Cloud {
 	public async queryGlobalSearch(input: string): Promise<SearchFindItemDecrypted[]> {
 		const inputNormalized = input.trim().toLowerCase()
 		const hmacKey = await this.sdk.generateHMACKey()
-		const hashes = await this.sdk.getWorker().crypto.utils.generateSearchIndexHashes({
-			input,
+		const hash = await this.sdk.crypto().utils.hashSearchIndex({
+			name: input,
 			hmacKey
 		})
 
 		const found = (
-			await this.sdk.api(3).search().find({
-				hashes
-			})
+			await this.sdk
+				.api(3)
+				.search()
+				.find({
+					hashes: [hash]
+				})
 		).items
 
 		const items: SearchFindItemDecrypted[] = (
@@ -5655,9 +5680,11 @@ export class Cloud {
 					}
 				})
 			)
-		).filter(item => item.metadataDecrypted.name.trim().toLowerCase().includes(inputNormalized))
+		).filter(
+			item => item.metadataDecrypted.name.length > 0 && item.metadataDecrypted.name.trim().toLowerCase().includes(inputNormalized)
+		)
 
-		return items
+		return Array.from(new Map(items.map(item => [`${item.uuid}:${item.type}`, item])).values())
 	}
 
 	/**
@@ -5759,7 +5786,7 @@ export class Cloud {
 			}
 
 			const addPromises: Promise<void>[] = []
-			const semaphore = new Semaphore(10)
+			const semaphore = new Semaphore(16)
 
 			params?.onProgress?.({
 				type: "adding",
@@ -5769,7 +5796,7 @@ export class Cloud {
 			})
 
 			for (const chunk of chunks) {
-				promises.push(
+				addPromises.push(
 					new Promise<void>((resolve, reject) => {
 						semaphore
 							.acquire()
