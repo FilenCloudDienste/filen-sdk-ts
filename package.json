@@ -58,7 +58,7 @@
 	"dependencies": {
 		"@noble/hashes": "^1.7.1",
 		"agentkeepalive": "^4.6.0",
-		"axios": "^0.28.1",
+		"axios": "^0.30.0",
 		"crypto-api-v1": "^1.0.0",
 		"crypto-js": "^4.2.0",
 		"dotenv": "^16.4.7",
