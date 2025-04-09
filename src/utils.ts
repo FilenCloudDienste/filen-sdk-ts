@@ -333,7 +333,17 @@ export function nameSplitter(input: string, minLength: number = 2, maxLength: nu
 		}
 	}
 
-	return [...new Set(results)].sort((a, b) => a.length - b.length).slice(0, 4096)
+	return [...new Set(results)]
+		.sort((a, b) => {
+			const lengthDiff = a.length - b.length
+
+			if (lengthDiff !== 0) {
+				return lengthDiff
+			}
+
+			return a.localeCompare(b)
+		})
+		.slice(0, 4096)
 }
 
 export function isValidHexString(str: string): boolean {

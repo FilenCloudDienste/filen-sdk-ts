@@ -5749,6 +5749,12 @@ export class Cloud {
 								hmacKey
 							})
 							.then(hashes => {
+								if (hashes.length === 0) {
+									resolve()
+
+									return
+								}
+
 								items.push(
 									...hashes.map(hash => ({
 										type: entry[1].type,
