@@ -86,8 +86,8 @@ export const APIClientDefaults = {
 		"https://ingest.filen-6.net"
 	],
 	gatewayTimeout: 300000,
-	egestTimeout: 300000,
-	ingestTimeout: 300000,
+	egestTimeout: 180000,
+	ingestTimeout: 180000,
 	maxRetries: 3600,
 	retryTimeout: 1000
 } as const
