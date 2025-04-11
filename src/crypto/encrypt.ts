@@ -8,6 +8,7 @@ import fs from "fs-extra"
 import { pipeline } from "stream"
 import { promisify } from "util"
 import { type FilenSDK, type FileEncryptionVersion, type MetadataEncryptionVersion } from ".."
+import CryptoJS from "crypto-js"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -68,7 +69,11 @@ export class Encrypt {
 			version = 2
 		}
 
-		if (version === 2) {
+		if (version === 1) {
+			// Old and deprecated, not in use anymore, just here for backwards compatibility
+			return CryptoJS.AES.encrypt(metadata, keyToUse).toString()
+		} else if (version === 2) {
+			// Old and deprecated, not in use anymore, just here for backwards compatibility
 			const iv = await generateRandomString(12)
 			const ivBuffer = Buffer.from(iv, "utf-8")
 
@@ -361,7 +366,45 @@ export class Encrypt {
 			version = 2
 		}
 
-		if (version === 2) {
+		if (version === 1) {
+			// Old and deprecated, not in use anymore, just here for backwards compatibility
+			if (key.length !== 32) {
+				throw new Error("v1 file encryption requires 32 char ascii key.")
+			}
+
+			return Buffer.from(CryptoJS.AES.encrypt(CryptoJS.lib.WordArray.create(data), key).toString(), "base64")
+		} else if (version === 1.5) {
+			// Old and deprecated, not in use anymore, just here for backwards compatibility
+			if (key.length !== 32) {
+				throw new Error("v1.5 file encryption requires 32 char ascii key.")
+			}
+
+			const keyBytes = Buffer.from(key, "utf-8")
+			const ivBytes = keyBytes.subarray(0, 16)
+
+			if (environment === "node") {
+				const cipher = nodeCrypto.createCipheriv("aes-256-cbc", keyBytes, ivBytes)
+
+				return Buffer.concat([cipher.update(data), cipher.final()])
+			} else {
+				return Buffer.from(
+					await crypto.subtle.encrypt(
+						{
+							name: "AES-CBC",
+							iv: ivBytes
+						},
+						await importRawKey({
+							key: keyBytes,
+							algorithm: "AES-CBC",
+							mode: ["encrypt"],
+							keyCache: false
+						}),
+						data
+					)
+				)
+			}
+		} else if (version === 2) {
+			// Old and deprecated, not in use anymore, just here for backwards compatibility
 			if (key.length !== 32) {
 				throw new Error("v2 file encryption requires 32 char ascii key.")
 			}

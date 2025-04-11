@@ -973,14 +973,14 @@ export class Decrypt {
 		}
 
 		if (environment === "node") {
-			if (version === 1) {
+			if (version === 1 || version === 1.5) {
 				// Old and deprecated, not in use anymore, just here for backwards compatibility
-				const firstBytes = Buffer.from(data.subarray(0, 16))
+				const firstBytes = data.subarray(0, 16)
 				const asciiString = firstBytes.toString("ascii")
 				const base64String = firstBytes.toString("base64")
 				const utf8String = firstBytes.toString("utf-8")
 				let needsConvert = true
-				let isCBC = true
+				let isNormalCBC = true
 
 				if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
 					needsConvert = false
@@ -994,33 +994,27 @@ export class Decrypt {
 					utf8String.startsWith("Salted_") ||
 					base64String.startsWith("U2FsdGVk")
 				) {
-					isCBC = false
+					isNormalCBC = false
 				}
 
-				if (needsConvert && !isCBC) {
+				if (needsConvert && !isNormalCBC) {
 					data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64")
 				}
 
-				if (!isCBC) {
-					// Old and deprecated, not in use anymore, just here for backwards compatibility
-					const saltBytes = Buffer.from(data.subarray(8, 16))
-
+				if (!isNormalCBC) {
 					const { key: keyBytes, iv: ivBytes } = EVP_BytesToKey({
 						password: Buffer.from(key, "utf-8"),
-						salt: saltBytes,
+						salt: data.subarray(8, 16),
 						keyBits: 256,
 						ivLength: 16
 					})
-
 					const decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes)
 					const ciphertext = data.subarray(16)
 
 					return Buffer.concat([decipher.update(ciphertext), decipher.final()])
 				} else {
-					// Old and deprecated, not in use anymore, just here for backwards compatibility
 					const keyBytes = Buffer.from(key, "utf-8")
 					const ivBytes = keyBytes.subarray(0, 16)
-
 					const decipher = nodeCrypto.createDecipheriv("aes-256-cbc", keyBytes, ivBytes)
 
 					return Buffer.concat([decipher.update(data), decipher.final()])
@@ -1054,14 +1048,14 @@ export class Decrypt {
 				throw new Error(`[crypto.decrypt.data] Invalid version ${version}`)
 			}
 		} else if (environment === "browser") {
-			if (version === 1) {
+			if (version === 1 || version === 1.5) {
 				// Old and deprecated, not in use anymore, just here for backwards compatibility
 				const firstBytes = Buffer.from(data.subarray(0, 16))
 				const asciiString = firstBytes.toString("ascii")
 				const base64String = firstBytes.toString("base64")
 				const utf8String = firstBytes.toString("utf-8")
 				let needsConvert = true
-				let isCBC = true
+				let isNormalCBC = true
 
 				if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
 					needsConvert = false
@@ -1075,14 +1069,14 @@ export class Decrypt {
 					utf8String.startsWith("Salted_") ||
 					base64String.startsWith("U2FsdGVk")
 				) {
-					isCBC = false
+					isNormalCBC = false
 				}
 
-				if (needsConvert && !isCBC) {
+				if (needsConvert && !isNormalCBC) {
 					data = Buffer.from(Buffer.from(data).toString("utf-8"), "base64")
 				}
 
-				if (!isCBC) {
+				if (!isNormalCBC) {
 					// Old and deprecated, not in use anymore, just here for backwards compatibility
 					const saltBytes = Buffer.from(data.subarray(8, 16))
 
@@ -1229,7 +1223,7 @@ export class Decrypt {
 
 		const inputStat = await fs.stat(input)
 
-		if (inputStat.size < (version === 1 ? 17 : 13)) {
+		if (inputStat.size < (version === 1 || version === 1.5 ? 17 : 13)) {
 			throw new Error(`Input file size too small: ${inputStat.size}.`)
 		}
 
@@ -1240,7 +1234,7 @@ export class Decrypt {
 		let inputFileSize = 0
 
 		try {
-			if (version === 1) {
+			if (version === 1 || version === 1.5) {
 				// Old and deprecated, not in use anymore, just here for backwards compatibility
 				const firstBytes = Buffer.alloc(16)
 
@@ -1254,7 +1248,7 @@ export class Decrypt {
 				const base64String = firstBytes.toString("base64")
 				const utf8String = firstBytes.toString("utf-8")
 				let needsConvert = true
-				let isCBC = true
+				let isNormalCBC = true
 
 				if (asciiString.startsWith("Salted_") || base64String.startsWith("Salted_") || utf8String.startsWith("Salted_")) {
 					needsConvert = false
@@ -1268,10 +1262,10 @@ export class Decrypt {
 					utf8String.startsWith("Salted_") ||
 					base64String.startsWith("U2FsdGVk")
 				) {
-					isCBC = false
+					isNormalCBC = false
 				}
 
-				if (needsConvert && !isCBC) {
+				if (needsConvert && !isNormalCBC) {
 					const inputConverted = pathModule.join(pathModule.dirname(output), await uuidv4())
 
 					await fs.rm(inputConverted, {
@@ -1285,7 +1279,11 @@ export class Decrypt {
 
 					const oldInput = `${input}`
 
-					input = await streamDecodeBase64({ inputFile: input, outputFile: inputConverted })
+					input = await streamDecodeBase64({
+						inputFile: input,
+						outputFile: inputConverted
+					})
+
 					inputHandle = await fs.open(input, fs.constants.R_OK)
 
 					await fs.rm(oldInput, {
@@ -1296,7 +1294,7 @@ export class Decrypt {
 					})
 				}
 
-				if (!isCBC) {
+				if (!isNormalCBC) {
 					// Old and deprecated, not in use anymore, just here for backwards compatibility
 					const saltBytes = Buffer.alloc(8)
 
@@ -1348,7 +1346,6 @@ export class Decrypt {
 				const keyBytes = Buffer.from(key, "hex")
 				const ivBytes = Buffer.alloc(12)
 				const authTagBytes = Buffer.alloc(16)
-
 				const stat = await fs.stat(input)
 
 				await Promise.all([fs.read(inputHandle, ivBytes, 0, 12, 0), fs.read(inputHandle, authTagBytes, 0, 16, stat.size - 16)])
@@ -1374,6 +1371,7 @@ export class Decrypt {
 			end: inputFileSize > 0 && bytesToSkipAtEndOfInputStream > 0 ? inputFileSize - bytesToSkipAtEndOfInputStream - 1 : Infinity,
 			start: bytesToSkipAtStartOfInputStream
 		})
+
 		const writeStream = fs.createWriteStream(normalizePath(output))
 
 		await pipelineAsync(readStream, decipher, writeStream)
