@@ -416,6 +416,7 @@ export class Socket extends EventEmitter {
 	private pingInterval: ReturnType<typeof setInterval> | number = 0
 	private apiKey = ""
 	private emitSocketAuthed = false
+	private connected = false
 
 	/**
 	 * Creates an instance of Socket.
@@ -441,8 +442,12 @@ export class Socket extends EventEmitter {
 			return
 		}
 
+		clearInterval(this.pingInterval)
+
+		this.connected = false
 		this.apiKey = apiKey
 		this.socket = null
+		this.emitSocketAuthed = false
 		this.socket = io(SOCKET_DEFAULTS.url, {
 			path: "",
 			reconnect: true,
@@ -452,6 +457,8 @@ export class Socket extends EventEmitter {
 		})
 
 		this.socket.on("connect", async () => {
+			this.connected = true
+
 			this.emit("connected")
 
 			this.socket?.emit("auth", {
@@ -488,9 +495,13 @@ export class Socket extends EventEmitter {
 		})
 
 		this.socket.on("disconnect", () => {
-			this.emit("disconnected")
+			this.socket = null
+			this.connected = false
+			this.emitSocketAuthed = false
 
 			clearInterval(this.pingInterval)
+
+			this.emit("disconnected")
 		})
 
 		this.socket.on("new-event", (data: SocketNewEvent) => {
@@ -869,9 +880,13 @@ export class Socket extends EventEmitter {
 	 * @public
 	 */
 	public disconnect(): void {
-		if (!this.socket) {
+		if (!this.socket || !this.isConnected()) {
 			return
 		}
+
+		clearInterval(this.pingInterval)
+
+		this.emitSocketAuthed = false
 
 		this.socket.disconnect()
 	}
@@ -888,7 +903,7 @@ export class Socket extends EventEmitter {
 			return false
 		}
 
-		return this.socket.connected
+		return this.connected
 	}
 }
 
