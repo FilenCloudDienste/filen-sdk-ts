@@ -2254,26 +2254,35 @@ export class Cloud {
 			password: derivedPassword
 		})
 
-		const [nameDecrypted, mimeDecrypted, sizeDecrypted] = await Promise.all([
-			this.sdk.getWorker().crypto.decrypt.metadata({
-				metadata: info.name,
-				key
-			}),
-			this.sdk.getWorker().crypto.decrypt.metadata({
-				metadata: info.mime,
-				key
-			}),
-			this.sdk.getWorker().crypto.decrypt.metadata({
-				metadata: info.size,
-				key
-			})
-		])
+		try {
+			const [nameDecrypted, mimeDecrypted, sizeDecrypted] = await Promise.all([
+				this.sdk.getWorker().crypto.decrypt.metadata({
+					metadata: info.name,
+					key
+				}),
+				this.sdk.getWorker().crypto.decrypt.metadata({
+					metadata: info.mime,
+					key
+				}),
+				this.sdk.getWorker().crypto.decrypt.metadata({
+					metadata: info.size,
+					key
+				})
+			])
 
-		return {
-			...info,
-			name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${uuid}`,
-			mime: nameDecrypted.length > 0 ? mimeDecrypted : "application/octet-stream",
-			size: nameDecrypted.length > 0 ? parseInt(sizeDecrypted) : 1
+			return {
+				...info,
+				name: nameDecrypted.length > 0 ? nameDecrypted : `CANNOT_DECRYPT_NAME_${uuid}`,
+				mime: nameDecrypted.length > 0 ? mimeDecrypted : "application/octet-stream",
+				size: nameDecrypted.length > 0 ? parseInt(sizeDecrypted) : 0
+			}
+		} catch {
+			return {
+				...info,
+				name: `CANNOT_DECRYPT_NAME_${uuid}`,
+				mime: "application/octet-stream",
+				size: 0
+			}
 		}
 	}
 
