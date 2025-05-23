@@ -9,11 +9,11 @@ import { type ProgressCallback } from "../types"
 import https from "https"
 import urlModule from "url"
 import progressStream from "progress-stream"
-import Agent from "agentkeepalive"
+import { HttpsAgent } from "agentkeepalive"
 import type FilenSDK from ".."
 
 const pipelineAsync = promisify(pipeline)
-const keepAliveAgent = new Agent.HttpsAgent()
+const keepAliveAgent = new HttpsAgent()
 
 export type APIClientConfig = {
 	apiKey: string
@@ -282,7 +282,7 @@ export class APIClient {
 					})
 
 					progressStreamInstance.on("progress", info => {
-						if (!info || typeof info.transferred !== "number") {
+						if (!info || typeof info.transferred !== "number" || !params.onUploadProgress) {
 							return
 						}
 
@@ -316,7 +316,7 @@ export class APIClient {
 			maxBodyLength: Infinity,
 			maxContentLength: Infinity,
 			onUploadProgress: event => {
-				if (!event || typeof event.loaded !== "number") {
+				if (!event || typeof event.loaded !== "number" || !params.onUploadProgress) {
 					return
 				}
 
@@ -373,6 +373,10 @@ export class APIClient {
 				const timeout = params.timeout ? params.timeout : APIClientDefaults.gatewayTimeout
 
 				const calculateProgress = (transferred: number) => {
+					if (!transferred || typeof transferred !== "number" || !params.onDownloadProgress) {
+						return
+					}
+
 					let bytes = transferred
 
 					if (lastBytesDownloaded === 0) {
@@ -506,7 +510,7 @@ export class APIClient {
 			maxBodyLength: Infinity,
 			maxContentLength: Infinity,
 			onDownloadProgress: event => {
-				if (!event || typeof event.loaded !== "number") {
+				if (!event || typeof event.loaded !== "number" || !params.onDownloadProgressId) {
 					return
 				}
 

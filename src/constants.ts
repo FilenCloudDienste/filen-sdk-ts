@@ -9,7 +9,17 @@ export const isBrowser =
 	// @ts-expect-error WorkerEnv's are not typed
 	(typeof ServiceWorkerGlobalScope !== "undefined" && self instanceof ServiceWorkerGlobalScope)
 
-export const environment: Environment = isBrowser ? "browser" : "node"
+export const isReactNative =
+	// @ts-expect-error Obviously not typed
+	typeof global.IS_EXPO_REACT_NATIVE !== "undefined" ||
+	// @ts-expect-error Obviously not typed
+	typeof global.IS_REACT_NATIVE !== "undefined" ||
+	// @ts-expect-error Obviously not typed
+	typeof globalThis.IS_EXPO_REACT_NATIVE !== "undefined" ||
+	// @ts-expect-error Obviously not typed
+	typeof globalThis.IS_REACT_NATIVE !== "undefined"
+
+export const environment: Environment = isBrowser ? "browser" : isReactNative ? "react-native" : "node"
 
 export const CHUNK_SIZE = 1024 * 1024
 export const BUFFER_SIZE = 4096

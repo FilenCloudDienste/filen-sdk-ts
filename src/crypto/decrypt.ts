@@ -13,6 +13,7 @@ import { promisify } from "util"
 import CryptoJS from "crypto-js"
 import { type UserEvent } from "../api/v3/user/events"
 import os from "os"
+import forge from "node-forge"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -67,7 +68,7 @@ export class Decrypt {
 				const ivBuffer = Buffer.from(metadata.slice(3, 15), "utf-8")
 				const encrypted = Buffer.from(metadata.slice(15), "base64")
 
-				if (environment === "node") {
+				if (environment === "node" || environment === "react-native") {
 					const authTag = encrypted.subarray(-16)
 					const cipherText = encrypted.subarray(0, encrypted.byteLength - 16)
 					const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer)
@@ -102,7 +103,7 @@ export class Decrypt {
 				const ivBuffer = Buffer.from(metadata.slice(3, 27), "hex")
 				const encrypted = Buffer.from(metadata.slice(27), "base64")
 
-				if (environment === "node") {
+				if (environment === "node" || environment === "react-native") {
 					const authTag = encrypted.subarray(-16)
 					const cipherText = encrypted.subarray(0, encrypted.byteLength - 16)
 					const decipher = nodeCrypto.createDecipheriv("aes-256-gcm", keyBuffer, ivBuffer)
@@ -164,6 +165,20 @@ export class Decrypt {
 			)
 
 			return decrypted.toString("utf-8")
+		} else if (environment === "react-native") {
+			const pemKey = await derKeyToPem({
+				key: privateKey
+			})
+			const forgePrivatKey = forge.pki.privateKeyFromPem(pemKey)
+			const encryptedBytes = forge.util.decode64(metadata)
+			const decrypted = forgePrivatKey.decrypt(encryptedBytes, "RSA-OAEP", {
+				md: forge.md.sha512.create(),
+				mgf1: {
+					md: forge.md.sha512.create()
+				}
+			})
+
+			return decrypted
 		} else if (environment === "browser") {
 			const importedPrivateKey = await importPrivateKey({
 				privateKey,
@@ -972,7 +987,7 @@ export class Decrypt {
 			throw new Error("Invalid key.")
 		}
 
-		if (environment === "node") {
+		if (environment === "node" || environment === "react-native") {
 			if (version === 1 || version === 1.5) {
 				// Old and deprecated, not in use anymore, just here for backwards compatibility
 				const firstBytes = data.subarray(0, 16)

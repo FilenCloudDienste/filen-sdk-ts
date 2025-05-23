@@ -9,6 +9,7 @@ import { pipeline } from "stream"
 import { promisify } from "util"
 import { type FilenSDK, type FileEncryptionVersion, type MetadataEncryptionVersion } from ".."
 import CryptoJS from "crypto-js"
+import forge from "node-forge"
 
 const pipelineAsync = promisify(pipeline)
 
@@ -77,7 +78,7 @@ export class Encrypt {
 			const iv = await generateRandomString(12)
 			const ivBuffer = Buffer.from(iv, "utf-8")
 
-			if (environment === "node") {
+			if (environment === "node" || environment === "react-native") {
 				const derivedKey = await deriveKeyFromPassword({
 					password: keyToUse,
 					salt: keyToUse,
@@ -128,7 +129,7 @@ export class Encrypt {
 			const ivBuffer = await generateRandomBytes(12)
 			const keyBuffer = Buffer.from(keyToUse, "hex")
 
-			if (environment === "node") {
+			if (environment === "node" || environment === "react-native") {
 				const dataBuffer = Buffer.from(metadata, "utf-8")
 				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer)
 				const encrypted = Buffer.concat([cipher.update(dataBuffer), cipher.final()])
@@ -185,6 +186,19 @@ export class Encrypt {
 			)
 
 			return Buffer.from(encrypted).toString("base64")
+		} else if (environment === "react-native") {
+			const pemKey = await derKeyToPem({
+				key: publicKey
+			})
+			const publicKeyObj = forge.pki.publicKeyFromPem(pemKey)
+			const encrypted = publicKeyObj.encrypt(metadata, "RSA-OAEP", {
+				md: forge.md.sha512.create(),
+				mgf1: {
+					md: forge.md.sha512.create()
+				}
+			})
+
+			return forge.util.encode64(encrypted)
 		} else if (environment === "browser") {
 			const importedPublicKey = await importPublicKey({
 				publicKey,
@@ -382,7 +396,7 @@ export class Encrypt {
 			const keyBytes = Buffer.from(key, "utf-8")
 			const ivBytes = keyBytes.subarray(0, 16)
 
-			if (environment === "node") {
+			if (environment === "node" || environment === "react-native") {
 				const cipher = nodeCrypto.createCipheriv("aes-256-cbc", keyBytes, ivBytes)
 
 				return Buffer.concat([cipher.update(data), cipher.final()])
@@ -412,7 +426,7 @@ export class Encrypt {
 			const iv = await generateRandomString(12)
 			const ivBuffer = Buffer.from(iv, "utf-8")
 
-			if (environment === "node") {
+			if (environment === "node" || environment === "react-native") {
 				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", Buffer.from(key, "utf-8"), ivBuffer)
 				const encrypted = Buffer.concat([cipher.update(data), cipher.final()])
 				const authTag = cipher.getAuthTag()
@@ -446,7 +460,7 @@ export class Encrypt {
 			const ivBuffer = await generateRandomBytes(12)
 			const keyBuffer = Buffer.from(key, "hex")
 
-			if (environment === "node") {
+			if (environment === "node" || environment === "react-native") {
 				const cipher = nodeCrypto.createCipheriv("aes-256-gcm", keyBuffer, ivBuffer)
 				const encrypted = Buffer.concat([cipher.update(data), cipher.final()])
 				const authTag = cipher.getAuthTag()

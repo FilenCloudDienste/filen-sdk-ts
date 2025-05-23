@@ -60,7 +60,7 @@ export function normalizePath(path: string): string {
  * @returns {Promise<string>}
  */
 export async function uuidv4(): Promise<string> {
-	if (environment === "node") {
+	if (environment === "node" || environment === "react-native") {
 		return nodeCrypto.randomUUID()
 	}
 

@@ -17,8 +17,10 @@ import type Encrypt from "../src/crypto/encrypt"
 import { argon2idAsync } from "@noble/hashes/argon2"
 import { blake2b } from "@noble/hashes/blake2b"
 import { sha256 } from "@noble/hashes/sha256"
+import { sha512 } from "@noble/hashes/sha512"
 import { nameSplitter } from "../src/utils"
-import crypto from "crypto"
+import nodeCrypto from "crypto"
+import { pbkdf2Async } from "@noble/hashes/pbkdf2"
 
 const filen = new FilenSDK(
 	{

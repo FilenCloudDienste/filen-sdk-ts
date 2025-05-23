@@ -4129,7 +4129,7 @@ export class Cloud {
 				this.sdk.generateHMACKey()
 			])
 
-			const fileHasher = environment === "node" ? nodeCrypto.createHash("sha512") : sha512.create()
+			const fileHasher = environment === "node" || environment === "react-native" ? nodeCrypto.createHash("sha512") : sha512.create()
 
 			if (fileSize > 0) {
 				const waitForPause = async (): Promise<void> => {

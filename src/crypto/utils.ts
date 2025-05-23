@@ -6,9 +6,12 @@ import cache from "../cache"
 import { fastStringHash, nameSplitter } from "../utils"
 import { argon2idAsync } from "@noble/hashes/argon2"
 import { sha256 } from "@noble/hashes/sha256"
+import { sha512 } from "@noble/hashes/sha512"
 import CryptoAPI from "crypto-api-v1"
 import { hmac } from "@noble/hashes/hmac"
 import { hkdf } from "@noble/hashes/hkdf"
+import { pbkdf2Async } from "@noble/hashes/pbkdf2"
+import forge from "node-forge"
 
 export const base64Charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
 export const asciiCharset = Buffer.from(
@@ -23,7 +26,7 @@ export const asciiCharset = Buffer.from(
 ).toString("utf-8")
 
 export async function generateRandomString(length: number = 32): Promise<string> {
-	if (environment === "node") {
+	if (environment === "node" || environment === "react-native") {
 		const array = nodeCrypto.randomBytes(length)
 
 		return Array.from(array)
@@ -43,7 +46,7 @@ export async function generateRandomString(length: number = 32): Promise<string>
 }
 
 export async function generateRandomBytes(length: number = 32): Promise<Buffer> {
-	if (environment === "node") {
+	if (environment === "node" || environment === "react-native") {
 		return nodeCrypto.randomBytes(length)
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
@@ -57,7 +60,7 @@ export async function generateRandomBytes(length: number = 32): Promise<Buffer> 
 }
 
 export async function generateRandomHexString(length: number = 32): Promise<string> {
-	if (environment === "node") {
+	if (environment === "node" || environment === "react-native") {
 		return nodeCrypto.randomBytes(length).toString("hex")
 	} else if (environment === "browser") {
 		const array = new Uint8Array(length)
@@ -114,7 +117,7 @@ export async function hashFileName({
 export async function hashSearchIndex({ name, hmacKey }: { name: string; hmacKey: Buffer }): Promise<string> {
 	const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
 
-	if (environment === "browser") {
+	if (environment === "browser" || environment === "react-native") {
 		return Buffer.from(hmac(sha256, hmacKey, nameBuffer)).toString("hex")
 	} else {
 		return nodeCrypto.createHmac("sha256", hmacKey).update(nameBuffer).digest("hex")
@@ -137,7 +140,7 @@ export async function generateSearchIndexHashes({ input, hmacKey }: { input: str
 export async function generatePrivateKeyHMAC(privateKey: string): Promise<Buffer> {
 	const privateKeyBuffer = Buffer.from(privateKey, "base64")
 
-	if (environment === "browser") {
+	if (environment === "browser" || environment === "react-native") {
 		return Buffer.from(hkdf(sha256, privateKeyBuffer, Buffer.from([]), Buffer.from("hmac-sha256-key", "utf-8"), 32))
 	} else {
 		return new Promise<Buffer>((resolve, reject) => {
@@ -229,6 +232,17 @@ export async function deriveKeyFromPassword({
 				resolve(result)
 			})
 		})
+	} else if (environment === "react-native") {
+		const result = await pbkdf2Async(hash === "sha512" ? sha512 : sha256, password, salt, {
+			dkLen: bitLength / 8,
+			c: iterations
+		})
+
+		if (returnHex) {
+			return Buffer.from(result).toString("hex")
+		}
+
+		return Buffer.from(result)
 	} else if (environment === "browser") {
 		const bits = await globalThis.crypto.subtle.deriveBits(
 			{
@@ -265,7 +279,7 @@ export async function deriveKeyFromPassword({
  * @returns {Promise<string>}
  */
 export async function hashFn({ input }: { input: string }): Promise<string> {
-	if (environment === "node") {
+	if (environment === "node" || environment === "react-native") {
 		return nodeCrypto
 			.createHash("sha1")
 			.update(nodeCrypto.createHash("sha512").update(Buffer.from(input, "utf-8")).digest("hex"))
@@ -288,7 +302,7 @@ export async function hashFn({ input }: { input: string }): Promise<string> {
  * @returns {Promise<string>}
  */
 export async function hashPassword({ password }: { password: string }): Promise<string> {
-	if (environment === "browser" || environment === "node") {
+	if (environment === "browser" || environment === "node" || environment === "react-native") {
 		return (
 			CryptoAPI.hash("sha512", CryptoAPI.hash("sha384", CryptoAPI.hash("sha256", CryptoAPI.hash("sha1", password)))) +
 			CryptoAPI.hash("sha512", CryptoAPI.hash("md5", CryptoAPI.hash("md4", CryptoAPI.hash("md2", password))))
@@ -343,7 +357,7 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 		let derivedPassword = derivedKey.substring(derivedKey.length / 2, derivedKey.length)
 		const derivedMasterKeys = derivedKey.substring(0, derivedKey.length / 2)
 
-		if (environment === "node") {
+		if (environment === "node" || environment === "react-native") {
 			derivedPassword = nodeCrypto.createHash("sha512").update(Buffer.from(derivedPassword, "utf-8")).digest("hex")
 		} else if (environment === "browser") {
 			derivedPassword = Buffer.from(await globalThis.crypto.subtle.digest("SHA-512", Buffer.from(derivedPassword, "utf-8"))).toString(
@@ -602,7 +616,7 @@ export async function importPBKDF2Key({
  * @returns {Promise<string>}
  */
 export async function bufferToHash({ buffer, algorithm }: { buffer: Uint8Array; algorithm: "sha256" | "sha512" | "md5" }): Promise<string> {
-	if (environment === "node") {
+	if (environment === "node" || environment === "react-native") {
 		return nodeCrypto.createHash(algorithm).update(buffer).digest("hex")
 	} else if (environment === "browser") {
 		const webcryptoAlgorithm = algorithm === "sha512" ? "SHA-512" : algorithm === "sha256" ? "SHA-256" : "MD-5"
@@ -650,6 +664,38 @@ export async function generateKeyPair(): Promise<{ publicKey: string; privateKey
 						publicKey: publicKey.toString("base64"),
 						privateKey: privateKey.toString("base64")
 					})
+				}
+			)
+		})
+	} else if (environment === "react-native") {
+		return new Promise((resolve, reject) => {
+			forge.pki.rsa.generateKeyPair(
+				{
+					bits: 4096,
+					e: 0x10001,
+					workers: -1
+				},
+				(err, keypair) => {
+					if (err) {
+						reject(err)
+
+						return
+					}
+
+					try {
+						const publicKeyAsn1 = forge.pki.publicKeyToAsn1(keypair.publicKey)
+						const publicKeyDer = forge.asn1.toDer(publicKeyAsn1).getBytes()
+						const privateKeyAsn1 = forge.pki.privateKeyToAsn1(keypair.privateKey)
+						const privateKeyInfo = forge.pki.wrapRsaPrivateKey(privateKeyAsn1)
+						const privateKeyDer = forge.asn1.toDer(privateKeyInfo).getBytes()
+
+						resolve({
+							publicKey: forge.util.encode64(publicKeyDer),
+							privateKey: forge.util.encode64(privateKeyDer)
+						})
+					} catch (error) {
+						reject(error)
+					}
 				}
 			)
 		})
