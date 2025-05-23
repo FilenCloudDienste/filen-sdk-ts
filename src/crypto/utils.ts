@@ -117,7 +117,7 @@ export async function hashFileName({
 export async function hashSearchIndex({ name, hmacKey }: { name: string; hmacKey: Buffer }): Promise<string> {
 	const nameBuffer = Buffer.from(name.toLowerCase(), "utf-8")
 
-	if (environment === "browser" || environment === "react-native") {
+	if (environment === "browser") {
 		return Buffer.from(hmac(sha256, hmacKey, nameBuffer)).toString("hex")
 	} else {
 		return nodeCrypto.createHmac("sha256", hmacKey).update(nameBuffer).digest("hex")

@@ -1463,7 +1463,7 @@ export class FS {
 		}
 
 		const item = await this.sdk.cloud().uploadLocalFileStream({
-			source: Readable.from(content),
+			source: Readable.from([content]),
 			parent: parentUUID,
 			name: fileName,
 			abortSignal,

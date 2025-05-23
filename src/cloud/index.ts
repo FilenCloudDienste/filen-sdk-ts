@@ -1,4 +1,4 @@
-import { type FSItem, type FilenSDK, APIError } from ".."
+import { type FilenSDK, APIError } from ".."
 import {
 	type FileEncryptionVersion,
 	type FileMetadata,
@@ -54,7 +54,6 @@ import { type FileLinkPasswordResponse } from "../api/v3/file/link/password"
 import { type DirLinkInfoDecryptedResponse } from "../api/v3/dir/link/info"
 import { type FileLinkInfoResponse } from "../api/v3/file/link/info"
 import { type DirLinkContentDecryptedResponse } from "../api/v3/dir/link/content"
-import { promisify } from "util"
 import { pipeline, Readable, Transform } from "stream"
 import { type ReadableStream as ReadableStreamWebType } from "stream/web"
 import { ChunkedUploadWriter } from "./streams"
@@ -65,8 +64,6 @@ import { type SearchFindItemDecrypted } from "../api/v3/search/find"
 import nodeCrypto from "crypto"
 import { sha512 } from "@noble/hashes/sha512"
 import { argon2idAsync } from "@noble/hashes/argon2"
-
-const pipelineAsync = promisify(pipeline)
 
 export type CloudItemReceiver = {
 	id: number
@@ -3190,9 +3187,17 @@ export class Cloud {
 					end
 				}) as unknown as ReadableStreamWebType<Buffer>
 
-				const writeStream = fs.createWriteStream(destinationPath)
+				await new Promise<void>((resolve, reject) => {
+					pipeline(Readable.fromWeb(readStream), fs.createWriteStream(destinationPath), err => {
+						if (err) {
+							reject(err)
 
-				await pipelineAsync(Readable.fromWeb(readStream), writeStream)
+							return
+						}
+
+						resolve()
+					})
+				})
 
 				if (onFinished) {
 					onFinished()
@@ -4508,7 +4513,28 @@ export class Cloud {
 					onProgress,
 					onProgressId,
 					lastModified,
-					creation
+					creation,
+					onUploadDone(item) {
+						resolve({
+							type: "file",
+							uuid,
+							name: item.metadata.name,
+							size: item.type === "directory" ? 0 : item.metadata.size,
+							mime: item.type === "directory" ? "application/octet-stream" : item.metadata.mime,
+							lastModified: item.type === "directory" ? Date.now() : item.metadata.lastModified,
+							timestamp: Date.now(),
+							parent,
+							rm: "",
+							version: FILE_ENCRYPTION_VERSION,
+							chunks: item.type === "directory" ? 0 : item.metadata.chunks,
+							favorited: false,
+							key,
+							bucket: item.type === "directory" ? "" : item.metadata.bucket,
+							region: item.type === "directory" ? "" : item.metadata.region,
+							creation: item.type === "directory" ? undefined : item.metadata.creation,
+							hash: item.type === "directory" ? undefined : item.metadata.hash
+						})
+					}
 				})
 
 				const cleanup = () => {
@@ -4524,27 +4550,6 @@ export class Cloud {
 						// Noop
 					}
 				}
-
-				writeStream.once("uploaded", (item: FSItem) => {
-					resolve({
-						type: "file",
-						uuid,
-						name: item.metadata.name,
-						size: item.type === "directory" ? 0 : item.metadata.size,
-						mime: item.type === "directory" ? "application/octet-stream" : item.metadata.mime,
-						lastModified: item.type === "directory" ? Date.now() : item.metadata.lastModified,
-						timestamp: Date.now(),
-						parent,
-						rm: "",
-						version: FILE_ENCRYPTION_VERSION,
-						chunks: item.type === "directory" ? 0 : item.metadata.chunks,
-						favorited: false,
-						key,
-						bucket: item.type === "directory" ? "" : item.metadata.bucket,
-						region: item.type === "directory" ? "" : item.metadata.region,
-						creation: item.type === "directory" ? undefined : item.metadata.creation
-					})
-				})
 
 				writeStream.once("close", () => {
 					closed = true
@@ -4570,19 +4575,19 @@ export class Cloud {
 					closed = true
 				})
 
-				pipelineAsync(sourceStream, transformer, writeStream, {
-					signal: abortSignal
-				})
-					.then(() => {
-						closed = true
-					})
-					.catch(err => {
+				pipeline(sourceStream, transformer, writeStream, err => {
+					if (err) {
 						aborted = true
 
 						setTimeout(cleanup, 3000)
 
 						reject(err)
-					})
+
+						return
+					}
+
+					closed = true
+				})
 			})
 
 			if (onUploaded) {

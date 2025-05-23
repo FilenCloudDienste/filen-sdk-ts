@@ -6,12 +6,9 @@ import { uuidv4, normalizePath, isValidHexString } from "../utils"
 import pathModule from "path"
 import fs from "fs-extra"
 import { pipeline } from "stream"
-import { promisify } from "util"
 import { type FilenSDK, type FileEncryptionVersion, type MetadataEncryptionVersion } from ".."
 import CryptoJS from "crypto-js"
 import forge from "node-forge"
-
-const pipelineAsync = promisify(pipeline)
 
 /**
  * Encrypt
@@ -557,7 +554,17 @@ export class Encrypt {
 			})
 		})
 
-		await pipelineAsync(readStream, cipher, writeStream)
+		await new Promise<void>((resolve, reject) => {
+			pipeline(readStream, cipher, writeStream, err => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve()
+			})
+		})
 
 		const authTag = cipher.getAuthTag()
 

@@ -36,6 +36,7 @@ export class ChunkedUploadWriter extends Writable {
 	private readonly onProgress?: ProgressCallback
 	private readonly onProgressId?: string
 	private readonly creation: number
+	private readonly onUploadDone?: (item: FSItem) => void
 
 	/**
 	 * Creates an instance of ChunkedUploadWriter.
@@ -78,7 +79,8 @@ export class ChunkedUploadWriter extends Writable {
 		onProgress,
 		onProgressId,
 		lastModified,
-		creation
+		creation,
+		onUploadDone
 	}: {
 		options?: ConstructorParameters<typeof Writable>[0]
 		sdk: FilenSDK
@@ -91,6 +93,7 @@ export class ChunkedUploadWriter extends Writable {
 		onProgressId?: string
 		lastModified?: number
 		creation?: number
+		onUploadDone?: (item: FSItem) => void
 	}) {
 		super(options)
 
@@ -112,6 +115,7 @@ export class ChunkedUploadWriter extends Writable {
 		this.uploadKey = uploadKey
 		this.parent = parent
 		this.hasher = nodeCrypto.createHash("sha512")
+		this.onUploadDone = onUploadDone
 	}
 
 	/**
@@ -426,7 +430,7 @@ export class ChunkedUploadWriter extends Writable {
 				})
 		])
 
-		this.emit("uploaded", {
+		const fsItem = {
 			type: "file",
 			uuid: this.uuid,
 			metadata: {
@@ -442,6 +446,9 @@ export class ChunkedUploadWriter extends Writable {
 				chunks: fileChunks,
 				bucket: this.bucket
 			}
-		} satisfies FSItem)
+		} satisfies FSItem
+
+		this.onUploadDone?.(fsItem)
+		this.emit("uploaded", fsItem)
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -20,7 +20,7 @@
 		"bundle": "webpack --mode production --node-env production --config webpack.config.js",
 		"typedoc": "typedoc --plugin typedoc-plugin-missing-exports --out docs src/index.ts",
 		"yalc": "npm run build && yalc push",
-		"publish": "npm run build && npm publish --access public --tag latest",
+		"publish:latest": "npm run build && npm publish --access public --tag latest",
 		"publish:beta": "npm run build && npm publish --access public --tag beta"
 	},
 	"repository": {

@@ -1,10 +1,7 @@
 import fs from "fs-extra"
 import { pipeline } from "stream"
-import { promisify } from "util"
 import { BUFFER_SIZE } from "../constants"
 import { normalizePath } from "../utils"
-
-const pipelineAsync = promisify(pipeline)
 
 /**
  * Append one file to another using streams.
@@ -31,12 +28,25 @@ export async function append({ inputFile, baseFile }: { inputFile: string; baseF
 		throw new Error("Output file does not exist.")
 	}
 
-	await pipelineAsync(
-		fs.createReadStream(input, {
-			highWaterMark: BUFFER_SIZE
-		}),
-		fs.createWriteStream(output, { flags: "a" })
-	)
+	await new Promise<void>((resolve, reject) => {
+		pipeline(
+			fs.createReadStream(input, {
+				highWaterMark: BUFFER_SIZE
+			}),
+			fs.createWriteStream(output, {
+				flags: "a"
+			}),
+			err => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve()
+			}
+		)
+	})
 
 	return inputStats.size
 }

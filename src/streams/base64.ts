@@ -1,10 +1,7 @@
 import fs from "fs-extra"
 import { Transform, pipeline } from "stream"
-import { promisify } from "util"
 import { normalizePath } from "../utils"
 import { BASE64_BUFFER_SIZE } from "../constants"
-
-const pipelineAsync = promisify(pipeline)
 
 /**
  * Base64DecodeStream
@@ -36,7 +33,7 @@ export class Base64DecodeStream extends Transform {
 	 * @param {BufferEncoding} encoding
 	 * @param {(error?: Error | null, data?: Buffer) => void} callback
 	 */
-	public _transform(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error | null, data?: Buffer) => void): void {
+	public _transform(chunk: Buffer, _: BufferEncoding, callback: (error?: Error | null, data?: Buffer) => void): void {
 		try {
 			this.push(Buffer.from(chunk.toString("utf-8"), "base64"))
 
@@ -70,7 +67,7 @@ export class Base64EncodeStream extends Transform {
 	 * @param {BufferEncoding} encoding
 	 * @param {(error?: Error | null, data?: Buffer) => void} callback
 	 */
-	public _transform(chunk: Buffer, encoding: BufferEncoding, callback: (error?: Error | null, data?: Buffer) => void): void {
+	public _transform(chunk: Buffer, _: BufferEncoding, callback: (error?: Error | null, data?: Buffer) => void): void {
 		try {
 			this.push(chunk.toString("base64"))
 
@@ -112,7 +109,17 @@ export async function streamDecodeBase64({ inputFile, outputFile }: { inputFile:
 	})
 	const writeStream = fs.createWriteStream(output)
 
-	await pipelineAsync(readStream, new Base64DecodeStream(), writeStream)
+	await new Promise<void>((resolve, reject) => {
+		pipeline(readStream, new Base64DecodeStream(), writeStream, err => {
+			if (err) {
+				reject(err)
+
+				return
+			}
+
+			resolve()
+		})
+	})
 
 	return output
 }
@@ -148,7 +155,17 @@ export async function streamEncodeBase64({ inputFile, outputFile }: { inputFile:
 	})
 	const writeStream = fs.createWriteStream(output)
 
-	await pipelineAsync(readStream, new Base64EncodeStream(), writeStream)
+	await new Promise<void>((resolve, reject) => {
+		pipeline(readStream, new Base64EncodeStream(), writeStream, err => {
+			if (err) {
+				reject(err)
+
+				return
+			}
+
+			resolve()
+		})
+	})
 
 	return output
 }

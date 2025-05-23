@@ -1,7 +1,6 @@
 import { type ResponseType, type AxiosResponse, type AxiosRequestConfig } from "axios"
 import { sleep, getRandomArbitrary, normalizePath, parseURLParams } from "../utils"
 import { environment } from "../constants"
-import { promisify } from "util"
 import { pipeline, Readable, Transform } from "stream"
 import fs from "fs-extra"
 import { APIError } from "./errors"
@@ -12,7 +11,6 @@ import progressStream from "progress-stream"
 import { HttpsAgent } from "agentkeepalive"
 import type FilenSDK from ".."
 
-const pipelineAsync = promisify(pipeline)
 const keepAliveAgent = new HttpsAgent()
 
 export type APIClientConfig = {
@@ -686,7 +684,17 @@ export class APIClient {
 			onDownloadProgressId: onProgressId
 		})
 
-		await pipelineAsync(response, fs.createWriteStream(to))
+		await new Promise<void>((resolve, reject) => {
+			pipeline(response, fs.createWriteStream(to), err => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve()
+			})
+		})
 	}
 
 	/**

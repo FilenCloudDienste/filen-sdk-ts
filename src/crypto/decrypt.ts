@@ -8,14 +8,11 @@ import cache from "../cache"
 import pathModule from "path"
 import fs from "fs-extra"
 import { streamDecodeBase64 } from "../streams/base64"
-import { pipeline } from "stream"
-import { promisify } from "util"
 import CryptoJS from "crypto-js"
 import { type UserEvent } from "../api/v3/user/events"
 import os from "os"
 import forge from "node-forge"
-
-const pipelineAsync = promisify(pipeline)
+import { pipeline } from "stream"
 
 /**
  * Decrypt
@@ -1389,7 +1386,17 @@ export class Decrypt {
 
 		const writeStream = fs.createWriteStream(normalizePath(output))
 
-		await pipelineAsync(readStream, decipher, writeStream)
+		await new Promise<void>((resolve, reject) => {
+			pipeline(readStream, decipher, writeStream, err => {
+				if (err) {
+					reject(err)
+
+					return
+				}
+
+				resolve()
+			})
+		})
 
 		return output
 	}
