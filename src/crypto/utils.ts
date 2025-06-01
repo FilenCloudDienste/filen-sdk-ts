@@ -372,8 +372,8 @@ export async function generatePasswordAndMasterKeyBasedOnAuthVersion({
 			derivedPassword
 		}
 	} else if (authVersion === 3) {
-		const derived = Buffer.from(
-			await argon2idAsync(Buffer.from(rawPassword, "utf-8"), Buffer.from(salt, "hex"), {
+		const derived = (
+			await argon2id(Buffer.from(rawPassword, "utf-8"), Buffer.from(salt, "hex"), {
 				t: 3,
 				m: 65536,
 				p: 4,
@@ -798,6 +798,26 @@ export function EVP_BytesToKey({
 	}
 }
 
+export async function argon2id(
+	password: Buffer,
+	salt: Buffer,
+	options: {
+		t: number
+		m: number
+		p: number
+		version: number
+		dkLen: number
+	}
+): Promise<Buffer> {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if (environment === "react-native" && typeof (globalThis as any).argon2id === "function") {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		return await (globalThis as any).argon2id(password, salt, options)
+	}
+
+	return Buffer.from(await argon2idAsync(password, salt, options))
+}
+
 export const utils = {
 	generateRandomString,
 	deriveKeyFromPassword,
@@ -817,7 +837,8 @@ export const utils = {
 	hashSearchIndex,
 	generateSearchIndexHashes,
 	generatePrivateKeyHMAC,
-	generateEncryptionKey
+	generateEncryptionKey,
+	argon2id
 }
 
 export default utils

@@ -1,6 +1,6 @@
 import type APIClient from "../../client"
 import { type FileEncryptionVersion } from "../../../types"
-import { argon2idAsync } from "@noble/hashes/argon2"
+import { argon2id } from "../../../crypto/utils"
 
 export type DirDownloadFile = {
 	uuid: string
@@ -119,8 +119,8 @@ export class DirDownload {
 						password:
 							linkHasPassword && linkSalt && linkPassword
 								? linkSalt.length === 512
-									? Buffer.from(
-											await argon2idAsync(Buffer.from(linkPassword, "utf-8"), Buffer.from(linkSalt, "hex"), {
+									? (
+											await argon2id(Buffer.from(linkPassword, "utf-8"), Buffer.from(linkSalt, "hex"), {
 												t: 3,
 												m: 65536,
 												p: 4,

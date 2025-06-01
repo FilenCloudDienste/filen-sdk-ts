@@ -15,6 +15,12 @@ declare module "socket.io-client" {
 
 	export default function io(
 		url: string,
-		options?: { path?: string; reconnect?: boolean; reconnection?: boolean; transports?: string[]; upgrade?: boolean }
+		options?: {
+			path?: string
+			reconnect?: boolean
+			reconnection?: boolean
+			transports?: string[]
+			upgrade?: boolean
+		}
 	): SocketHandle
 }

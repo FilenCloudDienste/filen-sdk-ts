@@ -63,7 +63,6 @@ import { type SearchAddItem } from "../api/v3/search/add"
 import { type SearchFindItemDecrypted } from "../api/v3/search/find"
 import nodeCrypto from "crypto"
 import { sha512 } from "@noble/hashes/sha512"
-import { argon2idAsync } from "@noble/hashes/argon2"
 
 export type CloudItemReceiver = {
 	id: number
@@ -2043,8 +2042,8 @@ export class Cloud {
 		const pass = password && password.length > 0 ? "notempty" : "empty"
 		const passHashed =
 			password && password.length > 0
-				? Buffer.from(
-						await argon2idAsync(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+				? (
+						await this.sdk.getWorker().crypto.utils.argon2id(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
 							t: 3,
 							m: 65536,
 							p: 4,
@@ -2222,7 +2221,7 @@ export class Cloud {
 		const derivedPassword = password
 			? salt && salt.length === 512
 				? Buffer.from(
-						await argon2idAsync(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+						await this.sdk.getWorker().crypto.utils.argon2id(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
 							t: 3,
 							m: 65536,
 							p: 4,
@@ -2353,7 +2352,7 @@ export class Cloud {
 		const derivedPassword = password
 			? salt && salt.length === 512
 				? Buffer.from(
-						await argon2idAsync(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+						await this.sdk.getWorker().crypto.utils.argon2id(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
 							t: 3,
 							m: 65536,
 							p: 4,
