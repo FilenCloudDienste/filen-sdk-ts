@@ -810,9 +810,9 @@ export async function argon2id(
 	}
 ): Promise<Buffer> {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if (environment === "react-native" && typeof (globalThis as any).argon2id === "function") {
+	if (typeof (globalThis as any).argon2idAsync === "function") {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		return await (globalThis as any).argon2id(password, salt, options)
+		return await (globalThis as any).argon2idAsync(password, salt, options)
 	}
 
 	return Buffer.from(await argon2idAsync(password, salt, options))
