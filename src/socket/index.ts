@@ -1,4 +1,3 @@
-import io from "socket.io-client"
 import { EventEmitter } from "events"
 import { type DirColors } from "../api/v3/dir/color"
 import { type ChatMessage } from "../api/v3/chat/messages"
@@ -6,9 +5,35 @@ import { type NoteParticipant, type NoteType } from "../api/v3/notes"
 import { type ChatTypingType } from "../api/v3/chat/typing"
 
 export const SOCKET_DEFAULTS = {
-	url: "https://socket.filen.io"
+	url: "https://socket.filen.io",
+	reconnectDelay: 1000,
+	maxReconnectDelay: 30000,
+	reconnectDelayMultiplier: 1.5,
+	defaultPingInterval: 15000
 }
 
+// Socket.io protocol constants
+const PACKET_TYPE = {
+	CONNECT: "0",
+	DISCONNECT: "1",
+	PING: "2",
+	PONG: "3",
+	MESSAGE: "4",
+	UPGRADE: "5",
+	NOOP: "6"
+}
+
+const MESSAGE_TYPE = {
+	CONNECT: "0",
+	DISCONNECT: "1",
+	EVENT: "2",
+	ACK: "3",
+	ERROR: "4",
+	BINARY_EVENT: "5",
+	BINARY_ACK: "6"
+}
+
+// Event type definitions remain the same...
 export interface SocketNewEvent {
 	uuid: string
 	type: string
@@ -412,11 +437,16 @@ export type SocketEvent =
  * @extends {EventEmitter}
  */
 export class Socket extends EventEmitter {
-	private socket: ReturnType<typeof io> | null = null
-	private pingInterval: ReturnType<typeof setInterval> | number = 0
+	private socket: WebSocket | null = null
+	private pingInterval: ReturnType<typeof setInterval> | null = null
+	private reconnectTimeout: ReturnType<typeof setTimeout> | null = null
 	private apiKey = ""
-	private emitSocketAuthed = false
 	private connected = false
+	private authenticated = false
+	private reconnectDelay = SOCKET_DEFAULTS.reconnectDelay
+	private shouldReconnect = true
+	private isConnecting = false
+	private currentPingInterval = SOCKET_DEFAULTS.defaultPingInterval
 
 	/**
 	 * Creates an instance of Socket.
@@ -438,439 +468,401 @@ export class Socket extends EventEmitter {
 	 * @param {string} param0.apiKey
 	 */
 	public connect({ apiKey }: { apiKey: string }): void {
-		if (this.socket || this.isConnected() || apiKey.length < 32 || apiKey === "anonymous") {
+		// Validate inputs and prevent duplicate connections
+		if (this.isConnecting || this.isConnected() || apiKey.length < 32 || apiKey === "anonymous") {
 			return
 		}
 
-		clearInterval(this.pingInterval)
-
-		this.connected = false
 		this.apiKey = apiKey
-		this.socket = null
-		this.emitSocketAuthed = false
-		this.socket = io(SOCKET_DEFAULTS.url, {
-			path: "",
-			reconnect: true,
-			reconnection: true,
-			transports: ["websocket"],
-			upgrade: false
-		})
+		this.shouldReconnect = true
+		this.isConnecting = true
 
-		this.socket.on("connect", async () => {
-			this.connected = true
+		this._connect()
+	}
 
-			this.emit("connected")
+	/**
+	 * Internal connect method that handles the actual WebSocket connection
+	 */
+	private _connect(): void {
+		try {
+			// Clean up any existing connection
+			this._cleanup()
 
-			this.socket?.emit("auth", {
-				apiKey: this.apiKey
+			// Build socket.io compatible URL
+			const url = new URL(SOCKET_DEFAULTS.url)
+			const isSecure = url.protocol === "https:" || url.protocol === "wss:"
+			const wsProtocol = isSecure ? "wss:" : "ws:"
+			const params = new URLSearchParams({
+				EIO: "3",
+				transport: "websocket",
+				t: Date.now().toString()
 			})
+			const socketPath = "/socket.io"
+			const wsUrl = `${wsProtocol}//${url.host}${socketPath}/?${params.toString()}`
 
-			this.emitSocketAuthed = true
+			// Create new WebSocket connection
+			this.socket = new WebSocket(wsUrl)
 
-			this.socket?.emit("authed", Date.now())
+			// Set up event handlers
+			this.socket.onopen = this._handleOpen.bind(this)
+			this.socket.onmessage = this._handleMessage.bind(this)
+			this.socket.onerror = this._handleError.bind(this)
+			this.socket.onclose = this._handleClose.bind(this)
+		} catch (error) {
+			this.isConnecting = false
+			this._handleError(error as Event)
+		}
+	}
 
-			this.pingInterval = setInterval(() => {
-				this.socket?.emit("authed", Date.now())
-			}, 15000)
-		})
+	/**
+	 * Handle WebSocket open event
+	 */
+	private _handleOpen(): void {
+		this.isConnecting = false
+		this.connected = true
+		this.reconnectDelay = SOCKET_DEFAULTS.reconnectDelay
 
-		this.socket.on("authFailed", () => {
-			this.emit("autFailed")
-		})
+		this.emit("connected")
+	}
 
-		this.socket.on("authed", async (authed: boolean) => {
-			if (!authed) {
-				this.socket?.emit("auth", {
-					apiKey: this.apiKey
-				})
+	/**
+	 * Handle incoming WebSocket messages
+	 */
+	private _handleMessage(event: MessageEvent): void {
+		try {
+			const data = event.data as string
+			const packetType = data.charAt(0)
+			const payload = data.substring(1)
 
-				this.emitSocketAuthed = true
-			} else {
-				if (this.emitSocketAuthed) {
-					this.emitSocketAuthed = false
+			switch (packetType) {
+				case PACKET_TYPE.CONNECT: {
+					// Handle connection handshake
+					this._handleHandshake(payload)
 
-					this.emit("socketAuthed")
+					break
+				}
+
+				case PACKET_TYPE.PONG: {
+					// Server acknowledged our ping
+					break
+				}
+
+				case PACKET_TYPE.MESSAGE: {
+					// Handle socket.io messages
+					this._handleSocketIOMessage(payload)
+
+					break
 				}
 			}
-		})
+		} catch (error) {
+			console.error("Error handling socket message:", error)
+		}
+	}
 
-		this.socket.on("disconnect", () => {
-			this.socket = null
-			this.connected = false
-			this.emitSocketAuthed = false
+	/**
+	 * Handle socket.io handshake
+	 */
+	private _handleHandshake(payload: string): void {
+		try {
+			const config = JSON.parse(payload)
+			const pingInterval = parseInt(config?.pingInterval ?? "15000") || SOCKET_DEFAULTS.defaultPingInterval
 
+			this.currentPingInterval = pingInterval
+
+			// Send namespace connect
+			this._sendRaw(PACKET_TYPE.MESSAGE + MESSAGE_TYPE.CONNECT)
+
+			// Start authentication
+			this._sendEvent("authed", Date.now())
+
+			// Start ping interval
+			this._startPingInterval()
+		} catch (error) {
+			console.error("Error handling socket handshake:", error)
+		}
+	}
+
+	/**
+	 * Handle socket.io protocol messages
+	 */
+	private _handleSocketIOMessage(payload: string): void {
+		const messageType = payload.charAt(0)
+		const messageData = payload.substring(1)
+
+		if (messageType !== MESSAGE_TYPE.EVENT) {
+			return
+		}
+
+		try {
+			const parsed = JSON.parse(messageData)
+
+			if (!Array.isArray(parsed) || parsed.length === 0) {
+				return
+			}
+
+			const [eventName, ...args] = parsed
+			const eventData = args[0]
+
+			switch (eventName) {
+				case "authFailed": {
+					this.authenticated = false
+					this.emit("authFailed")
+					this.disconnect()
+
+					break
+				}
+
+				case "authed": {
+					if (eventData === false) {
+						// Need to authenticate
+						this.authenticated = false
+						this._sendEvent("auth", { apiKey: this.apiKey })
+					}
+
+					break
+				}
+
+				default: {
+					// Handle all other events
+					this._handleSocketEvent(eventName, eventData)
+				}
+			}
+		} catch (error) {
+			console.error("Error parsing socket.io message:", error)
+		}
+	}
+
+	/**
+	 * Handle socket events and emit them with proper typing
+	 */
+	private _handleSocketEvent(event: string, data: unknown): void {
+		// Map event names to their types
+		const eventMappings: Record<string, string> = {
+			"new-event": "newEvent",
+			newEvent: "newEvent",
+			"file-rename": "fileRename",
+			fileRename: "fileRename",
+			"file-archive-restored": "fileArchiveRestored",
+			fileArchiveRestored: "fileArchiveRestored",
+			"file-new": "fileNew",
+			fileNew: "fileNew",
+			"file-move": "fileMove",
+			fileMove: "fileMove",
+			"file-trash": "fileTrash",
+			fileTrash: "fileTrash",
+			"file-archived": "fileArchived",
+			fileArchived: "fileArchived",
+			"folder-rename": "folderRename",
+			folderRename: "folderRename",
+			"folder-trash": "folderTrash",
+			folderTrash: "folderTrash",
+			"folder-move": "folderMove",
+			folderMove: "folderMove",
+			"folder-sub-created": "folderSubCreated",
+			folderSubCreated: "folderSubCreated",
+			"folder-restore": "folderRestore",
+			folderRestore: "folderRestore",
+			"folder-color-changed": "folderColorChanged",
+			folderColorChanged: "folderColorChanged",
+			"trash-empty": "trashEmpty",
+			trashEmpty: "trashEmpty",
+			passwordChanged: "passwordChanged",
+			chatMessageNew: "chatMessageNew",
+			chatTyping: "chatTyping",
+			chatMessageDelete: "chatMessageDelete",
+			chatMessageEmbedDisabled: "chatMessageEmbedDisabled",
+			noteContentEdited: "noteContentEdited",
+			noteArchived: "noteArchived",
+			noteDeleted: "noteDeleted",
+			noteTitleEdited: "noteTitleEdited",
+			noteParticipantPermissions: "noteParticipantPermissions",
+			noteRestored: "noteRestored",
+			noteParticipantRemoved: "noteParticipantRemoved",
+			noteParticipantNew: "noteParticipantNew",
+			noteNew: "noteNew",
+			chatMessageEdited: "chatMessageEdited",
+			chatConversationNameEdited: "chatConversationNameEdited",
+			chatConversationDeleted: "chatConversationDeleted",
+			chatConversationParticipantLeft: "chatConversationParticipantLeft",
+			chatConversationsNew: "chatConversationsNew",
+			"file-restore": "fileRestore",
+			fileRestore: "fileRestore",
+			contactRequestReceived: "contactRequestReceived",
+			"item-favorite": "itemFavorite",
+			chatConversationParticipantNew: "chatConversationParticipantNew",
+			"file-deleted-permanent": "fileDeletedPermanent"
+		}
+
+		const eventType = eventMappings[event]
+
+		if (eventType) {
+			const socketEvent =
+				eventType === "trashEmpty" || eventType === "passwordChanged"
+					? {
+							type: eventType
+					  }
+					: {
+							type: eventType,
+							data
+					  }
+
+			this.emit("socketEvent", socketEvent)
+		}
+	}
+
+	/**
+	 * Handle WebSocket errors
+	 */
+	private _handleError(error: Event): void {
+		this.emit("error", error)
+
+		this.isConnecting = false
+	}
+
+	/**
+	 * Handle WebSocket close event
+	 */
+	private _handleClose(): void {
+		const wasConnected = this.connected
+
+		this._cleanup()
+
+		if (wasConnected) {
+			this.emit("disconnected")
+		}
+
+		// Attempt to reconnect if enabled
+		if (this.shouldReconnect && this.apiKey) {
+			this._scheduleReconnect()
+		}
+	}
+
+	/**
+	 * Schedule a reconnection attempt
+	 */
+	private _scheduleReconnect(): void {
+		if (this.reconnectTimeout) {
+			return
+		}
+
+		this.reconnectTimeout = setTimeout(() => {
+			this.reconnectTimeout = null
+			if (this.shouldReconnect && !this.isConnected()) {
+				this.isConnecting = true
+				this._connect()
+			}
+		}, this.reconnectDelay)
+
+		// Increase delay for next attempt (exponential backoff)
+		this.reconnectDelay = Math.min(this.reconnectDelay * SOCKET_DEFAULTS.reconnectDelayMultiplier, SOCKET_DEFAULTS.maxReconnectDelay)
+	}
+
+	/**
+	 * Start ping interval
+	 */
+	private _startPingInterval(): void {
+		this._stopPingInterval()
+
+		this.pingInterval = setInterval(() => {
+			if (this.isConnected()) {
+				// Send socket.io ping
+				this._sendRaw(PACKET_TYPE.PING)
+
+				// Send authed event
+				this._sendEvent("authed", Date.now())
+			}
+		}, this.currentPingInterval)
+	}
+
+	/**
+	 * Stop ping interval
+	 */
+	private _stopPingInterval(): void {
+		if (this.pingInterval) {
 			clearInterval(this.pingInterval)
 
-			this.emit("disconnected")
-		})
+			this.pingInterval = null
+		}
+	}
 
-		this.socket.on("new-event", (data: SocketNewEvent) => {
-			this.emit("socketEvent", {
-				type: "newEvent",
-				data
-			} as SocketEvent)
-		})
+	/**
+	 * Send raw socket.io packet
+	 */
+	private _sendRaw(packet: string): void {
+		if (!this.isConnected() || this.socket?.readyState !== WebSocket.OPEN) {
+			return
+		}
 
-		this.socket.on("newEvent", (data: SocketNewEvent) => {
-			this.emit("socketEvent", {
-				type: "newEvent",
-				data
-			} as SocketEvent)
-		})
+		try {
+			this.socket.send(packet)
+		} catch (error) {
+			console.error("Error sending socket packet:", error)
+		}
+	}
 
-		this.socket.on("file-rename", (data: SocketFileRename) => {
-			this.emit("socketEvent", {
-				type: "fileRename",
-				data
-			} as SocketEvent)
-		})
+	/**
+	 * Send a socket.io event
+	 */
+	private _sendEvent(event: string, data?: unknown): void {
+		if (!this.isConnected() || this.socket?.readyState !== WebSocket.OPEN) {
+			return
+		}
 
-		this.socket.on("fileRename", (data: SocketFileRename) => {
-			this.emit("socketEvent", {
-				type: "fileRename",
-				data
-			} as SocketEvent)
-		})
+		try {
+			const payload = data !== undefined ? [event, data] : [event]
+			const packet = PACKET_TYPE.MESSAGE + MESSAGE_TYPE.EVENT + JSON.stringify(payload)
 
-		this.socket.on("file-archive-restored", (data: SocketFileArchiveRestored) => {
-			this.emit("socketEvent", {
-				type: "fileArchiveRestored",
-				data
-			} as SocketEvent)
-		})
+			this.socket.send(packet)
+		} catch (error) {
+			console.error("Error sending socket event:", error)
+		}
+	}
 
-		this.socket.on("fileArchiveRestored", (data: SocketFileArchiveRestored) => {
-			this.emit("socketEvent", {
-				type: "fileArchiveRestored",
-				data
-			} as SocketEvent)
-		})
+	/**
+	 * Public method to emit events (for compatibility with socket.io API)
+	 */
+	public emit(event: string, ...args: unknown[]): boolean {
+		// Check if it's an internal event or socket.io event
+		const internalEvents = ["connected", "disconnected", "socketAuthed", "authFailed", "error", "socketEvent"]
 
-		this.socket.on("file-new", (data: SocketFileNew) => {
-			this.emit("socketEvent", {
-				type: "fileNew",
-				data
-			} as SocketEvent)
-		})
+		if (internalEvents.includes(event)) {
+			// Emit as EventEmitter event
+			return super.emit(event, ...args)
+		} else {
+			// Send as socket.io event
+			this._sendEvent(event, args[0])
 
-		this.socket.on("fileNew", (data: SocketFileNew) => {
-			this.emit("socketEvent", {
-				type: "fileNew",
-				data
-			} as SocketEvent)
-		})
+			return true
+		}
+	}
 
-		this.socket.on("file-move", (data: SocketFileMove) => {
-			this.emit("socketEvent", {
-				type: "fileMove",
-				data
-			} as SocketEvent)
-		})
+	/**
+	 * Clean up resources
+	 */
+	private _cleanup(): void {
+		this.connected = false
+		this.authenticated = false
+		this.isConnecting = false
 
-		this.socket.on("fileMove", (data: SocketFileMove) => {
-			this.emit("socketEvent", {
-				type: "fileMove",
-				data
-			} as SocketEvent)
-		})
+		this._stopPingInterval()
 
-		this.socket.on("file-trash", (data: SocketFileTrash) => {
-			this.emit("socketEvent", {
-				type: "fileTrash",
-				data
-			} as SocketEvent)
-		})
+		if (this.reconnectTimeout) {
+			clearTimeout(this.reconnectTimeout)
+			this.reconnectTimeout = null
+		}
 
-		this.socket.on("fileTrash", (data: SocketFileTrash) => {
-			this.emit("socketEvent", {
-				type: "fileTrash",
-				data
-			} as SocketEvent)
-		})
+		if (this.socket) {
+			this.socket.onopen = null
+			this.socket.onmessage = null
+			this.socket.onerror = null
+			this.socket.onclose = null
 
-		this.socket.on("file-archived", (data: SocketFileArchived) => {
-			this.emit("socketEvent", {
-				type: "fileArchived",
-				data
-			} as SocketEvent)
-		})
+			if (this.socket.readyState === WebSocket.OPEN) {
+				this.socket.close()
+			}
 
-		this.socket.on("fileArchived", (data: SocketFileArchived) => {
-			this.emit("socketEvent", {
-				type: "fileArchived",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folder-rename", (data: SocketFolderRename) => {
-			this.emit("socketEvent", {
-				type: "folderRename",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folderRename", (data: SocketFolderRename) => {
-			this.emit("socketEvent", {
-				type: "folderRename",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folder-trash", (data: SocketFolderTrash) => {
-			this.emit("socketEvent", {
-				type: "folderTrash",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folderTrash", (data: SocketFolderTrash) => {
-			this.emit("socketEvent", {
-				type: "folderTrash",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folder-move", (data: SocketFolderMove) => {
-			this.emit("socketEvent", {
-				type: "folderMove",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folderMove", (data: SocketFolderMove) => {
-			this.emit("socketEvent", {
-				type: "folderMove",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folder-sub-created", (data: SocketFolderSubCreated) => {
-			this.emit("socketEvent", {
-				type: "folderSubCreated",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folderSubCreated", (data: SocketFolderSubCreated) => {
-			this.emit("socketEvent", {
-				type: "folderSubCreated",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folder-restore", (data: SocketFolderRestore) => {
-			this.emit("socketEvent", {
-				type: "folderRestore",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folderRestore", (data: SocketFolderRestore) => {
-			this.emit("socketEvent", {
-				type: "folderRestore",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folder-color-changed", (data: SocketFolderColorChanged) => {
-			this.emit("socketEvent", {
-				type: "folderColorChanged",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("folderColorChanged", (data: SocketFolderColorChanged) => {
-			this.emit("socketEvent", {
-				type: "folderColorChanged",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("trash-empty", () => {
-			this.emit("socketEvent", {
-				type: "trashEmpty"
-			} as SocketEvent)
-		})
-
-		this.socket.on("trashEmpty", () => {
-			this.emit("socketEvent", {
-				type: "trashEmpty"
-			} as SocketEvent)
-		})
-
-		this.socket.on("passwordChanged", () => {
-			this.emit("socketEvent", {
-				type: "passwordChanged"
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatMessageNew", (data: SocketChatMessageNew) => {
-			this.emit("socketEvent", {
-				type: "chatMessageNew",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatTyping", (data: SocketChatTyping) => {
-			this.emit("socketEvent", {
-				type: "chatTyping",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatMessageDelete", (data: SocketChatMessageDelete) => {
-			this.emit("socketEvent", {
-				type: "chatMessageDelete",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatMessageEmbedDisabled", (data: SocketChatMessageEmbedDisabled) => {
-			this.emit("socketEvent", {
-				type: "chatMessageEmbedDisabled",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteContentEdited", (data: SocketNoteContentEdited) => {
-			this.emit("socketEvent", {
-				type: "noteContentEdited",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteArchived", (data: SocketNoteArchived) => {
-			this.emit("socketEvent", {
-				type: "noteArchived",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteDeleted", (data: SocketNoteDeleted) => {
-			this.emit("socketEvent", {
-				type: "noteDeleted",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteTitleEdited", (data: SocketNoteTitleEdited) => {
-			this.emit("socketEvent", {
-				type: "noteTitleEdited",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteParticipantPermissions", (data: SocketNoteParticipantPermissions) => {
-			this.emit("socketEvent", {
-				type: "noteParticipantPermissions",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteRestored", (data: SocketNoteRestored) => {
-			this.emit("socketEvent", {
-				type: "noteRestored",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteParticipantRemoved", (data: SocketNoteParticipantRemoved) => {
-			this.emit("socketEvent", {
-				type: "noteParticipantRemoved",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteParticipantNew", (data: SocketNoteParticipantNew) => {
-			this.emit("socketEvent", {
-				type: "noteParticipantNew",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("noteNew", (data: SocketNoteNew) => {
-			this.emit("socketEvent", {
-				type: "noteNew",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatMessageEdited", (data: SocketChatMessageEdited) => {
-			this.emit("socketEvent", {
-				type: "chatMessageEdited",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatConversationNameEdited", (data: SocketChatConversationNameEdited) => {
-			this.emit("socketEvent", {
-				type: "chatConversationNameEdited",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatConversationDeleted", (data: SocketChatConversationDeleted) => {
-			this.emit("socketEvent", {
-				type: "chatConversationDeleted",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatConversationParticipantLeft", (data: SocketChatConversationParticipantLeft) => {
-			this.emit("socketEvent", {
-				type: "chatConversationParticipantLeft",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatConversationsNew", (data: SocketChatConversationsNew) => {
-			this.emit("socketEvent", {
-				type: "chatConversationsNew",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("file-restore", (data: SocketFileRestore) => {
-			this.emit("socketEvent", {
-				type: "fileRestore",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("fileRestore", (data: SocketFileRestore) => {
-			this.emit("socketEvent", {
-				type: "fileRestore",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("contactRequestReceived", (data: SocketContactRequestReceived) => {
-			this.emit("socketEvent", {
-				type: "contactRequestReceived",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("item-favorite", (data: SocketItemFavorite) => {
-			this.emit("socketEvent", {
-				type: "itemFavorite",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("chatConversationParticipantNew", (data: SocketChatConversationParticipantNew) => {
-			this.emit("socketEvent", {
-				type: "chatConversationParticipantNew",
-				data
-			} as SocketEvent)
-		})
-
-		this.socket.on("file-deleted-permanent", (data: SocketFileDeletedPermanent) => {
-			this.emit("socketEvent", {
-				type: "fileDeletedPermanent",
-				data
-			} as SocketEvent)
-		})
+			this.socket = null
+		}
 	}
 
 	/**
@@ -880,15 +872,9 @@ export class Socket extends EventEmitter {
 	 * @public
 	 */
 	public disconnect(): void {
-		if (!this.socket || !this.isConnected()) {
-			return
-		}
+		this.shouldReconnect = false
 
-		clearInterval(this.pingInterval)
-
-		this.emitSocketAuthed = false
-
-		this.socket.disconnect()
+		this._cleanup()
 	}
 
 	/**
@@ -899,11 +885,16 @@ export class Socket extends EventEmitter {
 	 * @returns {boolean}
 	 */
 	public isConnected(): boolean {
-		if (!this.socket) {
-			return false
-		}
+		return this.connected && this.socket !== null && this.socket.readyState === WebSocket.OPEN
+	}
 
-		return this.connected
+	/**
+	 * Check authentication status.
+	 * @public
+	 * @returns {boolean}
+	 */
+	public isAuthenticated(): boolean {
+		return this.authenticated
 	}
 }
 
