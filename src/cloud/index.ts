@@ -2038,28 +2038,18 @@ export class Cloud {
 		enableDownload?: boolean
 		expiration: PublicLinkExpiration
 	}): Promise<void> {
-		const salt = await this.sdk.getWorker().crypto.utils.generateRandomHexString(256)
+		const hashed = await this.sdk.getWorker().crypto.utils.hashPublicLinkPassword({
+			password
+		})
 		const pass = password && password.length > 0 ? "notempty" : "empty"
-		const passHashed =
-			password && password.length > 0
-				? (
-						await this.sdk.getWorker().crypto.utils.argon2id(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
-							t: 3,
-							m: 65536,
-							p: 4,
-							version: 0x13,
-							dkLen: 64
-						})
-				  ).toString("hex")
-				: "empty"
 
 		if (type === "directory") {
 			await this.sdk.api(3).dir().link().edit({
 				uuid: itemUUID,
 				expiration,
 				password: pass,
-				passwordHashed: passHashed,
-				salt,
+				passwordHashed: hashed.hash,
+				salt: hashed.salt,
 				downloadBtn: enableDownload
 			})
 
@@ -2075,8 +2065,8 @@ export class Cloud {
 			fileUUID: itemUUID,
 			expiration,
 			password: pass,
-			passwordHashed: passHashed,
-			salt,
+			passwordHashed: hashed.hash,
+			salt: hashed.salt,
 			downloadBtn: enableDownload,
 			type: "enable"
 		})

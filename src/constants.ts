@@ -1,4 +1,4 @@
-import { type Environment, type FileEncryptionVersion, type MetadataEncryptionVersion } from "./types"
+import { type Environment, type FileEncryptionVersion, type MetadataEncryptionVersion, type PublicLinkVersion } from "./types"
 import { type FilenSDKConfig } from "."
 import os from "os"
 
@@ -65,4 +65,8 @@ export const METADATA_ENCRYPTION_VERSION: MetadataEncryptionVersion = process?.e
 
 export const FILE_ENCRYPTION_VERSION: FileEncryptionVersion = process?.env?.FILE_ENCRYPTION_VERSION
 	? (parseInt(process.env.FILE_ENCRYPTION_VERSION) as FileEncryptionVersion)
+	: 2
+
+export const PUBLIC_LINK_VERSION: PublicLinkVersion = process?.env?.PUBLIC_LINK_VERSION
+	? (parseInt(process.env.PUBLIC_LINK_VERSION) as PublicLinkVersion)
 	: 2

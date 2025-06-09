@@ -1,4 +1,4 @@
-import { environment, FILE_ENCRYPTION_VERSION, METADATA_ENCRYPTION_VERSION } from "../constants"
+import { environment, FILE_ENCRYPTION_VERSION, METADATA_ENCRYPTION_VERSION, PUBLIC_LINK_VERSION } from "../constants"
 import nodeCrypto from "crypto"
 import { type AuthVersion } from "../types"
 import keyutil from "js-crypto-key-utils"
@@ -818,6 +818,69 @@ export async function argon2id(
 	return Buffer.from(await argon2idAsync(password, salt, options))
 }
 
+export async function hashPublicLinkPassword({ password }: { password?: string }): Promise<{ salt: string; hash: string }> {
+	if (PUBLIC_LINK_VERSION === 1) {
+		if (!password || password.length === 0) {
+			return {
+				salt: "",
+				hash: "empty"
+			}
+		}
+
+		return {
+			salt: "",
+			hash: await hashFn({
+				input: password
+			})
+		}
+	} else if (PUBLIC_LINK_VERSION === 2) {
+		const salt = await generateRandomString(32)
+
+		if (!password || password.length === 0) {
+			return {
+				salt,
+				hash: "empty"
+			}
+		}
+
+		return {
+			salt,
+			hash: await deriveKeyFromPassword({
+				password,
+				salt,
+				iterations: 200000,
+				hash: "sha512",
+				bitLength: 512,
+				returnHex: true
+			})
+		}
+	} else if (PUBLIC_LINK_VERSION === 3) {
+		const salt = await generateRandomHexString(256)
+
+		if (!password || password.length === 0) {
+			return {
+				salt,
+				hash: "empty"
+			}
+		}
+
+		return {
+			salt,
+			hash: (
+				await argon2id(Buffer.from(password, "utf-8"), Buffer.from(salt, "hex"), {
+					t: 3,
+					m: 65536,
+					p: 4,
+					version: 0x13,
+					dkLen: 64
+				})
+			).toString("hex")
+		}
+	}
+
+	throw new Error(`Invalid public link version: ${PUBLIC_LINK_VERSION}`)
+}
+
 export const utils = {
 	generateRandomString,
 	deriveKeyFromPassword,
@@ -838,7 +901,8 @@ export const utils = {
 	generateSearchIndexHashes,
 	generatePrivateKeyHMAC,
 	generateEncryptionKey,
-	argon2id
+	argon2id,
+	hashPublicLinkPassword
 }
 
 export default utils
