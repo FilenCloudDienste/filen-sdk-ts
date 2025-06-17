@@ -69,7 +69,9 @@ export async function teardown(): Promise<void> {
 					name2: "Screenshot 2023-05-16 201840.png",
 					split2: nameSplitter("Screenshot 2023-05-16 201840.png"),
 					name3: "!service-invoice-657c56116e4f6947a80001cc.pdf",
-					split3: nameSplitter("!service-invoice-657c56116e4f6947a80001cc.pdf")
+					split3: nameSplitter("!service-invoice-657c56116e4f6947a80001cc.pdf"),
+					name4: "файл.txt",
+					split4: nameSplitter("файл.txt")
 				}),
 				"utf-8"
 			)
