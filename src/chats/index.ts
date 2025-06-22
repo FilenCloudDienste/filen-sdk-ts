@@ -662,6 +662,13 @@ export class Chats {
 			conversations: values
 		})
 	}
+
+	public async mute({ uuid, mute }: { uuid: string; mute: boolean }): Promise<void> {
+		await this.sdk.api(3).chat().mute({
+			uuid,
+			mute
+		})
+	}
 }
 
 export default Chats

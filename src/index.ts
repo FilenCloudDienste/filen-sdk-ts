@@ -2,7 +2,7 @@ import API from "./api"
 import { type AuthVersion, type ClassMethods } from "./types"
 import Crypto from "./crypto"
 import utils from "./utils"
-import { environment, ANONYMOUS_SDK_CONFIG } from "./constants"
+import { environment, ANONYMOUS_SDK_CONFIG, REGISTER_AUTH_VERSION } from "./constants"
 import os from "os"
 import FS from "./fs"
 import appendStream from "./streams/append"
@@ -694,6 +694,56 @@ export class FilenSDK {
 		} finally {
 			await this._locks.auth.release().catch(() => {})
 		}
+	}
+
+	public async register({
+		email,
+		password,
+		refId,
+		affId
+	}: {
+		email: string
+		password: string
+		refId?: string
+		affId?: string
+	}): Promise<void> {
+		let salt: string = ""
+		let derived: {
+			derivedMasterKeys: string
+			derivedPassword: string
+		} = {
+			derivedMasterKeys: "",
+			derivedPassword: ""
+		}
+
+		if (REGISTER_AUTH_VERSION === 3) {
+			salt = await this.getWorker().crypto.utils.generateRandomHexString(256)
+			derived = await this.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+				rawPassword: password,
+				salt,
+				authVersion: REGISTER_AUTH_VERSION
+			})
+		} else {
+			salt = await this.getWorker().crypto.utils.generateRandomHexString(128)
+			derived = await this.getWorker().crypto.utils.generatePasswordAndMasterKeyBasedOnAuthVersion({
+				rawPassword: password,
+				salt,
+				authVersion: REGISTER_AUTH_VERSION
+			})
+		}
+
+		if (salt.length === 0 || derived.derivedMasterKeys.length === 0 || derived.derivedPassword.length === 0) {
+			throw new Error("Failed to generate salt or derived password")
+		}
+
+		await this.api(3).register({
+			email,
+			password: derived.derivedPassword,
+			salt,
+			authVersion: REGISTER_AUTH_VERSION,
+			...(typeof refId === "string" && refId.length > 0 && refId.length < 128 ? { refId } : {}),
+			...(typeof affId === "string" && affId.length > 0 && affId.length < 128 ? { affId } : {})
+		})
 	}
 
 	/**

@@ -1,4 +1,10 @@
-import { type Environment, type FileEncryptionVersion, type MetadataEncryptionVersion, type PublicLinkVersion } from "./types"
+import {
+	type Environment,
+	type FileEncryptionVersion,
+	type MetadataEncryptionVersion,
+	type PublicLinkVersion,
+	type AuthVersion
+} from "./types"
 import { type FilenSDKConfig } from "."
 import os from "os"
 
@@ -69,4 +75,8 @@ export const FILE_ENCRYPTION_VERSION: FileEncryptionVersion = process?.env?.FILE
 
 export const PUBLIC_LINK_VERSION: PublicLinkVersion = process?.env?.PUBLIC_LINK_VERSION
 	? (parseInt(process.env.PUBLIC_LINK_VERSION) as PublicLinkVersion)
+	: 2
+
+export const REGISTER_AUTH_VERSION: AuthVersion = process?.env?.REGISTER_AUTH_VERSION
+	? (parseInt(process.env.REGISTER_AUTH_VERSION) as AuthVersion)
 	: 2

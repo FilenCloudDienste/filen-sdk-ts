@@ -20,6 +20,7 @@ export type ChatConversation = {
 	ownerMetadata: string | null
 	name: string | null
 	participants: ChatConversationParticipant[]
+	muted: boolean
 	createdTimestamp: number
 }
 

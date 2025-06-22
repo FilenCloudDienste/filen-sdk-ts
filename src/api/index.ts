@@ -155,6 +155,7 @@ import V3UploadEmpty from "./v3/upload/empty"
 import V3SearchAdd from "./v3/search/add"
 import V3SearchFind from "./v3/search/find"
 import V3DirMetadata from "./v3/dir/metadata"
+import V3ChatMute from "./v3/chat/mute"
 
 /**
  * API
@@ -351,6 +352,7 @@ export class API {
 			conversationsDelete: V3ChatConversationsDelete
 			lastFocusUpdate: V3ChatLastFocusUpdate
 			lastFocus: V3ChatLastFocus
+			mute: V3ChatMute
 		}
 		notes: {
 			all: V3Notes
@@ -823,6 +825,9 @@ export class API {
 				}),
 				lastFocus: new V3ChatLastFocus({
 					apiClient: this.apiClient
+				}),
+				mute: new V3ChatMute({
+					apiClient: this.apiClient
 				})
 			},
 			notes: {
@@ -1242,7 +1247,8 @@ export class API {
 						this._v3.chat.conversationsDelete.fetch(...params),
 					lastFocusUpdate: (...params: Parameters<typeof this._v3.chat.lastFocusUpdate.fetch>) =>
 						this._v3.chat.lastFocusUpdate.fetch(...params),
-					lastFocus: (...params: Parameters<typeof this._v3.chat.lastFocus.fetch>) => this._v3.chat.lastFocus.fetch(...params)
+					lastFocus: (...params: Parameters<typeof this._v3.chat.lastFocus.fetch>) => this._v3.chat.lastFocus.fetch(...params),
+					mute: (...params: Parameters<typeof this._v3.chat.mute.fetch>) => this._v3.chat.mute.fetch(...params)
 				}
 			},
 			notes: () => {
