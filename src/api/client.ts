@@ -10,8 +10,9 @@ import urlModule from "url"
 import progressStream from "progress-stream"
 import { HttpsAgent } from "agentkeepalive"
 import type FilenSDK from ".."
+import Semaphore from "../semaphore"
 
-const keepAliveAgent = new HttpsAgent()
+export const keepAliveAgent = new HttpsAgent()
 
 export type APIClientConfig = {
 	apiKey: string
@@ -100,6 +101,7 @@ export const APIClientDefaults = {
  */
 export class APIClient {
 	public readonly sdk: FilenSDK
+	public readonly requestSemaphore: Semaphore = new Semaphore(32)
 
 	public constructor(sdk: FilenSDK) {
 		this.sdk = sdk
@@ -537,76 +539,82 @@ export class APIClient {
 	 * @returns {Promise<T>}
 	 */
 	public async request<T>(params: RequestParameters): Promise<T> {
-		const maxRetries = params.maxRetries ? params.maxRetries : APIClientDefaults.maxRetries
-		const retryTimeout = params.retryTimeout ? params.retryTimeout : APIClientDefaults.retryTimeout
-		let tries = 0
-		let lastError: Error | unknown
-		let returnImmediately = false
+		await this.requestSemaphore.acquire()
 
-		const send = async (): Promise<T> => {
-			if (tries >= maxRetries) {
-				if (lastError) {
-					throw lastError
-				}
+		try {
+			const maxRetries = params.maxRetries ? params.maxRetries : APIClientDefaults.maxRetries
+			const retryTimeout = params.retryTimeout ? params.retryTimeout : APIClientDefaults.retryTimeout
+			let tries = 0
+			let lastError: Error | unknown
+			let returnImmediately = false
 
-				throw new APIError({
-					code: "request_failed_after_max_tries",
-					message: `Request failed after ${maxRetries} tries`
-				})
-			}
-
-			tries += 1
-
-			try {
-				const response = params.method === "GET" ? await this.get(params) : await this.post(params)
-
-				if (!response || response.status !== 200) {
-					throw new APIError({
-						code: "invalid_http_status_code",
-						message: `Invalid HTTP status code: ${response.status}`
-					})
-				}
-
-				if (typeof response.data === "object" && typeof response.data.status === "boolean" && !response.data.status) {
-					returnImmediately = true
-
-					throw new APIError({
-						code: response.data.code,
-						message: response.data.message
-					})
-				}
-
-				if (params.includeRaw) {
-					const data =
-						response.data &&
-						(response.data.data || typeof response.data.data === "number" || typeof response.data.data === "string")
-							? response.data.data
-							: response.data
-
-					return {
-						...data,
-						raw: JSON.stringify(data)
+			const send = async (): Promise<T> => {
+				if (tries >= maxRetries) {
+					if (lastError) {
+						throw lastError
 					}
+
+					throw new APIError({
+						code: "request_failed_after_max_tries",
+						message: `Request failed after ${maxRetries} tries`
+					})
 				}
 
-				return response.data &&
-					(response.data.data || typeof response.data.data === "number" || typeof response.data.data === "string")
-					? response.data.data
-					: response.data
-			} catch (e) {
-				if (returnImmediately) {
-					throw e
+				tries += 1
+
+				try {
+					const response = params.method === "GET" ? await this.get(params) : await this.post(params)
+
+					if (!response || response.status !== 200) {
+						throw new APIError({
+							code: "invalid_http_status_code",
+							message: `Invalid HTTP status code: ${response.status}`
+						})
+					}
+
+					if (typeof response.data === "object" && typeof response.data.status === "boolean" && !response.data.status) {
+						returnImmediately = true
+
+						throw new APIError({
+							code: response.data.code,
+							message: response.data.message
+						})
+					}
+
+					if (params.includeRaw) {
+						const data =
+							response.data &&
+							(response.data.data || typeof response.data.data === "number" || typeof response.data.data === "string")
+								? response.data.data
+								: response.data
+
+						return {
+							...data,
+							raw: JSON.stringify(data)
+						}
+					}
+
+					return response.data &&
+						(response.data.data || typeof response.data.data === "number" || typeof response.data.data === "string")
+						? response.data.data
+						: response.data
+				} catch (e) {
+					if (returnImmediately) {
+						throw e
+					}
+
+					lastError = e
+
+					await sleep(retryTimeout)
+
+					return await send()
 				}
-
-				lastError = e
-
-				await sleep(retryTimeout)
-
-				return await send()
 			}
-		}
 
-		return await send()
+			return await send()
+		} finally {
+			this.requestSemaphore.release()
+		}
 	}
 
 	/**
