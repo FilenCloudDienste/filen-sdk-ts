@@ -353,29 +353,33 @@ export class Decrypt {
 			throw new Error("Invalid privateKey.")
 		}
 
-		const decrypted = JSON.parse(
-			await this.metadataPrivate({
-				metadata,
-				privateKey
-			})
-		)
+		try {
+			const decrypted = JSON.parse(
+				await this.metadataPrivate({
+					metadata,
+					privateKey
+				})
+			)
 
-		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-			const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
+			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+				const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
 
-			fileMetadata = {
-				size: parseInt(decrypted.size ?? 0),
-				lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
-				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
-				name: decrypted.name,
-				key: decrypted.key,
-				mime: decrypted.mime,
-				hash: decrypted.hash
+				fileMetadata = {
+					size: parseInt(decrypted.size ?? 0),
+					lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
+					creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+					name: decrypted.name,
+					key: decrypted.key,
+					mime: decrypted.mime,
+					hash: decrypted.hash
+				}
+
+				if (this.sdk.config.metadataCache) {
+					cache.fileMetadata.set(cacheKey, fileMetadata)
+				}
 			}
-
-			if (this.sdk.config.metadataCache) {
-				cache.fileMetadata.set(cacheKey, fileMetadata)
-			}
+		} catch {
+			// Noop
 		}
 
 		return fileMetadata
@@ -409,21 +413,25 @@ export class Decrypt {
 			throw new Error("Invalid privateKey.")
 		}
 
-		const decrypted = JSON.parse(
-			await this.metadataPrivate({
-				metadata,
-				privateKey
-			})
-		)
+		try {
+			const decrypted = JSON.parse(
+				await this.metadataPrivate({
+					metadata,
+					privateKey
+				})
+			)
 
-		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-			folderMetadata = {
-				name: decrypted.name
-			}
+			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+				folderMetadata = {
+					name: decrypted.name
+				}
 
-			if (this.sdk.config.metadataCache) {
-				cache.folderMetadata.set(cacheKey, folderMetadata)
+				if (this.sdk.config.metadataCache) {
+					cache.folderMetadata.set(cacheKey, folderMetadata)
+				}
 			}
+		} catch {
+			// Noop
 		}
 
 		return folderMetadata
@@ -461,29 +469,33 @@ export class Decrypt {
 			hash: undefined
 		}
 
-		const decrypted = JSON.parse(
-			await this.metadata({
-				metadata,
-				key: linkKey
-			})
-		)
+		try {
+			const decrypted = JSON.parse(
+				await this.metadata({
+					metadata,
+					key: linkKey
+				})
+			)
 
-		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-			const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
+			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+				const lastModifiedParsed = parseInt(decrypted.lastModified ?? Date.now())
 
-			fileMetadata = {
-				size: parseInt(decrypted.size ?? 0),
-				lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
-				creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
-				name: decrypted.name,
-				key: decrypted.key,
-				mime: decrypted.mime,
-				hash: decrypted.hash
+				fileMetadata = {
+					size: parseInt(decrypted.size ?? 0),
+					lastModified: lastModifiedParsed > 0 ? convertTimestampToMs(lastModifiedParsed) : Date.now(),
+					creation: typeof decrypted.creation === "number" ? convertTimestampToMs(parseInt(decrypted.creation)) : undefined,
+					name: decrypted.name,
+					key: decrypted.key,
+					mime: decrypted.mime,
+					hash: decrypted.hash
+				}
+
+				if (this.sdk.config.metadataCache) {
+					cache.fileMetadata.set(cacheKey, fileMetadata)
+				}
 			}
-
-			if (this.sdk.config.metadataCache) {
-				cache.fileMetadata.set(cacheKey, fileMetadata)
-			}
+		} catch {
+			// Noop
 		}
 
 		return fileMetadata
@@ -515,21 +527,25 @@ export class Decrypt {
 			name: ""
 		}
 
-		const decrypted = JSON.parse(
-			await this.metadata({
-				metadata,
-				key: linkKey
-			})
-		)
+		try {
+			const decrypted = JSON.parse(
+				await this.metadata({
+					metadata,
+					key: linkKey
+				})
+			)
 
-		if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
-			folderMetadata = {
-				name: decrypted.name
-			}
+			if (decrypted && typeof decrypted.name === "string" && decrypted.name.length > 0) {
+				folderMetadata = {
+					name: decrypted.name
+				}
 
-			if (this.sdk.config.metadataCache) {
-				cache.folderMetadata.set(cacheKey, folderMetadata)
+				if (this.sdk.config.metadataCache) {
+					cache.folderMetadata.set(cacheKey, folderMetadata)
+				}
 			}
+		} catch {
+			// Noop
 		}
 
 		return folderMetadata
@@ -603,6 +619,7 @@ export class Decrypt {
 			metadata,
 			privateKey
 		})
+
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.key !== "string") {
@@ -684,7 +701,11 @@ export class Decrypt {
 			throw new Error("Invalid key.")
 		}
 
-		const messageDecrypted = await this.metadata({ metadata: message, key })
+		const messageDecrypted = await this.metadata({
+			metadata: message,
+			key
+		})
+
 		const parsedMessage = JSON.parse(messageDecrypted)
 
 		if (typeof parsedMessage.message !== "string") {
@@ -764,6 +785,7 @@ export class Decrypt {
 			metadata,
 			privateKey
 		})
+
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.key !== "string") {
@@ -793,7 +815,11 @@ export class Decrypt {
 			throw new Error("Invalid key.")
 		}
 
-		const decrypted = await this.metadata({ metadata: content, key })
+		const decrypted = await this.metadata({
+			metadata: content,
+			key
+		})
+
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.content !== "string") {
@@ -829,6 +855,7 @@ export class Decrypt {
 			metadata: title,
 			key
 		})
+
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.title !== "string") {
@@ -868,6 +895,7 @@ export class Decrypt {
 			metadata: preview,
 			key
 		})
+
 		const parsed = JSON.parse(decrypted)
 
 		if (typeof parsed.preview !== "string") {

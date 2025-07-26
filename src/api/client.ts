@@ -101,7 +101,7 @@ export const APIClientDefaults = {
  */
 export class APIClient {
 	public readonly sdk: FilenSDK
-	public readonly requestSemaphore: Semaphore = new Semaphore(32)
+	public readonly requestSemaphore: Semaphore = new Semaphore(64)
 
 	public constructor(sdk: FilenSDK) {
 		this.sdk = sdk

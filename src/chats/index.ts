@@ -1,6 +1,6 @@
 import { MAX_CHAT_SIZE, type FilenSDK } from ".."
 import { type ChatConversation } from "../api/v3/chat/conversations"
-import { promiseAllChunked, uuidv4 } from "../utils"
+import { promiseAllChunked, uuidv4, promiseAllSettledChunked } from "../utils"
 import { type Contact } from "../api/v3/contacts"
 import { ChatTypingType } from "../api/v3/chat/typing"
 import { type ChatMessage } from "../api/v3/chat/messages"
@@ -137,7 +137,7 @@ export class Chats {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return chatConversations
 	}
@@ -293,6 +293,7 @@ export class Chats {
 		const key = await this.chatKey({
 			conversation
 		})
+
 		const nameEncrypted = await this.sdk.getWorker().crypto.encrypt.chatConversationName({
 			name,
 			key
@@ -326,6 +327,7 @@ export class Chats {
 		const key = await this.chatKey({
 			conversation
 		})
+
 		const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
 			message,
 			key
@@ -372,6 +374,7 @@ export class Chats {
 			}),
 			uuid ? Promise.resolve(uuid) : uuidv4()
 		])
+
 		const messageEncrypted = await this.sdk.getWorker().crypto.encrypt.chatMessage({
 			message,
 			key
@@ -433,6 +436,7 @@ export class Chats {
 					timestamp: timestamp ? timestamp : Date.now() + 3600000
 				})
 		])
+
 		const chatMessages: ChatMessage[] = []
 		const promises: Promise<void>[] = []
 
@@ -474,7 +478,7 @@ export class Chats {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return chatMessages
 	}
@@ -491,12 +495,16 @@ export class Chats {
 	 * @returns {Promise<void>}
 	 */
 	public async addParticipant({ conversation, contact }: { conversation: string; contact: Contact }): Promise<void> {
-		const key = await this.chatKey({ conversation })
+		const key = await this.chatKey({
+			conversation
+		})
+
 		const publicKey = (
 			await this.sdk.api(3).user().publicKey({
 				email: contact.email
 			})
 		).publicKey
+
 		const metadata = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
 			metadata: JSON.stringify({
 				key

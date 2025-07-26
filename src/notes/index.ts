@@ -1,5 +1,5 @@
 import type FilenSDK from ".."
-import { uuidv4, simpleDate, promiseAllChunked } from "../utils"
+import { uuidv4, simpleDate, promiseAllSettledChunked } from "../utils"
 import { type NoteType, type Note, type NoteTag } from "../api/v3/notes"
 import { createNotePreviewFromContentText } from "./utils"
 import { MAX_NOTE_SIZE } from "../constants"
@@ -57,7 +57,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return decryptedTags
 	}
@@ -133,7 +133,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return notes
 	}
@@ -398,6 +398,7 @@ export class Notes {
 		const uuidToUse = uuid ? uuid : await uuidv4()
 		const titleToUse = title ? title : simpleDate(Date.now())
 		const key = await this.sdk.getWorker().crypto.utils.generateEncryptionKey("metadata")
+
 		const [metadataEncrypted, titleEncrypted] = await Promise.all([
 			this.sdk.getWorker().crypto.encrypt.metadata({
 				metadata: JSON.stringify({
@@ -454,6 +455,7 @@ export class Notes {
 		const contentEncrypted = await this.sdk.api(3).notes().content({
 			uuid
 		})
+
 		let content = ""
 
 		if (contentEncrypted.content.length === 0) {
@@ -476,6 +478,7 @@ export class Notes {
 		const decryptedNoteKey = await this.noteKey({
 			uuid
 		})
+
 		const notePreviewPromise =
 			contentEncrypted.preview.length === 0
 				? Promise.resolve("")
@@ -483,6 +486,7 @@ export class Notes {
 						preview: contentEncrypted.preview,
 						key: decryptedNoteKey
 				  })
+
 		const [contentDecrypted, previewDecrypted] = await Promise.all([
 			this.sdk.getWorker().crypto.decrypt.noteContent({
 				content: contentEncrypted.content,
@@ -583,10 +587,12 @@ export class Notes {
 		const decryptedNoteKey = await this.noteKey({
 			uuid
 		})
+
 		const preview = createNotePreviewFromContentText({
 			content,
 			type
 		})
+
 		const [contentEncrypted, previewEncrypted] = await Promise.all([
 			this.sdk.getWorker().crypto.encrypt.noteContent({
 				content,
@@ -631,6 +637,7 @@ export class Notes {
 		const decryptedNoteKey = await this.noteKey({
 			uuid
 		})
+
 		const titleEncrypted = await this.sdk.getWorker().crypto.encrypt.noteTitle({
 			title,
 			key: decryptedNoteKey
@@ -805,16 +812,19 @@ export class Notes {
 				uuid: newUUID,
 				title: note[0].title
 			})
+
 			await this.addParticipant({
 				uuid: newUUID,
 				contactUUID: "owner",
 				permissionsWrite: true,
 				publicKey: this.sdk.config.publicKey!
 			})
+
 			await this.changeType({
 				uuid: newUUID,
 				newType: contentDecrypted.type
 			})
+
 			await this.edit({
 				uuid: newUUID,
 				content: contentDecrypted.content,
@@ -846,6 +856,7 @@ export class Notes {
 				uuid
 			})
 		])
+
 		const notesHistory: NoteHistory[] = []
 		const promises: Promise<void>[] = []
 
@@ -880,7 +891,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return notesHistory
 	}
@@ -991,7 +1002,7 @@ export class Notes {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return notesTags
 	}
