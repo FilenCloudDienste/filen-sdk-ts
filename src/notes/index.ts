@@ -307,6 +307,7 @@ export class Notes {
 			const decryptedNoteKey = await this.noteKey({
 				uuid
 			})
+
 			const metadata = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
 				metadata: JSON.stringify({
 					key: decryptedNoteKey

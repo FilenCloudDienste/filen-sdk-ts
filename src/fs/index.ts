@@ -523,6 +523,12 @@ export class FS {
 					continue
 				}
 
+				const itemNameNormalized = item.name.trim().toLowerCase()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
+					continue
+				}
+
 				existingPaths[lowercasePath] = true
 
 				const itemPath = pathModule.posix.join(path, entryPath)
@@ -606,6 +612,12 @@ export class FS {
 		)
 
 		for (const item of items) {
+			const itemNameNormalized = item.name.trim().toLowerCase()
+
+			if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
+				continue
+			}
+
 			const itemPath = pathModule.posix.join(path, item.name)
 			const lowercasePath = itemPath.toLowerCase()
 
@@ -700,6 +712,7 @@ export class FS {
 		const uuid = await this.pathToItemUUID({
 			path
 		})
+
 		const item = this._items[path]
 
 		if (!uuid || !item) {
@@ -1112,6 +1125,7 @@ export class FS {
 			const uuid = await this.pathToItemUUID({
 				path
 			})
+
 			const item = this._items[path]
 
 			if (!uuid || !item) {
@@ -1289,6 +1303,7 @@ export class FS {
 		const uuid = await this.pathToItemUUID({
 			path
 		})
+
 		const item = this._items[path]
 
 		if (!uuid || !item || item.type === "directory" || (item.type === "file" && item.metadata.key.length === 0)) {
@@ -1541,11 +1556,13 @@ export class FS {
 		path = this.normalizePath({
 			path
 		})
+
 		destination = normalizePath(destination)
 
 		const uuid = await this.pathToItemUUID({
 			path
 		})
+
 		const item = this._items[path]
 
 		if (!uuid || !item || (item.type === "file" && item.metadata.key.length === 0)) {
@@ -1628,6 +1645,7 @@ export class FS {
 		path = this.normalizePath({
 			path
 		})
+
 		source = normalizePath(source)
 
 		const sourceStat = await fs.stat(source)

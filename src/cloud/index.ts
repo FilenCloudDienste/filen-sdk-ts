@@ -207,6 +207,7 @@ export class Cloud {
 			uuid,
 			dirsOnly: onlyDirectories
 		})
+
 		const items: CloudItem[] = []
 		const promises: Promise<void>[] = []
 
@@ -279,7 +280,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -298,6 +299,7 @@ export class Cloud {
 		const content = await this.sdk.api(3).shared().in({
 			uuid
 		})
+
 		const items: CloudItemShared[] = []
 		const promises: Promise<void>[] = []
 
@@ -377,7 +379,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -398,6 +400,7 @@ export class Cloud {
 			uuid,
 			receiverId
 		})
+
 		const items: CloudItemShared[] = []
 		const promises: Promise<void>[] = []
 
@@ -477,7 +480,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		const groups: CloudItemShared[] = []
 		const sharedTo: Record<string, CloudItemReceiver[]> = {}
@@ -526,6 +529,7 @@ export class Cloud {
 		const content = await this.sdk.api(3).dir().content({
 			uuid: "recents"
 		})
+
 		const items: CloudItem[] = []
 		const promises: Promise<void>[] = []
 
@@ -568,7 +572,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -585,6 +589,7 @@ export class Cloud {
 		const content = await this.sdk.api(3).dir().content({
 			uuid: "trash"
 		})
+
 		const items: CloudItem[] = []
 		const promises: Promise<void>[] = []
 
@@ -657,7 +662,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -746,7 +751,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -763,6 +768,7 @@ export class Cloud {
 		const content = await this.sdk.api(3).dir().content({
 			uuid: "links"
 		})
+
 		const items: CloudItem[] = []
 		const promises: Promise<void>[] = []
 
@@ -835,7 +841,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return items
 	}
@@ -859,6 +865,7 @@ export class Cloud {
 				authVersion: this.sdk.config.authVersion!,
 				hmacKey: await this.sdk.generateHMACKey()
 			})
+
 			const exists = await this.sdk.api(3).file().exists({
 				nameHashed,
 				parent
@@ -889,6 +896,7 @@ export class Cloud {
 				authVersion: this.sdk.config.authVersion!,
 				hmacKey: await this.sdk.generateHMACKey()
 			})
+
 			const exists = await this.sdk.api(3).dir().exists({
 				nameHashed,
 				parent
@@ -911,6 +919,12 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async editFileMetadata({ uuid, metadata }: { uuid: string; metadata: FileMetadata }): Promise<void> {
+		const itemNameNormalized = metadata.name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			throw new Error("Cannot edit item with malformed metadata.")
+		}
+
 		if (!isValidFileName(metadata.name)) {
 			throw new Error(`"${metadata.name}" is not a valid file name.`)
 		}
@@ -995,6 +1009,12 @@ export class Cloud {
 	 * @returns {Promise<void>}
 	 */
 	public async editDirectoryMetadata({ uuid, name }: { uuid: string; name: string }): Promise<void> {
+		const itemNameNormalized = name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			throw new Error("Cannot rename item with malformed metadata.")
+		}
+
 		if (!isValidDirectoryName(name)) {
 			throw new Error(`"${name}" is not a valid directory name.`)
 		}
@@ -1005,6 +1025,7 @@ export class Cloud {
 			const get = await this.sdk.api(3).dir().get({
 				uuid
 			})
+
 			const exists = await this.directoryExists({
 				name,
 				parent: get.parent
@@ -1092,6 +1113,12 @@ export class Cloud {
 		name: string
 		overwriteIfExists?: boolean
 	}): Promise<void> {
+		const itemNameNormalized = metadata.name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			throw new Error("Cannot rename item with malformed metadata.")
+		}
+
 		if (!isValidFileName(name)) {
 			throw new Error(`"${name}" is not a valid file name.`)
 		}
@@ -1114,6 +1141,7 @@ export class Cloud {
 			const get = await this.sdk.api(3).file().get({
 				uuid
 			})
+
 			const exists = await this.fileExists({
 				name,
 				parent: get.parent
@@ -1207,6 +1235,12 @@ export class Cloud {
 		name: string
 		overwriteIfExists?: boolean
 	}): Promise<void> {
+		const itemNameNormalized = name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			throw new Error("Cannot rename item with malformed metadata.")
+		}
+
 		if (!isValidDirectoryName(name)) {
 			throw new Error(`"${name}" is not a valid directory name.`)
 		}
@@ -1225,6 +1259,7 @@ export class Cloud {
 			const get = await this.sdk.api(3).dir().get({
 				uuid
 			})
+
 			const exists = await this.directoryExists({
 				name,
 				parent: get.parent
@@ -1938,6 +1973,12 @@ export class Cloud {
 					continue
 				}
 
+				const itemNameNormalized = item.name.toLowerCase().trim()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
+					continue
+				}
+
 				promises.push(
 					new Promise((resolve, reject) => {
 						this.addItemToDirectoryPublicLink({
@@ -2041,6 +2082,7 @@ export class Cloud {
 		const hashed = await this.sdk.getWorker().crypto.utils.hashPublicLinkPassword({
 			password
 		})
+
 		const pass = password && password.length > 0 ? "notempty" : "empty"
 
 		if (type === "directory") {
@@ -2290,6 +2332,7 @@ export class Cloud {
 		const info = await this.sdk.api(3).dir().link().info({
 			uuid
 		})
+
 		const metadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
 			metadata: info.metadata,
 			key
@@ -2503,9 +2546,21 @@ export class Cloud {
 				email
 			})
 		).publicKey
-		const itemsToShare: { type: "file" | "folder"; uuid: string; parent: string; metadata: FileMetadata | FolderMetadata }[] = []
+
+		const itemsToShare: {
+			type: "file" | "folder"
+			uuid: string
+			parent: string
+			metadata: FileMetadata | FolderMetadata
+		}[] = []
 
 		for (const file of files) {
+			const itemNameNormalized = file.metadata.name.toLowerCase().trim()
+
+			if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${file.uuid}`)) {
+				continue
+			}
+
 			itemsToShare.push({
 				...file,
 				metadata: file.metadata satisfies FileMetadata,
@@ -2517,6 +2572,12 @@ export class Cloud {
 		const directoryPromises: Promise<void>[] = []
 
 		for (const directory of directories) {
+			const itemNameNormalized = directory.metadata.name.toLowerCase().trim()
+
+			if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${directory.uuid}`)) {
+				continue
+			}
+
 			itemsToShare.push({
 				...directory,
 				metadata: directory.metadata satisfies FolderMetadata,
@@ -2538,6 +2599,12 @@ export class Cloud {
 								}
 
 								if (item.parent === "base" || item.uuid === directory.uuid) {
+									continue
+								}
+
+								const itemNameNormalized = directory.metadata.name.toLowerCase().trim()
+
+								if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${directory.uuid}`)) {
 									continue
 								}
 
@@ -2581,6 +2648,12 @@ export class Cloud {
 		let done = 0
 
 		for (const item of itemsToShare) {
+			const itemNameNormalized = item.metadata.name.toLowerCase().trim()
+
+			if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
+				continue
+			}
+
 			sharePromises.push(
 				new Promise((resolve, reject) => {
 					this.shareItem({
@@ -2638,6 +2711,12 @@ export class Cloud {
 		uuid: string
 		itemMetadata: FileMetadata | FolderMetadata
 	}): Promise<void> {
+		const itemNameNormalized = itemMetadata.name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			return
+		}
+
 		const [isSharingParent, isLinkingParent] = await Promise.all([
 			this.sdk.api(3).dir().shared({
 				uuid: parent
@@ -2688,6 +2767,12 @@ export class Cloud {
 						continue
 					}
 
+					const itemNameNormalized = item.name.toLowerCase().trim()
+
+					if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
+						continue
+					}
+
 					if (item.type === "file") {
 						filesToShare.push({
 							uuid: item.uuid,
@@ -2715,6 +2800,12 @@ export class Cloud {
 			}
 
 			for (const file of filesToShare) {
+				const itemNameNormalized = file.metadata.name.toLowerCase().trim()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${file.uuid}`)) {
+					continue
+				}
+
 				for (const user of isSharingParent.users) {
 					promises.push(
 						this.shareItem({
@@ -2730,6 +2821,12 @@ export class Cloud {
 			}
 
 			for (const directory of directoriesToShare) {
+				const itemNameNormalized = directory.metadata.name.toLowerCase().trim()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${directory.uuid}`)) {
+					continue
+				}
+
 				for (const user of isSharingParent.users) {
 					promises.push(
 						this.shareItem({
@@ -2779,6 +2876,12 @@ export class Cloud {
 						continue
 					}
 
+					const itemNameNormalized = item.name.toLowerCase().trim()
+
+					if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
+						continue
+					}
+
 					if (item.type === "file") {
 						filesToLink.push({
 							uuid: item.uuid,
@@ -2806,6 +2909,12 @@ export class Cloud {
 			}
 
 			for (const file of filesToLink) {
+				const itemNameNormalized = file.metadata.name.toLowerCase().trim()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${file.uuid}`)) {
+					continue
+				}
+
 				for (const link of isLinkingParent.links) {
 					promises.push(
 						this.addItemToDirectoryPublicLink({
@@ -2822,6 +2931,12 @@ export class Cloud {
 			}
 
 			for (const directory of directoriesToLink) {
+				const itemNameNormalized = directory.metadata.name.toLowerCase().trim()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${directory.uuid}`)) {
+					continue
+				}
+
 				for (const link of isLinkingParent.links) {
 					promises.push(
 						this.addItemToDirectoryPublicLink({
@@ -2867,6 +2982,12 @@ export class Cloud {
 		metadata: FileMetadata | FolderMetadata
 		publicKey: string
 	}): Promise<void> {
+		const itemNameNormalized = metadata.name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			throw new Error("Cannot rename item with malformed metadata.")
+		}
+
 		const metadataEncrypted = await this.sdk.getWorker().crypto.encrypt.metadataPublic({
 			metadata: JSON.stringify(metadata),
 			publicKey
@@ -2903,6 +3024,12 @@ export class Cloud {
 		metadata: FileMetadata | FolderMetadata
 		linkKeyEncrypted: string
 	}): Promise<void> {
+		const itemNameNormalized = metadata.name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			throw new Error("Cannot rename item with malformed metadata.")
+		}
+
 		const key = await this.sdk.getWorker().crypto.decrypt.folderLinkKey({
 			metadata: linkKeyEncrypted
 		})
@@ -2945,6 +3072,12 @@ export class Cloud {
 		uuid: string
 		itemMetadata: FileMetadata | FolderMetadata
 	}): Promise<void> {
+		const itemNameNormalized = itemMetadata.name.toLowerCase().trim()
+
+		if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${uuid}`)) {
+			return
+		}
+
 		const [isSharingItem, isLinkingItem] = await Promise.all([
 			this.sdk.api(3).item().shared({
 				uuid
@@ -3696,6 +3829,7 @@ export class Cloud {
 			linkSalt,
 			skipCache
 		})
+
 		const tree: Record<string, CloudItemTree> = {}
 		const folderNames: Record<string, string> = { base: "/" }
 
@@ -3814,7 +3948,7 @@ export class Cloud {
 			)
 		}
 
-		await promiseAllChunked(promises)
+		await promiseAllSettledChunked(promises)
 
 		return tree
 	}
@@ -3936,12 +4070,19 @@ export class Cloud {
 				linkSalt,
 				linkKey
 			})
+
 			const promises: Promise<void>[] = []
 
 			for (const path in tree) {
 				const item = tree[path]
 
 				if (!item || item.type !== "file" || item.key.length === 0) {
+					continue
+				}
+
+				const itemNameNormalized = item.name.toLowerCase().trim()
+
+				if (itemNameNormalized.startsWith("cannot_decrypt_") && itemNameNormalized.endsWith(`_${item.uuid}`)) {
 					continue
 				}
 
@@ -5523,6 +5664,7 @@ export class Cloud {
 			const file = await this.sdk.api(3).file().get({
 				uuid
 			})
+
 			const fileMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.fileMetadata({
 				metadata: file.metadata
 			})
@@ -5553,6 +5695,7 @@ export class Cloud {
 			const dir = await this.sdk.api(3).dir().get({
 				uuid
 			})
+
 			const dirMetadataDecrypted = await this.sdk.getWorker().crypto.decrypt.folderMetadata({
 				metadata: dir.nameEncrypted
 			})
