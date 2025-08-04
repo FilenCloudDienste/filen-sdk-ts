@@ -393,6 +393,9 @@ export class User {
 					})
 				])
 
+				this.sdk.config.masterKeys = newMasterKeys
+				this.sdk.config.apiKey = response.newAPIKey
+
 				return response.newAPIKey
 			} else if (authInfo.authVersion === 3) {
 				const newDekEncryptionKey = derivedNew.derivedMasterKeys
@@ -432,6 +435,9 @@ export class User {
 						encryptedPrivateKey: privateKeyReEncrypted
 					})
 				])
+
+				this.sdk.config.masterKeys = [newDekEncryptionKey]
+				this.sdk.config.apiKey = response.newAPIKey
 
 				return response.newAPIKey
 			} else {
