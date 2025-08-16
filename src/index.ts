@@ -655,8 +655,8 @@ export class FilenSDK {
 		this.init({
 			...this.config,
 			email: emailToUse,
-			password: passwordToUse,
-			twoFactorCode: twoFactorCodeToUse,
+			password: "redacted",
+			twoFactorCode: "redacted",
 			apiKey: loginResponse.apiKey,
 			authVersion
 		})
@@ -681,8 +681,8 @@ export class FilenSDK {
 			this.init({
 				...this.config,
 				email: emailToUse,
-				password: passwordToUse,
-				twoFactorCode: twoFactorCodeToUse,
+				password: "redacted",
+				twoFactorCode: "redacted",
 				masterKeys: updateKeys.masterKeys,
 				apiKey: loginResponse.apiKey,
 				publicKey: updateKeys.publicKey,
