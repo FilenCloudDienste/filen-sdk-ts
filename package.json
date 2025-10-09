@@ -1,6 +1,6 @@
 {
 	"name": "@filen/sdk",
-	"version": "0.3.11",
+	"version": "0.3.12",
 	"description": "Filen SDK",
 	"main": "dist/node/index.js",
 	"browser": "dist/browser/index.js",
@@ -75,4 +75,3 @@
 		"uuid": "^11.1.0"
 	}
 }
-
