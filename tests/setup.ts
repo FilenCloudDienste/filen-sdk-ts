@@ -57,6 +57,17 @@ export async function teardown(): Promise<void> {
 			path: "/compat-ts/big.txt",
 			content: Buffer.from(crypto.randomBytes(1024 * 1024 * 4).toString("hex"), "utf-8")
 		}),
+		sdk.fs().writeFile({
+			path: "/compat-ts/large_sample-20mb.txt",
+			content: Buffer.from(
+				new Array(2700000)
+					.fill(0)
+					.map((_, index) => `${index}\n`)
+					.join(""),
+				"utf-8"
+			),
+			encryptionKey: "0123456789abcdefghijklmnopqrstuv"
+		}),
 		sdk.fs().mkdir({
 			path: "/compat-ts/dir"
 		}),
