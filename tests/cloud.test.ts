@@ -177,7 +177,7 @@ describe("cloud", () => {
 		})
 
 		// Deleting/trashing a dir is not 100% immediate
-		await new Promise<void>(resolve => setTimeout(resolve, 15000))
+		await new Promise<void>(resolve => setTimeout(resolve, 200000))
 
 		const trash = await sdk.cloud().listTrash()
 
@@ -293,7 +293,7 @@ describe("cloud", () => {
 		})
 
 		// Deleting/trashing a dir is not 100% immediate
-		await new Promise<void>(resolve => setTimeout(resolve, 15000))
+		await new Promise<void>(resolve => setTimeout(resolve, 300000))
 
 		const [trash, list] = await Promise.all([
 			sdk.cloud().listTrash(),
