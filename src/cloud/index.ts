@@ -4088,6 +4088,16 @@ export class Cloud {
 
 				const filePath = pathModule.join(destinationPath, path)
 
+				// Decrypted item names are user-supplied and can contain separators or ".." segments. Tree keys are built with
+				// posix.join (which ignores "\"), so on Windows a backslash name survives into the key and this pathModule.join
+				// (win32) can re-resolve it outside destinationPath. Skip any entry whose resolved target lands outside destination.
+				const resolvedDestination = pathModule.resolve(destinationPath)
+				const resolvedFilePath = pathModule.resolve(filePath)
+
+				if (resolvedFilePath !== resolvedDestination && !resolvedFilePath.startsWith(resolvedDestination + pathModule.sep)) {
+					continue
+				}
+
 				promises.push(
 					new Promise((resolve, reject) => {
 						this.downloadFileToLocal({
