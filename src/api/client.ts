@@ -1,5 +1,5 @@
 import { type ResponseType, type AxiosResponse, type AxiosRequestConfig } from "axios"
-import { sleep, getRandomArbitrary, normalizePath, parseURLParams } from "../utils"
+import { getRandomArbitrary, normalizePath, parseURLParams } from "../utils"
 import { environment } from "../constants"
 import { pipeline, Readable, Transform } from "stream"
 import fs from "fs-extra"
@@ -90,6 +90,45 @@ export const APIClientDefaults = {
 	maxRetries: 3600,
 	retryTimeout: 1000
 } as const
+
+/**
+ * Wait between two request attempts, returning early if the request is aborted meanwhile.
+ *
+ * @param {number} ms
+ * @param {?AbortSignal} [abortSignal]
+ * @returns {Promise<void>}
+ */
+function waitBeforeRetry(ms: number, abortSignal?: AbortSignal): Promise<void> {
+	return new Promise<void>(resolve => {
+		if (!abortSignal) {
+			setTimeout(resolve, ms)
+
+			return
+		}
+
+		if (abortSignal.aborted) {
+			resolve()
+
+			return
+		}
+
+		const onAbort = (): void => {
+			clearTimeout(timeout)
+
+			resolve()
+		}
+
+		const timeout = setTimeout(() => {
+			abortSignal.removeEventListener("abort", onAbort)
+
+			resolve()
+		}, ms)
+
+		abortSignal.addEventListener("abort", onAbort, {
+			once: true
+		})
+	})
+}
 
 /**
  * APIClient
@@ -544,23 +583,18 @@ export class APIClient {
 		try {
 			const maxRetries = params.maxRetries ? params.maxRetries : APIClientDefaults.maxRetries
 			const retryTimeout = params.retryTimeout ? params.retryTimeout : APIClientDefaults.retryTimeout
-			let tries = 0
 			let lastError: Error | unknown
-			let returnImmediately = false
 
-			const send = async (): Promise<T> => {
-				if (tries >= maxRetries) {
-					if (lastError) {
-						throw lastError
-					}
-
-					throw new APIError({
-						code: "request_failed_after_max_tries",
-						message: `Request failed after ${maxRetries} tries`
-					})
+			// A loop rather than a recursive retry: each pending recursive call kept its failed attempt (and error) alive until
+			// the request settled, up to maxRetries of them.
+			for (let tries = 0; tries < maxRetries; tries++) {
+				// An aborted request can't succeed anymore. Retrying it would keep the request slot, and in Node send a new
+				// request every retryTimeout, for up to maxRetries * retryTimeout (an hour by default).
+				if (params.abortSignal?.aborted) {
+					throw new Error("Aborted")
 				}
 
-				tries += 1
+				let returnImmediately = false
 
 				try {
 					const response = params.method === "GET" ? await this.get(params) : await this.post(params)
@@ -603,15 +637,24 @@ export class APIClient {
 						throw e
 					}
 
+					if (params.abortSignal?.aborted) {
+						throw new Error("Aborted")
+					}
+
 					lastError = e
 
-					await sleep(retryTimeout)
-
-					return await send()
+					await waitBeforeRetry(retryTimeout, params.abortSignal)
 				}
 			}
 
-			return await send()
+			if (lastError) {
+				throw lastError
+			}
+
+			throw new APIError({
+				code: "request_failed_after_max_tries",
+				message: `Request failed after ${maxRetries} tries`
+			})
 		} finally {
 			this.requestSemaphore.release()
 		}
